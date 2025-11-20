@@ -30,6 +30,11 @@
  *
  * Similar to the bblit renderer but assembles an array of blit-requests and
  * pushes all of them at once to the video device.
+ *
+ * Only push cells that have changed from previous frame, and the frame before
+ * as kmscon uses double buffering.
+ * bbulk->prev holds the previous cell content, bbulk->damaged tells if the
+ * previous cell content was different from its predecessor.
  */
 
 #include <errno.h>
@@ -46,12 +51,25 @@
 
 #define LOG_SUBSYSTEM "text_bbulk"
 
+#define ID_DAMAGED 0xd41146edd41146ed
+#define ID_OVERFLOW 0x0c34f10110c34f10
+
+struct bbcell {
+	uint64_t id;
+	struct tsm_screen_attr attr;
+};
+
 struct bbulk {
 	struct uterm_video_blend_req *reqs;
 	unsigned int req_len;
 	unsigned int req_total_len;
 	struct shl_hashtable *glyphs;
 	struct shl_hashtable *bold_glyphs;
+	struct bbcell *prev;
+	unsigned int cells;
+	unsigned int sw;
+	unsigned int sh;
+	bool *damages;
 };
 
 static int bbulk_init(struct kmscon_text *txt)
@@ -84,59 +102,53 @@ static void free_glyph(void *data)
 static int bbulk_set(struct kmscon_text *txt)
 {
 	struct bbulk *bb = txt->data;
-	unsigned int sw, sh, i, j;
-	struct uterm_video_blend_req *req;
+	int i;
 
 	memset(bb, 0, sizeof(*bb));
 
-	sw = uterm_display_get_width(txt->disp);
-	sh = uterm_display_get_height(txt->disp);
+	bb->sw = uterm_display_get_width(txt->disp);
+	bb->sh = uterm_display_get_height(txt->disp);
 
-	if (!sw || !sh)
+	if (!bb->sw || !bb->sh)
 		return -EINVAL;
 
 	if (txt->orientation == OR_NORMAL || txt->orientation == OR_UPSIDE_DOWN) {
-		txt->cols = sw / FONT_WIDTH(txt);
-		txt->rows = sh / FONT_HEIGHT(txt);
+		txt->cols = bb->sw / FONT_WIDTH(txt);
+		txt->rows = bb->sh / FONT_HEIGHT(txt);
 	} else {
-		txt->rows = sw / FONT_HEIGHT(txt);
-		txt->cols = sh / FONT_WIDTH(txt);
+		txt->rows = bb->sw / FONT_HEIGHT(txt);
+		txt->cols = bb->sh / FONT_WIDTH(txt);
 	}
+	bb->cells = txt->cols * txt->rows;
 
-	bb->req_total_len = txt->cols * txt->rows + 1; // + 1 for the pointer
+	bb->req_total_len = bb->cells + 1; // + 1 for the mouse pointer
 	bb->reqs = malloc(sizeof(*bb->reqs) * bb->req_total_len);
 	if (!bb->reqs)
 		return -ENOMEM;
 	memset(bb->reqs, 0, sizeof(*bb->reqs) * bb->req_total_len);
 
-	for (i = 0; i < txt->rows; ++i) {
-		for (j = 0; j < txt->cols; ++j) {
-			req = &bb->reqs[i * txt->cols + j];
-			switch (txt->orientation) {
-			default:
-			case OR_NORMAL:
-				req->x = j * FONT_WIDTH(txt);
-				req->y = i * FONT_HEIGHT(txt);
-				break;
-			case OR_UPSIDE_DOWN:
-				req->x = sw - (j + 1) * FONT_WIDTH(txt);
-				req->y = sh - (i + 1) * FONT_HEIGHT(txt);
-				break;
-			case OR_RIGHT:
-				req->x = sw - (i + 1) * FONT_HEIGHT(txt);
-				req->y = j * FONT_WIDTH(txt);
-				break;
-			case OR_LEFT:
-				req->x = i * FONT_HEIGHT(txt);
-				req->y = sh - (j + 1) * FONT_WIDTH(txt);
-				break;
-			}
-		}
-	}
-	if (kmscon_rotate_create_tables(&bb->glyphs, &bb->bold_glyphs, free_glyph))
+	bb->prev = malloc(sizeof(*bb->prev) * bb->cells);
+	if (!bb->prev)
 		goto free_reqs;
+
+	bb->damages = malloc(sizeof(*bb->damages) * bb->cells);
+	if (!bb->damages)
+		goto free_prev;
+
+	for (i = 0; i < bb->cells; i++) {
+		// start with all cells damaged
+		bb->prev[i].id = ID_DAMAGED;
+		bb->damages[i] = true;
+	}
+
+	if (kmscon_rotate_create_tables(&bb->glyphs, &bb->bold_glyphs, free_glyph))
+		goto free_damages;
 	return 0;
 
+free_damages:
+	free(bb->damages);
+free_prev:
+	free(bb->prev);
 free_reqs:
 	free(bb->reqs);
 	return -ENOMEM;
@@ -148,7 +160,11 @@ static void bbulk_unset(struct kmscon_text *txt)
 
 	kmscon_rotate_free_tables(bb->glyphs, bb->bold_glyphs);
 	free(bb->reqs);
+	free(bb->damages);
+	free(bb->prev);
 	bb->reqs = NULL;
+	bb->damages = NULL;
+	bb->prev = NULL;
 }
 
 static int bbulk_rotate(struct kmscon_text *txt, enum Orientation orientation)
@@ -227,6 +243,29 @@ err_free:
 	return ret;
 }
 
+static void set_coordinate(struct kmscon_text *txt, struct uterm_video_blend_req *req,
+			   unsigned int sw, unsigned int sh, unsigned int posx, unsigned int posy)
+{
+	switch (txt->orientation) {
+	case OR_NORMAL:
+		req->x = posx * FONT_WIDTH(txt);
+		req->y = posy * FONT_HEIGHT(txt);
+		break;
+	case OR_UPSIDE_DOWN:
+		req->x = sw - (posx + 1) * FONT_WIDTH(txt);
+		req->y = sh - (posy + 1) * FONT_HEIGHT(txt);
+		break;
+	case OR_RIGHT:
+		req->x = sw - (posy + 1) * FONT_HEIGHT(txt);
+		req->y = posx * FONT_WIDTH(txt);
+		break;
+	case OR_LEFT:
+		req->x = posy * FONT_HEIGHT(txt);
+		req->y = sh - (posx + 1) * FONT_WIDTH(txt);
+		break;
+	}
+}
+
 static int bbulk_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, size_t len,
 		      unsigned int width, unsigned int posx, unsigned int posy,
 		      const struct tsm_screen_attr *attr)
@@ -234,28 +273,55 @@ static int bbulk_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, 
 	struct bbulk *bb = txt->data;
 	struct uterm_video_buffer *bb_glyph;
 	struct uterm_video_blend_req *req;
+	struct bbcell *prev;
+	unsigned int offset = posx + posy * txt->cols;
 	int ret;
 
-	if (!width) {
-		bb->reqs[posy * txt->cols + posx].buf = NULL;
+	prev = &bb->prev[offset];
+	if (!width)
 		return 0;
+
+	if (prev->id == id && !memcmp(&prev->attr, attr, sizeof(*attr))) {
+		if (txt->overflow_next && posx + 1 < txt->cols) {
+			if (bb->damages[offset] || bb->damages[offset + 1] ||
+			    bb->prev[offset + 1].id == ID_DAMAGED) {
+				bb->damages[offset] = false;
+				if (bb->prev[offset + 1].id == ID_OVERFLOW)
+					bb->damages[offset + 1] = false;
+				bb->prev[offset + 1].id = ID_OVERFLOW;
+			} else {
+				return 0;
+			}
+		} else {
+			if (!bb->damages[offset]) {
+				return 0;
+			} else {
+				bb->damages[offset] = false;
+			}
+		}
+	} else {
+		bb->damages[offset] = true;
 	}
+
+	prev->id = id;
+	memcpy(&prev->attr, attr, sizeof(*attr));
+
 	ret = find_glyph(txt, &bb_glyph, id, ch, len, attr);
 	if (ret)
 		return ret;
 
-	req = &bb->reqs[posy * txt->cols + posx];
+	req = &bb->reqs[bb->req_len++];
 
-	/*
-	 * In case of left or upside down orientation, we need to draw to the
-	 * next cell, as the glyph is already rotated, so start on the next cell
-	 * and end on this cell
-	 */
-	if (txt->orientation == OR_LEFT || txt->orientation == OR_UPSIDE_DOWN) {
-		if (txt->overflow_next && posx + 1 < txt->cols) {
-			req = &bb->reqs[posy * txt->cols + posx + 1];
-		}
-	}
+	if (txt->overflow_next && posx + 1 < txt->cols &&
+	    (txt->orientation == OR_LEFT || txt->orientation == OR_UPSIDE_DOWN))
+		/*
+		 * In case of left or upside down orientation, we need to draw to the
+		 * next cell, as the glyph is already rotated, so start on the next cell
+		 * and end on this cell
+		 */
+		set_coordinate(txt, req, bb->sw, bb->sh, posx + 1, posy);
+	else
+		set_coordinate(txt, req, bb->sw, bb->sh, posx, posy);
 
 	req->buf = bb_glyph;
 	if (attr->inverse) {
@@ -273,8 +339,96 @@ static int bbulk_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, 
 		req->bg = attr->bg;
 		req->bb = attr->bb;
 	}
-
 	return 0;
+}
+
+/*
+ * When the pointer move over, mark the 4 underlying cells as damaged.
+ */
+static void mark_damaged(struct kmscon_text *txt, struct bbulk *bb, unsigned int x, unsigned int y)
+{
+	unsigned int posx = 0;
+	unsigned int posy = 0;
+	unsigned int fw, fh;
+	fw = SHL_DIV_ROUND_UP(FONT_WIDTH(txt), 2);
+	fh = SHL_DIV_ROUND_UP(FONT_HEIGHT(txt), 2);
+
+	if (x > fw)
+		posx = (x - fw) / FONT_WIDTH(txt);
+	if (y > fh)
+		posy = (y - fh) / FONT_HEIGHT(txt);
+
+	bb->damages[posx + txt->cols * posy] = true;
+	bb->prev[posx + txt->cols * posy].id = ID_DAMAGED;
+
+	if (posx + 1 < txt->cols) {
+		bb->damages[posx + 1 + txt->cols * posy] = true;
+		bb->prev[posx + 1 + txt->cols * posy].id = ID_DAMAGED;
+	}
+	if (posy + 1 < txt->rows) {
+		bb->damages[posx + txt->cols * (posy + 1)] = true;
+		bb->prev[posx + txt->cols * (posy + 1)].id = ID_DAMAGED;
+	}
+	if (posx + 1 < txt->cols && posy + 1 < txt->rows) {
+		bb->damages[posx + 1 + txt->cols * (posy + 1)] = true;
+		bb->prev[posx + 1 + txt->cols * (posy + 1)].id = ID_DAMAGED;
+	}
+}
+
+static unsigned int clamp(unsigned int val, unsigned int min, unsigned int max)
+{
+	if (val < min)
+		return min;
+	if (val > max)
+		return max;
+	return val;
+}
+
+/*
+ * pointer_x and pointer_y are the center of the pointer sprite, in the
+ * non-rotated screen.
+ */
+static void set_pointer_coordinate(struct bbulk *bb, struct kmscon_text *txt,
+				   struct uterm_video_blend_req *req, unsigned int pointer_x,
+				   unsigned int pointer_y)
+{
+	unsigned int hf_w, hf_h, x, y;
+
+	if (txt->orientation == OR_NORMAL || txt->orientation == OR_UPSIDE_DOWN) {
+		hf_w = SHL_DIV_ROUND_UP(FONT_WIDTH(txt), 2);
+		hf_h = SHL_DIV_ROUND_UP(FONT_HEIGHT(txt), 2);
+	} else {
+		hf_w = SHL_DIV_ROUND_UP(FONT_HEIGHT(txt), 2);
+		hf_h = SHL_DIV_ROUND_UP(FONT_WIDTH(txt), 2);
+	}
+
+	switch (txt->orientation) {
+	default:
+	case OR_NORMAL:
+		x = pointer_x;
+		y = pointer_y;
+		break;
+	case OR_UPSIDE_DOWN:
+		x = bb->sw - pointer_x;
+		y = bb->sh - pointer_y;
+		break;
+	case OR_RIGHT:
+		x = bb->sw - pointer_y;
+		y = pointer_x;
+		break;
+	case OR_LEFT:
+		x = pointer_y;
+		y = bb->sh - pointer_x;
+		break;
+	}
+	x = clamp(x, hf_w, bb->sw - hf_w);
+	y = clamp(y, hf_h, bb->sh - hf_h);
+
+	x -= hf_w;
+	y -= hf_h;
+
+	req->x = x;
+	req->y = y;
 }
 
 static int bblit_draw_pointer(struct kmscon_text *txt, unsigned int pointer_x,
@@ -285,62 +439,21 @@ static int bblit_draw_pointer(struct kmscon_text *txt, unsigned int pointer_x,
 	struct uterm_video_buffer *bb_glyph;
 	uint32_t ch = 'I';
 	uint64_t id = ch;
-	unsigned int sw, sh;
-	unsigned int m_x, m_y, x, y;
+
 	int ret;
 
-	sw = uterm_display_get_width(txt->disp);
-	sh = uterm_display_get_height(txt->disp);
+	if (bb->req_len >= bb->req_total_len)
+		return -ENOMEM;
 
-	if (txt->orientation == OR_NORMAL || txt->orientation == OR_UPSIDE_DOWN) {
-		m_x = SHL_DIV_ROUND_UP(FONT_WIDTH(txt), 2);
-		m_y = SHL_DIV_ROUND_UP(FONT_HEIGHT(txt), 2);
-	} else {
-		m_x = SHL_DIV_ROUND_UP(FONT_HEIGHT(txt), 2);
-		m_y = SHL_DIV_ROUND_UP(FONT_WIDTH(txt), 2);
-	}
-
-	// pointer is the last request
-	req = &bb->reqs[bb->req_total_len - 1];
+	req = &bb->reqs[bb->req_len++];
+	mark_damaged(txt, bb, pointer_x, pointer_y);
 
 	ret = find_glyph(txt, &bb_glyph, id, &ch, 1, attr);
 	if (ret)
 		return ret;
 
 	req->buf = bb_glyph;
-
-	switch (txt->orientation) {
-	default:
-	case OR_NORMAL:
-		x = pointer_x;
-		y = pointer_y;
-		break;
-	case OR_UPSIDE_DOWN:
-		x = sw - pointer_x;
-		y = sh - pointer_y;
-		break;
-	case OR_RIGHT:
-		x = sw - pointer_y;
-		y = pointer_x;
-		break;
-	case OR_LEFT:
-		x = pointer_y;
-		y = sh - pointer_x;
-		break;
-	}
-	if (x < m_x)
-		x = m_x;
-	if (x + m_x > sw)
-		x = sw - m_x;
-	if (y < m_y)
-		y = m_y;
-	if (y + m_y > sh)
-		y = sh - m_y;
-	x -= m_x;
-	y -= m_y;
-
-	req->x = x;
-	req->y = y;
+	set_pointer_coordinate(bb, txt, req, pointer_x, pointer_y);
 
 	req->fr = attr->fr;
 	req->fg = attr->fg;
@@ -348,8 +461,6 @@ static int bblit_draw_pointer(struct kmscon_text *txt, unsigned int pointer_x,
 	req->br = attr->br;
 	req->bg = attr->bg;
 	req->bb = attr->bb;
-
-	bb->req_len = bb->req_total_len;
 	return 0;
 }
 
@@ -359,6 +470,7 @@ static int bbulk_render(struct kmscon_text *txt)
 	int ret;
 
 	ret = uterm_display_fake_blendv(txt->disp, bb->reqs, bb->req_len);
+	log_debug("bbulk, redraw %d cells", bb->req_len);
 	return ret;
 }
 
@@ -370,7 +482,8 @@ static int bbulk_prepare(struct kmscon_text *txt)
 	// Clear previous requests
 	for (i = 0; i < bb->req_total_len; ++i)
 		bb->reqs[i].buf = NULL;
-	bb->req_len = txt->cols * txt->rows;
+
+	bb->req_len = 0;
 	return 0;
 }
 
