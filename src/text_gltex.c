@@ -98,6 +98,7 @@ struct gltex {
 	struct shl_hashtable *bold_glyphs;
 	unsigned int max_tex_size;
 	bool supports_rowlen;
+	bool previous_overflow;
 
 	struct shl_dlist atlases;
 
@@ -589,13 +590,21 @@ static int gltex_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, 
 	if (!width)
 		return 0;
 
+	if (!len && posx && gt->previous_overflow) {
+		gt->previous_overflow = false;
+		return 0;
+	}
 	ret = find_glyph(txt, &glyph, id, ch, len, attr);
 	if (ret)
 		return ret;
 	atlas = glyph->atlas;
 
-	if (txt->overflow_next)
-		width = glyph->glyph->width;
+	if (width == 1 && glyph->glyph->width == 2) {
+		gt->previous_overflow = true;
+		width = 2;
+	} else {
+		gt->previous_overflow = false;
+	}
 
 	if (atlas->cache_num >= atlas->cache_size)
 		return -ERANGE;

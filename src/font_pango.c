@@ -459,20 +459,6 @@ static int kmscon_font_pango_render_inval(struct kmscon_font *font, const struct
 	return kmscon_font_pango_render(font, question_mark, &question_mark, 1, out);
 }
 
-static bool kmscon_font_pango_get_overflow(struct kmscon_font *font, uint64_t id,
-					   const uint32_t *ch, size_t len)
-{
-	struct face *face = font->data;
-	unsigned int cwidth;
-	struct kmscon_glyph *glyph;
-
-	if (get_glyph(face, &glyph, id, ch, len, &font->attr) < 0)
-		return false;
-
-	cwidth = tsm_ucs4_get_width(*ch);
-	return (glyph->width == 2 && cwidth == 1);
-}
-
 struct kmscon_font_ops kmscon_font_pango_ops = {
 	.name = "pango",
 	.owner = NULL,
@@ -481,5 +467,4 @@ struct kmscon_font_ops kmscon_font_pango_ops = {
 	.render = kmscon_font_pango_render,
 	.render_empty = kmscon_font_pango_render_empty,
 	.render_inval = kmscon_font_pango_render_inval,
-	.get_overflow = kmscon_font_pango_get_overflow,
 };

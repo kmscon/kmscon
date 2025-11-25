@@ -442,17 +442,10 @@ int kmscon_text_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, s
 		     unsigned int width, unsigned int posx, unsigned int posy,
 		     const struct tsm_screen_attr *attr)
 {
-	bool previous_overflow;
-
 	if (!txt || !txt->rendering)
 		return -EINVAL;
 	if (posx >= txt->cols || posy >= txt->rows || !attr)
 		return -EINVAL;
-
-	previous_overflow = txt->overflow_next;
-	txt->overflow_next = kmscon_font_get_overflow(txt->font, id, ch, len);
-	if (previous_overflow && !len && posx && !attr->inverse)
-		return 0;
 
 	return txt->ops->draw(txt, id, ch, len, width, posx, posy, attr);
 }

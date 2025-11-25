@@ -50,7 +50,7 @@ void kmscon_rotate_free_tables(struct shl_hashtable *normal, struct shl_hashtabl
 }
 
 SHL_EXPORT
-int kmscon_rotate_glyph(struct uterm_video_buffer *vb, const struct kmscon_glyph *glyph,
+int kmscon_rotate_glyph(struct kmscon_glyph *vb, const struct kmscon_glyph *glyph,
 			enum Orientation orientation, uint8_t align)
 {
 	int width;
@@ -69,13 +69,13 @@ int kmscon_rotate_glyph(struct uterm_video_buffer *vb, const struct kmscon_glyph
 	}
 
 	stride = align * ((width + (align - 1)) / align);
-	vb->data = malloc(stride * height);
+	vb->buf.data = malloc(stride * height);
 
-	if (!vb->data)
+	if (!vb->buf.data)
 		return -ENOMEM;
 
 	src = buf->data;
-	dst = vb->data;
+	dst = vb->buf.data;
 
 	switch (orientation) {
 	default:
@@ -111,9 +111,10 @@ int kmscon_rotate_glyph(struct uterm_video_buffer *vb, const struct kmscon_glyph
 			src += buf->stride;
 		}
 	}
-	vb->width = width;
-	vb->height = height;
-	vb->stride = stride;
-	vb->format = buf->format;
+	vb->buf.width = width;
+	vb->buf.height = height;
+	vb->buf.stride = stride;
+	vb->buf.format = buf->format;
+	vb->width = glyph->width;
 	return 0;
 }
