@@ -58,6 +58,7 @@
 struct bbcell {
 	uint64_t id;
 	struct tsm_screen_attr attr;
+	bool overflow;
 };
 
 struct bbulk {
@@ -175,11 +176,11 @@ static int bbulk_rotate(struct kmscon_text *txt, enum Orientation orientation)
 	return bbulk_set(txt);
 }
 
-static int find_glyph(struct kmscon_text *txt, struct uterm_video_buffer **out, uint64_t id,
+static int find_glyph(struct kmscon_text *txt, struct kmscon_glyph **out, uint64_t id,
 		      const uint32_t *ch, size_t len, const struct tsm_screen_attr *attr)
 {
 	struct bbulk *bb = txt->data;
-	struct uterm_video_buffer *bb_glyph;
+	struct kmscon_glyph *bb_glyph;
 	const struct kmscon_glyph *glyph;
 	struct shl_hashtable *gtable;
 	struct kmscon_font *font;
@@ -238,7 +239,7 @@ static int find_glyph(struct kmscon_text *txt, struct uterm_video_buffer **out, 
 	return 0;
 
 err_free_vb:
-	free(bb_glyph->data);
+	free(bb_glyph->buf.data);
 err_free:
 	free(bb_glyph);
 	return ret;
@@ -272,18 +273,22 @@ static int bbulk_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, 
 		      const struct tsm_screen_attr *attr)
 {
 	struct bbulk *bb = txt->data;
-	struct uterm_video_buffer *bb_glyph;
+	struct kmscon_glyph *bb_glyph;
 	struct uterm_video_blend_req *req;
 	struct bbcell *prev;
 	unsigned int offset = posx + posy * txt->cols;
 	int ret;
 
-	prev = &bb->prev[offset];
 	if (!width)
 		return 0;
 
+	if (!len && posx && bb->prev[offset - 1].overflow)
+		return 0;
+
+	prev = &bb->prev[offset];
+
 	if (prev->id == id && !memcmp(&prev->attr, attr, sizeof(*attr))) {
-		if (txt->overflow_next && posx + 1 < txt->cols) {
+		if (prev->overflow) {
 			if (bb->damages[offset] || bb->damages[offset + 1] ||
 			    bb->prev[offset + 1].id == ID_DAMAGED) {
 				bb->damages[offset] = false;
@@ -311,10 +316,14 @@ static int bbulk_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, 
 	if (ret)
 		return ret;
 
+	if (bb_glyph->width == 2 && posx + 1 < txt->cols)
+		prev->overflow = true;
+	else
+		prev->overflow = false;
+
 	req = &bb->reqs[bb->req_len++];
 
-	if (txt->overflow_next && posx + 1 < txt->cols &&
-	    (txt->orientation == OR_LEFT || txt->orientation == OR_UPSIDE_DOWN))
+	if (prev->overflow && (txt->orientation == OR_LEFT || txt->orientation == OR_UPSIDE_DOWN))
 		/*
 		 * In case of left or upside down orientation, we need to draw to the
 		 * next cell, as the glyph is already rotated, so start on the next cell
@@ -324,7 +333,7 @@ static int bbulk_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, 
 	else
 		set_coordinate(txt, req, bb->sw, bb->sh, posx, posy);
 
-	req->buf = bb_glyph;
+	req->buf = &bb_glyph->buf;
 	if (attr->inverse) {
 		req->fr = attr->br;
 		req->fg = attr->bg;
@@ -437,7 +446,7 @@ static int bblit_draw_pointer(struct kmscon_text *txt, unsigned int pointer_x,
 {
 	struct bbulk *bb = txt->data;
 	struct uterm_video_blend_req *req;
-	struct uterm_video_buffer *bb_glyph;
+	struct kmscon_glyph *bb_glyph;
 	uint32_t ch = 'I';
 	uint64_t id = ch;
 
@@ -453,7 +462,7 @@ static int bblit_draw_pointer(struct kmscon_text *txt, unsigned int pointer_x,
 	if (ret)
 		return ret;
 
-	req->buf = bb_glyph;
+	req->buf = &bb_glyph->buf;
 	set_pointer_coordinate(bb, txt, req, pointer_x, pointer_y);
 
 	req->fr = attr->fr;
@@ -471,7 +480,7 @@ static int bbulk_render(struct kmscon_text *txt)
 	int ret;
 
 	ret = uterm_display_fake_blendv(txt->disp, bb->reqs, bb->req_len);
-	log_notice("FRAME DRAW %d tiles", bb->req_len);
+	log_debug("bbulk, redraw %d cells", bb->req_len);
 	return ret;
 }
 
