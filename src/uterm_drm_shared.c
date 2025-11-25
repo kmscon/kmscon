@@ -460,6 +460,18 @@ int uterm_drm_video_init(struct uterm_video *video, const char *node,
 	/* TODO: fix the race-condition with DRM-Master-on-open */
 	drmDropMaster(vdrm->fd);
 
+	ret = drmSetClientCap(vdrm->fd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1);
+	if (ret) {
+		log_err("Device %s doesn't support universal planes", node);
+		goto err_close;
+	}
+
+	ret = drmSetClientCap(vdrm->fd, DRM_CLIENT_CAP_ATOMIC, 1);
+	if (ret) {
+		log_err("Device %s doesn't support atomic modesetting", node);
+		goto err_close;
+	}
+
 	ret = ev_eloop_new_fd(video->eloop, &vdrm->efd, vdrm->fd, EV_READABLE, io_event, video);
 	if (ret)
 		goto err_close;
