@@ -438,6 +438,7 @@ int uterm_drm_video_init(struct uterm_video *video, const char *node,
 			 void *data)
 {
 	struct uterm_drm_video *vdrm;
+	uint64_t cap;
 	int ret;
 
 	log_info("new drm device via %s", node);
@@ -459,6 +460,25 @@ int uterm_drm_video_init(struct uterm_video *video, const char *node,
 	}
 	/* TODO: fix the race-condition with DRM-Master-on-open */
 	drmDropMaster(vdrm->fd);
+
+	ret = drmSetClientCap(vdrm->fd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1);
+	if (ret) {
+		log_err("Device %s doesn't support universal planes", node);
+		goto err_close;
+	}
+
+	ret = drmSetClientCap(vdrm->fd, DRM_CLIENT_CAP_ATOMIC, 1);
+	if (ret) {
+		log_err("Device %s doesn't support atomic modesetting", node);
+		goto err_close;
+	}
+
+	ret = drmGetCap(vdrm->fd, DRM_CAP_DUMB_BUFFER, &cap);
+	if (ret < 0 || !cap) {
+		log_err("drm device '%s' does not support dumb buffers\n",
+			node);
+		goto err_close;
+	}
 
 	ret = ev_eloop_new_fd(video->eloop, &vdrm->efd, vdrm->fd, EV_READABLE, io_event, video);
 	if (ret)

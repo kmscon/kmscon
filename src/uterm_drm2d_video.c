@@ -244,22 +244,12 @@ static void show_displays(struct uterm_video *video)
 static int video_init(struct uterm_video *video, const char *node)
 {
 	int ret;
-	uint64_t has_dumb;
-	struct uterm_drm_video *vdrm;
 
 	ret = uterm_drm_video_init(video, node, &drm2d_display_ops, NULL, NULL);
 	if (ret)
 		return ret;
-	vdrm = video->data;
 
 	log_debug("initialize 2D layer on %p", video);
-
-	if (drmGetCap(vdrm->fd, DRM_CAP_DUMB_BUFFER, &has_dumb) < 0 || !has_dumb) {
-		log_err("driver does not support dumb buffers");
-		uterm_drm_video_destroy(video);
-		return -EOPNOTSUPP;
-	}
-
 	return 0;
 }
 
