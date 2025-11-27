@@ -1,5 +1,7 @@
 # KMSCON
 
+![Build Status](https://github.com/kmscon/kmscon/actions/workflows/meson.yml/badge.svg?branch=main)
+
 Kmscon is a simple terminal emulator based on linux kernel mode setting (KMS).
 It is an attempt to replace the in-kernel VT implementation with a userspace
 console. See kmscon(1) man-page for usage information.
@@ -7,7 +9,7 @@ console. See kmscon(1) man-page for usage information.
 ## Requirements
 
 Kmscon requires the following software:
-  - [libtsm](https://github.com/Aetf/libtsm): terminal emulator state machine
+  - [libtsm](https://github.com/kmscon/libtsm): terminal emulator state machine
   - [libudev](https://www.freedesktop.org/software/systemd/man/libudev.html): providing input, video, etc. device hotplug support (>=v172)
   - [libxkbcommon](https://xkbcommon.org/): providing internationalized keyboard handling
   - [libdrm](https://gitlab.freedesktop.org/mesa/drm): graphics access to DRM/KMS subsystem
@@ -35,7 +37,7 @@ sudo apt install systemd-dev
 
 ## Download
 
-Released tarballs can be found at: https://github.com/Aetf/kmscon/releases
+Released tarballs can be found at: https://github.com/kmscon/kmscon/releases
 
 ## Install
 
@@ -91,7 +93,7 @@ See `man kmscon` for more information.
 ### Config file
 
 The default configuration file is `/etc/kmscon/kmscon.conf`. Any command line option can be put in the config file in
-its long form without the leading `--` (double dash). See `man kmscon` for more information.
+its long form without the leading `--` (double dash). See `man kmscon` for more information or look at [kmscon.com](scripts/etc/kmscon.conf)
 
 ## License
 
@@ -100,5 +102,4 @@ This software is licensed under the terms of an MIT-like license. Please see
 
 ## History
 
-This is a personal fork from https://www.freedesktop.org/wiki/Software/kmscon, which hasn't been updated since 2014.
-
+This project was maintained in [Aetf's](https://github.com/Aetf/kmscon) fork for 11 years, before coming back here in 2025

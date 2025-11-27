@@ -23,7 +23,7 @@ jobs:
     - name: Compile and install libtsm
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        LIBTSM: "https://api.github.com/repos/Aetf/libtsm/releases/latest"
+        LIBTSM: "https://api.github.com/repos/kmscon/libtsm/releases/latest"
       run: |
         tar_url=$(curl -s --request GET --header "Authorization: Bearer $GH_TOKEN" --url $LIBTSM | jq -r .tarball_url)
         curl --request GET -s -L -o libtsm.tar.gz --header "Authorization: Bearer $GH_TOKEN" --url $tar_url
