@@ -30,6 +30,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
+#include <libdrm/drm_fourcc.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -72,50 +73,47 @@ static void display_destroy(struct uterm_display *disp)
 	uterm_drm_display_destroy(disp);
 }
 
+static int drm_addfb2(int fd, uint32_t width, uint32_t height, struct uterm_drm2d_rb *rb)
+{
+	uint32_t handles[4] = {rb->handle, 0, 0, 0};
+	uint32_t pitches[4] = {rb->stride, 0, 0, 0};
+	uint32_t offsets[4] = {0, 0, 0, 0};
+
+	return drmModeAddFB2(fd, width, height, DRM_FORMAT_XRGB8888, handles, pitches, offsets,
+			     &rb->id, 0);
+}
+
 static int init_rb(struct uterm_display *disp, struct uterm_drm2d_rb *rb)
 {
 	int ret, r;
 	struct uterm_video *video = disp->video;
 	struct uterm_drm_video *vdrm = video->data;
-	struct drm_mode_create_dumb req;
-	struct drm_mode_destroy_dumb dreq;
-	struct drm_mode_map_dumb mreq;
+	uint32_t width, height;
+	uint64_t mmap_offset;
 
-	memset(&req, 0, sizeof(req));
-	req.width = disp->width;
-	req.height = disp->height;
-	req.bpp = 32;
-	req.flags = 0;
+	width = disp->width;
+	height = disp->height;
 
-	ret = drmIoctl(vdrm->fd, DRM_IOCTL_MODE_CREATE_DUMB, &req);
-	if (ret < 0) {
+	if (drmModeCreateDumbBuffer(vdrm->fd, width, height, 32, 0, &rb->handle, &rb->stride,
+				    &rb->size)) {
 		log_err("cannot create dumb drm buffer");
 		return -EFAULT;
 	}
 
-	rb->handle = req.handle;
-	rb->stride = req.pitch;
-	rb->size = req.size;
-
-	ret = drmModeAddFB(vdrm->fd, req.width, req.height, 24, 32, rb->stride, rb->handle,
-			   &rb->fb);
+	ret = drm_addfb2(vdrm->fd, width, height, rb);
 	if (ret) {
 		log_err("cannot add drm-fb");
 		ret = -EFAULT;
 		goto err_buf;
 	}
 
-	memset(&mreq, 0, sizeof(mreq));
-	mreq.handle = rb->handle;
-
-	ret = drmIoctl(vdrm->fd, DRM_IOCTL_MODE_MAP_DUMB, &mreq);
+	ret = drmModeMapDumbBuffer(vdrm->fd, rb->handle, &mmap_offset);
 	if (ret) {
-		log_err("cannot map dumb buffer");
-		ret = -EFAULT;
+		log_err("Cannot map dumb buffer");
 		goto err_fb;
 	}
 
-	rb->map = mmap(0, rb->size, PROT_READ | PROT_WRITE, MAP_SHARED, vdrm->fd, mreq.offset);
+	rb->map = mmap(0, rb->size, PROT_READ | PROT_WRITE, MAP_SHARED, vdrm->fd, mmap_offset);
 	if (rb->map == MAP_FAILED) {
 		log_err("cannot mmap dumb buffer");
 		ret = -EFAULT;
@@ -126,11 +124,9 @@ static int init_rb(struct uterm_display *disp, struct uterm_drm2d_rb *rb)
 	return 0;
 
 err_fb:
-	drmModeRmFB(vdrm->fd, rb->fb);
+	drmModeRmFB(vdrm->fd, rb->id);
 err_buf:
-	memset(&dreq, 0, sizeof(dreq));
-	dreq.handle = rb->handle;
-	r = drmIoctl(vdrm->fd, DRM_IOCTL_MODE_DESTROY_DUMB, &dreq);
+	r = drmModeDestroyDumbBuffer(vdrm->fd, rb->handle);
 	if (r)
 		log_warning("cannot destroy dumb buffer (%d/%d): %m", ret, errno);
 
@@ -140,14 +136,11 @@ err_buf:
 static void destroy_rb(struct uterm_display *disp, struct uterm_drm2d_rb *rb)
 {
 	struct uterm_drm_video *vdrm = disp->video->data;
-	struct drm_mode_destroy_dumb dreq;
 	int ret;
 
 	munmap(rb->map, rb->size);
-	drmModeRmFB(vdrm->fd, rb->fb);
-	memset(&dreq, 0, sizeof(dreq));
-	dreq.handle = rb->handle;
-	ret = drmIoctl(vdrm->fd, DRM_IOCTL_MODE_DESTROY_DUMB, &dreq);
+	drmModeRmFB(vdrm->fd, rb->id);
+	ret = drmModeDestroyDumbBuffer(vdrm->fd, rb->handle);
 	if (ret)
 		log_warning("cannot destroy dumb buffer (%d/%d): %m", ret, errno);
 }
@@ -185,7 +178,7 @@ static int display_activate(struct uterm_display *disp)
 	if (ret)
 		goto err_rb;
 
-	ret = drmModeSetCrtc(vdrm->fd, ddrm->crtc_id, d2d->rb[0].fb, 0, 0, &ddrm->conn_id, 1,
+	ret = drmModeSetCrtc(vdrm->fd, ddrm->crtc_id, d2d->rb[0].id, 0, 0, &ddrm->conn_id, 1,
 			     minfo);
 
 	if (ret && ddrm->current_mode == ddrm->desired_mode &&
@@ -245,7 +238,7 @@ static int display_swap(struct uterm_display *disp, bool immediate)
 	struct uterm_drm2d_display *d2d = uterm_drm_display_get_data(disp);
 
 	rb = d2d->current_rb ^ 1;
-	ret = uterm_drm_display_swap(disp, d2d->rb[rb].fb, immediate);
+	ret = uterm_drm_display_swap(disp, d2d->rb[rb].id, immediate);
 	if (ret)
 		return ret;
 

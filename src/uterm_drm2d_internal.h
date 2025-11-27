@@ -35,7 +35,7 @@
 #include "uterm_video.h"
 
 struct uterm_drm2d_rb {
-	uint32_t fb;
+	uint32_t id;
 	uint32_t handle;
 	uint32_t stride;
 	uint64_t size;
