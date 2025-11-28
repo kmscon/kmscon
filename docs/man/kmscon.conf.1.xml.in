@@ -396,13 +396,6 @@ font-name=Ubuntu Mono
       </varlistentry>
 
       <varlistentry>
-        <term><option>render-timing</option></term>
-        <listitem>
-          <para>Print renderer timing information. (default: off)</para>
-        </listitem>
-      </varlistentry>
-
-      <varlistentry>
         <term><option>use-original-mode</option></term>
         <listitem>
           <para>Use the original KMS video mode. (default: on)</para>

@@ -147,7 +147,6 @@ static void print_help()
 		"\t                                      available\n"
 		"\t    --gpus={all,aux,primary}  [all]   GPU selection mode\n"
 		"\t    --render-engine <eng>     [-]     Console renderer\n"
-		"\t    --render-timing           [off]   Print renderer timing information\n"
 		"\t    --use-original-mode     [on]    Use original KMS video mode\n"
 		"\t    --mode <width>x<height>   [0x0]  Set the desired mode for the\n"
 		"\t                                     output. If the specified mode is\n"
