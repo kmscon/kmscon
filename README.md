@@ -93,7 +93,7 @@ See `man kmscon` for more information.
 ### Config file
 
 The default configuration file is `/etc/kmscon/kmscon.conf`. Any command line option can be put in the config file in
-its long form without the leading `--` (double dash). See `man kmscon` for more information or look at [kmscon.com](scripts/etc/kmscon.conf)
+its long form without the leading `--` (double dash). See `man kmscon` for more information or look at [kmscon.conf](scripts/etc/kmscon.conf)
 
 ## License
 
