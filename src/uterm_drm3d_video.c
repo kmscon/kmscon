@@ -339,7 +339,6 @@ static const struct display_ops drm_display_ops = {
 	.deactivate = display_deactivate,
 	.set_dpms = uterm_drm_display_set_dpms,
 	.use = uterm_drm3d_display_use,
-	.get_buffers = NULL,
 	.swap = display_swap,
 	.fake_blendv = uterm_drm3d_display_fake_blendv,
 	.fill = uterm_drm3d_display_fill,

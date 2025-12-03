@@ -165,8 +165,6 @@ int uterm_display_set_dpms(struct uterm_display *disp, int state);
 int uterm_display_get_dpms(const struct uterm_display *disp);
 
 int uterm_display_use(struct uterm_display *disp, bool *opengl);
-int uterm_display_get_buffers(struct uterm_display *disp, struct uterm_video_buffer *buffer,
-			      unsigned int formats);
 int uterm_display_swap(struct uterm_display *disp, bool immediate);
 bool uterm_display_is_swapping(struct uterm_display *disp);
 
