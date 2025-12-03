@@ -64,7 +64,6 @@ struct display_ops {
 struct video_ops {
 	int (*init)(struct uterm_video *video, const char *node);
 	void (*destroy)(struct uterm_video *video);
-	void (*segfault)(struct uterm_video *video);
 	int (*poll)(struct uterm_video *video);
 	void (*sleep)(struct uterm_video *video);
 	int (*wake_up)(struct uterm_video *video);
