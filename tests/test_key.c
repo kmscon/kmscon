@@ -37,17 +37,16 @@ int main()
 	bool reset = false;
 
 	fprintf(stderr, "Quit with 'q' (maybe followed by 'enter'/'return')\r\n");
-	fprintf(stderr, "Maybe your terminal may be unusable after this, use 'reset' to fix it\r\n");
+	fprintf(stderr,
+		"Maybe your terminal may be unusable after this, use 'reset' to fix it\r\n");
 
 	if (tcgetattr(0, &omode) < 0) {
-		fprintf(stderr, "cannot retrieve terminal attributes (%d): %m\r\n",
-			errno);
+		fprintf(stderr, "cannot retrieve terminal attributes (%d): %m\r\n", errno);
 	} else {
 		memcpy(&nmode, &omode, sizeof(nmode));
 		cfmakeraw(&nmode);
 		if (tcsetattr(0, TCSANOW, &nmode) < 0)
-			fprintf(stderr, "cannot set terminal attributes (%d): %m\r\n",
-				errno);
+			fprintf(stderr, "cannot set terminal attributes (%d): %m\r\n", errno);
 		else
 			reset = true;
 	}
@@ -55,24 +54,21 @@ int main()
 	while (1) {
 		res = fread(&buf, 1, 1, stdin);
 		if (res != 1) {
-			fprintf(stderr, "error on stdin: %d %d: %m\r\n",
-				res, errno);
+			fprintf(stderr, "error on stdin: %d %d: %m\r\n", res, errno);
 			break;
 		}
 
 		if (buf == '\n')
 			fprintf(stderr, "key: <newline>\r\n");
 		else
-			fprintf(stderr, "key: %x %u %o '%c'\r\n",
-				(int)buf, buf, buf, buf);
+			fprintf(stderr, "key: %x %u %o '%c'\r\n", (int)buf, buf, buf, buf);
 
 		if (buf == 'q')
 			break;
 	}
 
 	if (reset && tcsetattr(0, TCSANOW, &omode) < 0)
-		fprintf(stderr, "cannot reset terminal attributes (%d): %m\r\n",
-			errno);
+		fprintf(stderr, "cannot reset terminal attributes (%d): %m\r\n", errno);
 
 	return 0;
 }

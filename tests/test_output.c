@@ -48,8 +48,8 @@ static void print_help();
 
 #include "eloop.h"
 #include "shl_log.h"
-#include "uterm_video.h"
 #include "test_include.h"
+#include "uterm_video.h"
 
 /* eloop object */
 static struct ev_eloop *eloop;
@@ -70,7 +70,7 @@ static int blit_outputs(struct uterm_video *video)
 
 	j = 0;
 	iter = uterm_video_get_displays(video);
-	for ( ; iter; iter = uterm_display_next(iter)) {
+	for (; iter; iter = uterm_display_next(iter)) {
 		log_notice("Activating display %d %p...", j, iter);
 		ret = uterm_display_activate(iter, NULL);
 		if (ret)
@@ -86,13 +86,12 @@ static int blit_outputs(struct uterm_video *video)
 	}
 
 	iter = uterm_video_get_displays(video);
-	for ( ; iter; iter = uterm_display_next(iter)) {
+	for (; iter; iter = uterm_display_next(iter)) {
 		if (uterm_display_get_state(iter) != UTERM_DISPLAY_ACTIVE)
 			continue;
 
 		mode = uterm_display_get_current(iter);
-		ret = uterm_display_fill(iter, 0xff, 0xff, 0xff, 0, 0,
-					 uterm_mode_get_width(mode),
+		ret = uterm_display_fill(iter, 0xff, 0xff, 0xff, 0, 0, uterm_mode_get_width(mode),
 					 uterm_mode_get_height(mode));
 		if (ret) {
 			log_err("cannot fill framebuffer");
@@ -125,7 +124,7 @@ static int list_outputs(struct uterm_video *video)
 
 	i = 0;
 	iter = uterm_video_get_displays(video);
-	for ( ; iter; iter = uterm_display_next(iter)) {
+	for (; iter; iter = uterm_display_next(iter)) {
 		cur = uterm_display_get_current(iter);
 
 		log_notice("Output %d:", i++);
@@ -133,7 +132,7 @@ static int list_outputs(struct uterm_video *video)
 		log_notice("  has current: %s", cur ? "yes" : "no");
 
 		mode = uterm_display_get_modes(iter);
-		for ( ; mode; mode = uterm_mode_next(mode)) {
+		for (; mode; mode = uterm_mode_next(mode)) {
 			log_notice("  Mode '%s':", uterm_mode_get_name(mode));
 			log_notice("    x: %u", uterm_mode_get_width(mode));
 			log_notice("    y: %u", uterm_mode_get_height(mode));
@@ -166,12 +165,11 @@ static void print_help()
 		"You can prefix boolean options with \"no-\" to negate it. If an argument is\n"
 		"given multiple times, only the last argument matters if not otherwise stated.\n"
 		"\n"
-		"General Options:\n"
-		TEST_HELP
-		"\n"
+		"General Options:\n" TEST_HELP "\n"
 		"Video Options:\n"
 		"\t    --fbdev                 [off]   Use fbdev instead of DRM\n"
-		"\t    --test                  [off]   Try displaying content instead of listing devices\n"
+		"\t    --test                  [off]   Try displaying content instead of listing "
+		"devices\n"
 		"\t    --dev                   [/dev/dri/card0 | /dev/fb0] Use the given device\n",
 		"test_input");
 	/*
@@ -188,7 +186,7 @@ struct conf_option options[] = {
 	TEST_OPTIONS,
 	CONF_OPTION_BOOL(0, "fbdev", &output_conf.fbdev, false),
 	CONF_OPTION_BOOL(0, "test", &output_conf.test, false),
-	CONF_OPTION_STRING(0, "dev",  &output_conf.dev, NULL),
+	CONF_OPTION_STRING(0, "dev", &output_conf.dev, NULL),
 	CONF_OPTION_UINT(0, "desired-width", &output_conf.desired_width, 0),
 	CONF_OPTION_UINT(0, "desired-height", &output_conf.desired_height, 0),
 };
@@ -219,14 +217,12 @@ int main(int argc, char **argv)
 
 	log_notice("Creating video object using %s...", node);
 
-	ret = uterm_video_new(&video, eloop, node, mode,
-			      output_conf.desired_width,
+	ret = uterm_video_new(&video, eloop, node, mode, output_conf.desired_width,
 			      output_conf.desired_height);
 	if (ret) {
 		if (!output_conf.fbdev) {
 			log_notice("cannot create drm device; trying drm2d mode");
-			ret = uterm_video_new(&video, eloop, node,
-					      "drm2d",
+			ret = uterm_video_new(&video, eloop, node, "drm2d",
 					      output_conf.desired_width,
 					      output_conf.desired_height);
 			if (ret)

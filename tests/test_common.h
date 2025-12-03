@@ -45,22 +45,22 @@
 #include <stdlib.h>
 
 /* lower address-space is protected from user-allocation, so this is invalid */
-#define TEST_INVALID_PTR ((void*)0x10)
+#define TEST_INVALID_PTR ((void *)0x10)
 
 #define UNUSED(x) (void)(x)
 
-#define TEST_DEFINE_CASE(_name)					\
-	static TCase *test_create_case_##_name(void)		\
-	{							\
-		TCase *tc;					\
-								\
-		tc = tcase_create(#_name);			\
+#define TEST_DEFINE_CASE(_name)                                                                    \
+	static TCase *test_create_case_##_name(void)                                               \
+	{                                                                                          \
+		TCase *tc;                                                                         \
+                                                                                                   \
+		tc = tcase_create(#_name);
 
 #define TEST(_name) tcase_add_test(tc, _name);
 
-#define TEST_END_CASE						\
-		return tc;					\
-	}							\
+#define TEST_END_CASE                                                                              \
+	return tc;                                                                                 \
+	}
 
 #define TEST_END NULL
 
@@ -75,7 +75,7 @@ static inline Suite *test_create_suite(const char *name, ...)
 	s = suite_create(name);
 
 	va_start(list, name);
-	while ((fn = va_arg(list, TCase *(*)(void))))
+	while ((fn = va_arg(list, TCase * (*)(void))))
 		suite_add_tcase(s, fn());
 	va_end(list);
 
@@ -97,26 +97,20 @@ static inline int test_run_suite(Suite *s)
 	return ret;
 }
 
-#define TEST_DEFINE(_suite) \
-	int main(int argc, char **argv) \
-	{ \
-		return test_run_suite(_suite); \
+#define TEST_DEFINE(_suite)                                                                        \
+	int main(int argc, char **argv)                                                            \
+	{                                                                                          \
+		return test_run_suite(_suite);                                                     \
 	}
 
 #ifndef ck_assert_mem_eq
 #include <string.h>
-#define ck_assert_mem_eq(_x, _y, _len) \
-	ck_assert(memcmp((_x), (_y), (_len)) == 0)
-#define ck_assert_mem_ne(_x, _y, _len) \
-	ck_assert(memcmp((_x), (_y), (_len)) != 0)
-#define ck_assert_mem_lt(_x, _y, _len) \
-	ck_assert(memcmp((_x), (_y), (_len)) < 0)
-#define ck_assert_mem_le(_x, _y, _len) \
-	ck_assert(memcmp((_x), (_y), (_len)) <= 0)
-#define ck_assert_mem_gt(_x, _y, _len) \
-	ck_assert(memcmp((_x), (_y), (_len)) > 0)
-#define ck_assert_mem_ge(_x, _y, _len) \
-	ck_assert(memcmp((_x), (_y), (_len)) >= 0)
+#define ck_assert_mem_eq(_x, _y, _len) ck_assert(memcmp((_x), (_y), (_len)) == 0)
+#define ck_assert_mem_ne(_x, _y, _len) ck_assert(memcmp((_x), (_y), (_len)) != 0)
+#define ck_assert_mem_lt(_x, _y, _len) ck_assert(memcmp((_x), (_y), (_len)) < 0)
+#define ck_assert_mem_le(_x, _y, _len) ck_assert(memcmp((_x), (_y), (_len)) <= 0)
+#define ck_assert_mem_gt(_x, _y, _len) ck_assert(memcmp((_x), (_y), (_len)) > 0)
+#define ck_assert_mem_ge(_x, _y, _len) ck_assert(memcmp((_x), (_y), (_len)) >= 0)
 #endif
 
 #endif /* TEST_COMMON_H */

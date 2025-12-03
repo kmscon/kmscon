@@ -44,9 +44,9 @@ static void print_help();
 #include <unistd.h>
 #include "eloop.h"
 #include "shl_log.h"
+#include "test_include.h"
 #include "uterm_input.h"
 #include "uterm_vt.h"
-#include "test_include.h"
 
 static void print_help()
 {
@@ -69,9 +69,7 @@ static void print_help()
 		"You can prefix boolean options with \"no-\" to negate it. If an argument is\n"
 		"given multiple times, only the last argument matters if not otherwise stated.\n"
 		"\n"
-		"General Options:\n"
-		TEST_HELP
-		"\n"
+		"General Options:\n" TEST_HELP "\n"
 		"VT Options:\n"
 		"\t    --vt <vt>               [-]     Path to VT to use\n"
 		"\t-s, --switchvt              [off]   Switch automatically to the new VT\n",
@@ -113,13 +111,12 @@ int main(int argc, char **argv)
 	if (ret)
 		goto err_exit;
 
-	ret = uterm_input_new(&input, eloop, "", "", "", "", "C", "", "", 0, 0,
-			      0, log_llog, NULL);
+	ret = uterm_input_new(&input, eloop, "", "", "", "", "C", "", "", 0, 0, 0, log_llog, NULL);
 	if (ret)
 		goto err_vtm;
 
-	ret = uterm_vt_allocate(vtm, &vt, UTERM_VT_FAKE | UTERM_VT_REAL,
-				"seat0", input, vtpath, NULL, NULL);
+	ret = uterm_vt_allocate(vtm, &vt, UTERM_VT_FAKE | UTERM_VT_REAL, "seat0", input, vtpath,
+				NULL, NULL);
 	if (ret)
 		goto err_input;
 

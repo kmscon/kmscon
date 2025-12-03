@@ -33,10 +33,10 @@
 #include "eloop.h"
 #include "shl_log.h"
 
-#define TEST_HELP \
-	"\t-h, --help                  [off]   Print this help and exit\n" \
-	"\t-v, --verbose               [off]   Print verbose messages\n" \
-	"\t    --debug                 [off]   Enable debug mode\n" \
+#define TEST_HELP                                                                                  \
+	"\t-h, --help                  [off]   Print this help and exit\n"                         \
+	"\t-v, --verbose               [off]   Print verbose messages\n"                           \
+	"\t    --debug                 [off]   Enable debug mode\n"                                \
 	"\t    --silent                [off]   Suppress notices and warnings\n"
 
 static struct {
@@ -49,8 +49,7 @@ static struct {
 
 static struct conf_ctx *test_ctx;
 
-static int aftercheck_debug(struct conf_option *opt, int argc, char **argv,
-			    int idx)
+static int aftercheck_debug(struct conf_option *opt, int argc, char **argv, int idx)
 {
 	/* --debug implies --verbose */
 	if (test_conf.debug)
@@ -59,8 +58,7 @@ static int aftercheck_debug(struct conf_option *opt, int argc, char **argv,
 	return 0;
 }
 
-static int aftercheck_help(struct conf_option *opt, int argc, char **argv,
-			   int idx)
+static int aftercheck_help(struct conf_option *opt, int argc, char **argv, int idx)
 {
 	/* exit after printing --help information */
 	if (test_conf.help) {
@@ -71,14 +69,14 @@ static int aftercheck_help(struct conf_option *opt, int argc, char **argv,
 	return 0;
 }
 
-#define TEST_OPTIONS \
-	CONF_OPTION_BOOL_FULL('h', "help", aftercheck_help, NULL, NULL, &test_conf.help, false), \
-	CONF_OPTION_BOOL('v', "verbose", &test_conf.verbose, false), \
-	CONF_OPTION_BOOL_FULL(0, "debug", aftercheck_debug, NULL, NULL, &test_conf.debug, false), \
-	CONF_OPTION_BOOL(0, "silent", &test_conf.silent, false)
+#define TEST_OPTIONS                                                                               \
+	CONF_OPTION_BOOL_FULL('h', "help", aftercheck_help, NULL, NULL, &test_conf.help, false),   \
+		CONF_OPTION_BOOL('v', "verbose", &test_conf.verbose, false),                       \
+		CONF_OPTION_BOOL_FULL(0, "debug", aftercheck_debug, NULL, NULL, &test_conf.debug,  \
+				      false),                                                      \
+		CONF_OPTION_BOOL(0, "silent", &test_conf.silent, false)
 
-static void sig_generic(struct ev_eloop *p, struct signalfd_siginfo *info,
-			void *data)
+static void sig_generic(struct ev_eloop *p, struct signalfd_siginfo *info, void *data)
 {
 	struct ev_eloop *eloop = data;
 
@@ -86,8 +84,8 @@ static void sig_generic(struct ev_eloop *p, struct signalfd_siginfo *info,
 	log_info("terminating due to caught signal %d", info->ssi_signo);
 }
 
-static int test_prepare(struct conf_option *opts, size_t len,
-			int argc, char **argv, struct ev_eloop **out)
+static int test_prepare(struct conf_option *opts, size_t len, int argc, char **argv,
+			struct ev_eloop **out)
 {
 	int ret;
 	struct ev_eloop *eloop;
@@ -108,8 +106,7 @@ static int test_prepare(struct conf_option *opts, size_t len,
 	if (!test_conf.debug && !test_conf.verbose && test_conf.silent)
 		log_set_config(&LOG_CONFIG_WARNING(0, 0, 0, 0));
 	else
-		log_set_config(&LOG_CONFIG_INFO(test_conf.debug,
-						test_conf.verbose));
+		log_set_config(&LOG_CONFIG_INFO(test_conf.debug, test_conf.verbose));
 
 	log_print_init(argv[0]);
 
@@ -123,8 +120,7 @@ static int test_prepare(struct conf_option *opts, size_t len,
 
 	ret = ev_eloop_register_signal_cb(eloop, SIGINT, sig_generic, eloop);
 	if (ret) {
-		ev_eloop_unregister_signal_cb(eloop, SIGTERM,
-						sig_generic, eloop);
+		ev_eloop_unregister_signal_cb(eloop, SIGTERM, sig_generic, eloop);
 		goto err_unref;
 	}
 
@@ -144,8 +140,7 @@ static void test_fail(int ret)
 		log_err("init failed, errno %d: %s", ret, strerror(-ret));
 }
 
-static void test_exit(struct conf_option *opts, size_t len,
-		      struct ev_eloop *eloop)
+static void test_exit(struct conf_option *opts, size_t len, struct ev_eloop *eloop)
 {
 	ev_eloop_unregister_signal_cb(eloop, SIGINT, sig_generic, eloop);
 	ev_eloop_unregister_signal_cb(eloop, SIGTERM, sig_generic, eloop);

@@ -39,9 +39,9 @@ static void print_help();
 #include <xkbcommon/xkbcommon.h>
 #include "eloop.h"
 #include "shl_log.h"
+#include "test_include.h"
 #include "uterm_input.h"
 #include "uterm_monitor.h"
-#include "test_include.h"
 
 static struct ev_eloop *eloop;
 static struct uterm_input *input;
@@ -57,9 +57,7 @@ struct {
 } input_conf;
 
 /* Pressing Ctrl-\ should toggle the capturing. */
-static void sig_quit(struct ev_eloop *p,
-			struct signalfd_siginfo *info,
-			void *data)
+static void sig_quit(struct ev_eloop *p, struct signalfd_siginfo *info, void *data)
 {
 	if (!input)
 		return;
@@ -88,9 +86,7 @@ static void print_modifiers(unsigned int mods)
 	printf("\n");
 }
 
-static void input_arrived(struct uterm_input *input,
-			  struct uterm_input_key_event *ev,
-			  void *data)
+static void input_arrived(struct uterm_input *input, struct uterm_input_key_event *ev, void *data)
 {
 	char s[32];
 
@@ -106,9 +102,7 @@ static void input_arrived(struct uterm_input *input,
 	print_modifiers(ev->mods);
 }
 
-static void monitor_event(struct uterm_monitor *mon,
-				struct uterm_monitor_event *ev,
-				void *data)
+static void monitor_event(struct uterm_monitor *mon, struct uterm_monitor_event *ev, void *data)
 {
 	int ret;
 	char *keymap, *compose_file;
@@ -120,32 +114,26 @@ static void monitor_event(struct uterm_monitor *mon,
 
 		keymap = NULL;
 		if (input_conf.xkb_keymap && *input_conf.xkb_keymap) {
-			ret = shl_read_file(input_conf.xkb_keymap, &keymap,
-					    NULL);
+			ret = shl_read_file(input_conf.xkb_keymap, &keymap, NULL);
 			if (ret)
-				log_error("cannot read keymap file %s: %d",
-					  input_conf.xkb_keymap, ret);
+				log_error("cannot read keymap file %s: %d", input_conf.xkb_keymap,
+					  ret);
 		}
 
 		compose_file = NULL;
 		compose_file_len = 0;
-		if (input_conf.xkb_compose_file &&
-		    *input_conf.xkb_compose_file) {
-			ret = shl_read_file(input_conf.xkb_compose_file,
-					    &compose_file, &compose_file_len);
+		if (input_conf.xkb_compose_file && *input_conf.xkb_compose_file) {
+			ret = shl_read_file(input_conf.xkb_compose_file, &compose_file,
+					    &compose_file_len);
 			if (ret)
 				log_error("cannot read compose file %s: %d",
 					  input_conf.xkb_compose_file, ret);
 		}
 
-		ret = uterm_input_new(&input, eloop,
-				      input_conf.xkb_model,
-				      input_conf.xkb_layout,
-				      input_conf.xkb_variant,
-				      input_conf.xkb_options,
-				      input_conf.locale,
-				      keymap, compose_file, compose_file_len,
-				      0, 0, log_llog, NULL);
+		ret = uterm_input_new(&input, eloop, input_conf.xkb_model, input_conf.xkb_layout,
+				      input_conf.xkb_variant, input_conf.xkb_options,
+				      input_conf.locale, keymap, compose_file, compose_file_len, 0,
+				      0, log_llog, NULL);
 		if (ret)
 			return;
 		ret = uterm_input_register_key_cb(input, input_arrived, NULL);
@@ -185,9 +173,7 @@ static void print_help()
 		"You can prefix boolean options with \"no-\" to negate it. If an argument is\n"
 		"given multiple times, only the last argument matters if not otherwise stated.\n"
 		"\n"
-		"General Options:\n"
-		TEST_HELP
-		"\n"
+		"General Options:\n" TEST_HELP "\n"
 		"Input Device Options:\n"
 		"\t    --xkb-model <model>     [-]     Set XkbModel for input devices\n"
 		"\t    --xkb-layout <layout>   [-]     Set XkbLayout for input devices\n"
