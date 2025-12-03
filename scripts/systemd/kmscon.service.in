@@ -6,7 +6,7 @@ After=systemd-user-sessions.service
 After=rc-local.service
 
 [Service]
-ExecStart=@bindir@/kmscon --login -- /sbin/agetty -o '-p -- \\u' --noclear -- -
+ExecStart=@bindir@/kmscon --login -- /sbin/agetty -o '-p -- \\u' --noclear -- - $$TERM
 
 [Install]
 WantedBy=multi-user.target
