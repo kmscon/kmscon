@@ -26,18 +26,17 @@
 #include "font_rotate.h"
 #include "shl_misc.h"
 
- SHL_EXPORT
-int kmscon_rotate_create_tables(struct shl_hashtable **normal, struct shl_hashtable **bold, shl_free_cb free_glyph)
+SHL_EXPORT
+int kmscon_rotate_create_tables(struct shl_hashtable **normal, struct shl_hashtable **bold,
+				shl_free_cb free_glyph)
 {
 	int ret;
 
-	ret = shl_hashtable_new(normal, shl_direct_hash,
-				shl_direct_equal, free_glyph);
+	ret = shl_hashtable_new(normal, shl_direct_hash, shl_direct_equal, free_glyph);
 	if (ret)
 		return ret;
 
-	ret = shl_hashtable_new(bold, shl_direct_hash,
-				shl_direct_equal, free_glyph);
+	ret = shl_hashtable_new(bold, shl_direct_hash, shl_direct_equal, free_glyph);
 	if (ret)
 		shl_hashtable_free(*normal);
 	return ret;
@@ -51,7 +50,8 @@ void kmscon_rotate_free_tables(struct shl_hashtable *normal, struct shl_hashtabl
 }
 
 SHL_EXPORT
-int kmscon_rotate_glyph(struct uterm_video_buffer *vb, const struct kmscon_glyph *glyph, enum Orientation orientation, uint8_t align)
+int kmscon_rotate_glyph(struct uterm_video_buffer *vb, const struct kmscon_glyph *glyph,
+			enum Orientation orientation, uint8_t align)
 {
 	int width;
 	int height;
@@ -68,7 +68,7 @@ int kmscon_rotate_glyph(struct uterm_video_buffer *vb, const struct kmscon_glyph
 		height = buf->width;
 	}
 
-	stride =  align * ((width + (align - 1)) / align);
+	stride = align * ((width + (align - 1)) / align);
 	vb->data = malloc(stride * height);
 
 	if (!vb->data)
@@ -93,7 +93,7 @@ int kmscon_rotate_glyph(struct uterm_video_buffer *vb, const struct kmscon_glyph
 			}
 			src += buf->stride;
 		}
-	break;
+		break;
 	case OR_UPSIDE_DOWN:
 		src += (buf->height - 1) * buf->stride;
 		for (i = 0; i < buf->height; i++) {
@@ -106,7 +106,7 @@ int kmscon_rotate_glyph(struct uterm_video_buffer *vb, const struct kmscon_glyph
 	case OR_LEFT:
 		for (i = 0; i < buf->height; i++) {
 			for (j = 0; j < buf->width; j++) {
-				dst[(height -j -1) * stride + i] = src[j];
+				dst[(height - j - 1) * stride + i] = src[j];
 			}
 			src += buf->stride;
 		}
@@ -117,4 +117,3 @@ int kmscon_rotate_glyph(struct uterm_video_buffer *vb, const struct kmscon_glyph
 	vb->format = buf->format;
 	return 0;
 }
-

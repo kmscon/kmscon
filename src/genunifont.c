@@ -68,8 +68,7 @@ static void print_unifont_glyph(FILE *out, const struct unifont_glyph *g)
 	case 64:
 		break;
 	default:
-		fprintf(stderr, "genunifont: invalid data size %d for %x",
-			g->len, g->codepoint);
+		fprintf(stderr, "genunifont: invalid data size %d for %x", g->len, g->codepoint);
 		return;
 	}
 
@@ -79,7 +78,7 @@ static void print_unifont_glyph(FILE *out, const struct unifont_glyph *g)
 		val |= hex_val(g->data[i + 1]);
 		fprintf(out, "%c", val);
 	}
-	for ( ; i < 64; i += 2)
+	for (; i < 64; i += 2)
 		fprintf(out, "%c", 0);
 }
 
@@ -112,10 +111,7 @@ static int build_unifont_glyph(struct unifont_glyph *g, const char *buf)
 static int parse_single_file(FILE *out, FILE *in)
 {
 	static const struct unifont_glyph replacement = {
-		.codepoint = 0,
-		.len = 32,
-		.data = "0000007E665A5A7A76767E76767E0000"
-	};
+		.codepoint = 0, .len = 32, .data = "0000007E665A5A7A76767E76767E0000"};
 	char buf[MAX_DATA_SIZE];
 	struct unifont_glyph *g, **iter, *list, *last;
 	int ret, num;
@@ -185,8 +181,7 @@ static int parse_single_file(FILE *out, FILE *in)
 				iter = &(*iter)->next;
 
 			if (*iter && (*iter)->codepoint == g->codepoint) {
-				fprintf(stderr, "glyph %d used twice\n",
-					g->codepoint);
+				fprintf(stderr, "glyph %d used twice\n", g->codepoint);
 				free(g);
 				return -EFAULT;
 			}
@@ -231,29 +226,25 @@ int main(int argc, char **argv)
 
 	out = fopen(argv[1], "wb");
 	if (!out) {
-		fprintf(stderr, "genunifont: cannot open output %s: %m\n",
-			argv[1]);
+		fprintf(stderr, "genunifont: cannot open output %s: %m\n", argv[1]);
 		ret = EXIT_FAILURE;
 		goto err_out;
 	}
 
 	in = fopen(argv[2], "rb");
 	if (!in) {
-		fprintf(stderr, "genunifont: cannot open %s: %m\n",
-			argv[2]);
+		fprintf(stderr, "genunifont: cannot open %s: %m\n", argv[2]);
 		ret = EXIT_FAILURE;
 	} else {
 		ret = parse_single_file(out, in);
 		if (ret) {
-			fprintf(stderr, "genunifont: parsing input %s failed",
-				argv[2]);
+			fprintf(stderr, "genunifont: parsing input %s failed", argv[2]);
 			ret = EXIT_FAILURE;
 		} else {
 			ret = EXIT_SUCCESS;
 		}
 		fclose(in);
 	}
-
 
 	fclose(out);
 err_out:

@@ -44,14 +44,14 @@ struct conf_ctx;
 
 /* Conf Types */
 
-#define CONF_HAS_ARG		0x0001
+#define CONF_HAS_ARG 0x0001
 
 struct conf_type {
 	unsigned int flags;
-	void (*set_default) (struct conf_option *opt);
-	void (*free) (struct conf_option *opt);
-	int (*parse) (struct conf_option *opt, bool on, const char *arg);
-	int (*copy) (struct conf_option *opt, const struct conf_option *src);
+	void (*set_default)(struct conf_option *opt);
+	void (*free)(struct conf_option *opt);
+	int (*parse)(struct conf_option *opt, bool on, const char *arg);
+	int (*copy)(struct conf_option *opt, const struct conf_option *src);
 };
 
 /*
@@ -107,21 +107,19 @@ struct conf_grab {
 	uint32_t **keysyms;
 };
 
-static inline bool conf_grab_matches(const struct conf_grab *grab,
-				     unsigned int ev_mods,
-				     unsigned int ev_num_syms,
-				     const uint32_t *ev_syms)
+static inline bool conf_grab_matches(const struct conf_grab *grab, unsigned int ev_mods,
+				     unsigned int ev_num_syms, const uint32_t *ev_syms)
 {
-	return shl_grab_has_match(ev_mods, ev_num_syms, ev_syms,
-				  grab->num, grab->mods, grab->num_syms,
-				  grab->keysyms);
+	return shl_grab_has_match(ev_mods, ev_num_syms, ev_syms, grab->num, grab->mods,
+				  grab->num_syms, grab->keysyms);
 }
 
-#define CONF_SINGLE_GRAB(_mods, _sym) { \
-		.num = 1, \
-		.mods = (unsigned int[]) { (_mods) }, \
-		.num_syms = (unsigned int[]) { 1 }, \
-		.keysyms = (uint32_t*[]) { (uint32_t[]) { (_sym) } }, \
+#define CONF_SINGLE_GRAB(_mods, _sym)                                                              \
+	{                                                                                          \
+		.num = 1,                                                                          \
+		.mods = (unsigned int[]){(_mods)},                                                 \
+		.num_syms = (unsigned int[]){1},                                                   \
+		.keysyms = (uint32_t *[]){(uint32_t[]){(_sym)}},                                   \
 	}
 
 /*
@@ -134,8 +132,7 @@ static inline bool conf_grab_matches(const struct conf_grab *grab,
 
 struct conf_ctx;
 
-int conf_ctx_new(struct conf_ctx **out, const struct conf_option *opts,
-		 size_t onum, void *mem);
+int conf_ctx_new(struct conf_ctx **out, const struct conf_option *opts, size_t onum, void *mem);
 void conf_ctx_free(struct conf_ctx *ctx);
 void conf_ctx_reset(struct conf_ctx *ctx);
 void *conf_ctx_get_mem(struct conf_ctx *ctx);
@@ -151,52 +148,54 @@ int conf_ctx_parse_file(struct conf_ctx *ctx, const char *format, ...);
  * this structure.
  */
 
-#define CONF_LOCKED		0x0001
+#define CONF_LOCKED 0x0001
 
 struct conf_option {
 	unsigned int flags;
 	char short_name;
 	const char *long_name;
 	const struct conf_type *type;
-	int (*aftercheck) (struct conf_option *opt, int argc,
-			   char **argv, int idx);
-	int (*copy) (struct conf_option *opt, const struct conf_option *src);
-	int (*file) (struct conf_option *opt, bool on, const char *arg);
+	int (*aftercheck)(struct conf_option *opt, int argc, char **argv, int idx);
+	int (*copy)(struct conf_option *opt, const struct conf_option *src);
+	int (*file)(struct conf_option *opt, bool on, const char *arg);
 	void *mem;
 	void *def;
 };
 
-#define CONF_OPTION(_flags, _short, _long, _type, _aftercheck, _copy, _file, _mem, _def) \
-	{ _flags, _short, "no-" _long, _type, _aftercheck, _copy, _file, _mem, _def }
+#define CONF_OPTION(_flags, _short, _long, _type, _aftercheck, _copy, _file, _mem, _def)           \
+	{_flags, _short, "no-" _long, _type, _aftercheck, _copy, _file, _mem, _def}
 
-#define CONF_OPTION_BOOL_FULL(_short, _long, _aftercheck, _copy, _file, _mem, _def) \
-	CONF_OPTION(0, _short, _long, &conf_bool, _aftercheck, _copy, _file, _mem, (void*)(long)_def)
-#define CONF_OPTION_BOOL(_short, _long, _mem, _def) \
+#define CONF_OPTION_BOOL_FULL(_short, _long, _aftercheck, _copy, _file, _mem, _def)                \
+	CONF_OPTION(0, _short, _long, &conf_bool, _aftercheck, _copy, _file, _mem,                 \
+		    (void *)(long)_def)
+#define CONF_OPTION_BOOL(_short, _long, _mem, _def)                                                \
 	CONF_OPTION_BOOL_FULL(_short, _long, NULL, NULL, NULL, _mem, _def)
 
-#define CONF_OPTION_INT_FULL(_short, _long, _aftercheck, _copy, _file, _mem, _def) \
-	CONF_OPTION(0, _short, _long, &conf_int, _aftercheck, _copy, _file, _mem, (void*)(long)_def)
-#define CONF_OPTION_INT(_short, _long, _mem, _def) \
+#define CONF_OPTION_INT_FULL(_short, _long, _aftercheck, _copy, _file, _mem, _def)                 \
+	CONF_OPTION(0, _short, _long, &conf_int, _aftercheck, _copy, _file, _mem,                  \
+		    (void *)(long)_def)
+#define CONF_OPTION_INT(_short, _long, _mem, _def)                                                 \
 	CONF_OPTION_INT_FULL(_short, _long, NULL, NULL, NULL, _mem, _def)
 
-#define CONF_OPTION_UINT_FULL(_short, _long, _aftercheck, _copy, _file, _mem, _def) \
-	CONF_OPTION(0, _short, _long, &conf_uint, _aftercheck, _copy, _file, _mem, (void*)(unsigned long)_def)
-#define CONF_OPTION_UINT(_short, _long, _mem, _def) \
+#define CONF_OPTION_UINT_FULL(_short, _long, _aftercheck, _copy, _file, _mem, _def)                \
+	CONF_OPTION(0, _short, _long, &conf_uint, _aftercheck, _copy, _file, _mem,                 \
+		    (void *)(unsigned long)_def)
+#define CONF_OPTION_UINT(_short, _long, _mem, _def)                                                \
 	CONF_OPTION_UINT_FULL(_short, _long, NULL, NULL, NULL, _mem, _def)
 
-#define CONF_OPTION_STRING_FULL(_short, _long, _aftercheck, _copy, _file, _mem, _def) \
+#define CONF_OPTION_STRING_FULL(_short, _long, _aftercheck, _copy, _file, _mem, _def)              \
 	CONF_OPTION(0, _short, _long, &conf_string, _aftercheck, _copy, _file, _mem, _def)
-#define CONF_OPTION_STRING(_short, _long, _mem, _def) \
+#define CONF_OPTION_STRING(_short, _long, _mem, _def)                                              \
 	CONF_OPTION_STRING_FULL(_short, _long, NULL, NULL, NULL, _mem, _def)
 
-#define CONF_OPTION_STRING_LIST_FULL(_short, _long, _aftercheck, _copy, _file, _mem, _def) \
+#define CONF_OPTION_STRING_LIST_FULL(_short, _long, _aftercheck, _copy, _file, _mem, _def)         \
 	CONF_OPTION(0, _short, _long, &conf_string_list, _aftercheck, _copy, _file, _mem, _def)
-#define CONF_OPTION_STRING_LIST(_short, _long, _mem, _def) \
+#define CONF_OPTION_STRING_LIST(_short, _long, _mem, _def)                                         \
 	CONF_OPTION_STRING_LIST_FULL(_short, _long, NULL, NULL, NULL, _mem, _def)
 
-#define CONF_OPTION_GRAB_FULL(_short, _long, _aftercheck, _copy, _file, _mem, _def) \
+#define CONF_OPTION_GRAB_FULL(_short, _long, _aftercheck, _copy, _file, _mem, _def)                \
 	CONF_OPTION(0, _short, _long, &conf_grab, _aftercheck, _copy, _file, _mem, _def)
-#define CONF_OPTION_GRAB(_short, _long, _mem, _def) \
+#define CONF_OPTION_GRAB(_short, _long, _mem, _def)                                                \
 	CONF_OPTION_GRAB_FULL(_short, _long, NULL, NULL, NULL, _mem, _def)
 
 #endif /* CONF_CONF_H */

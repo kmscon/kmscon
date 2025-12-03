@@ -109,8 +109,8 @@ static void manager__unref()
 	}
 }
 
-static int get_glyph(struct face *face, struct kmscon_glyph **out,
-		     uint64_t id, const uint32_t *ch, size_t len, const struct kmscon_font_attr *attr)
+static int get_glyph(struct face *face, struct kmscon_glyph **out, uint64_t id, const uint32_t *ch,
+		     size_t len, const struct kmscon_font_attr *attr)
 {
 	struct kmscon_glyph *glyph;
 	PangoLayout *layout;
@@ -131,7 +131,7 @@ static int get_glyph(struct face *face, struct kmscon_glyph **out,
 		return -ERANGE;
 
 	pthread_mutex_lock(&face->glyph_lock);
-	res = shl_hashtable_find(face->glyphs, (void**)&glyph, id);
+	res = shl_hashtable_find(face->glyphs, (void **)&glyph, id);
 	pthread_mutex_unlock(&face->glyph_lock);
 	if (res) {
 		*out = glyph;
@@ -164,20 +164,16 @@ static int get_glyph(struct face *face, struct kmscon_glyph **out,
 
 	/* underline if requested */
 	if (attr->underline) {
-		pango_attr_list_change(attrlist,
-							   pango_attr_underline_new(PANGO_UNDERLINE_SINGLE));
+		pango_attr_list_change(attrlist, pango_attr_underline_new(PANGO_UNDERLINE_SINGLE));
 	} else {
-		pango_attr_list_change(attrlist,
-							   pango_attr_underline_new(PANGO_UNDERLINE_NONE));
+		pango_attr_list_change(attrlist, pango_attr_underline_new(PANGO_UNDERLINE_NONE));
 	}
 
 	/* italic if requested */
 	if (attr->italic) {
-		pango_attr_list_change(attrlist,
-							   pango_attr_style_new(PANGO_STYLE_ITALIC));
+		pango_attr_list_change(attrlist, pango_attr_style_new(PANGO_STYLE_ITALIC));
 	} else {
-		pango_attr_list_change(attrlist,
-							   pango_attr_style_new(PANGO_STYLE_NORMAL));
+		pango_attr_list_change(attrlist, pango_attr_style_new(PANGO_STYLE_NORMAL));
 	}
 
 	val = tsm_ucs4_to_utf8_alloc(ch, len, &ulen);
@@ -199,7 +195,8 @@ static int get_glyph(struct face *face, struct kmscon_glyph **out,
 	pango_layout_line_get_extents(line, &logical_rec, &rec);
 	pango_extents_to_pixels(&rec, &logical_rec);
 
-	glyph->width = (logical_rec.x + logical_rec.width > rec.x + face->real_attr.width) ? 2 : cwidth;
+	glyph->width =
+		(logical_rec.x + logical_rec.width > rec.x + face->real_attr.width) ? 2 : cwidth;
 	glyph->buf.width = face->real_attr.width * glyph->width;
 	glyph->buf.height = face->real_attr.height;
 	glyph->buf.stride = glyph->buf.width;
@@ -269,7 +266,8 @@ static int manager_get_face(struct face **out, struct kmscon_font_attr *attr)
 
 	manager_lock();
 
-	shl_dlist_for_each(iter, &manager__list) {
+	shl_dlist_for_each(iter, &manager__list)
+	{
 		face = shl_dlist_entry(iter, struct face, list);
 		if (kmscon_font_attr_match(&face->attr, attr)) {
 			++face->ref;
@@ -299,8 +297,7 @@ static int manager_get_face(struct face **out, struct kmscon_font_attr *attr)
 		goto err_free;
 	}
 
-	ret = shl_hashtable_new(&face->glyphs, shl_direct_hash,
-				shl_direct_equal, free_glyph);
+	ret = shl_hashtable_new(&face->glyphs, shl_direct_hash, shl_direct_equal, free_glyph);
 	if (ret) {
 		log_error("cannot allocate hashtable");
 		goto err_lock;
@@ -311,12 +308,11 @@ static int manager_get_face(struct face **out, struct kmscon_font_attr *attr)
 	pango_context_set_language(face->ctx, pango_language_get_default());
 
 	desc = pango_font_description_from_string(attr->name);
-	pango_font_description_set_absolute_size(desc,
-					PANGO_SCALE * face->attr.height);
+	pango_font_description_set_absolute_size(desc, PANGO_SCALE * face->attr.height);
 	pango_font_description_set_weight(desc,
-			attr->bold ? PANGO_WEIGHT_BOLD : PANGO_WEIGHT_NORMAL);
+					  attr->bold ? PANGO_WEIGHT_BOLD : PANGO_WEIGHT_NORMAL);
 	pango_font_description_set_style(desc,
-			attr->italic ? PANGO_STYLE_ITALIC : PANGO_STYLE_NORMAL);
+					 attr->italic ? PANGO_STYLE_ITALIC : PANGO_STYLE_NORMAL);
 	pango_font_description_set_variant(desc, PANGO_VARIANT_NORMAL);
 	pango_font_description_set_stretch(desc, PANGO_STRETCH_NORMAL);
 	pango_font_description_set_gravity(desc, PANGO_GRAVITY_SOUTH);
@@ -349,7 +345,8 @@ static int manager_get_face(struct face **out, struct kmscon_font_attr *attr)
 
 	/* The real metrics probably differ from the requested metrics so try
 	 * again to find a suitable cached font. */
-	shl_dlist_for_each(iter, &manager__list) {
+	shl_dlist_for_each(iter, &manager__list)
+	{
 		f = shl_dlist_entry(iter, struct face, list);
 		if (kmscon_font_attr_match(&f->real_attr, &face->real_attr)) {
 			++f->ref;
@@ -405,8 +402,7 @@ static void block_sigchild(void)
 	pthread_sigmask(SIG_BLOCK, &mask, NULL);
 }
 
-static int kmscon_font_pango_init(struct kmscon_font *out,
-				  const struct kmscon_font_attr *attr)
+static int kmscon_font_pango_init(struct kmscon_font *out, const struct kmscon_font_attr *attr)
 {
 	struct face *face = NULL;
 	int ret;
@@ -437,9 +433,8 @@ static void kmscon_font_pango_destroy(struct kmscon_font *font)
 	manager_put_face(face);
 }
 
-static int kmscon_font_pango_render(struct kmscon_font *font, uint64_t id,
-				    const uint32_t *ch, size_t len,
-				    const struct kmscon_glyph **out)
+static int kmscon_font_pango_render(struct kmscon_font *font, uint64_t id, const uint32_t *ch,
+				    size_t len, const struct kmscon_glyph **out)
 {
 	struct kmscon_glyph *glyph;
 	int ret;
@@ -452,25 +447,20 @@ static int kmscon_font_pango_render(struct kmscon_font *font, uint64_t id,
 	return 0;
 }
 
-static int kmscon_font_pango_render_empty(struct kmscon_font *font,
-					  const struct kmscon_glyph **out)
+static int kmscon_font_pango_render_empty(struct kmscon_font *font, const struct kmscon_glyph **out)
 {
 	static const uint32_t empty_char = ' ';
 	return kmscon_font_pango_render(font, empty_char, &empty_char, 1, out);
 }
 
-static int kmscon_font_pango_render_inval(struct kmscon_font *font,
-					  const struct kmscon_glyph **out)
+static int kmscon_font_pango_render_inval(struct kmscon_font *font, const struct kmscon_glyph **out)
 {
 	static const uint32_t question_mark = '?';
-	return kmscon_font_pango_render(font, question_mark, &question_mark, 1,
-					out);
+	return kmscon_font_pango_render(font, question_mark, &question_mark, 1, out);
 }
 
-static bool kmscon_font_pango_get_overflow(struct kmscon_font *font,
-					   uint64_t id,
-					   const uint32_t *ch,
-					   size_t len)
+static bool kmscon_font_pango_get_overflow(struct kmscon_font *font, uint64_t id,
+					   const uint32_t *ch, size_t len)
 {
 	struct face *face = font->data;
 	unsigned int cwidth;

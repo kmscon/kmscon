@@ -32,19 +32,19 @@
 
 #include <stdbool.h>
 #include <stdlib.h>
-#include "shl_module.h"
 #include "shl_dlist.h"
 #include "shl_githead.h"
 #include "shl_misc.h"
+#include "shl_module.h"
 
 struct shl_module_info {
 	const char *githead;
 	const char *date;
 	const char *time;
-	int (*init) (void);
-	int (*load) (void);
-	void (*unload) (void);
-	void (*exit) (void);
+	int (*init)(void);
+	int (*load)(void);
+	void (*unload)(void);
+	void (*exit)(void);
 };
 
 struct shl_module {
@@ -56,17 +56,18 @@ struct shl_module {
 	char *file;
 };
 
-#define SHL_MODULE(_init, _load, _unload, _exit) \
-	struct shl_module module = { \
-		.info = { \
-			.githead = shl_git_head, \
-			.date = __DATE__, \
-			.time = __TIME__, \
-			.init = _init, \
-			.load = _load, \
-			.unload = _unload, \
-			.exit = _exit, \
-		}, \
+#define SHL_MODULE(_init, _load, _unload, _exit)                                                   \
+	struct shl_module module = {                                                               \
+		.info =                                                                            \
+			{                                                                          \
+				.githead = shl_git_head,                                           \
+				.date = __DATE__,                                                  \
+				.time = __TIME__,                                                  \
+				.init = _init,                                                     \
+				.load = _load,                                                     \
+				.unload = _unload,                                                 \
+				.exit = _exit,                                                     \
+			},                                                                         \
 	};
 
 SHL_EXPORT

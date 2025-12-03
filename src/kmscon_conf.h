@@ -31,10 +31,10 @@
 #ifndef KMSCON_MAIN_H
 #define KMSCON_MAIN_H
 
+#include <libtsm.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdlib.h>
-#include <libtsm.h>
 #include "conf.h"
 #include "shl_dlist.h"
 
@@ -178,8 +178,7 @@ struct kmscon_conf_t {
 int kmscon_conf_new(struct conf_ctx **out);
 void kmscon_conf_free(struct conf_ctx *ctx);
 int kmscon_conf_load_main(struct conf_ctx *ctx, int argc, char **argv);
-int kmscon_conf_load_seat(struct conf_ctx *ctx, const struct conf_ctx *main,
-			  const char *seat);
+int kmscon_conf_load_seat(struct conf_ctx *ctx, const struct conf_ctx *main, const char *seat);
 
 static inline bool kmscon_conf_is_current_seat(struct kmscon_conf_t *conf)
 {

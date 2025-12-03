@@ -97,10 +97,10 @@ struct uterm_display_event {
 };
 
 enum uterm_video_format {
-	UTERM_FORMAT_GREY	= 0x01,
-	UTERM_FORMAT_XRGB32	= 0x02,
-	UTERM_FORMAT_RGB16	= 0x04,
-	UTERM_FORMAT_RGB24	= 0x08,
+	UTERM_FORMAT_GREY = 0x01,
+	UTERM_FORMAT_XRGB32 = 0x02,
+	UTERM_FORMAT_RGB16 = 0x04,
+	UTERM_FORMAT_RGB24 = 0x08,
 };
 
 struct uterm_video_buffer {
@@ -123,12 +123,10 @@ struct uterm_video_blend_req {
 	uint8_t bb;
 };
 
-typedef void (*uterm_video_cb) (struct uterm_video *video,
-				struct uterm_video_hotplug *arg,
-				void *data);
-typedef void (*uterm_display_cb) (struct uterm_display *disp,
-				  struct uterm_display_event *arg,
-				  void *data);
+typedef void (*uterm_video_cb)(struct uterm_video *video, struct uterm_video_hotplug *arg,
+			       void *data);
+typedef void (*uterm_display_cb)(struct uterm_display *disp, struct uterm_display_event *arg,
+				 void *data);
 
 /* misc */
 
@@ -152,10 +150,8 @@ bool uterm_display_is_drm(struct uterm_display *disp);
 const char *uterm_display_backend_name(struct uterm_display *disp);
 struct uterm_display *uterm_display_next(struct uterm_display *disp);
 
-int uterm_display_register_cb(struct uterm_display *disp, uterm_display_cb cb,
-			      void *data);
-void uterm_display_unregister_cb(struct uterm_display *disp,
-				 uterm_display_cb cb, void *data);
+int uterm_display_register_cb(struct uterm_display *disp, uterm_display_cb cb, void *data);
+void uterm_display_unregister_cb(struct uterm_display *disp, uterm_display_cb cb, void *data);
 
 struct uterm_mode *uterm_display_get_modes(struct uterm_display *disp);
 struct uterm_mode *uterm_display_get_current(struct uterm_display *disp);
@@ -169,39 +165,30 @@ int uterm_display_set_dpms(struct uterm_display *disp, int state);
 int uterm_display_get_dpms(const struct uterm_display *disp);
 
 int uterm_display_use(struct uterm_display *disp, bool *opengl);
-int uterm_display_get_buffers(struct uterm_display *disp,
-			      struct uterm_video_buffer *buffer,
+int uterm_display_get_buffers(struct uterm_display *disp, struct uterm_video_buffer *buffer,
 			      unsigned int formats);
 int uterm_display_swap(struct uterm_display *disp, bool immediate);
 bool uterm_display_is_swapping(struct uterm_display *disp);
 
-int uterm_display_fill(struct uterm_display *disp,
-		       uint8_t r, uint8_t g, uint8_t b,
-		       unsigned int x, unsigned int y,
-		       unsigned int width, unsigned int height);
-int uterm_display_fake_blend(struct uterm_display *disp,
-			     const struct uterm_video_buffer *buf,
-			     unsigned int x, unsigned int y,
-			     uint8_t fr, uint8_t fg, uint8_t fb,
+int uterm_display_fill(struct uterm_display *disp, uint8_t r, uint8_t g, uint8_t b, unsigned int x,
+		       unsigned int y, unsigned int width, unsigned int height);
+int uterm_display_fake_blend(struct uterm_display *disp, const struct uterm_video_buffer *buf,
+			     unsigned int x, unsigned int y, uint8_t fr, uint8_t fg, uint8_t fb,
 			     uint8_t br, uint8_t bg, uint8_t bb);
-int uterm_display_fake_blendv(struct uterm_display *disp,
-			      const struct uterm_video_blend_req *req,
+int uterm_display_fake_blendv(struct uterm_display *disp, const struct uterm_video_blend_req *req,
 			      size_t num);
 
 /* video interface */
 
-int uterm_video_new(struct uterm_video **out, struct ev_eloop *eloop,
-		    const char *node, const char *backend,
-		    unsigned int desired_width, unsigned int desired_height);
+int uterm_video_new(struct uterm_video **out, struct ev_eloop *eloop, const char *node,
+		    const char *backend, unsigned int desired_width, unsigned int desired_height);
 void uterm_video_ref(struct uterm_video *video);
 void uterm_video_unref(struct uterm_video *video);
 
 void uterm_video_segfault(struct uterm_video *video);
 struct uterm_display *uterm_video_get_displays(struct uterm_video *video);
-int uterm_video_register_cb(struct uterm_video *video, uterm_video_cb cb,
-			    void *data);
-void uterm_video_unregister_cb(struct uterm_video *video, uterm_video_cb cb,
-			       void *data);
+int uterm_video_register_cb(struct uterm_video *video, uterm_video_cb cb, void *data);
+void uterm_video_unregister_cb(struct uterm_video *video, uterm_video_cb cb, void *data);
 
 int uterm_video_register(const struct uterm_video_module *ops);
 void uterm_video_unregister(const char *name);
@@ -213,7 +200,8 @@ void uterm_video_poll(struct uterm_video *video);
 #ifdef BUILD_ENABLE_VIDEO_DRM2D
 extern struct uterm_video_module drm2d_module;
 
-static inline void uterm_register_drm2d(void) {
+static inline void uterm_register_drm2d(void)
+{
 	uterm_video_register(&drm2d_module);
 }
 
@@ -224,7 +212,8 @@ static inline void uterm_register_drm2d(void) {}
 #ifdef BUILD_ENABLE_VIDEO_FBDEV
 extern struct uterm_video_module fbdev_module;
 
-static inline void uterm_register_fbdev(void) {
+static inline void uterm_register_fbdev(void)
+{
 	uterm_video_register(&fbdev_module);
 }
 #else

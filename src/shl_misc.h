@@ -143,8 +143,7 @@ static inline unsigned long shl_next_pow2(unsigned long num)
  * array. You can set it to NULL to not retrieve this value.
  * \sep is the separator character which must be a valid ASCII character,
  * otherwise this will not be UTF8 safe. */
-static inline int shl_split_string(const char *arg, char ***out,
-				   unsigned int *out_num, char sep,
+static inline int shl_split_string(const char *arg, char ***out, unsigned int *out_num, char sep,
 				   bool keep_empty)
 {
 	unsigned int i;
@@ -175,13 +174,13 @@ static inline int shl_split_string(const char *arg, char ***out,
 		size += len + 1;
 	}
 
-	list = malloc(sizeof(char*) * (num + 1) + size);
+	list = malloc(sizeof(char *) * (num + 1) + size);
 	if (!list)
 		return -ENOMEM;
 
-	off = (void*)(((char*)list) + (sizeof(char*) * (num + 1)));
+	off = (void *)(((char *)list) + (sizeof(char *) * (num + 1)));
 	i = 0;
-	for (pos = 0; pos < num; ) {
+	for (pos = 0; pos < num;) {
 		list[pos] = off;
 		while (arg[i] && arg[i] != sep)
 			*off++ = arg[i++];
@@ -203,8 +202,7 @@ static inline int shl_split_string(const char *arg, char ***out,
 /* This parses \arg and splits the string into a new allocated array. The array
  * is stored in \out and is NULL terminated. \out_num is the number of entries
  * in the array. You can set it to NULL to not retrieve this value.  */
-static inline int shl_split_command_string(const char *arg, char ***out,
-					   unsigned int *out_num)
+static inline int shl_split_command_string(const char *arg, char ***out, unsigned int *out_num)
 {
 	unsigned int i;
 	unsigned int num, len, size, pos;
@@ -295,11 +293,11 @@ static inline int shl_split_command_string(const char *arg, char ***out,
 		size += len + 1;
 	}
 
-	list = malloc(sizeof(char*) * (num + 1) + size);
+	list = malloc(sizeof(char *) * (num + 1) + size);
 	if (!list)
 		return -ENOMEM;
 
-	off = (void*)(((char*)list) + (sizeof(char*) * (num + 1)));
+	off = (void *)(((char *)list) + (sizeof(char *) * (num + 1)));
 	len = 0;
 	pos = 0;
 	in_word = false;
@@ -436,7 +434,7 @@ static inline int shl_replace_array_with_env(char ***out, char **argv)
 		return -EINVAL;
 
 	for (len = 0; argv[len]; ++len)
-		/* empty */ ;
+		/* empty */;
 
 	nargv = malloc(sizeof(*nargv) * (len + 1));
 	if (!nargv)
@@ -451,7 +449,7 @@ static inline int shl_replace_array_with_env(char ***out, char **argv)
 	nargv[len] = NULL;
 	++i;
 
-	size += i * sizeof(char*);
+	size += i * sizeof(char *);
 
 	t = malloc(size);
 	if (!t) {
@@ -460,7 +458,7 @@ static inline int shl_replace_array_with_env(char ***out, char **argv)
 	}
 	*out = t;
 
-	off = (char*)t + i * sizeof(char*);
+	off = (char *)t + i * sizeof(char *);
 	for (i = 0; i < len; ++i) {
 		*t++ = off;
 		for (j = 0; nargv[i][j]; ++j)
@@ -489,14 +487,14 @@ static inline int shl_dup_array_size(char ***out, char **argv, size_t len)
 	}
 	++i;
 
-	size += i * sizeof(char*);
+	size += i * sizeof(char *);
 
 	t = malloc(size);
 	if (!t)
 		return -ENOMEM;
 	*out = t;
 
-	off = (char*)t + i * sizeof(char*);
+	off = (char *)t + i * sizeof(char *);
 	while (len--) {
 		*t++ = off;
 		for (i = 0; *argv && argv[0][i]; ++i)
@@ -517,7 +515,7 @@ static inline int shl_dup_array(char ***out, char **argv)
 		return -EINVAL;
 
 	for (i = 0; argv[i]; ++i)
-		/* empty */ ;
+		/* empty */;
 
 	return shl_dup_array_size(out, argv, i);
 }
@@ -606,39 +604,33 @@ err_close:
  * We currently copy them into each library API we use so we need  to keep
  * them in sync. Currently, they're used in uterm-input and tsm-vte. */
 enum shl_xkb_mods {
-	SHL_SHIFT_MASK		= (1 << 0),
-	SHL_LOCK_MASK		= (1 << 1),
-	SHL_CONTROL_MASK	= (1 << 2),
-	SHL_ALT_MASK		= (1 << 3),
-	SHL_LOGO_MASK		= (1 << 4),
+	SHL_SHIFT_MASK = (1 << 0),
+	SHL_LOCK_MASK = (1 << 1),
+	SHL_CONTROL_MASK = (1 << 2),
+	SHL_ALT_MASK = (1 << 3),
+	SHL_LOGO_MASK = (1 << 4),
 };
 
 static inline unsigned int shl_get_xkb_mods(struct xkb_state *state)
 {
 	unsigned int mods = 0;
 
-	if (xkb_state_mod_name_is_active(state, XKB_MOD_NAME_SHIFT,
-					 XKB_STATE_MODS_EFFECTIVE) > 0)
+	if (xkb_state_mod_name_is_active(state, XKB_MOD_NAME_SHIFT, XKB_STATE_MODS_EFFECTIVE) > 0)
 		mods |= SHL_SHIFT_MASK;
-	if (xkb_state_mod_name_is_active(state, XKB_MOD_NAME_CAPS,
-					 XKB_STATE_MODS_EFFECTIVE) > 0)
+	if (xkb_state_mod_name_is_active(state, XKB_MOD_NAME_CAPS, XKB_STATE_MODS_EFFECTIVE) > 0)
 		mods |= SHL_LOCK_MASK;
-	if (xkb_state_mod_name_is_active(state, XKB_MOD_NAME_CTRL,
-					 XKB_STATE_MODS_EFFECTIVE) > 0)
+	if (xkb_state_mod_name_is_active(state, XKB_MOD_NAME_CTRL, XKB_STATE_MODS_EFFECTIVE) > 0)
 		mods |= SHL_CONTROL_MASK;
-	if (xkb_state_mod_name_is_active(state, XKB_MOD_NAME_ALT,
-					 XKB_STATE_MODS_EFFECTIVE) > 0)
+	if (xkb_state_mod_name_is_active(state, XKB_MOD_NAME_ALT, XKB_STATE_MODS_EFFECTIVE) > 0)
 		mods |= SHL_ALT_MASK;
-	if (xkb_state_mod_name_is_active(state, XKB_MOD_NAME_LOGO,
-					 XKB_STATE_MODS_EFFECTIVE) > 0)
+	if (xkb_state_mod_name_is_active(state, XKB_MOD_NAME_LOGO, XKB_STATE_MODS_EFFECTIVE) > 0)
 		mods |= SHL_LOGO_MASK;
 
 	return mods;
 }
 
 static inline uint32_t shl_get_ascii(struct xkb_state *state, uint32_t keycode,
-				     const uint32_t *keysyms,
-				     unsigned int num_keysyms)
+				     const uint32_t *keysyms, unsigned int num_keysyms)
 {
 	struct xkb_keymap *keymap;
 	xkb_layout_index_t num_layouts;
@@ -655,8 +647,7 @@ static inline uint32_t shl_get_ascii(struct xkb_state *state, uint32_t keycode,
 
 	for (layout = 0; layout < num_layouts; layout++) {
 		level = xkb_state_key_get_level(state, keycode, layout);
-		num_syms = xkb_keymap_key_get_syms_by_level(keymap, keycode,
-							layout, level, &syms);
+		num_syms = xkb_keymap_key_get_syms_by_level(keymap, keycode, layout, level, &syms);
 		if (num_syms != 1)
 			continue;
 
@@ -667,12 +658,9 @@ static inline uint32_t shl_get_ascii(struct xkb_state *state, uint32_t keycode,
 	return XKB_KEY_NoSymbol;
 }
 
-static inline bool shl_grab_matches(unsigned int ev_mods,
-				    unsigned int ev_num_syms,
-				    const uint32_t *ev_syms,
-				    unsigned int grab_mods,
-				    unsigned int grab_num_syms,
-				    const uint32_t *grab_syms)
+static inline bool shl_grab_matches(unsigned int ev_mods, unsigned int ev_num_syms,
+				    const uint32_t *ev_syms, unsigned int grab_mods,
+				    unsigned int grab_num_syms, const uint32_t *grab_syms)
 {
 	if (!SHL_HAS_BITS(ev_mods, grab_mods))
 		return false;
@@ -687,19 +675,15 @@ static inline bool shl_grab_matches(unsigned int ev_mods,
 	return true;
 }
 
-static inline bool shl_grab_has_match(unsigned int ev_mods,
-				      unsigned int ev_num_syms,
-				      const uint32_t *ev_syms,
-				      unsigned int grab_num,
+static inline bool shl_grab_has_match(unsigned int ev_mods, unsigned int ev_num_syms,
+				      const uint32_t *ev_syms, unsigned int grab_num,
 				      const unsigned int *grab_mods,
-				      const unsigned int *grab_num_syms,
-				      uint32_t **grab_syms)
+				      const unsigned int *grab_num_syms, uint32_t **grab_syms)
 {
 	unsigned int i;
 
 	for (i = 0; i < grab_num; ++i) {
-		if (shl_grab_matches(ev_mods, ev_num_syms, ev_syms,
-				     grab_mods[i], grab_num_syms[i],
+		if (shl_grab_matches(ev_mods, ev_num_syms, ev_syms, grab_mods[i], grab_num_syms[i],
 				     grab_syms[i]))
 			return true;
 	}

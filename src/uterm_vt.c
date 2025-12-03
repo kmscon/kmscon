@@ -85,8 +85,7 @@ struct uterm_vt_master {
 	struct shl_dlist vts;
 };
 
-static int vt_call(struct uterm_vt *vt, unsigned int event, int target,
-		   bool force)
+static int vt_call(struct uterm_vt *vt, unsigned int event, int target, bool force)
 {
 	int ret;
 	struct uterm_vt_event ev;
@@ -106,8 +105,7 @@ static int vt_call(struct uterm_vt *vt, unsigned int event, int target,
 
 		ret = vt->cb(vt, &ev, vt->data);
 		if (ret)
-			log_warning("vt event handler returned %d instead of 0 on activation",
-				    ret);
+			log_warning("vt event handler returned %d instead of 0 on activation", ret);
 		break;
 	case UTERM_VT_DEACTIVATE:
 		if (!vt->active)
@@ -118,7 +116,8 @@ static int vt_call(struct uterm_vt *vt, unsigned int event, int target,
 		ret = vt->cb(vt, &ev, vt->data);
 		if (ret) {
 			if (force)
-				log_warning("vt event handler returned %d instead of 0 on forced deactivation",
+				log_warning("vt event handler returned %d instead of 0 on forced "
+					    "deactivation",
 					    ret);
 			else
 				return ret;
@@ -198,11 +197,9 @@ static void real_sig_enter(struct uterm_vt *vt, struct signalfd_siginfo *info)
 
 	if (vt->real_delayed) {
 		vt->real_delayed = false;
-		ev_eloop_unregister_idle_cb(vt->vtm->eloop, real_delayed, vt,
-					    EV_NORMAL);
+		ev_eloop_unregister_idle_cb(vt->vtm->eloop, real_delayed, vt, EV_NORMAL);
 	} else if (vt->active) {
-		log_warning("activating VT %d even though it's already active",
-			    vt->real_num);
+		log_warning("activating VT %d even though it's already active", vt->real_num);
 	} else {
 		uterm_input_wake_up(vt->input);
 	}
@@ -239,12 +236,10 @@ static void real_sig_leave(struct uterm_vt *vt, struct signalfd_siginfo *info)
 
 	if (vt->real_delayed) {
 		vt->real_delayed = false;
-		ev_eloop_unregister_idle_cb(vt->vtm->eloop, real_delayed, vt,
-					    EV_NORMAL);
+		ev_eloop_unregister_idle_cb(vt->vtm->eloop, real_delayed, vt, EV_NORMAL);
 		uterm_input_sleep(vt->input);
 	} else if (!active) {
-		log_warning("deactivating VT %d even though it's not active",
-			    vt->real_num);
+		log_warning("deactivating VT %d even though it's not active", vt->real_num);
 	} else {
 		uterm_input_sleep(vt->input);
 	}
@@ -351,8 +346,8 @@ static int real_open(struct uterm_vt *vt, const char *vt_name)
 	if (ret)
 		return ret;
 
-	ret = ev_eloop_new_fd(vt->vtm->eloop, &vt->real_efd, vt->real_fd,
-			      EV_READABLE, real_vt_input, vt);
+	ret = ev_eloop_new_fd(vt->vtm->eloop, &vt->real_efd, vt->real_fd, EV_READABLE,
+			      real_vt_input, vt);
 	if (ret)
 		goto err_fd;
 
@@ -409,8 +404,7 @@ static int real_open(struct uterm_vt *vt, const char *vt_name)
 		log_warning("cannot set VT KBMODE to K_OFF (%d): %m", errno);
 
 	if (vts.v_active == vt->real_num) {
-		ret = ev_eloop_register_idle_cb(vt->vtm->eloop, real_delayed,
-						vt, EV_NORMAL);
+		ret = ev_eloop_register_idle_cb(vt->vtm->eloop, real_delayed, vt, EV_NORMAL);
 		if (ret) {
 			log_error("cannot register idle cb for VT switch");
 			goto err_kbdmode;
@@ -424,20 +418,17 @@ static int real_open(struct uterm_vt *vt, const char *vt_name)
 err_kbdmode:
 	err = ioctl(vt->real_fd, KDSKBMODE, vt->real_kbmode);
 	if (err)
-		log_error("cannot reset VT KBMODE to %d (%d): %m",
-			  vt->real_kbmode, errno);
+		log_error("cannot reset VT KBMODE to %d (%d): %m", vt->real_kbmode, errno);
 err_setmode:
 	memset(&mode, 0, sizeof(mode));
 	mode.mode = VT_AUTO;
 	err = ioctl(vt->real_fd, VT_SETMODE, &mode);
 	if (err)
-		log_warning("cannot reset VT %d to VT_AUTO mode (%d): %m",
-			    vt->real_num, errno);
+		log_warning("cannot reset VT %d to VT_AUTO mode (%d): %m", vt->real_num, errno);
 err_text:
 	err = ioctl(vt->real_fd, KDSETMODE, KD_TEXT);
 	if (err)
-		log_warning("cannot reset VT %d to text-mode (%d): %m",
-			    vt->real_num, errno);
+		log_warning("cannot reset VT %d to text-mode (%d): %m", vt->real_num, errno);
 err_eloop:
 	ev_eloop_rm_fd(vt->real_efd);
 	vt->real_efd = NULL;
@@ -455,8 +446,7 @@ static void real_close(struct uterm_vt *vt)
 
 	if (vt->real_delayed) {
 		vt->real_delayed = false;
-		ev_eloop_unregister_idle_cb(vt->vtm->eloop, real_delayed, vt,
-					    EV_NORMAL);
+		ev_eloop_unregister_idle_cb(vt->vtm->eloop, real_delayed, vt, EV_NORMAL);
 		uterm_input_sleep(vt->input);
 	} else if (vt->active) {
 		uterm_input_sleep(vt->input);
@@ -465,20 +455,17 @@ static void real_close(struct uterm_vt *vt)
 
 	ret = ioctl(vt->real_fd, KDSKBMODE, vt->real_kbmode);
 	if (ret && !vt->hup)
-		log_error("cannot reset VT KBMODE to %d (%d): %m",
-			  vt->real_kbmode, errno);
+		log_error("cannot reset VT KBMODE to %d (%d): %m", vt->real_kbmode, errno);
 
 	memset(&mode, 0, sizeof(mode));
 	mode.mode = VT_AUTO;
 	ret = ioctl(vt->real_fd, VT_SETMODE, &mode);
 	if (ret && !vt->hup)
-		log_warning("cannot reset VT %d to VT_AUTO mode (%d): %m",
-			    vt->real_num, errno);
+		log_warning("cannot reset VT %d to VT_AUTO mode (%d): %m", vt->real_num, errno);
 
 	ret = ioctl(vt->real_fd, KDSETMODE, KD_TEXT);
 	if (ret && !vt->hup)
-		log_warning("cannot reset VT %d to text-mode (%d): %m",
-			    vt->real_num, errno);
+		log_warning("cannot reset VT %d to text-mode (%d): %m", vt->real_num, errno);
 
 	ev_eloop_rm_fd(vt->real_efd);
 	vt->real_efd = NULL;
@@ -510,8 +497,7 @@ static int real_activate(struct uterm_vt *vt)
 		return 0;
 
 	if (vt->active)
-		log_warning("activating VT %d even though it's already active",
-			    vt->real_num);
+		log_warning("activating VT %d even though it's already active", vt->real_num);
 
 	vt->real_target = -1;
 	ret = ioctl(vt->real_fd, VT_ACTIVATE, vt->real_num);
@@ -556,20 +542,18 @@ static int real_deactivate(struct uterm_vt *vt)
 		return 0;
 
 	if (!vt->active)
-		log_warning("deactivating VT %d even though it's not active",
-			    vt->real_num);
+		log_warning("deactivating VT %d even though it's not active", vt->real_num);
 
 	vt->real_target = vt->real_saved_num;
 	vt->real_target_time = time(NULL);
 	ret = ioctl(vt->real_fd, VT_ACTIVATE, vt->real_saved_num);
 	if (ret) {
-		log_warn("cannot leave VT %d to VT %d (%d): %m", vt->real_num,
-			 vt->real_saved_num, errno);
+		log_warn("cannot leave VT %d to VT %d (%d): %m", vt->real_num, vt->real_saved_num,
+			 errno);
 		return -EFAULT;
 	}
 
-	log_debug("leaving VT %d on demand to VT %d", vt->real_num,
-		  vt->real_saved_num);
+	log_debug("leaving VT %d on demand to VT %d", vt->real_num, vt->real_saved_num);
 	return -EINPROGRESS;
 }
 
@@ -609,15 +593,13 @@ static void real_input(struct uterm_vt *vt, struct uterm_input_key_event *ev)
 	if (!id || id == vt->real_num)
 		return;
 
-	log_debug("deactivating VT %d to %d due to user input", vt->real_num,
-		  id);
+	log_debug("deactivating VT %d to %d due to user input", vt->real_num, id);
 
 	vt->real_target = id;
 	vt->real_target_time = time(NULL);
 	ret = ioctl(vt->real_fd, VT_ACTIVATE, id);
 	if (ret) {
-		log_warn("cannot leave VT %d to %d (%d): %m", vt->real_num,
-			 id, errno);
+		log_warn("cannot leave VT %d to %d (%d): %m", vt->real_num, id, errno);
 		return;
 	}
 }
@@ -646,16 +628,13 @@ static void real_retry(struct uterm_vt *vt)
 	}
 
 	if (!vt->active)
-		log_warning("leaving VT %d even though it's not active",
-			    vt->real_num);
+		log_warning("leaving VT %d even though it's not active", vt->real_num);
 
-	log_debug("deactivating VT %d to %d (retry)", vt->real_num,
-		  vt->real_target);
+	log_debug("deactivating VT %d to %d (retry)", vt->real_num, vt->real_target);
 
 	ret = ioctl(vt->real_fd, VT_ACTIVATE, vt->real_target);
 	if (ret) {
-		log_warn("cannot leave VT %d to %d (%d): %m", vt->real_num,
-			 vt->real_target, errno);
+		log_warn("cannot leave VT %d to %d (%d): %m", vt->real_num, vt->real_target, errno);
 		return;
 	}
 }
@@ -748,9 +727,7 @@ static void fake_close(struct uterm_vt *vt)
  * handling.
  */
 
-static void vt_input(struct uterm_input *input,
-		     struct uterm_input_key_event *ev,
-		     void *data)
+static void vt_input(struct uterm_input *input, struct uterm_input_key_event *ev, void *data)
 {
 	struct uterm_vt *vt = data;
 
@@ -760,8 +737,7 @@ static void vt_input(struct uterm_input *input,
 		fake_input(vt, ev);
 }
 
-static void vt_sigusr1(struct ev_eloop *eloop, struct signalfd_siginfo *info,
-		       void *data)
+static void vt_sigusr1(struct ev_eloop *eloop, struct signalfd_siginfo *info, void *data)
 {
 	struct uterm_vt *vt = data;
 
@@ -769,8 +745,7 @@ static void vt_sigusr1(struct ev_eloop *eloop, struct signalfd_siginfo *info,
 		real_sig_enter(vt, info);
 }
 
-static void vt_sigusr2(struct ev_eloop *eloop, struct signalfd_siginfo *info,
-		       void *data)
+static void vt_sigusr2(struct ev_eloop *eloop, struct signalfd_siginfo *info, void *data)
 {
 	struct uterm_vt *vt = data;
 
@@ -801,8 +776,7 @@ static int seat_find_vt(const char *seat, char **out)
 		/* First check whether our controlling terminal is a real VT. If
 		 * it is, use it but verify very hard that it really is. */
 		ret = fstat(STDERR_FILENO, &st);
-		if (!ret && major(st.st_rdev) == TTY_MAJOR &&
-		    minor(st.st_rdev) > 0) {
+		if (!ret && major(st.st_rdev) == TTY_MAJOR && minor(st.st_rdev) > 0) {
 			ret = asprintf(&vt, "/dev/tty%d", minor(st.st_rdev));
 			if (ret < 0)
 				return -ENOMEM;
@@ -820,11 +794,9 @@ static int seat_find_vt(const char *seat, char **out)
 		fd = open(def_vt, O_NONBLOCK | O_NOCTTY | O_CLOEXEC);
 		if (fd < 0) {
 			err1 = errno;
-			fd = open("/dev/tty1",
-				  O_NONBLOCK | O_NOCTTY | O_CLOEXEC);
+			fd = open("/dev/tty1", O_NONBLOCK | O_NOCTTY | O_CLOEXEC);
 			if (fd < 0) {
-				log_error("cannot find parent tty (%d, %d): %m",
-					  err1, errno);
+				log_error("cannot find parent tty (%d, %d): %m", err1, errno);
 				return -EFAULT;
 			}
 		}
@@ -850,14 +822,9 @@ static int seat_find_vt(const char *seat, char **out)
 }
 
 SHL_EXPORT
-int uterm_vt_allocate(struct uterm_vt_master *vtm,
-		      struct uterm_vt **out,
-		      unsigned int allowed_types,
-		      const char *seat,
-		      struct uterm_input *input,
-		      const char *vt_name,
-		      uterm_vt_cb cb,
-		      void *data)
+int uterm_vt_allocate(struct uterm_vt_master *vtm, struct uterm_vt **out,
+		      unsigned int allowed_types, const char *seat, struct uterm_input *input,
+		      const char *vt_name, uterm_vt_cb cb, void *data)
 {
 	struct uterm_vt *vt;
 	int ret;
@@ -1046,8 +1013,7 @@ unsigned int uterm_vt_get_num(struct uterm_vt *vt)
 }
 
 SHL_EXPORT
-int uterm_vt_master_new(struct uterm_vt_master **out,
-			struct ev_eloop *eloop)
+int uterm_vt_master_new(struct uterm_vt_master **out, struct ev_eloop *eloop)
 {
 	struct uterm_vt_master *vtm;
 
@@ -1087,9 +1053,7 @@ void uterm_vt_master_unref(struct uterm_vt_master *vtm)
 		return;
 
 	while (vtm->vts.next != &vtm->vts) {
-		vt = shl_dlist_entry(vtm->vts.next,
-					struct uterm_vt,
-					list);
+		vt = shl_dlist_entry(vtm->vts.next, struct uterm_vt, list);
 		uterm_vt_deallocate(vt);
 	}
 
@@ -1111,7 +1075,8 @@ int uterm_vt_master_activate_all(struct uterm_vt_master *vtm)
 	if (!vtm)
 		return -EINVAL;
 
-	shl_dlist_for_each(iter, &vtm->vts) {
+	shl_dlist_for_each(iter, &vtm->vts)
+	{
 		vt = shl_dlist_entry(iter, struct uterm_vt, list);
 		ret = uterm_vt_activate(vt);
 		if (ret == -EINPROGRESS)
@@ -1140,7 +1105,8 @@ int uterm_vt_master_deactivate_all(struct uterm_vt_master *vtm)
 	if (!vtm)
 		return -EINVAL;
 
-	shl_dlist_for_each(iter, &vtm->vts) {
+	shl_dlist_for_each(iter, &vtm->vts)
+	{
 		vt = shl_dlist_entry(iter, struct uterm_vt, list);
 		ret = uterm_vt_deactivate(vt);
 		if (ret == -EINPROGRESS)

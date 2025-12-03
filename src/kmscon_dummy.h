@@ -36,13 +36,11 @@
 
 #ifdef BUILD_ENABLE_SESSION_DUMMY
 
-int kmscon_dummy_register(struct kmscon_session **out,
-			  struct kmscon_seat *seat);
+int kmscon_dummy_register(struct kmscon_session **out, struct kmscon_seat *seat);
 
 #else /* !BUILD_ENABLE_SESSION_DUMMY */
 
-static inline int kmscon_dummy_register(struct kmscon_session **out,
-					struct kmscon_seat *seat)
+static inline int kmscon_dummy_register(struct kmscon_session **out, struct kmscon_seat *seat)
 {
 	return -EOPNOTSUPP;
 }

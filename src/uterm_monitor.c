@@ -107,9 +107,9 @@ static void monitor_refresh_seats(struct uterm_monitor *mon)
 	}
 
 	/* Remove all seats that are no longer present */
-	shl_dlist_for_each_safe(iter, tmp, &mon->seats) {
-		seat = shl_dlist_entry(iter, struct uterm_monitor_seat,
-						list);
+	shl_dlist_for_each_safe(iter, tmp, &mon->seats)
+	{
+		seat = shl_dlist_entry(iter, struct uterm_monitor_seat, list);
 		for (i = 0; i < num; ++i) {
 			if (!strcmp(seats[i], seat->name))
 				break;
@@ -134,9 +134,7 @@ static void monitor_refresh_seats(struct uterm_monitor *mon)
 	free(seats);
 }
 
-static void monitor_sd_event(struct ev_fd *fd,
-			     int mask,
-			     void *data)
+static void monitor_sd_event(struct ev_fd *fd, int mask, void *data)
 {
 	struct uterm_monitor *mon = data;
 
@@ -174,8 +172,7 @@ static int monitor_sd_init(struct uterm_monitor *mon)
 		goto err_sd;
 	}
 
-	ret = ev_eloop_new_fd(mon->eloop, &mon->sd_mon_fd, sfd, EV_READABLE,
-			      monitor_sd_event, mon);
+	ret = ev_eloop_new_fd(mon->eloop, &mon->sd_mon_fd, sfd, EV_READABLE, monitor_sd_event, mon);
 	if (ret)
 		goto err_sd;
 
@@ -195,10 +192,8 @@ static void monitor_sd_deinit(struct uterm_monitor *mon)
 	uterm_sd_free(mon->sd);
 }
 
-static void seat_new_dev(struct uterm_monitor_seat *seat,
-				unsigned int type,
-				unsigned int flags,
-				const char *node)
+static void seat_new_dev(struct uterm_monitor_seat *seat, unsigned int type, unsigned int flags,
+			 const char *node)
 {
 	struct uterm_monitor_dev *dev;
 	struct uterm_monitor_event ev;
@@ -261,7 +256,7 @@ static void seat_free_dev(struct uterm_monitor_dev *dev)
 }
 
 static struct uterm_monitor_dev *monitor_find_dev(struct uterm_monitor *mon,
-						struct udev_device *dev)
+						  struct udev_device *dev)
 {
 	const char *node;
 	struct shl_dlist *iter, *iter2;
@@ -272,13 +267,12 @@ static struct uterm_monitor_dev *monitor_find_dev(struct uterm_monitor *mon,
 	if (!node)
 		return NULL;
 
-	shl_dlist_for_each(iter, &mon->seats) {
-		seat = shl_dlist_entry(iter, struct uterm_monitor_seat,
-						list);
-		shl_dlist_for_each(iter2, &seat->devices) {
-			sdev = shl_dlist_entry(iter2,
-						struct uterm_monitor_dev,
-						list);
+	shl_dlist_for_each(iter, &mon->seats)
+	{
+		seat = shl_dlist_entry(iter, struct uterm_monitor_seat, list);
+		shl_dlist_for_each(iter2, &seat->devices)
+		{
+			sdev = shl_dlist_entry(iter2, struct uterm_monitor_dev, list);
 			if (!strcmp(node, sdev->node))
 				return sdev;
 		}
@@ -327,9 +321,7 @@ static void monitor_free_seat(struct uterm_monitor_seat *seat)
 	log_debug("free seat %s", seat->name);
 
 	while (seat->devices.next != &seat->devices) {
-		dev = shl_dlist_entry(seat->devices.next,
-						struct uterm_monitor_dev,
-						list);
+		dev = shl_dlist_entry(seat->devices.next, struct uterm_monitor_dev, list);
 		seat_free_dev(dev);
 	}
 
@@ -416,14 +408,15 @@ static unsigned int get_fbdev_flags(struct uterm_monitor *mon, const char *node)
 
 	fd = open(node, O_RDWR | O_CLOEXEC);
 	if (fd < 0) {
-		log_warning("cannot open fbdev node %s for drm-device verification (%d): %m",
-			    node, errno);
+		log_warning("cannot open fbdev node %s for drm-device verification (%d): %m", node,
+			    errno);
 		return flags;
 	}
 
 	ret = ioctl(fd, FBIOGET_FSCREENINFO, &finfo);
 	if (ret) {
-		log_warning("cannot retrieve finfo from fbdev node %s for drm-device verification (%d): %m",
+		log_warning("cannot retrieve finfo from fbdev node %s for drm-device verification "
+			    "(%d): %m",
 			    node, errno);
 		goto out_close;
 	}
@@ -435,8 +428,7 @@ static unsigned int get_fbdev_flags(struct uterm_monitor *mon, const char *node)
 	 * checking whether the parent udev device node does also provide a DRM
 	 * device. */
 	len = strlen(finfo.id);
-	if ((len < 5 || strcmp(&finfo.id[len - 5], "drmfb")) &&
-	    strcmp(finfo.id, "nouveaufb") &&
+	if ((len < 5 || strcmp(&finfo.id[len - 5], "drmfb")) && strcmp(finfo.id, "nouveaufb") &&
 	    strcmp(finfo.id, "psbfb"))
 		flags &= ~UTERM_MONITOR_DRM_BACKED;
 
@@ -450,8 +442,7 @@ out_close:
 	return flags;
 }
 
-static bool is_drm_primary(struct uterm_monitor *mon, struct udev_device *dev,
-			   const char *node)
+static bool is_drm_primary(struct uterm_monitor *mon, struct udev_device *dev, const char *node)
 {
 	struct udev_device *pci;
 	const char *id;
@@ -476,15 +467,15 @@ static bool is_drm_primary(struct uterm_monitor *mon, struct udev_device *dev,
  */
 
 struct uterm_drm_version {
-	int version_major;	  /**< Major version */
-	int version_minor;	  /**< Minor version */
-	int version_patchlevel;	  /**< Patch level */
-	size_t name_len;	  /**< Length of name buffer */
-	char *name;	  /**< Name of driver */
-	size_t date_len;	  /**< Length of date buffer */
-	char *date;	  /**< User-space buffer to hold date */
-	size_t desc_len;	  /**< Length of desc buffer */
-	char *desc;	  /**< User-space buffer to hold desc */
+	int version_major;	/**< Major version */
+	int version_minor;	/**< Minor version */
+	int version_patchlevel; /**< Patch level */
+	size_t name_len;	/**< Length of name buffer */
+	char *name;		/**< Name of driver */
+	size_t date_len;	/**< Length of date buffer */
+	char *date;		/**< User-space buffer to hold date */
+	size_t desc_len;	/**< Length of desc buffer */
+	char *desc;		/**< User-space buffer to hold desc */
 };
 #define UTERM_DRM_IOCTL_VERSION _IOWR('d', 0x00, struct uterm_drm_version)
 
@@ -524,8 +515,7 @@ static bool is_drm_usb(struct uterm_monitor *mon, const char *node, int fd)
 
 	name = get_drm_name(fd);
 	if (!name) {
-		log_warning("cannot get driver name for DRM device %s (%d): %m",
-			    node, errno);
+		log_warning("cannot get driver name for DRM device %s (%d): %m", node, errno);
 		return false;
 	}
 
@@ -539,16 +529,16 @@ static bool is_drm_usb(struct uterm_monitor *mon, const char *node, int fd)
 	return res;
 }
 
-static unsigned int get_drm_flags(struct uterm_monitor *mon,
-				  struct udev_device *dev, const char *node)
+static unsigned int get_drm_flags(struct uterm_monitor *mon, struct udev_device *dev,
+				  const char *node)
 {
 	int fd;
 	unsigned int flags = 0;
 
 	fd = open(node, O_RDWR | O_CLOEXEC);
 	if (fd < 0) {
-		log_warning("cannot open DRM device %s for primary-detection (%d): %m",
-			    node, errno);
+		log_warning("cannot open DRM device %s for primary-detection (%d): %m", node,
+			    errno);
 		return flags;
 	}
 
@@ -561,8 +551,7 @@ static unsigned int get_drm_flags(struct uterm_monitor *mon,
 	return flags;
 }
 
-static void monitor_udev_add(struct uterm_monitor *mon,
-				struct udev_device *dev)
+static void monitor_udev_add(struct uterm_monitor *mon, struct udev_device *dev)
 {
 	const char *sname, *subs, *node, *name, *sysname;
 	struct shl_dlist *iter;
@@ -624,8 +613,7 @@ static void monitor_udev_add(struct uterm_monitor *mon,
 			log_debug("adding unsupported input dev %s", name);
 			return;
 		}
-		p = udev_device_get_parent_with_subsystem_devtype(dev,
-								"input", NULL);
+		p = udev_device_get_parent_with_subsystem_devtype(dev, "input", NULL);
 		if (!p) {
 			log_debug("adding device without parent %s", name);
 			return;
@@ -638,8 +626,7 @@ static void monitor_udev_add(struct uterm_monitor *mon,
 		type = UTERM_MONITOR_INPUT;
 		flags = 0;
 	} else {
-		log_debug("adding device with unknown subsystem %s (%s)",
-				subs, name);
+		log_debug("adding device with unknown subsystem %s (%s)", subs, name);
 		return;
 	}
 
@@ -647,24 +634,22 @@ static void monitor_udev_add(struct uterm_monitor *mon,
 		sname = "seat0";
 
 	/* find correct seat */
-	shl_dlist_for_each(iter, &mon->seats) {
-		seat = shl_dlist_entry(iter, struct uterm_monitor_seat,
-						list);
+	shl_dlist_for_each(iter, &mon->seats)
+	{
+		seat = shl_dlist_entry(iter, struct uterm_monitor_seat, list);
 		if (!strcmp(sname, seat->name))
 			break;
 	}
 
 	if (iter == &mon->seats) {
-		log_debug("adding device for unknown seat %s (%s)",
-				sname, name);
+		log_debug("adding device for unknown seat %s (%s)", sname, name);
 		return;
 	}
 
 	seat_new_dev(seat, type, flags, node);
 }
 
-static void monitor_udev_remove(struct uterm_monitor *mon,
-				struct udev_device *dev)
+static void monitor_udev_remove(struct uterm_monitor *mon, struct udev_device *dev)
 {
 	struct uterm_monitor_dev *sdev;
 
@@ -677,8 +662,7 @@ static void monitor_udev_remove(struct uterm_monitor *mon,
 	seat_free_dev(sdev);
 }
 
-static void monitor_udev_change(struct uterm_monitor *mon,
-				struct udev_device *dev)
+static void monitor_udev_change(struct uterm_monitor *mon, struct udev_device *dev)
 {
 	const char *sname, *val;
 	struct uterm_monitor_dev *sdev;
@@ -708,8 +692,7 @@ static void monitor_udev_change(struct uterm_monitor *mon,
 			ev.dev_type = sdev->type;
 			ev.dev_node = sdev->node;
 			ev.dev_data = sdev->data;
-			sdev->seat->mon->cb(sdev->seat->mon, &ev,
-						sdev->seat->mon->data);
+			sdev->seat->mon->cb(sdev->seat->mon, &ev, sdev->seat->mon->data);
 		}
 	} else {
 		/* Unknown device; maybe it switched into a known seat? Try
@@ -718,9 +701,7 @@ static void monitor_udev_change(struct uterm_monitor *mon,
 	}
 }
 
-static void monitor_udev_event(struct ev_fd *fd,
-				int mask,
-				void *data)
+static void monitor_udev_event(struct ev_fd *fd, int mask, void *data)
 {
 	struct uterm_monitor *mon = data;
 	struct udev_device *dev;
@@ -762,10 +743,8 @@ static void monitor_udev_event(struct ev_fd *fd,
 }
 
 SHL_EXPORT
-int uterm_monitor_new(struct uterm_monitor **out,
-			struct ev_eloop *eloop,
-			uterm_monitor_cb cb,
-			void *data)
+int uterm_monitor_new(struct uterm_monitor **out, struct ev_eloop *eloop, uterm_monitor_cb cb,
+		      void *data)
 {
 	struct uterm_monitor *mon;
 	int ret, ufd, set;
@@ -801,8 +780,7 @@ int uterm_monitor_new(struct uterm_monitor **out,
 		goto err_udev;
 	}
 
-	ret = udev_monitor_filter_add_match_subsystem_devtype(mon->umon,
-							"drm", "drm_minor");
+	ret = udev_monitor_filter_add_match_subsystem_devtype(mon->umon, "drm", "drm_minor");
 	if (ret) {
 		errno = -ret;
 		log_err("cannot add udev filter (%d): %m", ret);
@@ -810,8 +788,7 @@ int uterm_monitor_new(struct uterm_monitor **out,
 		goto err_umon;
 	}
 
-	ret = udev_monitor_filter_add_match_subsystem_devtype(mon->umon,
-							"graphics", NULL);
+	ret = udev_monitor_filter_add_match_subsystem_devtype(mon->umon, "graphics", NULL);
 	if (ret) {
 		errno = -ret;
 		log_err("cannot add udev filter (%d): %m", ret);
@@ -819,8 +796,7 @@ int uterm_monitor_new(struct uterm_monitor **out,
 		goto err_umon;
 	}
 
-	ret = udev_monitor_filter_add_match_subsystem_devtype(mon->umon,
-							"input", NULL);
+	ret = udev_monitor_filter_add_match_subsystem_devtype(mon->umon, "input", NULL);
 	if (ret) {
 		errno = -ret;
 		log_err("cannot add udev filter (%d): %m", ret);
@@ -858,8 +834,7 @@ int uterm_monitor_new(struct uterm_monitor **out,
 		goto err_umon;
 	}
 
-	ret = ev_eloop_new_fd(mon->eloop, &mon->umon_fd, ufd, EV_READABLE,
-				monitor_udev_event, mon);
+	ret = ev_eloop_new_fd(mon->eloop, &mon->umon_fd, ufd, EV_READABLE, monitor_udev_event, mon);
 	if (ret)
 		goto err_umon;
 
@@ -896,9 +871,7 @@ void uterm_monitor_unref(struct uterm_monitor *mon)
 		return;
 
 	while (mon->seats.next != &mon->seats) {
-		seat = shl_dlist_entry(mon->seats.next,
-						struct uterm_monitor_seat,
-						list);
+		seat = shl_dlist_entry(mon->seats.next, struct uterm_monitor_seat, list);
 		monitor_free_seat(seat);
 	}
 
@@ -957,7 +930,8 @@ void uterm_monitor_scan(struct uterm_monitor *mon)
 		goto out_enum;
 	}
 
-	udev_list_entry_foreach(entry, udev_enumerate_get_list_entry(e)) {
+	udev_list_entry_foreach(entry, udev_enumerate_get_list_entry(e))
+	{
 		path = udev_list_entry_get_name(entry);
 		if (!path) {
 			log_debug("udev device without syspath");

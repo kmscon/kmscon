@@ -39,14 +39,12 @@
 
 #ifdef BUILD_ENABLE_SESSION_TERMINAL
 
-int kmscon_terminal_register(struct kmscon_session **out,
-			     struct kmscon_seat *seat,
+int kmscon_terminal_register(struct kmscon_session **out, struct kmscon_seat *seat,
 			     unsigned int vtnr);
 
 #else /* !BUILD_ENABLE_SESSION_TERMINAL */
 
-static inline int kmscon_terminal_register(struct kmscon_session **out,
-					   struct kmscon_seat *seat,
+static inline int kmscon_terminal_register(struct kmscon_session **out, struct kmscon_seat *seat,
 					   unsigned int vtnr)
 {
 	return -EOPNOTSUPP;

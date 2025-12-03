@@ -45,7 +45,7 @@
 enum Orientation {
 	OR_NORMAL = 0,	// 0 Degree
 	OR_RIGHT,	// 90 Degree
-	OR_UPSIDE_DOWN,	// 180 Degree
+	OR_UPSIDE_DOWN, // 180 Degree
 	OR_LEFT,	// 270 Degree
 };
 
@@ -71,23 +71,19 @@ struct kmscon_text {
 struct kmscon_text_ops {
 	const char *name;
 	struct shl_module *owner;
-	int (*init) (struct kmscon_text *txt);
-	void (*destroy) (struct kmscon_text *txt);
-	int (*set) (struct kmscon_text *txt);
-	void (*unset) (struct kmscon_text *txt);
-	int (*rotate) (struct kmscon_text *txt, enum Orientation orientation);
-	int (*prepare) (struct kmscon_text *txt);
-	int (*draw) (struct kmscon_text *txt,
-		     uint64_t id, const uint32_t *ch, size_t len,
-		     unsigned int width,
-		     unsigned int posx, unsigned int posy,
-		     const struct tsm_screen_attr *attr);
-	int (*draw_pointer) (struct kmscon_text *txt,
-			     unsigned int x,
-			     unsigned int y,
-			     const struct tsm_screen_attr *attr);
-	int (*render) (struct kmscon_text *txt);
-	void (*abort) (struct kmscon_text *txt);
+	int (*init)(struct kmscon_text *txt);
+	void (*destroy)(struct kmscon_text *txt);
+	int (*set)(struct kmscon_text *txt);
+	void (*unset)(struct kmscon_text *txt);
+	int (*rotate)(struct kmscon_text *txt, enum Orientation orientation);
+	int (*prepare)(struct kmscon_text *txt);
+	int (*draw)(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, size_t len,
+		    unsigned int width, unsigned int posx, unsigned int posy,
+		    const struct tsm_screen_attr *attr);
+	int (*draw_pointer)(struct kmscon_text *txt, unsigned int x, unsigned int y,
+			    const struct tsm_screen_attr *attr);
+	int (*render)(struct kmscon_text *txt);
+	void (*abort)(struct kmscon_text *txt);
 };
 
 #define FONT_WIDTH(txt) ((txt)->font->attr.width)
@@ -100,10 +96,8 @@ int kmscon_text_new(struct kmscon_text **out, const char *backend, const char *r
 void kmscon_text_ref(struct kmscon_text *txt);
 void kmscon_text_unref(struct kmscon_text *txt);
 
-int kmscon_text_set(struct kmscon_text *txt,
-		    struct kmscon_font *font,
-		    struct kmscon_font *bold_font,
-		    struct uterm_display *disp);
+int kmscon_text_set(struct kmscon_text *txt, struct kmscon_font *font,
+		    struct kmscon_font *bold_font, struct uterm_display *disp);
 void kmscon_text_unset(struct kmscon_text *txt);
 unsigned int kmscon_text_get_cols(struct kmscon_text *txt);
 unsigned int kmscon_text_get_rows(struct kmscon_text *txt);
@@ -112,23 +106,17 @@ enum Orientation kmscon_text_get_orientation(struct kmscon_text *txt);
 int kmscon_text_rotate(struct kmscon_text *txt, enum Orientation orientation);
 
 int kmscon_text_prepare(struct kmscon_text *txt);
-int kmscon_text_draw(struct kmscon_text *txt,
-		     uint64_t id, const uint32_t *ch, size_t len,
-		     unsigned int width,
-		     unsigned int posx, unsigned int posy,
+int kmscon_text_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, size_t len,
+		     unsigned int width, unsigned int posx, unsigned int posy,
 		     const struct tsm_screen_attr *attr);
-int kmscon_text_draw_pointer(struct kmscon_text *txt,
-			     unsigned int x, unsigned int y,
+int kmscon_text_draw_pointer(struct kmscon_text *txt, unsigned int x, unsigned int y,
 			     const struct tsm_screen_attr *attr);
 int kmscon_text_render(struct kmscon_text *txt);
 void kmscon_text_abort(struct kmscon_text *txt);
 
-int kmscon_text_draw_cb(struct tsm_screen *con,
-			uint64_t id, const uint32_t *ch, size_t len,
-			unsigned int width,
-			unsigned int posx, unsigned int posy,
-			const struct tsm_screen_attr *attr,
-			tsm_age_t age, void *data);
+int kmscon_text_draw_cb(struct tsm_screen *con, uint64_t id, const uint32_t *ch, size_t len,
+			unsigned int width, unsigned int posx, unsigned int posy,
+			const struct tsm_screen_attr *attr, tsm_age_t age, void *data);
 
 /* modularized backends */
 

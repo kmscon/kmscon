@@ -126,26 +126,22 @@ static void do_clear_margins(struct screen *scr)
 
 	if (dw) {
 		if (scr->txt->orientation == OR_NORMAL || scr->txt->orientation == OR_LEFT)
-			uterm_display_fill(scr->disp, attr.br, attr.bg, attr.bb,
-				w, 0,dw, sh);
+			uterm_display_fill(scr->disp, attr.br, attr.bg, attr.bb, w, 0, dw, sh);
 		else
-			uterm_display_fill(scr->disp, attr.br, attr.bg, attr.bb,
-				0, 0,dw, sh);
+			uterm_display_fill(scr->disp, attr.br, attr.bg, attr.bb, 0, 0, dw, sh);
 	}
 	if (dh) {
 		if (scr->txt->orientation == OR_NORMAL || scr->txt->orientation == OR_RIGHT)
-			uterm_display_fill(scr->disp, attr.br, attr.bg, attr.bb,
-				0, h, sw, dh);
+			uterm_display_fill(scr->disp, attr.br, attr.bg, attr.bb, 0, h, sw, dh);
 		else
-		 	uterm_display_fill(scr->disp, attr.br, attr.bg, attr.bb,
-				0, 0, sw, dh);
+			uterm_display_fill(scr->disp, attr.br, attr.bg, attr.bb, 0, 0, sw, dh);
 	}
 }
 
 static int font_set(struct kmscon_terminal *term);
 
-
-static void coord_to_cell(struct kmscon_terminal *term, int32_t x, int32_t y, unsigned int *posx, unsigned int *posy)
+static void coord_to_cell(struct kmscon_terminal *term, int32_t x, int32_t y, unsigned int *posx,
+			  unsigned int *posy)
 {
 	int fw = term->font->attr.width;
 	int fh = term->font->attr.height;
@@ -226,7 +222,8 @@ static void redraw_all(struct kmscon_terminal *term)
 	if (!term->awake)
 		return;
 
-	shl_dlist_for_each(iter, &term->screens) {
+	shl_dlist_for_each(iter, &term->screens)
+	{
 		scr = shl_dlist_entry(iter, struct screen, list);
 		redraw_screen(scr);
 	}
@@ -237,7 +234,8 @@ static bool has_kms_display(struct kmscon_terminal *term)
 	struct shl_dlist *iter;
 	struct screen *scr;
 
-	shl_dlist_for_each(iter, &term->screens) {
+	shl_dlist_for_each(iter, &term->screens)
+	{
 		scr = shl_dlist_entry(iter, struct screen, list);
 		if (uterm_display_is_drm(scr->disp))
 			return true;
@@ -262,7 +260,8 @@ static void update_pointer_max_all(struct kmscon_terminal *term)
 	if (!term->awake)
 		return;
 
-	shl_dlist_for_each(iter, &term->screens) {
+	shl_dlist_for_each(iter, &term->screens)
+	{
 		scr = shl_dlist_entry(iter, struct screen, list);
 
 		mode = uterm_display_get_current(scr->disp);
@@ -296,7 +295,8 @@ static void redraw_all_test(struct kmscon_terminal *term)
 	if (!term->awake)
 		return;
 
-	shl_dlist_for_each(iter, &term->screens) {
+	shl_dlist_for_each(iter, &term->screens)
+	{
 		scr = shl_dlist_entry(iter, struct screen, list);
 		if (uterm_display_is_swapping(scr->disp))
 			scr->swapping = true;
@@ -304,8 +304,7 @@ static void redraw_all_test(struct kmscon_terminal *term)
 	}
 }
 
-static void display_event(struct uterm_display *disp,
-			  struct uterm_display_event *ev, void *data)
+static void display_event(struct uterm_display *disp, struct uterm_display_event *ev, void *data)
 {
 	struct screen *scr = data;
 
@@ -317,16 +316,14 @@ static void display_event(struct uterm_display *disp,
 		do_redraw_screen(scr);
 }
 
-static void osc_event(struct tsm_vte *vte, const char *osc_string,
-	size_t osc_len, void *data)
+static void osc_event(struct tsm_vte *vte, const char *osc_string, size_t osc_len, void *data)
 {
 	struct kmscon_terminal *term = data;
 
 	if (strcmp(osc_string, "setBackground") == 0) {
 		log_info("Got OSC setBackground");
 		kmscon_session_set_background(term->session);
-	}
-	else if (strcmp(osc_string, "setForeground") == 0) {
+	} else if (strcmp(osc_string, "setForeground") == 0) {
 		log_info("Got OSC setForeground");
 		kmscon_session_set_foreground(term->session);
 	}
@@ -354,8 +351,7 @@ static void mouse_event(struct tsm_vte *vte, enum tsm_mouse_track_mode track_mod
  * though the size might have changed. force = true and notify = false doesn't
  * make any sense, though.
  */
-static void terminal_resize(struct kmscon_terminal *term,
-			    unsigned int cols, unsigned int rows,
+static void terminal_resize(struct kmscon_terminal *term, unsigned int cols, unsigned int rows,
 			    bool force, bool notify)
 {
 	bool resize = false;
@@ -389,14 +385,12 @@ static int font_set(struct kmscon_terminal *term)
 	struct screen *ent;
 
 	term->font_attr.bold = false;
-	ret = kmscon_font_find(&font, &term->font_attr,
-			       term->conf->font_engine);
+	ret = kmscon_font_find(&font, &term->font_attr, term->conf->font_engine);
 	if (ret)
 		return ret;
 
 	term->font_attr.bold = true;
-	ret = kmscon_font_find(&bold_font, &term->font_attr,
-			       term->conf->font_engine);
+	ret = kmscon_font_find(&bold_font, &term->font_attr, term->conf->font_engine);
 	if (ret) {
 		log_warning("cannot create bold font: %d", ret);
 		bold_font = font;
@@ -410,18 +404,16 @@ static int font_set(struct kmscon_terminal *term)
 
 	term->min_cols = 0;
 	term->min_rows = 0;
-	shl_dlist_for_each(iter, &term->screens) {
+	shl_dlist_for_each(iter, &term->screens)
+	{
 		ent = shl_dlist_entry(iter, struct screen, list);
 
 		ret = kmscon_text_set(ent->txt, font, bold_font, ent->disp);
 		if (ret)
-			log_warning("cannot change text-renderer font: %d",
-				    ret);
+			log_warning("cannot change text-renderer font: %d", ret);
 
-		terminal_resize(term,
-				kmscon_text_get_cols(ent->txt),
-				kmscon_text_get_rows(ent->txt),
-				false, false);
+		terminal_resize(term, kmscon_text_get_cols(ent->txt),
+				kmscon_text_get_rows(ent->txt), false, false);
 	}
 
 	terminal_resize(term, 0, 0, true, true);
@@ -440,15 +432,14 @@ static void rotate_cw_all(struct kmscon_terminal *term)
 	struct shl_dlist *iter;
 	struct screen *scr;
 
-	shl_dlist_for_each(iter, &term->screens) {
+	shl_dlist_for_each(iter, &term->screens)
+	{
 		scr = shl_dlist_entry(iter, struct screen, list);
 		rotate_cw_screen(scr);
 		term->min_cols = 0;
 		term->min_rows = 0;
-		terminal_resize(term,
-				kmscon_text_get_cols(scr->txt),
-				kmscon_text_get_rows(scr->txt),
-				true, true);
+		terminal_resize(term, kmscon_text_get_cols(scr->txt),
+				kmscon_text_get_rows(scr->txt), true, true);
 	}
 }
 
@@ -467,15 +458,14 @@ static void rotate_ccw_all(struct kmscon_terminal *term)
 	struct shl_dlist *iter;
 	struct screen *scr;
 
-	shl_dlist_for_each(iter, &term->screens) {
+	shl_dlist_for_each(iter, &term->screens)
+	{
 		scr = shl_dlist_entry(iter, struct screen, list);
 		rotate_ccw_screen(scr);
 		term->min_cols = 0;
 		term->min_rows = 0;
-		terminal_resize(term,
-				kmscon_text_get_cols(scr->txt),
-				kmscon_text_get_rows(scr->txt),
-				true, true);
+		terminal_resize(term, kmscon_text_get_cols(scr->txt),
+				kmscon_text_get_rows(scr->txt), true, true);
 	}
 }
 
@@ -487,7 +477,8 @@ static int add_display(struct kmscon_terminal *term, struct uterm_display *disp)
 	const char *be;
 	bool opengl;
 
-	shl_dlist_for_each(iter, &term->screens) {
+	shl_dlist_for_each(iter, &term->screens)
+	{
 		scr = shl_dlist_entry(iter, struct screen, list);
 		if (scr->disp == disp)
 			return 0;
@@ -522,23 +513,19 @@ static int add_display(struct kmscon_terminal *term, struct uterm_display *disp)
 		goto err_cb;
 	}
 
-	ret = kmscon_text_set(scr->txt, term->font, term->bold_font,
-			      scr->disp);
+	ret = kmscon_text_set(scr->txt, term->font, term->bold_font, scr->disp);
 	if (ret) {
 		log_error("cannot set text-renderer parameters");
 		goto err_text;
 	}
 
-	terminal_resize(term,
-			kmscon_text_get_cols(scr->txt),
-			kmscon_text_get_rows(scr->txt),
-			false, true);
+	terminal_resize(term, kmscon_text_get_cols(scr->txt), kmscon_text_get_rows(scr->txt), false,
+			true);
 
 	shl_dlist_link(&term->screens, &scr->list);
 
 	log_notice("Using video backend [%s] with text renderer [%s] and font engine [%s]",
-		   uterm_display_backend_name(disp), scr->txt->ops->name,
-		   term->font->ops->name);
+		   uterm_display_backend_name(disp), scr->txt->ops->name, term->font->ops->name);
 
 	log_debug("added display %p to terminal %p", disp, term);
 	redraw_screen(scr);
@@ -572,12 +559,11 @@ static void free_screen(struct screen *scr, bool update)
 
 	term->min_cols = 0;
 	term->min_rows = 0;
-	shl_dlist_for_each(iter, &term->screens) {
+	shl_dlist_for_each(iter, &term->screens)
+	{
 		ent = shl_dlist_entry(iter, struct screen, list);
-		terminal_resize(term,
-				kmscon_text_get_cols(ent->txt),
-				kmscon_text_get_rows(ent->txt),
-				false, false);
+		terminal_resize(term, kmscon_text_get_cols(ent->txt),
+				kmscon_text_get_rows(ent->txt), false, false);
 	}
 
 	terminal_resize(term, 0, 0, true, true);
@@ -588,7 +574,8 @@ static void rm_display(struct kmscon_terminal *term, struct uterm_display *disp)
 	struct shl_dlist *iter;
 	struct screen *scr;
 
-	shl_dlist_for_each(iter, &term->screens) {
+	shl_dlist_for_each(iter, &term->screens)
+	{
 		scr = shl_dlist_entry(iter, struct screen, list);
 		if (scr->disp == disp)
 			break;
@@ -601,45 +588,39 @@ static void rm_display(struct kmscon_terminal *term, struct uterm_display *disp)
 	free_screen(scr, true);
 }
 
-static void input_event(struct uterm_input *input,
-			struct uterm_input_key_event *ev,
-			void *data)
+static void input_event(struct uterm_input *input, struct uterm_input_key_event *ev, void *data)
 {
 	struct kmscon_terminal *term = data;
 
-	if (!term->opened || !term->awake || ev->handled || !kmscon_session_get_foreground(term->session))
+	if (!term->opened || !term->awake || ev->handled ||
+	    !kmscon_session_get_foreground(term->session))
 		return;
 
-	if (conf_grab_matches(term->conf->grab_scroll_up,
-			      ev->mods, ev->num_syms, ev->keysyms)) {
+	if (conf_grab_matches(term->conf->grab_scroll_up, ev->mods, ev->num_syms, ev->keysyms)) {
 		tsm_screen_sb_up(term->console, 1);
 		redraw_all(term);
 		ev->handled = true;
 		return;
 	}
-	if (conf_grab_matches(term->conf->grab_scroll_down,
-			      ev->mods, ev->num_syms, ev->keysyms)) {
+	if (conf_grab_matches(term->conf->grab_scroll_down, ev->mods, ev->num_syms, ev->keysyms)) {
 		tsm_screen_sb_down(term->console, 1);
 		redraw_all(term);
 		ev->handled = true;
 		return;
 	}
-	if (conf_grab_matches(term->conf->grab_page_up,
-			      ev->mods, ev->num_syms, ev->keysyms)) {
+	if (conf_grab_matches(term->conf->grab_page_up, ev->mods, ev->num_syms, ev->keysyms)) {
 		tsm_screen_sb_page_up(term->console, 1);
 		redraw_all(term);
 		ev->handled = true;
 		return;
 	}
-	if (conf_grab_matches(term->conf->grab_page_down,
-			      ev->mods, ev->num_syms, ev->keysyms)) {
+	if (conf_grab_matches(term->conf->grab_page_down, ev->mods, ev->num_syms, ev->keysyms)) {
 		tsm_screen_sb_page_down(term->console, 1);
 		redraw_all(term);
 		ev->handled = true;
 		return;
 	}
-	if (conf_grab_matches(term->conf->grab_zoom_in,
-			      ev->mods, ev->num_syms, ev->keysyms)) {
+	if (conf_grab_matches(term->conf->grab_zoom_in, ev->mods, ev->num_syms, ev->keysyms)) {
 		ev->handled = true;
 		if (term->font_attr.points + 1 < term->font_attr.points)
 			return;
@@ -649,8 +630,7 @@ static void input_event(struct uterm_input *input,
 			--term->font_attr.points;
 		return;
 	}
-	if (conf_grab_matches(term->conf->grab_zoom_out,
-			      ev->mods, ev->num_syms, ev->keysyms)) {
+	if (conf_grab_matches(term->conf->grab_zoom_out, ev->mods, ev->num_syms, ev->keysyms)) {
 		ev->handled = true;
 		if (term->font_attr.points <= 1)
 			return;
@@ -660,14 +640,12 @@ static void input_event(struct uterm_input *input,
 			++term->font_attr.points;
 		return;
 	}
-	if (conf_grab_matches(term->conf->grab_rotate_cw,
-				ev->mods, ev->num_syms, ev->keysyms)) {
+	if (conf_grab_matches(term->conf->grab_rotate_cw, ev->mods, ev->num_syms, ev->keysyms)) {
 		rotate_cw_all(term);
 		ev->handled = true;
 		return;
 	}
-	if (conf_grab_matches(term->conf->grab_rotate_ccw,
-				ev->mods, ev->num_syms, ev->keysyms)) {
+	if (conf_grab_matches(term->conf->grab_rotate_ccw, ev->mods, ev->num_syms, ev->keysyms)) {
 		rotate_ccw_all(term);
 		ev->handled = true;
 		return;
@@ -679,8 +657,8 @@ static void input_event(struct uterm_input *input,
 	if (ev->num_syms > 1)
 		return;
 
-	if (tsm_vte_handle_keyboard(term->vte, ev->keysyms[0], ev->ascii,
-				    ev->mods, ev->codepoints[0])) {
+	if (tsm_vte_handle_keyboard(term->vte, ev->keysyms[0], ev->ascii, ev->mods,
+				    ev->codepoints[0])) {
 		tsm_screen_sb_reset(term->console);
 		redraw_all(term);
 		ev->handled = true;
@@ -708,7 +686,8 @@ static void copy_selection(struct kmscon_terminal *term)
 	term->pointer.copy_len = tsm_screen_selection_copy(term->console, &term->pointer.copy);
 }
 
-static void forward_pointer_event(struct kmscon_terminal *term, struct uterm_input_pointer_event *ev)
+static void forward_pointer_event(struct kmscon_terminal *term,
+				  struct uterm_input_pointer_event *ev)
 {
 	unsigned int event;
 
@@ -725,22 +704,25 @@ static void forward_pointer_event(struct kmscon_terminal *term, struct uterm_inp
 	default:
 		return;
 	}
-	tsm_vte_handle_mouse(term->vte, term->pointer.posx, term->pointer.posy,
-			term->pointer.x, term->pointer.y, ev->button, event, 0);
+	tsm_vte_handle_mouse(term->vte, term->pointer.posx, term->pointer.posy, term->pointer.x,
+			     term->pointer.y, ev->button, event, 0);
 }
 
-static void handle_pointer_button(struct kmscon_terminal *term, struct uterm_input_pointer_event *ev)
+static void handle_pointer_button(struct kmscon_terminal *term,
+				  struct uterm_input_pointer_event *ev)
 {
-	switch(ev->button) {
+	switch (ev->button) {
 	case 0:
 		if (ev->pressed) {
 			if (ev->double_click) {
-				tsm_screen_selection_word(term->console, term->pointer.posx, term->pointer.posy);
+				tsm_screen_selection_word(term->console, term->pointer.posx,
+							  term->pointer.posy);
 				copy_selection(term);
 				term->pointer.select = false;
 			} else {
 				term->pointer.select = true;
-				start_selection(term->console, term->pointer.posx, term->pointer.posy);
+				start_selection(term->console, term->pointer.posx,
+						term->pointer.posy);
 			}
 		} else {
 			if (term->pointer.select)
@@ -760,8 +742,7 @@ static void handle_pointer_button(struct kmscon_terminal *term, struct uterm_inp
 	}
 }
 
-static void pointer_event(struct uterm_input *input,
-			  struct uterm_input_pointer_event *ev,
+static void pointer_event(struct uterm_input *input, struct uterm_input_pointer_event *ev,
 			  void *data)
 {
 	struct kmscon_terminal *term = data;
@@ -770,7 +751,8 @@ static void pointer_event(struct uterm_input *input,
 		term->pointer.x = ev->pointer_x;
 		term->pointer.y = ev->pointer_y;
 
-		coord_to_cell(term, term->pointer.x, term->pointer.y, &term->pointer.posx, &term->pointer.posy);
+		coord_to_cell(term, term->pointer.x, term->pointer.y, &term->pointer.posx,
+			      &term->pointer.posy);
 		term->pointer.visible = true;
 	}
 
@@ -785,7 +767,7 @@ static void pointer_event(struct uterm_input *input,
 		break;
 	case UTERM_MOVED:
 		if (term->pointer.select)
-			update_selection(term->console,term->pointer.posx, term->pointer.posy);
+			update_selection(term->console, term->pointer.posx, term->pointer.posy);
 		break;
 	case UTERM_BUTTON:
 		handle_pointer_button(term, ev);
@@ -794,7 +776,7 @@ static void pointer_event(struct uterm_input *input,
 		if (ev->wheel > 0)
 			tsm_screen_sb_up(term->console, 3);
 		else
-		 	tsm_screen_sb_down(term->console, 3);
+			tsm_screen_sb_down(term->console, 3);
 		break;
 	case UTERM_SYNC:
 		redraw_all(term);
@@ -866,8 +848,8 @@ static void terminal_destroy(struct kmscon_terminal *term)
 	free(term);
 }
 
-static int session_event(struct kmscon_session *session,
-			 struct kmscon_session_event *ev, void *data)
+static int session_event(struct kmscon_session *session, struct kmscon_session_event *ev,
+			 void *data)
 {
 	struct kmscon_terminal *term = data;
 
@@ -898,8 +880,7 @@ static int session_event(struct kmscon_session *session,
 	return 0;
 }
 
-static void pty_input(struct kmscon_pty *pty, const char *u8, size_t len,
-								void *data)
+static void pty_input(struct kmscon_pty *pty, const char *u8, size_t len, void *data)
 {
 	struct kmscon_terminal *term = data;
 
@@ -919,16 +900,15 @@ static void pty_event(struct ev_fd *fd, int mask, void *data)
 	kmscon_pty_dispatch(term->pty);
 }
 
-static void write_event(struct tsm_vte *vte, const char *u8, size_t len,
-			void *data)
+static void write_event(struct tsm_vte *vte, const char *u8, size_t len, void *data)
 {
 	struct kmscon_terminal *term = data;
 
 	kmscon_pty_write(term->pty, u8, len);
 }
 
-int kmscon_terminal_register(struct kmscon_session **out,
-			     struct kmscon_seat *seat, unsigned int vtnr)
+int kmscon_terminal_register(struct kmscon_session **out, struct kmscon_seat *seat,
+			     unsigned int vtnr)
 {
 	struct kmscon_terminal *term;
 	int ret;
@@ -949,8 +929,7 @@ int kmscon_terminal_register(struct kmscon_session **out,
 	term->conf_ctx = kmscon_seat_get_conf(seat);
 	term->conf = conf_ctx_get_mem(term->conf_ctx);
 
-	strncpy(term->font_attr.name, term->conf->font_name,
-		KMSCON_FONT_MAX_NAME - 1);
+	strncpy(term->font_attr.name, term->conf->font_name, KMSCON_FONT_MAX_NAME - 1);
 	term->font_attr.ppi = term->conf->font_ppi;
 	term->font_attr.points = term->conf->font_size;
 
@@ -959,13 +938,11 @@ int kmscon_terminal_register(struct kmscon_session **out,
 		goto err_free;
 	tsm_screen_set_max_sb(term->console, term->conf->sb_size);
 
-	ret = tsm_vte_new(&term->vte, term->console, write_event, term,
-			  log_llog, NULL);
+	ret = tsm_vte_new(&term->vte, term->console, write_event, term, log_llog, NULL);
 	if (ret)
 		goto err_con;
 
-	tsm_vte_set_backspace_sends_delete(term->vte,
-					   BUILD_BACKSPACE_SENDS_DELETE);
+	tsm_vte_set_backspace_sends_delete(term->vte, BUILD_BACKSPACE_SENDS_DELETE);
 
 	tsm_vte_set_osc_cb(term->vte, osc_event, (void *)term);
 	tsm_vte_set_mouse_cb(term->vte, mouse_event, (void *)term);
@@ -1010,9 +987,8 @@ int kmscon_terminal_register(struct kmscon_session **out,
 			goto err_pty;
 	}
 
-	ret = ev_eloop_new_fd(term->eloop, &term->ptyfd,
-			      kmscon_pty_get_fd(term->pty),
-			      EV_READABLE, pty_event, term);
+	ret = ev_eloop_new_fd(term->eloop, &term->ptyfd, kmscon_pty_get_fd(term->pty), EV_READABLE,
+			      pty_event, term);
 	if (ret)
 		goto err_pty;
 
@@ -1026,8 +1002,7 @@ int kmscon_terminal_register(struct kmscon_session **out,
 			goto err_input;
 	}
 
-	ret = kmscon_seat_register_session(seat, &term->session, session_event,
-					   term);
+	ret = kmscon_seat_register_session(seat, &term->session, session_event, term);
 	if (ret) {
 		log_error("cannot register session for terminal: %d", ret);
 		goto err_pointer;

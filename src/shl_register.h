@@ -45,7 +45,7 @@
 #include <string.h>
 #include "shl_dlist.h"
 
-typedef void (*shl_register_destroy_cb) (void *data);
+typedef void (*shl_register_destroy_cb)(void *data);
 
 struct shl_register_record {
 	struct shl_dlist list;
@@ -62,9 +62,10 @@ struct shl_register {
 	struct shl_dlist records;
 };
 
-#define SHL_REGISTER_INIT(name) { \
-		.mutex = PTHREAD_MUTEX_INITIALIZER, \
-		.records = SHL_DLIST_INIT((name).records), \
+#define SHL_REGISTER_INIT(name)                                                                    \
+	{                                                                                          \
+		.mutex = PTHREAD_MUTEX_INITIALIZER,                                                \
+		.records = SHL_DLIST_INIT((name).records),                                         \
 	}
 
 static inline void shl_register_record_ref(struct shl_register_record *record)
@@ -141,9 +142,9 @@ static inline void shl_register_free(struct shl_register *reg)
 	if (!reg)
 		return;
 
-	shl_dlist_for_each(iter, &reg->records) {
-		record = shl_dlist_entry(iter, struct shl_register_record,
-					 list);
+	shl_dlist_for_each(iter, &reg->records)
+	{
+		record = shl_dlist_entry(iter, struct shl_register_record, list);
 		shl_dlist_unlink(&record->list);
 		shl_register_record_unref(record);
 	}
@@ -152,8 +153,7 @@ static inline void shl_register_free(struct shl_register *reg)
 	free(reg);
 }
 
-static inline int shl_register_add_cb(struct shl_register *reg,
-				      const char *name, void *data,
+static inline int shl_register_add_cb(struct shl_register *reg, const char *name, void *data,
 				      shl_register_destroy_cb destroy)
 {
 	struct shl_dlist *iter;
@@ -167,9 +167,9 @@ static inline int shl_register_add_cb(struct shl_register *reg,
 	if (ret)
 		return -EFAULT;
 
-	shl_dlist_for_each(iter, &reg->records) {
-		record = shl_dlist_entry(iter, struct shl_register_record,
-					 list);
+	shl_dlist_for_each(iter, &reg->records)
+	{
+		record = shl_dlist_entry(iter, struct shl_register_record, list);
 		if (!strcmp(record->name, name)) {
 			ret = -EALREADY;
 			goto out_unlock;
@@ -211,14 +211,12 @@ out_unlock:
 	return ret;
 }
 
-static inline int shl_register_add(struct shl_register *reg, const char *name,
-				   void *data)
+static inline int shl_register_add(struct shl_register *reg, const char *name, void *data)
 {
 	return shl_register_add_cb(reg, name, data, NULL);
 }
 
-static inline void shl_register_remove(struct shl_register *reg,
-				       const char *name)
+static inline void shl_register_remove(struct shl_register *reg, const char *name)
 {
 	struct shl_dlist *iter;
 	struct shl_register_record *record;
@@ -231,9 +229,9 @@ static inline void shl_register_remove(struct shl_register *reg,
 	if (ret)
 		return;
 
-	shl_dlist_for_each(iter, &reg->records) {
-		record = shl_dlist_entry(iter, struct shl_register_record,
-					 list);
+	shl_dlist_for_each(iter, &reg->records)
+	{
+		record = shl_dlist_entry(iter, struct shl_register_record, list);
 		if (strcmp(record->name, name))
 			continue;
 
@@ -245,9 +243,8 @@ static inline void shl_register_remove(struct shl_register *reg,
 	pthread_mutex_unlock(&reg->mutex);
 }
 
-static inline struct shl_register_record *shl_register_find(
-						struct shl_register *reg,
-						const char *name)
+static inline struct shl_register_record *shl_register_find(struct shl_register *reg,
+							    const char *name)
 {
 	struct shl_dlist *iter;
 	struct shl_register_record *record, *res;
@@ -261,9 +258,9 @@ static inline struct shl_register_record *shl_register_find(
 		return NULL;
 
 	res = NULL;
-	shl_dlist_for_each(iter, &reg->records) {
-		record = shl_dlist_entry(iter, struct shl_register_record,
-					 list);
+	shl_dlist_for_each(iter, &reg->records)
+	{
+		record = shl_dlist_entry(iter, struct shl_register_record, list);
 		if (!strcmp(record->name, name)) {
 			res = record;
 			shl_register_record_ref(res);
@@ -275,8 +272,7 @@ static inline struct shl_register_record *shl_register_find(
 	return res;
 }
 
-static inline struct shl_register_record *shl_register_first(
-						struct shl_register *reg)
+static inline struct shl_register_record *shl_register_first(struct shl_register *reg)
 {
 	int ret;
 	void *res;
@@ -291,8 +287,7 @@ static inline struct shl_register_record *shl_register_first(
 	if (shl_dlist_empty(&reg->records)) {
 		res = NULL;
 	} else {
-		res = shl_dlist_entry(reg->records.next,
-				      struct shl_register_record, list);
+		res = shl_dlist_entry(reg->records.next, struct shl_register_record, list);
 		shl_register_record_ref(res);
 	}
 
@@ -300,8 +295,7 @@ static inline struct shl_register_record *shl_register_first(
 	return res;
 }
 
-static inline struct shl_register_record *shl_register_last(
-						struct shl_register *reg)
+static inline struct shl_register_record *shl_register_last(struct shl_register *reg)
 {
 	int ret;
 	void *res;
@@ -316,8 +310,7 @@ static inline struct shl_register_record *shl_register_last(
 	if (shl_dlist_empty(&reg->records)) {
 		res = NULL;
 	} else {
-		res = shl_dlist_entry(reg->records.prev,
-				      struct shl_register_record, list);
+		res = shl_dlist_entry(reg->records.prev, struct shl_register_record, list);
 		shl_register_record_ref(res);
 	}
 

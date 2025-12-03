@@ -74,8 +74,7 @@ struct kmscon_pty {
 	int retry_count;
 };
 
-int kmscon_pty_new(struct kmscon_pty **out, kmscon_pty_input_cb input_cb,
-		   void *data)
+int kmscon_pty_new(struct kmscon_pty **out, kmscon_pty_input_cb input_cb, void *data)
 {
 	struct kmscon_pty *pty;
 	int ret;
@@ -250,9 +249,9 @@ static bool pty_is_open(struct kmscon_pty *pty)
 	return pty->fd >= 0;
 }
 
-static void __attribute__((noreturn))
-exec_child(const char *term, const char *colorterm, char **argv,
-	   const char *seat, const char *vtnr, bool env_reset, bool drm)
+static void __attribute__((noreturn)) exec_child(const char *term, const char *colorterm,
+						 char **argv, const char *seat, const char *vtnr,
+						 bool env_reset, bool drm)
 {
 	char **env;
 	char **def_argv;
@@ -260,19 +259,18 @@ exec_child(const char *term, const char *colorterm, char **argv,
 	int ret;
 
 	if (env_reset) {
-		env = malloc(sizeof(char*));
+		env = malloc(sizeof(char *));
 		if (!env) {
-			log_error("cannot allocate memory for environment (%d): %m",
-				  errno);
+			log_error("cannot allocate memory for environment (%d): %m", errno);
 			exit(EXIT_FAILURE);
 		}
 
-		memset(env, 0, sizeof(char*));
+		memset(env, 0, sizeof(char *));
 		environ = env;
 
-		def_argv = (char*[]){ "/bin/login", "-p", NULL };
+		def_argv = (char *[]){"/bin/login", "-p", NULL};
 	} else {
-		def_argv = (char*[]){ "/bin/login", NULL };
+		def_argv = (char *[]){"/bin/login", NULL};
 	}
 
 	if (!term)
@@ -382,8 +380,8 @@ static void setup_child(int master, struct winsize *ws)
 	}
 
 	if (dup2(slave, STDIN_FILENO) != STDIN_FILENO ||
-			dup2(slave, STDOUT_FILENO) != STDOUT_FILENO ||
-			dup2(slave, STDERR_FILENO) != STDERR_FILENO) {
+	    dup2(slave, STDOUT_FILENO) != STDOUT_FILENO ||
+	    dup2(slave, STDERR_FILENO) != STDERR_FILENO) {
 		log_err("cannot duplicate slave: %m");
 		goto err_out;
 	}
@@ -405,8 +403,8 @@ err_out:
  * a little bit more control of the process, and as a bonus avoid linking to
  * the libutil library in glibc.
  */
-static int pty_spawn(struct kmscon_pty *pty, int master,
-		     unsigned short width, unsigned short height, bool drm)
+static int pty_spawn(struct kmscon_pty *pty, int master, unsigned short width,
+		     unsigned short height, bool drm)
 {
 	pid_t pid;
 	struct winsize ws;
@@ -422,8 +420,8 @@ static int pty_spawn(struct kmscon_pty *pty, int master,
 		return -errno;
 	case 0:
 		setup_child(master, &ws);
-		exec_child(pty->term, pty->colorterm, pty->argv, pty->seat,
-			   pty->vtnr, pty->env_reset, drm);
+		exec_child(pty->term, pty->colorterm, pty->argv, pty->seat, pty->vtnr,
+			   pty->env_reset, drm);
 		exit(EXIT_FAILURE);
 	default:
 		log_debug("forking child %d", pid);
@@ -449,8 +447,7 @@ static int send_buf(struct kmscon_pty *pty)
 		}
 
 		if (ret < 0 && errno != EWOULDBLOCK) {
-			log_warn("cannot write to child process (%d): %m",
-				 errno);
+			log_warn("cannot write to child process (%d): %m", errno);
 			return ret;
 		}
 
@@ -477,12 +474,10 @@ static int read_buf(struct kmscon_pty *pty)
 			if (pty->input_cb)
 				pty->input_cb(pty, pty->io_buf, len, pty->data);
 		} else if (len == 0) {
-			log_debug("HUP during read on pty of child %d",
-				  pty->child);
+			log_debug("HUP during read on pty of child %d", pty->child);
 			break;
 		} else if (errno != EWOULDBLOCK) {
-			log_debug("cannot read from pty of child %d (%d): %m",
-				  pty->child, errno);
+			log_debug("cannot read from pty of child %d (%d): %m", pty->child, errno);
 			break;
 		}
 	} while (len > 0 && --num);
@@ -531,8 +526,7 @@ static void pty_input(struct ev_fd *fd, int mask, void *data)
 		read_buf(pty);
 }
 
-static void sig_child(struct ev_eloop *eloop, struct ev_child_data *chld,
-			void *data)
+static void sig_child(struct ev_eloop *eloop, struct ev_child_data *chld, void *data)
 {
 	struct kmscon_pty *pty = data;
 	time_t current_time;
@@ -540,8 +534,7 @@ static void sig_child(struct ev_eloop *eloop, struct ev_child_data *chld,
 	if (chld->pid != pty->child)
 		return;
 
-	log_info("child exited: pid: %u status: %d",
-		 chld->pid, chld->status);
+	log_info("child exited: pid: %u status: %d", chld->pid, chld->status);
 
 	if (pty->retry_count == MAX_RETRY_COUNT) {
 		log_err("reached max retry attempts for login process");
@@ -560,8 +553,7 @@ static void sig_child(struct ev_eloop *eloop, struct ev_child_data *chld,
 	pty->input_cb(pty, NULL, 0, pty->data);
 }
 
-int kmscon_pty_open(struct kmscon_pty *pty, unsigned short width,
-		    unsigned short height, bool drm)
+int kmscon_pty_open(struct kmscon_pty *pty, unsigned short width, unsigned short height, bool drm)
 {
 	int ret;
 	int master;
@@ -578,8 +570,7 @@ int kmscon_pty_open(struct kmscon_pty *pty, unsigned short width,
 		return -errno;
 	}
 
-	ret = ev_eloop_new_fd(pty->eloop, &pty->efd, master,
-			      EV_ET | EV_READABLE, pty_input, pty);
+	ret = ev_eloop_new_fd(pty->eloop, &pty->efd, master, EV_ET | EV_READABLE, pty_input, pty);
 	if (ret)
 		goto err_master;
 
@@ -664,8 +655,7 @@ void kmscon_pty_signal(struct kmscon_pty *pty, int signum)
 	log_debug("send signal %d to child", signum);
 }
 
-void kmscon_pty_resize(struct kmscon_pty *pty,
-			unsigned short width, unsigned short height)
+void kmscon_pty_resize(struct kmscon_pty *pty, unsigned short width, unsigned short height)
 {
 	int ret;
 	struct winsize ws;

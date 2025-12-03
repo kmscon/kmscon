@@ -31,8 +31,8 @@
 #include <errno.h>
 #include <stdlib.h>
 #include "font.h"
-#include "shl_module_interface.h"
 #include "shl_log.h"
+#include "shl_module_interface.h"
 
 #define LOG_SUBSYSTEM "mod_pango"
 

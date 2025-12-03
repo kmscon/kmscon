@@ -126,31 +126,20 @@ static inline bool input_bit_is_set(const unsigned long *array, int bit)
 	return !!(array[bit / LONG_BIT] & (1UL << (bit % LONG_BIT)));
 }
 
-int uxkb_desc_init(struct uterm_input *input,
-		   const char *model,
-		   const char *layout,
-		   const char *variant,
-		   const char *options,
-		   const char *locale,
-		   const char *keymap,
-		   const char *compose_file,
-		   size_t compose_file_len);
+int uxkb_desc_init(struct uterm_input *input, const char *model, const char *layout,
+		   const char *variant, const char *options, const char *locale, const char *keymap,
+		   const char *compose_file, size_t compose_file_len);
 void uxkb_desc_destroy(struct uterm_input *input);
 
 int uxkb_dev_init(struct uterm_input_dev *dev);
 void uxkb_dev_destroy(struct uterm_input_dev *dev);
-int uxkb_dev_process(struct uterm_input_dev *dev,
-		     uint16_t key_state,
-		     uint16_t code);
+int uxkb_dev_process(struct uterm_input_dev *dev, uint16_t key_state, uint16_t code);
 void uxkb_dev_sleep(struct uterm_input_dev *dev);
 void uxkb_dev_wake_up(struct uterm_input_dev *dev);
 
-void pointer_dev_rel(struct uterm_input_dev *dev,
-		     uint16_t code, int32_t value);
-void pointer_dev_abs(struct uterm_input_dev *dev,
-		     uint16_t code, int32_t value);
-void pointer_dev_button(struct uterm_input_dev *dev,
-			uint16_t code, int32_t value);
+void pointer_dev_rel(struct uterm_input_dev *dev, uint16_t code, int32_t value);
+void pointer_dev_abs(struct uterm_input_dev *dev, uint16_t code, int32_t value);
+void pointer_dev_button(struct uterm_input_dev *dev, uint16_t code, int32_t value);
 void pointer_dev_sync(struct uterm_input_dev *dev);
 
 #endif /* UTERM_INPUT_INTERNAL_H */

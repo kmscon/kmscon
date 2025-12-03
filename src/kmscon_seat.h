@@ -51,9 +51,7 @@ enum kmscon_seat_event {
 	KMSCON_SEAT_HUP,
 };
 
-typedef int (*kmscon_seat_cb_t) (struct kmscon_seat *seat,
-				 unsigned int event,
-				 void *data);
+typedef int (*kmscon_seat_cb_t)(struct kmscon_seat *seat, unsigned int event, void *data);
 
 enum kmscon_session_event_type {
 	KMSCON_SESSION_DISPLAY_NEW,
@@ -69,27 +67,18 @@ struct kmscon_session_event {
 	struct uterm_display *disp;
 };
 
-typedef int (*kmscon_session_cb_t) (struct kmscon_session *session,
-				    struct kmscon_session_event *event,
-				    void *data);
+typedef int (*kmscon_session_cb_t)(struct kmscon_session *session,
+				   struct kmscon_session_event *event, void *data);
 
-int kmscon_seat_new(struct kmscon_seat **out,
-		    struct conf_ctx *main_conf,
-		    struct ev_eloop *eloop,
-		    struct uterm_vt_master *vtm,
-		    unsigned int vt_types,
-		    const char *seatname,
-		    kmscon_seat_cb_t cb,
-		    void *data);
+int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf, struct ev_eloop *eloop,
+		    struct uterm_vt_master *vtm, unsigned int vt_types, const char *seatname,
+		    kmscon_seat_cb_t cb, void *data);
 void kmscon_seat_free(struct kmscon_seat *seat);
 void kmscon_seat_startup(struct kmscon_seat *seat);
 
-int kmscon_seat_add_display(struct kmscon_seat *seat,
-			    struct uterm_display *disp);
-void kmscon_seat_remove_display(struct kmscon_seat *seat,
-				struct uterm_display *disp);
-void kmscon_seat_refresh_display(struct kmscon_seat *seat,
-				 struct uterm_display *disp);
+int kmscon_seat_add_display(struct kmscon_seat *seat, struct uterm_display *disp);
+void kmscon_seat_remove_display(struct kmscon_seat *seat, struct uterm_display *disp);
+void kmscon_seat_refresh_display(struct kmscon_seat *seat, struct uterm_display *disp);
 int kmscon_seat_add_input(struct kmscon_seat *seat, const char *node, bool mouse);
 void kmscon_seat_remove_input(struct kmscon_seat *seat, const char *node);
 
@@ -100,10 +89,8 @@ struct conf_ctx *kmscon_seat_get_conf(struct kmscon_seat *seat);
 
 void kmscon_seat_schedule(struct kmscon_seat *seat, unsigned int id);
 
-int kmscon_seat_register_session(struct kmscon_seat *seat,
-				 struct kmscon_session **out,
-				 kmscon_session_cb_t cb,
-				 void *data);
+int kmscon_seat_register_session(struct kmscon_seat *seat, struct kmscon_session **out,
+				 kmscon_session_cb_t cb, void *data);
 
 void kmscon_session_ref(struct kmscon_session *sess);
 void kmscon_session_unref(struct kmscon_session *sess);

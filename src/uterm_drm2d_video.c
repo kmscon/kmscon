@@ -40,8 +40,8 @@
 #include "eloop.h"
 #include "shl_log.h"
 #include "shl_misc.h"
-#include "uterm_drm_shared_internal.h"
 #include "uterm_drm2d_internal.h"
+#include "uterm_drm_shared_internal.h"
 #include "uterm_video.h"
 #include "uterm_video_internal.h"
 
@@ -97,8 +97,8 @@ static int init_rb(struct uterm_display *disp, struct uterm_drm2d_rb *rb)
 	rb->stride = req.pitch;
 	rb->size = req.size;
 
-	ret = drmModeAddFB(vdrm->fd, req.width, req.height,
-			   24, 32, rb->stride, rb->handle, &rb->fb);
+	ret = drmModeAddFB(vdrm->fd, req.width, req.height, 24, 32, rb->stride, rb->handle,
+			   &rb->fb);
 	if (ret) {
 		log_err("cannot add drm-fb");
 		ret = -EFAULT;
@@ -115,8 +115,7 @@ static int init_rb(struct uterm_display *disp, struct uterm_drm2d_rb *rb)
 		goto err_fb;
 	}
 
-	rb->map = mmap(0, rb->size, PROT_READ | PROT_WRITE, MAP_SHARED,
-		       vdrm->fd, mreq.offset);
+	rb->map = mmap(0, rb->size, PROT_READ | PROT_WRITE, MAP_SHARED, vdrm->fd, mreq.offset);
 	if (rb->map == MAP_FAILED) {
 		log_err("cannot mmap dumb buffer");
 		ret = -EFAULT;
@@ -133,8 +132,7 @@ err_buf:
 	dreq.handle = rb->handle;
 	r = drmIoctl(vdrm->fd, DRM_IOCTL_MODE_DESTROY_DUMB, &dreq);
 	if (r)
-		log_warning("cannot destroy dumb buffer (%d/%d): %m",
-			    ret, errno);
+		log_warning("cannot destroy dumb buffer (%d/%d): %m", ret, errno);
 
 	return ret;
 }
@@ -149,11 +147,9 @@ static void destroy_rb(struct uterm_display *disp, struct uterm_drm2d_rb *rb)
 	drmModeRmFB(vdrm->fd, rb->fb);
 	memset(&dreq, 0, sizeof(dreq));
 	dreq.handle = rb->handle;
-	ret = drmIoctl(vdrm->fd, DRM_IOCTL_MODE_DESTROY_DUMB,
-		       &dreq);
+	ret = drmIoctl(vdrm->fd, DRM_IOCTL_MODE_DESTROY_DUMB, &dreq);
 	if (ret)
-		log_warning("cannot destroy dumb buffer (%d/%d): %m",
-			    ret, errno);
+		log_warning("cannot destroy dumb buffer (%d/%d): %m", ret, errno);
 }
 
 static int display_activate(struct uterm_display *disp, struct uterm_mode *mode)
@@ -168,9 +164,9 @@ static int display_activate(struct uterm_display *disp, struct uterm_mode *mode)
 	if (!mode)
 		return -EINVAL;
 
-	minfo = uterm_drm_mode_get_info(mode);;
-	log_info("activating display %p to %ux%u", disp,
-		 minfo->hdisplay, minfo->vdisplay);
+	minfo = uterm_drm_mode_get_info(mode);
+	;
+	log_info("activating display %p to %ux%u", disp, minfo->hdisplay, minfo->vdisplay);
 
 	ret = uterm_drm_display_activate(disp, vdrm->fd);
 	if (ret)
@@ -187,8 +183,7 @@ static int display_activate(struct uterm_display *disp, struct uterm_mode *mode)
 	if (ret)
 		goto err_rb;
 
-	ret = drmModeSetCrtc(vdrm->fd, ddrm->crtc_id,
-			     d2d->rb[0].fb, 0, 0, &ddrm->conn_id, 1,
+	ret = drmModeSetCrtc(vdrm->fd, ddrm->crtc_id, d2d->rb[0].fb, 0, 0, &ddrm->conn_id, 1,
 			     minfo);
 
 	if (ret && mode == disp->desired_mode && mode != disp->default_mode) {
@@ -239,8 +234,7 @@ static int display_use(struct uterm_display *disp, bool *opengl)
 	return d2d->current_rb ^ 1;
 }
 
-static int display_get_buffers(struct uterm_display *disp,
-			       struct uterm_video_buffer *buffer,
+static int display_get_buffers(struct uterm_display *disp, struct uterm_video_buffer *buffer,
 			       unsigned int formats)
 {
 	struct uterm_drm2d_display *d2d = uterm_drm_display_get_data(disp);
@@ -299,7 +293,8 @@ static void show_displays(struct uterm_video *video)
 	if (!video_is_awake(video))
 		return;
 
-	shl_dlist_for_each(i, &video->displays) {
+	shl_dlist_for_each(i, &video->displays)
+	{
 		iter = shl_dlist_entry(i, struct uterm_display, list);
 
 		if (!display_is_online(iter))
@@ -326,16 +321,14 @@ static int video_init(struct uterm_video *video, const char *node)
 	uint64_t has_dumb;
 	struct uterm_drm_video *vdrm;
 
-	ret = uterm_drm_video_init(video, node, &drm2d_display_ops,
-				   NULL, NULL);
+	ret = uterm_drm_video_init(video, node, &drm2d_display_ops, NULL, NULL);
 	if (ret)
 		return ret;
 	vdrm = video->data;
 
 	log_debug("initialize 2D layer on %p", video);
 
-	if (drmGetCap(vdrm->fd, DRM_CAP_DUMB_BUFFER, &has_dumb) < 0 ||
-	    !has_dumb) {
+	if (drmGetCap(vdrm->fd, DRM_CAP_DUMB_BUFFER, &has_dumb) < 0 || !has_dumb) {
 		log_err("driver does not support dumb buffers");
 		uterm_drm_video_destroy(video);
 		return -EOPNOTSUPP;
@@ -378,11 +371,13 @@ static int video_wake_up(struct uterm_video *video)
 struct uterm_video_module drm2d_module = {
 	.name = "drm2d",
 	.owner = NULL,
-	.ops = {
-		.init = video_init,
-		.destroy = video_destroy,
-		.segfault = NULL, /* TODO: reset all saved CRTCs on segfault */
-		.poll = video_poll,
-		.sleep = video_sleep,
-		.wake_up = video_wake_up,},
+	.ops =
+		{
+			.init = video_init,
+			.destroy = video_destroy,
+			.segfault = NULL, /* TODO: reset all saved CRTCs on segfault */
+			.poll = video_poll,
+			.sleep = video_sleep,
+			.wake_up = video_wake_up,
+		},
 };

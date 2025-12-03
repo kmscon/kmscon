@@ -220,8 +220,7 @@ static void print_help()
 	 */
 }
 
-#define KMSCON_CONF_FROM_FIELD(_mem, _name) \
-	shl_offsetof((_mem), struct kmscon_conf_t, _name)
+#define KMSCON_CONF_FROM_FIELD(_mem, _name) shl_offsetof((_mem), struct kmscon_conf_t, _name)
 
 /*
  * VT Type
@@ -265,12 +264,11 @@ static int conf_parse_vt(struct conf_option *opt, bool on, const char *arg)
 	}
 
 	opt->type->free(opt);
-	*(void**)opt->mem = str;
+	*(void **)opt->mem = str;
 	return 0;
 }
 
-static int conf_copy_vt(struct conf_option *opt,
-			const struct conf_option *src)
+static int conf_copy_vt(struct conf_option *opt, const struct conf_option *src)
 {
 	return conf_string.copy(opt, src);
 }
@@ -292,7 +290,7 @@ static const struct conf_type conf_vt = {
  * special handling that the command-line does.
  */
 
-static char *def_argv[] = { "/bin/login", "-p", NULL };
+static char *def_argv[] = {"/bin/login", "-p", NULL};
 
 static void conf_default_login(struct conf_option *opt)
 {
@@ -322,8 +320,7 @@ static int conf_parse_login(struct conf_option *opt, bool on, const char *arg)
 	return 0;
 }
 
-static int conf_copy_login(struct conf_option *opt,
-			   const struct conf_option *src)
+static int conf_copy_login(struct conf_option *opt, const struct conf_option *src)
 {
 	struct kmscon_conf_t *conf = KMSCON_CONF_FROM_FIELD(opt->mem, login);
 	struct kmscon_conf_t *s = KMSCON_CONF_FROM_FIELD(src->mem, login);
@@ -352,8 +349,7 @@ static const struct conf_type conf_login = {
 	.copy = conf_copy_login,
 };
 
-static int aftercheck_login(struct conf_option *opt, int argc, char **argv,
-			    int idx)
+static int aftercheck_login(struct conf_option *opt, int argc, char **argv, int idx)
 {
 	struct kmscon_conf_t *conf = KMSCON_CONF_FROM_FIELD(opt->mem, login);
 	int ret = 0;
@@ -373,8 +369,7 @@ static int aftercheck_login(struct conf_option *opt, int argc, char **argv,
 		conf->argv = t;
 		ret = argc - idx;
 	} else if (!conf->argv) {
-		ret = shl_dup_array_size(&t, def_argv,
-					 sizeof(def_argv) / sizeof(*def_argv));
+		ret = shl_dup_array_size(&t, def_argv, sizeof(def_argv) / sizeof(*def_argv));
 		if (ret)
 			return ret;
 
@@ -449,8 +444,7 @@ static int conf_parse_gpus(struct conf_option *opt, bool on, const char *arg)
 	return 0;
 }
 
-static int conf_copy_gpus(struct conf_option *opt,
-			  const struct conf_option *src)
+static int conf_copy_gpus(struct conf_option *opt, const struct conf_option *src)
 {
 	return conf_uint.copy(opt, src);
 }
@@ -481,13 +475,13 @@ static int conf_parse_color(struct conf_option *opt, bool on, const char *arg)
 
 	ret = shl_split_string(arg, &list, &list_num, ',', true);
 	if (ret) {
-		log_error("cannot split '%s' config-option argument",
-			  opt->long_name + 3);
+		log_error("cannot split '%s' config-option argument", opt->long_name + 3);
 		return ret;
 	}
 	if (list_num != 3) {
 		log_error("%u values given for '%s' config-option argument, "
-			  "3 expected", list_num, opt->long_name + 3);
+			  "3 expected",
+			  list_num, opt->long_name + 3);
 		ret = -EFAULT;
 		goto out_free;
 	}
@@ -503,7 +497,7 @@ static int conf_parse_color(struct conf_option *opt, bool on, const char *arg)
 			ret = -EFAULT;
 			goto out_free;
 		}
-		((uint8_t*)opt->mem)[i] = val;
+		((uint8_t *)opt->mem)[i] = val;
 	}
 
 out_free:
@@ -511,8 +505,7 @@ out_free:
 	return ret;
 }
 
-static int conf_copy_color(struct conf_option *opt,
-			   const struct conf_option *src)
+static int conf_copy_color(struct conf_option *opt, const struct conf_option *src)
 {
 	memcpy(opt->mem, src->mem, 3);
 	return 0;
@@ -531,8 +524,9 @@ static const struct conf_type conf_color = {
 	.copy = conf_copy_color,
 };
 
-#define CONF_OPTION_COLOR(_long, _mem_palette, _offset) \
-	CONF_OPTION(0, 0, _long, &conf_color, NULL, NULL, NULL, &(_mem_palette)[_offset], &def_palette[_offset])
+#define CONF_OPTION_COLOR(_long, _mem_palette, _offset)                                            \
+	CONF_OPTION(0, 0, _long, &conf_color, NULL, NULL, NULL, &(_mem_palette)[_offset],          \
+		    &def_palette[_offset])
 
 /*
  * Custom Afterchecks
@@ -541,8 +535,7 @@ static const struct conf_type conf_color = {
  * Some of them also need copy-helpers because they copy more than one value.
  */
 
-static int aftercheck_debug(struct conf_option *opt, int argc, char **argv,
-			    int idx)
+static int aftercheck_debug(struct conf_option *opt, int argc, char **argv, int idx)
 {
 	struct kmscon_conf_t *conf = KMSCON_CONF_FROM_FIELD(opt->mem, debug);
 
@@ -553,8 +546,7 @@ static int aftercheck_debug(struct conf_option *opt, int argc, char **argv,
 	return 0;
 }
 
-static int aftercheck_help(struct conf_option *opt, int argc, char **argv,
-			   int idx)
+static int aftercheck_help(struct conf_option *opt, int argc, char **argv, int idx)
 {
 	struct kmscon_conf_t *conf = KMSCON_CONF_FROM_FIELD(opt->mem, help);
 
@@ -567,8 +559,7 @@ static int aftercheck_help(struct conf_option *opt, int argc, char **argv,
 	return 0;
 }
 
-static int aftercheck_drm(struct conf_option *opt, int argc, char **argv,
-			  int idx)
+static int aftercheck_drm(struct conf_option *opt, int argc, char **argv, int idx)
 {
 #ifndef BUILD_ENABLE_VIDEO_DRM2D
 #ifndef BUILD_ENABLE_VIDEO_DRM3D
@@ -588,8 +579,7 @@ static int aftercheck_drm(struct conf_option *opt, int argc, char **argv,
 	return 0;
 }
 
-static int aftercheck_vt(struct conf_option *opt, int argc, char **argv,
-			 int idx)
+static int aftercheck_vt(struct conf_option *opt, int argc, char **argv, int idx)
 {
 	struct kmscon_conf_t *conf = KMSCON_CONF_FROM_FIELD(opt->mem, vt);
 
@@ -597,7 +587,8 @@ static int aftercheck_vt(struct conf_option *opt, int argc, char **argv,
 		return 0;
 
 	if (!kmscon_conf_is_single_seat(conf)) {
-		log_error("you cannot use global --vt if --seats contains not exactly one seat, ignoring --vt");
+		log_error("you cannot use global --vt if --seats contains not exactly one seat, "
+			  "ignoring --vt");
 		free(conf->vt);
 		conf->vt = NULL;
 		return -EFAULT;
@@ -606,8 +597,7 @@ static int aftercheck_vt(struct conf_option *opt, int argc, char **argv,
 	return 0;
 }
 
-static int aftercheck_listen(struct conf_option *opt, int argc, char **argv,
-			     int idx)
+static int aftercheck_listen(struct conf_option *opt, int argc, char **argv, int idx)
 {
 	struct kmscon_conf_t *conf = KMSCON_CONF_FROM_FIELD(opt->mem, listen);
 
@@ -623,67 +613,59 @@ static int aftercheck_listen(struct conf_option *opt, int argc, char **argv,
  * speeds up config-parser considerably.
  */
 
-static char *def_seats[] = { "current", NULL };
+static char *def_seats[] = {"current", NULL};
 
-static struct conf_grab def_grab_scroll_up =
-		CONF_SINGLE_GRAB(SHL_SHIFT_MASK, XKB_KEY_Up);
+static struct conf_grab def_grab_scroll_up = CONF_SINGLE_GRAB(SHL_SHIFT_MASK, XKB_KEY_Up);
 
-static struct conf_grab def_grab_scroll_down =
-		CONF_SINGLE_GRAB(SHL_SHIFT_MASK, XKB_KEY_Down);
+static struct conf_grab def_grab_scroll_down = CONF_SINGLE_GRAB(SHL_SHIFT_MASK, XKB_KEY_Down);
 
-static struct conf_grab def_grab_page_up =
-		CONF_SINGLE_GRAB(SHL_SHIFT_MASK, XKB_KEY_Prior);
+static struct conf_grab def_grab_page_up = CONF_SINGLE_GRAB(SHL_SHIFT_MASK, XKB_KEY_Prior);
 
-static struct conf_grab def_grab_page_down =
-		CONF_SINGLE_GRAB(SHL_SHIFT_MASK, XKB_KEY_Next);
+static struct conf_grab def_grab_page_down = CONF_SINGLE_GRAB(SHL_SHIFT_MASK, XKB_KEY_Next);
 
-static struct conf_grab def_grab_zoom_in =
-		CONF_SINGLE_GRAB(SHL_CONTROL_MASK, XKB_KEY_plus);
+static struct conf_grab def_grab_zoom_in = CONF_SINGLE_GRAB(SHL_CONTROL_MASK, XKB_KEY_plus);
 
-static struct conf_grab def_grab_zoom_out =
-		CONF_SINGLE_GRAB(SHL_CONTROL_MASK, XKB_KEY_minus);
+static struct conf_grab def_grab_zoom_out = CONF_SINGLE_GRAB(SHL_CONTROL_MASK, XKB_KEY_minus);
 
 static struct conf_grab def_grab_session_next =
-		CONF_SINGLE_GRAB(SHL_CONTROL_MASK | SHL_LOGO_MASK, XKB_KEY_Right);
+	CONF_SINGLE_GRAB(SHL_CONTROL_MASK | SHL_LOGO_MASK, XKB_KEY_Right);
 
 static struct conf_grab def_grab_session_prev =
-		CONF_SINGLE_GRAB(SHL_CONTROL_MASK | SHL_LOGO_MASK, XKB_KEY_Left);
+	CONF_SINGLE_GRAB(SHL_CONTROL_MASK | SHL_LOGO_MASK, XKB_KEY_Left);
 
 static struct conf_grab def_grab_session_dummy =
-		CONF_SINGLE_GRAB(SHL_CONTROL_MASK | SHL_LOGO_MASK, XKB_KEY_Escape);
+	CONF_SINGLE_GRAB(SHL_CONTROL_MASK | SHL_LOGO_MASK, XKB_KEY_Escape);
 
 static struct conf_grab def_grab_session_close =
-		CONF_SINGLE_GRAB(SHL_CONTROL_MASK | SHL_LOGO_MASK, XKB_KEY_BackSpace);
+	CONF_SINGLE_GRAB(SHL_CONTROL_MASK | SHL_LOGO_MASK, XKB_KEY_BackSpace);
 
 static struct conf_grab def_grab_terminal_new =
-		CONF_SINGLE_GRAB(SHL_CONTROL_MASK | SHL_LOGO_MASK, XKB_KEY_Return);
+	CONF_SINGLE_GRAB(SHL_CONTROL_MASK | SHL_LOGO_MASK, XKB_KEY_Return);
 
-static struct conf_grab def_grab_rotate_cw =
-		CONF_SINGLE_GRAB(SHL_LOGO_MASK, XKB_KEY_plus);
+static struct conf_grab def_grab_rotate_cw = CONF_SINGLE_GRAB(SHL_LOGO_MASK, XKB_KEY_plus);
 
-static struct conf_grab def_grab_rotate_ccw =
-		CONF_SINGLE_GRAB(SHL_LOGO_MASK, XKB_KEY_minus);
+static struct conf_grab def_grab_rotate_ccw = CONF_SINGLE_GRAB(SHL_LOGO_MASK, XKB_KEY_minus);
 
 static palette_t def_palette = {
-	[TSM_COLOR_BLACK]         = {   0,   0,   0 }, /* black */
-	[TSM_COLOR_RED]           = { 205,   0,   0 }, /* red */
-	[TSM_COLOR_GREEN]         = {   0, 205,   0 }, /* green */
-	[TSM_COLOR_YELLOW]        = { 205, 205,   0 }, /* yellow */
-	[TSM_COLOR_BLUE]          = {   0,   0, 238 }, /* blue */
-	[TSM_COLOR_MAGENTA]       = { 205,   0, 205 }, /* magenta */
-	[TSM_COLOR_CYAN]          = {   0, 205, 205 }, /* cyan */
-	[TSM_COLOR_LIGHT_GREY]    = { 229, 229, 229 }, /* light grey */
-	[TSM_COLOR_DARK_GREY]     = { 127, 127, 127 }, /* dark grey */
-	[TSM_COLOR_LIGHT_RED]     = { 255,   0,   0 }, /* light red */
-	[TSM_COLOR_LIGHT_GREEN]   = {   0, 255,   0 }, /* light green */
-	[TSM_COLOR_LIGHT_YELLOW]  = { 255, 255,   0 }, /* light yellow */
-	[TSM_COLOR_LIGHT_BLUE]    = {  92,  92, 255 }, /* light blue */
-	[TSM_COLOR_LIGHT_MAGENTA] = { 255,   0, 255 }, /* light magenta */
-	[TSM_COLOR_LIGHT_CYAN]    = {   0, 255, 255 }, /* light cyan */
-	[TSM_COLOR_WHITE]         = { 255, 255, 255 }, /* white */
+	[TSM_COLOR_BLACK] = {0, 0, 0},		   /* black */
+	[TSM_COLOR_RED] = {205, 0, 0},		   /* red */
+	[TSM_COLOR_GREEN] = {0, 205, 0},	   /* green */
+	[TSM_COLOR_YELLOW] = {205, 205, 0},	   /* yellow */
+	[TSM_COLOR_BLUE] = {0, 0, 238},		   /* blue */
+	[TSM_COLOR_MAGENTA] = {205, 0, 205},	   /* magenta */
+	[TSM_COLOR_CYAN] = {0, 205, 205},	   /* cyan */
+	[TSM_COLOR_LIGHT_GREY] = {229, 229, 229},  /* light grey */
+	[TSM_COLOR_DARK_GREY] = {127, 127, 127},   /* dark grey */
+	[TSM_COLOR_LIGHT_RED] = {255, 0, 0},	   /* light red */
+	[TSM_COLOR_LIGHT_GREEN] = {0, 255, 0},	   /* light green */
+	[TSM_COLOR_LIGHT_YELLOW] = {255, 255, 0},  /* light yellow */
+	[TSM_COLOR_LIGHT_BLUE] = {92, 92, 255},	   /* light blue */
+	[TSM_COLOR_LIGHT_MAGENTA] = {255, 0, 255}, /* light magenta */
+	[TSM_COLOR_LIGHT_CYAN] = {0, 255, 255},	   /* light cyan */
+	[TSM_COLOR_WHITE] = {255, 255, 255},	   /* white */
 
-	[TSM_COLOR_FOREGROUND]    = { 229, 229, 229 }, /* light grey */
-	[TSM_COLOR_BACKGROUND]    = {   0,   0,   0 }, /* black */
+	[TSM_COLOR_FOREGROUND] = {229, 229, 229}, /* light grey */
+	[TSM_COLOR_BACKGROUND] = {0, 0, 0},	  /* black */
 };
 
 int kmscon_conf_new(struct conf_ctx **out)
@@ -704,10 +686,12 @@ int kmscon_conf_new(struct conf_ctx **out)
 		/* Global Options */
 		CONF_OPTION_BOOL_FULL('h', "help", aftercheck_help, NULL, NULL, &conf->help, false),
 		CONF_OPTION_BOOL('v', "verbose", &conf->verbose, false),
-		CONF_OPTION_BOOL_FULL(0, "debug", aftercheck_debug, NULL, NULL, &conf->debug, false),
+		CONF_OPTION_BOOL_FULL(0, "debug", aftercheck_debug, NULL, NULL, &conf->debug,
+				      false),
 		CONF_OPTION_BOOL(0, "silent", &conf->silent, false),
 		CONF_OPTION_STRING('c', "configdir", &conf->configdir, BUILD_CONFIG_DIR),
-		CONF_OPTION_BOOL_FULL(0, "listen", aftercheck_listen, NULL, NULL, &conf->listen, false),
+		CONF_OPTION_BOOL_FULL(0, "listen", aftercheck_listen, NULL, NULL, &conf->listen,
+				      false),
 
 		/* Seat Options */
 		CONF_OPTION(0, 0, "vt", &conf_vt, aftercheck_vt, NULL, NULL, &conf->vt, NULL),
@@ -720,7 +704,8 @@ int kmscon_conf_new(struct conf_ctx **out)
 		CONF_OPTION_BOOL(0, "terminal-session", &conf->terminal_session, true),
 
 		/* Terminal Options */
-		CONF_OPTION(0, 'l', "login", &conf_login, aftercheck_login, NULL, file_login, &conf->login, false),
+		CONF_OPTION(0, 'l', "login", &conf_login, aftercheck_login, NULL, file_login,
+			    &conf->login, false),
 		CONF_OPTION_STRING('t', "term", &conf->term, "xterm-256color"),
 		CONF_OPTION_BOOL(0, "reset-env", &conf->reset_env, true),
 		CONF_OPTION_UINT(0, "sb-size", &conf->sb_size, 1000),
@@ -738,23 +723,31 @@ int kmscon_conf_new(struct conf_ctx **out)
 
 		/* Grabs / Keyboard-Shortcuts */
 		CONF_OPTION_GRAB(0, "grab-scroll-up", &conf->grab_scroll_up, &def_grab_scroll_up),
-		CONF_OPTION_GRAB(0, "grab-scroll-down", &conf->grab_scroll_down, &def_grab_scroll_down),
+		CONF_OPTION_GRAB(0, "grab-scroll-down", &conf->grab_scroll_down,
+				 &def_grab_scroll_down),
 		CONF_OPTION_GRAB(0, "grab-page-up", &conf->grab_page_up, &def_grab_page_up),
 		CONF_OPTION_GRAB(0, "grab-page-down", &conf->grab_page_down, &def_grab_page_down),
 		CONF_OPTION_GRAB(0, "grab-zoom-in", &conf->grab_zoom_in, &def_grab_zoom_in),
 		CONF_OPTION_GRAB(0, "grab-zoom-out", &conf->grab_zoom_out, &def_grab_zoom_out),
-		CONF_OPTION_GRAB(0, "grab-session-next", &conf->grab_session_next, &def_grab_session_next),
-		CONF_OPTION_GRAB(0, "grab-session-prev", &conf->grab_session_prev, &def_grab_session_prev),
-		CONF_OPTION_GRAB(0, "grab-session-dummy", &conf->grab_session_dummy, &def_grab_session_dummy),
-		CONF_OPTION_GRAB(0, "grab-session-close", &conf->grab_session_close, &def_grab_session_close),
-		CONF_OPTION_GRAB(0, "grab-terminal-new", &conf->grab_terminal_new, &def_grab_terminal_new),
+		CONF_OPTION_GRAB(0, "grab-session-next", &conf->grab_session_next,
+				 &def_grab_session_next),
+		CONF_OPTION_GRAB(0, "grab-session-prev", &conf->grab_session_prev,
+				 &def_grab_session_prev),
+		CONF_OPTION_GRAB(0, "grab-session-dummy", &conf->grab_session_dummy,
+				 &def_grab_session_dummy),
+		CONF_OPTION_GRAB(0, "grab-session-close", &conf->grab_session_close,
+				 &def_grab_session_close),
+		CONF_OPTION_GRAB(0, "grab-terminal-new", &conf->grab_terminal_new,
+				 &def_grab_terminal_new),
 		CONF_OPTION_GRAB(0, "grab-rotate-cw", &conf->grab_rotate_cw, &def_grab_rotate_cw),
-		CONF_OPTION_GRAB(0, "grab-rotate-ccw", &conf->grab_rotate_ccw, &def_grab_rotate_ccw),
+		CONF_OPTION_GRAB(0, "grab-rotate-ccw", &conf->grab_rotate_ccw,
+				 &def_grab_rotate_ccw),
 
 		/* Video Options */
 		CONF_OPTION_BOOL_FULL(0, "drm", aftercheck_drm, NULL, NULL, &conf->drm, true),
 		CONF_OPTION_BOOL(0, "hwaccel", &conf->hwaccel, false),
-		CONF_OPTION(0, 0, "gpus", &conf_gpus, NULL, NULL, NULL, &conf->gpus, KMSCON_GPU_ALL),
+		CONF_OPTION(0, 0, "gpus", &conf_gpus, NULL, NULL, NULL, &conf->gpus,
+			    KMSCON_GPU_ALL),
 		CONF_OPTION_STRING(0, "render-engine", &conf->render_engine, NULL),
 		CONF_OPTION_BOOL(0, "use-original-mode", &conf->use_original_mode, true),
 		CONF_OPTION_STRING(0, "mode", &conf->mode, NULL),
@@ -778,18 +771,20 @@ int kmscon_conf_new(struct conf_ctx **out)
 		CONF_OPTION_COLOR("palette-light-grey", conf->custom_palette, TSM_COLOR_LIGHT_GREY),
 		CONF_OPTION_COLOR("palette-dark-grey", conf->custom_palette, TSM_COLOR_DARK_GREY),
 		CONF_OPTION_COLOR("palette-light-red", conf->custom_palette, TSM_COLOR_LIGHT_RED),
-		CONF_OPTION_COLOR("palette-light-green", conf->custom_palette, TSM_COLOR_LIGHT_GREEN),
-		CONF_OPTION_COLOR("palette-light-yellow", conf->custom_palette, TSM_COLOR_LIGHT_YELLOW),
+		CONF_OPTION_COLOR("palette-light-green", conf->custom_palette,
+				  TSM_COLOR_LIGHT_GREEN),
+		CONF_OPTION_COLOR("palette-light-yellow", conf->custom_palette,
+				  TSM_COLOR_LIGHT_YELLOW),
 		CONF_OPTION_COLOR("palette-light-blue", conf->custom_palette, TSM_COLOR_LIGHT_BLUE),
-		CONF_OPTION_COLOR("palette-light-magenta", conf->custom_palette, TSM_COLOR_LIGHT_MAGENTA),
+		CONF_OPTION_COLOR("palette-light-magenta", conf->custom_palette,
+				  TSM_COLOR_LIGHT_MAGENTA),
 		CONF_OPTION_COLOR("palette-light-cyan", conf->custom_palette, TSM_COLOR_LIGHT_CYAN),
 		CONF_OPTION_COLOR("palette-white", conf->custom_palette, TSM_COLOR_WHITE),
 		CONF_OPTION_COLOR("palette-foreground", conf->custom_palette, TSM_COLOR_FOREGROUND),
 		CONF_OPTION_COLOR("palette-background", conf->custom_palette, TSM_COLOR_BACKGROUND),
 	};
 
-	ret = conf_ctx_new(&ctx, options, sizeof(options) / sizeof(*options),
-			   conf);
+	ret = conf_ctx_new(&ctx, options, sizeof(options) / sizeof(*options), conf);
 	if (ret) {
 		free(conf);
 		return ret;
@@ -831,8 +826,7 @@ int kmscon_conf_load_main(struct conf_ctx *ctx, int argc, char **argv)
 	if (!conf->debug && !conf->verbose && conf->silent)
 		log_set_config(&LOG_CONFIG_WARNING(0, 0, 0, 0));
 	else
-		log_set_config(&LOG_CONFIG_INFO(conf->debug,
-						conf->verbose));
+		log_set_config(&LOG_CONFIG_INFO(conf->debug, conf->verbose));
 
 	ret = conf_ctx_parse_file(ctx, "%s/kmscon.conf", conf->configdir);
 	if (ret)
@@ -846,14 +840,14 @@ int kmscon_conf_load_main(struct conf_ctx *ctx, int argc, char **argv)
 	if (!conf->debug && !conf->verbose && conf->silent)
 		log_set_config(&LOG_CONFIG_WARNING(0, 0, 0, 0));
 	else
-		log_set_config(&LOG_CONFIG_INFO(conf->debug,
-						conf->verbose));
+		log_set_config(&LOG_CONFIG_INFO(conf->debug, conf->verbose));
 
 	/* You can't set a mode, and use_original_mode at the same time
 	 * specified mode takes priority.
 	 */
 	if (conf->use_original_mode && conf->mode != NULL) {
-		log_error("Cannot use --mode if --use-original-mode is enabled. Try --no-use-original-mode.\n");
+		log_error("Cannot use --mode if --use-original-mode is enabled. Try "
+			  "--no-use-original-mode.\n");
 		conf->use_original_mode = false;
 	}
 	log_print_init("kmscon");
@@ -861,8 +855,7 @@ int kmscon_conf_load_main(struct conf_ctx *ctx, int argc, char **argv)
 	return 0;
 }
 
-int kmscon_conf_load_seat(struct conf_ctx *ctx, const struct conf_ctx *main,
-			  const char *seat)
+int kmscon_conf_load_seat(struct conf_ctx *ctx, const struct conf_ctx *main, const char *seat)
 {
 	int ret;
 	struct kmscon_conf_t *conf;
@@ -879,8 +872,7 @@ int kmscon_conf_load_seat(struct conf_ctx *ctx, const struct conf_ctx *main,
 	if (ret)
 		return ret;
 
-	ret = conf_ctx_parse_file(ctx, "%s/%s.seat.conf", conf->configdir,
-				  seat);
+	ret = conf_ctx_parse_file(ctx, "%s/%s.seat.conf", conf->configdir, seat);
 	if (ret)
 		return ret;
 

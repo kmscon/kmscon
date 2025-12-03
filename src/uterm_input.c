@@ -51,10 +51,7 @@
 
 static void input_free_dev(struct uterm_input_dev *dev);
 
-static void notify_event(struct uterm_input_dev *dev,
-			 uint16_t type,
-			 uint16_t code,
-			 int32_t value)
+static void notify_event(struct uterm_input_dev *dev, uint16_t type, uint16_t code, int32_t value)
 {
 	switch (type) {
 	case EV_KEY:
@@ -93,20 +90,17 @@ static void input_data_dev(struct ev_fd *fd, int mask, void *data)
 		if (len < 0) {
 			if (errno == EWOULDBLOCK)
 				break;
-			llog_warn(dev->input, "reading from %s failed (%d): %m",
-				  dev->node, errno);
+			llog_warn(dev->input, "reading from %s failed (%d): %m", dev->node, errno);
 			input_free_dev(dev);
 		} else if (len == 0) {
 			llog_debug(dev->input, "EOF on %s", dev->node);
 			input_free_dev(dev);
 		} else if (len % sizeof(*ev)) {
-			llog_warn(dev->input, "invalid input_event on %s",
-				  dev->node);
+			llog_warn(dev->input, "invalid input_event on %s", dev->node);
 		} else {
 			n = len / sizeof(*ev);
 			for (i = 0; i < n; i++)
-				notify_event(dev, ev[i].type, ev[i].code,
-								ev[i].value);
+				notify_event(dev, ev[i].type, ev[i].code, ev[i].value);
 		}
 	}
 }
@@ -120,15 +114,14 @@ static int input_wake_up_dev(struct uterm_input_dev *dev)
 
 	dev->rfd = open(dev->node, O_CLOEXEC | O_NONBLOCK | O_RDWR);
 	if (dev->rfd < 0) {
-		llog_warn(dev->input, "cannot open device %s (%d): %m",
-			  dev->node, errno);
+		llog_warn(dev->input, "cannot open device %s (%d): %m", dev->node, errno);
 		return -EFAULT;
 	}
 	if (dev->capabilities & UTERM_DEVICE_HAS_KEYS)
 		uxkb_dev_wake_up(dev);
 
-	ret = ev_eloop_new_fd(dev->input->eloop, &dev->fd, dev->rfd,
-			      EV_READABLE, input_data_dev, dev);
+	ret = ev_eloop_new_fd(dev->input->eloop, &dev->fd, dev->rfd, EV_READABLE, input_data_dev,
+			      dev);
 	if (ret) {
 		close(dev->rfd);
 		dev->rfd = -1;
@@ -218,9 +211,8 @@ static int input_init_abs(struct uterm_input_dev *dev)
 	dev->pointer.min_y = info.minimum;
 	dev->pointer.max_y = info.maximum;
 
-	llog_debug(dev->input, "ABSX min %d max %d ABSY min %d max %d\n",
-		   dev->pointer.min_x, dev->pointer.max_x,
-		   dev->pointer.min_y, dev->pointer.max_y);
+	llog_debug(dev->input, "ABSX min %d max %d ABSY min %d max %d\n", dev->pointer.min_x,
+		   dev->pointer.max_x, dev->pointer.min_y, dev->pointer.max_y);
 	return 0;
 
 err_closefd:
@@ -228,9 +220,7 @@ err_closefd:
 	return ret;
 }
 
-static void input_new_dev(struct uterm_input *input,
-				const char *node,
-				unsigned int capabilities)
+static void input_new_dev(struct uterm_input *input, const char *node, unsigned int capabilities)
 {
 	struct uterm_input_dev *dev;
 	int ret;
@@ -260,7 +250,7 @@ static void input_new_dev(struct uterm_input *input,
 		if (dev->capabilities & UTERM_DEVICE_HAS_TOUCH)
 			dev->pointer.kind = POINTER_TOUCHPAD;
 		else
-		 	dev->pointer.kind = POINTER_VMOUSE;
+			dev->pointer.kind = POINTER_VMOUSE;
 	}
 	if (dev->capabilities & UTERM_DEVICE_HAS_REL)
 		dev->pointer.kind = POINTER_MOUSE;
@@ -306,20 +296,11 @@ static void hide_pointer_timer(struct ev_timer *timer, uint64_t num, void *data)
 }
 
 SHL_EXPORT
-int uterm_input_new(struct uterm_input **out,
-		    struct ev_eloop *eloop,
-		    const char *model,
-		    const char *layout,
-		    const char *variant,
-		    const char *options,
-		    const char *locale,
-		    const char *keymap,
-		    const char *compose_file,
-		    size_t compose_file_len,
-		    unsigned int repeat_delay,
-		    unsigned int repeat_rate,
-		    uterm_input_log_t log,
-		    void *log_data)
+int uterm_input_new(struct uterm_input **out, struct ev_eloop *eloop, const char *model,
+		    const char *layout, const char *variant, const char *options,
+		    const char *locale, const char *keymap, const char *compose_file,
+		    size_t compose_file_len, unsigned int repeat_delay, unsigned int repeat_rate,
+		    uterm_input_log_t log, void *log_data)
 {
 	struct uterm_input *input;
 	int ret;
@@ -356,8 +337,8 @@ int uterm_input_new(struct uterm_input **out,
 	if (ret)
 		goto err_hook;
 
-	ret = ev_eloop_new_timer(input->eloop, &input->hide_pointer, NULL,
-				 hide_pointer_timer, input);
+	ret = ev_eloop_new_timer(input->eloop, &input->hide_pointer, NULL, hide_pointer_timer,
+				 input);
 	if (ret)
 		goto err_hook_pointer;
 
@@ -365,16 +346,16 @@ int uterm_input_new(struct uterm_input **out,
 	 * variable if options is an empty string.
 	 * So if all variables are empty, use NULL instead.
 	 */
-	if (model && *model == 0 && layout && *layout == 0 &&
-	    variant && *variant == 0 && options && *options == 0) {
+	if (model && *model == 0 && layout && *layout == 0 && variant && *variant == 0 && options &&
+	    *options == 0) {
 		model = NULL;
 		layout = NULL;
 		variant = NULL;
 		options = NULL;
 	}
 
-	ret = uxkb_desc_init(input, model, layout, variant, options, locale,
-			     keymap, compose_file, compose_file_len);
+	ret = uxkb_desc_init(input, model, layout, variant, options, locale, keymap, compose_file,
+			     compose_file_len);
 	if (ret)
 		goto err_hide_timer;
 
@@ -417,9 +398,7 @@ void uterm_input_unref(struct uterm_input *input)
 	llog_debug(input, "free object %p", input);
 
 	while (input->devices.next != &input->devices) {
-		dev = shl_dlist_entry(input->devices.next,
-					struct uterm_input_dev,
-					list);
+		dev = shl_dlist_entry(input->devices.next, struct uterm_input_dev, list);
 		input_free_dev(dev);
 	}
 
@@ -434,15 +413,14 @@ void uterm_input_unref(struct uterm_input *input)
  * We go over the possible capabilities and return a mask of enum
  * uterm_input_device_capability's.
  */
-static unsigned int probe_device_capabilities(struct uterm_input *input,
-					      const char *node)
+static unsigned int probe_device_capabilities(struct uterm_input *input, const char *node)
 {
 	int i, fd, ret;
 	unsigned int capabilities = 0;
-	unsigned long evbits[NLONGS(EV_CNT)] = { 0 };
-	unsigned long keybits[NLONGS(KEY_CNT)] = { 0 };
-	unsigned long relbits[NLONGS(REL_CNT)] = { 0 };
-	unsigned long absbits[NLONGS(ABS_CNT)] = { 0 };
+	unsigned long evbits[NLONGS(EV_CNT)] = {0};
+	unsigned long keybits[NLONGS(KEY_CNT)] = {0};
+	unsigned long relbits[NLONGS(REL_CNT)] = {0};
+	unsigned long absbits[NLONGS(ABS_CNT)] = {0};
 
 	fd = open(node, O_NONBLOCK | O_CLOEXEC | O_RDONLY);
 	if (fd < 0)
@@ -476,25 +454,21 @@ static unsigned int probe_device_capabilities(struct uterm_input *input,
 			capabilities |= UTERM_DEVICE_HAS_TOUCH;
 	}
 
-	if (input_bit_is_set(evbits, EV_SYN) &&
-	    input_bit_is_set(evbits, EV_REL)) {
+	if (input_bit_is_set(evbits, EV_SYN) && input_bit_is_set(evbits, EV_REL)) {
 		ret = ioctl(fd, EVIOCGBIT(EV_REL, sizeof(relbits)), relbits);
 		if (ret < 0)
 			goto err_ioctl;
-		if (input_bit_is_set(relbits, REL_X) &&
-		    input_bit_is_set(relbits, REL_Y))
+		if (input_bit_is_set(relbits, REL_X) && input_bit_is_set(relbits, REL_Y))
 			capabilities |= UTERM_DEVICE_HAS_REL;
 		if (input_bit_is_set(relbits, REL_WHEEL))
 			capabilities |= UTERM_DEVICE_HAS_WHEEL;
 	}
 
-	if (input_bit_is_set(evbits, EV_SYN) &&
-	    input_bit_is_set(evbits, EV_ABS)) {
+	if (input_bit_is_set(evbits, EV_SYN) && input_bit_is_set(evbits, EV_ABS)) {
 		ret = ioctl(fd, EVIOCGBIT(EV_ABS, sizeof(absbits)), absbits);
 		if (ret < 0)
 			goto err_ioctl;
-		if (input_bit_is_set(absbits, ABS_X) &&
-		    input_bit_is_set(absbits, ABS_Y))
+		if (input_bit_is_set(absbits, ABS_X) && input_bit_is_set(absbits, ABS_Y))
 			capabilities |= UTERM_DEVICE_HAS_ABS;
 	}
 
@@ -505,8 +479,7 @@ static unsigned int probe_device_capabilities(struct uterm_input *input,
 	return capabilities;
 
 err_ioctl:
-	llog_warn(input, "cannot probe capabilities of device %s (%d): %m",
-		  node, errno);
+	llog_warn(input, "cannot probe capabilities of device %s (%d): %m", node, errno);
 	close(fd);
 	return 0;
 }
@@ -547,10 +520,9 @@ void uterm_input_remove_dev(struct uterm_input *input, const char *node)
 	if (!input || !node)
 		return;
 
-	shl_dlist_for_each(iter, &input->devices) {
-		dev = shl_dlist_entry(iter,
-					struct uterm_input_dev,
-					list);
+	shl_dlist_for_each(iter, &input->devices)
+	{
+		dev = shl_dlist_entry(iter, struct uterm_input_dev, list);
 		if (!strcmp(dev->node, node)) {
 			input_free_dev(dev);
 			break;
@@ -559,9 +531,7 @@ void uterm_input_remove_dev(struct uterm_input *input, const char *node)
 }
 
 SHL_EXPORT
-int uterm_input_register_key_cb(struct uterm_input *input,
-				uterm_input_key_cb cb,
-				void *data)
+int uterm_input_register_key_cb(struct uterm_input *input, uterm_input_key_cb cb, void *data)
 {
 	if (!input || !cb)
 		return -EINVAL;
@@ -570,9 +540,7 @@ int uterm_input_register_key_cb(struct uterm_input *input,
 }
 
 SHL_EXPORT
-void uterm_input_unregister_key_cb(struct uterm_input *input,
-				uterm_input_key_cb cb,
-				void *data)
+void uterm_input_unregister_key_cb(struct uterm_input *input, uterm_input_key_cb cb, void *data)
 {
 	if (!input || !cb)
 		return;
@@ -581,8 +549,7 @@ void uterm_input_unregister_key_cb(struct uterm_input *input,
 }
 
 SHL_EXPORT
-int uterm_input_register_pointer_cb(struct uterm_input *input,
-				    uterm_input_pointer_cb cb,
+int uterm_input_register_pointer_cb(struct uterm_input *input, uterm_input_pointer_cb cb,
 				    void *data)
 {
 	if (!input || !cb)
@@ -592,8 +559,7 @@ int uterm_input_register_pointer_cb(struct uterm_input *input,
 }
 
 SHL_EXPORT
-void uterm_input_unregister_pointer_cb(struct uterm_input *input,
-				       uterm_input_pointer_cb cb,
+void uterm_input_unregister_pointer_cb(struct uterm_input *input, uterm_input_pointer_cb cb,
 				       void *data)
 {
 	if (!input || !cb)
@@ -617,10 +583,9 @@ void uterm_input_sleep(struct uterm_input *input)
 
 	llog_debug(input, "going to sleep");
 
-	shl_dlist_for_each(iter, &input->devices) {
-		dev = shl_dlist_entry(iter,
-					struct uterm_input_dev,
-					list);
+	shl_dlist_for_each(iter, &input->devices)
+	{
+		dev = shl_dlist_entry(iter, struct uterm_input_dev, list);
 		input_sleep_dev(dev);
 	}
 }
@@ -641,10 +606,9 @@ void uterm_input_wake_up(struct uterm_input *input)
 
 	llog_debug(input, "wakeing up");
 
-	shl_dlist_for_each_safe(iter, tmp, &input->devices) {
-		dev = shl_dlist_entry(iter,
-					struct uterm_input_dev,
-					list);
+	shl_dlist_for_each_safe(iter, tmp, &input->devices)
+	{
+		dev = shl_dlist_entry(iter, struct uterm_input_dev, list);
 		ret = input_wake_up_dev(dev);
 		if (ret)
 			input_free_dev(dev);
@@ -661,9 +625,7 @@ bool uterm_input_is_awake(struct uterm_input *input)
 }
 
 SHL_EXPORT
-void uterm_input_set_pointer_max(struct uterm_input *input,
-				 unsigned int max_x,
-				 unsigned int max_y)
+void uterm_input_set_pointer_max(struct uterm_input *input, unsigned int max_x, unsigned int max_y)
 {
 	if (!input)
 		return;

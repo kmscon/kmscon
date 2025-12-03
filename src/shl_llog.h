@@ -70,25 +70,12 @@ enum llog_severity {
 	LLOG_SEV_NUM,
 };
 
-typedef void (*llog_submit_t) (void *data,
-			       const char *file,
-			       int line,
-			       const char *func,
-			       const char *subs,
-			       unsigned int sev,
-			       const char *format,
-			       va_list args);
+typedef void (*llog_submit_t)(void *data, const char *file, int line, const char *func,
+			      const char *subs, unsigned int sev, const char *format, va_list args);
 
-static inline __attribute__((format(printf, 8, 9)))
-void llog_format(llog_submit_t llog,
-		 void *data,
-		 const char *file,
-		 int line,
-		 const char *func,
-		 const char *subs,
-		 unsigned int sev,
-		 const char *format,
-		 ...)
+static inline __attribute__((format(printf, 8, 9))) void
+llog_format(llog_submit_t llog, void *data, const char *file, int line, const char *func,
+	    const char *subs, unsigned int sev, const char *format, ...)
 {
 	va_list list;
 
@@ -105,24 +92,13 @@ static const char *LLOG_SUBSYSTEM __attribute__((__unused__));
 
 #define LLOG_DEFAULT __FILE__, __LINE__, __func__, LLOG_SUBSYSTEM
 
-#define llog_printf(obj, sev, format, ...) \
-	llog_format((obj)->llog, \
-		    (obj)->llog_data, \
-		    LLOG_DEFAULT, \
-		    (sev), \
-		    (format), \
-		    ##__VA_ARGS__)
-#define llog_dprintf(obj, data, sev, format, ...) \
-	llog_format((obj), \
-		    (data), \
-		    LLOG_DEFAULT, \
-		    (sev), \
-		    (format), \
-		    ##__VA_ARGS__)
+#define llog_printf(obj, sev, format, ...)                                                         \
+	llog_format((obj)->llog, (obj)->llog_data, LLOG_DEFAULT, (sev), (format), ##__VA_ARGS__)
+#define llog_dprintf(obj, data, sev, format, ...)                                                  \
+	llog_format((obj), (data), LLOG_DEFAULT, (sev), (format), ##__VA_ARGS__)
 
-static inline __attribute__((format(printf, 4, 5)))
-void llog_dummyf(llog_submit_t llog, void *data, unsigned int sev,
-		 const char *format, ...)
+static inline __attribute__((format(printf, 4, 5))) void
+llog_dummyf(llog_submit_t llog, void *data, unsigned int sev, const char *format, ...)
 {
 }
 
@@ -135,44 +111,37 @@ void llog_dummyf(llog_submit_t llog, void *data, unsigned int sev,
  */
 
 #ifdef BUILD_ENABLE_DEBUG
-	#define llog_ddebug(obj, data, format, ...) \
-		llog_dprintf((obj), (data), LLOG_DEBUG, (format), ##__VA_ARGS__)
-	#define llog_debug(obj, format, ...) \
-		llog_ddebug((obj)->llog, (obj)->llog_data, (format), ##__VA_ARGS__)
+#define llog_ddebug(obj, data, format, ...)                                                        \
+	llog_dprintf((obj), (data), LLOG_DEBUG, (format), ##__VA_ARGS__)
+#define llog_debug(obj, format, ...)                                                               \
+	llog_ddebug((obj)->llog, (obj)->llog_data, (format), ##__VA_ARGS__)
 #else
-	#define llog_ddebug(obj, data, format, ...) \
-		llog_dummyf((obj), (data), LLOG_DEBUG, (format), ##__VA_ARGS__)
-	#define llog_debug(obj, format, ...) \
-		llog_ddebug((obj)->llog, (obj)->llog_data, (format), ##__VA_ARGS__)
+#define llog_ddebug(obj, data, format, ...)                                                        \
+	llog_dummyf((obj), (data), LLOG_DEBUG, (format), ##__VA_ARGS__)
+#define llog_debug(obj, format, ...)                                                               \
+	llog_ddebug((obj)->llog, (obj)->llog_data, (format), ##__VA_ARGS__)
 #endif
 
-#define llog_info(obj, format, ...) \
-	llog_printf((obj), LLOG_INFO, (format), ##__VA_ARGS__)
-#define llog_dinfo(obj, data, format, ...) \
+#define llog_info(obj, format, ...) llog_printf((obj), LLOG_INFO, (format), ##__VA_ARGS__)
+#define llog_dinfo(obj, data, format, ...)                                                         \
 	llog_dprintf((obj), (data), LLOG_INFO, (format), ##__VA_ARGS__)
-#define llog_notice(obj, format, ...) \
-	llog_printf((obj), LLOG_NOTICE, (format), ##__VA_ARGS__)
-#define llog_dnotice(obj, data, format, ...) \
+#define llog_notice(obj, format, ...) llog_printf((obj), LLOG_NOTICE, (format), ##__VA_ARGS__)
+#define llog_dnotice(obj, data, format, ...)                                                       \
 	llog_dprintf((obj), (data), LLOG_NOTICE, (format), ##__VA_ARGS__)
-#define llog_warning(obj, format, ...) \
-	llog_printf((obj), LLOG_WARNING, (format), ##__VA_ARGS__)
-#define llog_dwarning(obj, data, format, ...) \
+#define llog_warning(obj, format, ...) llog_printf((obj), LLOG_WARNING, (format), ##__VA_ARGS__)
+#define llog_dwarning(obj, data, format, ...)                                                      \
 	llog_dprintf((obj), (data), LLOG_WARNING, (format), ##__VA_ARGS__)
-#define llog_error(obj, format, ...) \
-	llog_printf((obj), LLOG_ERROR, (format), ##__VA_ARGS__)
-#define llog_derror(obj, data, format, ...) \
+#define llog_error(obj, format, ...) llog_printf((obj), LLOG_ERROR, (format), ##__VA_ARGS__)
+#define llog_derror(obj, data, format, ...)                                                        \
 	llog_dprintf((obj), (data), LLOG_ERROR, (format), ##__VA_ARGS__)
-#define llog_critical(obj, format, ...) \
-	llog_printf((obj), LLOG_CRITICAL, (format), ##__VA_ARGS__)
-#define llog_dcritical(obj, data, format, ...) \
+#define llog_critical(obj, format, ...) llog_printf((obj), LLOG_CRITICAL, (format), ##__VA_ARGS__)
+#define llog_dcritical(obj, data, format, ...)                                                     \
 	llog_dprintf((obj), (data), LLOG_CRITICAL, (format), ##__VA_ARGS__)
-#define llog_alert(obj, format, ...) \
-	llog_printf((obj), LLOG_ALERT, (format), ##__VA_ARGS__)
-#define llog_dalert(obj, data, format, ...) \
+#define llog_alert(obj, format, ...) llog_printf((obj), LLOG_ALERT, (format), ##__VA_ARGS__)
+#define llog_dalert(obj, data, format, ...)                                                        \
 	llog_dprintf((obj), (data), LLOG_ALERT, (format), ##__VA_ARGS__)
-#define llog_fatal(obj, format, ...) \
-	llog_printf((obj), LLOG_FATAL, (format), ##__VA_ARGS__)
-#define llog_dfatal(obj, data, format, ...) \
+#define llog_fatal(obj, format, ...) llog_printf((obj), LLOG_FATAL, (format), ##__VA_ARGS__)
+#define llog_dfatal(obj, data, format, ...)                                                        \
 	llog_dprintf((obj), (data), LLOG_FATAL, (format), ##__VA_ARGS__)
 
 #define llog_dbg llog_debug
@@ -192,31 +161,19 @@ void llog_dummyf(llog_submit_t llog, void *data, unsigned int sev,
  * are used in debug paths and would slow down normal applications.
  */
 
-#define llog_dEINVAL(obj, data) \
-	(llog_ddebug((obj), (data), "invalid arguments"), -EINVAL)
-#define llog_EINVAL(obj) \
-	(llog_dEINVAL((obj)->llog, (obj)->llog_data))
-#define llog_vEINVAL(obj) \
-	((void)llog_EINVAL(obj))
-#define llog_vdEINVAL(obj, data) \
-	((void)llog_dEINVAL((obj), (data)))
+#define llog_dEINVAL(obj, data) (llog_ddebug((obj), (data), "invalid arguments"), -EINVAL)
+#define llog_EINVAL(obj) (llog_dEINVAL((obj)->llog, (obj)->llog_data))
+#define llog_vEINVAL(obj) ((void)llog_EINVAL(obj))
+#define llog_vdEINVAL(obj, data) ((void)llog_dEINVAL((obj), (data)))
 
-#define llog_dEFAULT(obj, data) \
-	(llog_ddebug((obj), (data), "operation failed"), -EFAULT)
-#define llog_EFAULT(obj) \
-	(llog_dEFAULT((obj)->llog, (obj)->llog_data))
-#define llog_vEFAULT(obj) \
-	((void)llog_EFAULT(obj))
-#define llog_vdEFAULT(obj, data) \
-	((void)llog_dEFAULT((obj), (data)))
+#define llog_dEFAULT(obj, data) (llog_ddebug((obj), (data), "operation failed"), -EFAULT)
+#define llog_EFAULT(obj) (llog_dEFAULT((obj)->llog, (obj)->llog_data))
+#define llog_vEFAULT(obj) ((void)llog_EFAULT(obj))
+#define llog_vdEFAULT(obj, data) ((void)llog_dEFAULT((obj), (data)))
 
-#define llog_dENOMEM(obj, data) \
-	(llog_ddebug((obj), (data), "memory allocation failed"), -ENOMEM)
-#define llog_ENOMEM(obj) \
-	(llog_dENOMEM((obj)->llog, (obj)->llog_data))
-#define llog_vENOMEM(obj) \
-	((void)llog_ENOMEM(obj))
-#define llog_vdENOMEM(obj, data) \
-	((void)llog_dENOMEM((obj), (data)))
+#define llog_dENOMEM(obj, data) (llog_ddebug((obj), (data), "memory allocation failed"), -ENOMEM)
+#define llog_ENOMEM(obj) (llog_dENOMEM((obj)->llog, (obj)->llog_data))
+#define llog_vENOMEM(obj) ((void)llog_ENOMEM(obj))
+#define llog_vdENOMEM(obj, data) ((void)llog_dENOMEM((obj), (data)))
 
 #endif /* SHL_LLOG_H_INCLUDED */

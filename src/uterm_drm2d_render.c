@@ -39,16 +39,15 @@
 #include <xf86drmMode.h>
 #include "eloop.h"
 #include "shl_log.h"
-#include "uterm_drm_shared_internal.h"
 #include "uterm_drm2d_internal.h"
+#include "uterm_drm_shared_internal.h"
 #include "uterm_video.h"
 #include "uterm_video_internal.h"
 
 #define LOG_SUBSYSTEM "uterm_drm2d_render"
 
 int uterm_drm2d_display_fake_blendv(struct uterm_display *disp,
-				    const struct uterm_video_blend_req *req,
-				    size_t num)
+				    const struct uterm_video_blend_req *req, size_t num)
 {
 	unsigned int tmp;
 	uint8_t *dst, *src;
@@ -110,24 +109,21 @@ int uterm_drm2d_display_fake_blendv(struct uterm_display *disp,
 					b = req->fb;
 					out = (r << 16) | (g << 8) | b;
 				} else {
-					r = req->fr * src[i] +
-					    req->br * (255 - src[i]);
+					r = req->fr * src[i] + req->br * (255 - src[i]);
 					r += 0x80;
 					r = (r + (r >> 8)) >> 8;
 
-					g = req->fg * src[i] +
-					    req->bg * (255 - src[i]);
+					g = req->fg * src[i] + req->bg * (255 - src[i]);
 					g += 0x80;
 					g = (g + (g >> 8)) >> 8;
 
-					b = req->fb * src[i] +
-					    req->bb * (255 - src[i]);
+					b = req->fb * src[i] + req->bb * (255 - src[i]);
 					b += 0x80;
 					b = (b + (b >> 8)) >> 8;
 					out = (r << 16) | (g << 8) | b;
 				}
 
-				((uint32_t*)dst)[i] = out;
+				((uint32_t *)dst)[i] = out;
 			}
 			dst += rb->stride;
 			src += req->buf->stride;
@@ -137,10 +133,9 @@ int uterm_drm2d_display_fake_blendv(struct uterm_display *disp,
 	return 0;
 }
 
-int uterm_drm2d_display_fill(struct uterm_display *disp,
-			     uint8_t r, uint8_t g, uint8_t b,
-			     unsigned int x, unsigned int y,
-			     unsigned int width, unsigned int height)
+int uterm_drm2d_display_fill(struct uterm_display *disp, uint8_t r, uint8_t g, uint8_t b,
+			     unsigned int x, unsigned int y, unsigned int width,
+			     unsigned int height)
 {
 	unsigned int tmp, i;
 	uint8_t *dst;
@@ -168,7 +163,7 @@ int uterm_drm2d_display_fill(struct uterm_display *disp,
 
 	while (height--) {
 		for (i = 0; i < width; ++i)
-			((uint32_t*)dst)[i] = (r << 16) | (g << 8) | b;
+			((uint32_t *)dst)[i] = (r << 16) | (g << 8) | b;
 		dst += rb->stride;
 	}
 

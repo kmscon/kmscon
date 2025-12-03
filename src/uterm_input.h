@@ -40,36 +40,31 @@
 
 struct uterm_input;
 
-typedef void (*uterm_input_log_t) (void *data,
-				   const char *file,
-				   int line,
-				   const char *func,
-				   const char *subs,
-				   unsigned int sev,
-				   const char *format,
-				   va_list args);
+typedef void (*uterm_input_log_t)(void *data, const char *file, int line, const char *func,
+				  const char *subs, unsigned int sev, const char *format,
+				  va_list args);
 
 /* keep in sync with shl_xkb_mods */
 enum uterm_input_modifier {
-	UTERM_SHIFT_MASK	= (1 << 0),
-	UTERM_LOCK_MASK		= (1 << 1),
-	UTERM_CONTROL_MASK	= (1 << 2),
-	UTERM_ALT_MASK		= (1 << 3),
-	UTERM_LOGO_MASK		= (1 << 4),
+	UTERM_SHIFT_MASK = (1 << 0),
+	UTERM_LOCK_MASK = (1 << 1),
+	UTERM_CONTROL_MASK = (1 << 2),
+	UTERM_ALT_MASK = (1 << 3),
+	UTERM_LOGO_MASK = (1 << 4),
 };
 
 /* keep in sync with TSM_VTE_INVALID */
 #define UTERM_INPUT_INVALID 0xffffffff
 
 struct uterm_input_key_event {
-	bool handled;		/* user-controlled, default is false */
-	uint16_t keycode;	/* linux keycode - KEY_* - linux/input.h */
-	uint32_t ascii;		/* ascii keysym for @keycode */
-	unsigned int mods;	/* active modifiers - uterm_modifier mask */
+	bool handled;	   /* user-controlled, default is false */
+	uint16_t keycode;  /* linux keycode - KEY_* - linux/input.h */
+	uint32_t ascii;	   /* ascii keysym for @keycode */
+	unsigned int mods; /* active modifiers - uterm_modifier mask */
 
-	unsigned int num_syms;	/* number of keysyms */
-	uint32_t *keysyms;	/* XKB-common keysym-array - XKB_KEY_* */
-	uint32_t *codepoints;	/* ucs4 unicode value or UTERM_INPUT_INVALID */
+	unsigned int num_syms; /* number of keysyms */
+	uint32_t *keysyms;     /* XKB-common keysym-array - XKB_KEY_* */
+	uint32_t *codepoints;  /* ucs4 unicode value or UTERM_INPUT_INVALID */
 };
 
 enum uterm_input_pointer_type {
@@ -92,19 +87,16 @@ struct uterm_input_pointer_event {
 
 #define UTERM_INPUT_HAS_MODS(_ev, _mods) (((_ev)->mods & (_mods)) == (_mods))
 
-typedef void (*uterm_input_key_cb) (struct uterm_input *input,
-				    struct uterm_input_key_event *ev,
-				    void *data);
+typedef void (*uterm_input_key_cb)(struct uterm_input *input, struct uterm_input_key_event *ev,
+				   void *data);
 
-typedef void (*uterm_input_pointer_cb) (struct uterm_input *input,
-					struct uterm_input_pointer_event *ev,
-					void *data);
+typedef void (*uterm_input_pointer_cb)(struct uterm_input *input,
+				       struct uterm_input_pointer_event *ev, void *data);
 
-int uterm_input_new(struct uterm_input **out, struct ev_eloop *eloop,
-		    const char *model, const char *layout, const char *variant,
-		    const char *options, const char *locale, const char *keymap,
-		    const char *compose_file, size_t compose_file_len,
-		    unsigned int repeat_delay, unsigned int repeat_rate,
+int uterm_input_new(struct uterm_input **out, struct ev_eloop *eloop, const char *model,
+		    const char *layout, const char *variant, const char *options,
+		    const char *locale, const char *keymap, const char *compose_file,
+		    size_t compose_file_len, unsigned int repeat_delay, unsigned int repeat_rate,
 		    uterm_input_log_t log, void *log_data);
 void uterm_input_ref(struct uterm_input *input);
 void uterm_input_unref(struct uterm_input *input);
@@ -112,21 +104,17 @@ void uterm_input_unref(struct uterm_input *input);
 void uterm_input_add_dev(struct uterm_input *input, const char *node, bool mouse);
 void uterm_input_remove_dev(struct uterm_input *input, const char *node);
 
-int uterm_input_register_key_cb(struct uterm_input *input, uterm_input_key_cb cb,
-			    void *data);
-void uterm_input_unregister_key_cb(struct uterm_input *input, uterm_input_key_cb cb,
-			       void *data);
+int uterm_input_register_key_cb(struct uterm_input *input, uterm_input_key_cb cb, void *data);
+void uterm_input_unregister_key_cb(struct uterm_input *input, uterm_input_key_cb cb, void *data);
 
 int uterm_input_register_pointer_cb(struct uterm_input *input, uterm_input_pointer_cb cb,
-			    void *data);
+				    void *data);
 void uterm_input_unregister_pointer_cb(struct uterm_input *input, uterm_input_pointer_cb cb,
-			       void *data);
+				       void *data);
 
 void uterm_input_sleep(struct uterm_input *input);
 void uterm_input_wake_up(struct uterm_input *input);
 bool uterm_input_is_awake(struct uterm_input *input);
-void uterm_input_set_pointer_max(struct uterm_input *input,
-				 unsigned int max_x,
-				 unsigned int max_y);
+void uterm_input_set_pointer_max(struct uterm_input *input, unsigned int max_x, unsigned int max_y);
 
 #endif /* UTERM_UTERM_INPUT_H */

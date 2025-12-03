@@ -62,21 +62,18 @@ enum uterm_vt_type {
 	UTERM_VT_FAKE = 0x02,
 };
 
-typedef int (*uterm_vt_cb) (struct uterm_vt *vt, struct uterm_vt_event *ev,
-			    void *data);
+typedef int (*uterm_vt_cb)(struct uterm_vt *vt, struct uterm_vt_event *ev, void *data);
 
-int uterm_vt_master_new(struct uterm_vt_master **out,
-			struct ev_eloop *eloop);
+int uterm_vt_master_new(struct uterm_vt_master **out, struct ev_eloop *eloop);
 void uterm_vt_master_ref(struct uterm_vt_master *vtm);
 void uterm_vt_master_unref(struct uterm_vt_master *vtm);
 
 int uterm_vt_master_activate_all(struct uterm_vt_master *vtm);
 int uterm_vt_master_deactivate_all(struct uterm_vt_master *vtm);
 
-int uterm_vt_allocate(struct uterm_vt_master *vt, struct uterm_vt **out,
-		      unsigned int allowed_types,
-		      const char *seat, struct uterm_input *input,
-		      const char *vt_name, uterm_vt_cb cb, void *data);
+int uterm_vt_allocate(struct uterm_vt_master *vt, struct uterm_vt **out, unsigned int allowed_types,
+		      const char *seat, struct uterm_input *input, const char *vt_name,
+		      uterm_vt_cb cb, void *data);
 void uterm_vt_deallocate(struct uterm_vt *vt);
 void uterm_vt_ref(struct uterm_vt *vt);
 void uterm_vt_unref(struct uterm_vt *vt);

@@ -119,28 +119,27 @@ struct log_config {
 	int sev[LOG_SEV_NUM];
 };
 
-#define LOG_CONFIG_ALL(debug, info, notice, warning, error, critical, alert, fatal) \
-	(struct log_config){ .sev = { \
-		[LOG_DEBUG] = (debug), \
-		[LOG_INFO] = (info), \
-		[LOG_NOTICE] = (notice), \
-		[LOG_WARNING] = (warning), \
-		[LOG_ERROR] = (error), \
-		[LOG_CRITICAL] = (critical), \
-		[LOG_ALERT] = (alert), \
-		[LOG_FATAL] = (fatal), \
-	} }
+#define LOG_CONFIG_ALL(debug, info, notice, warning, error, critical, alert, fatal)                \
+	(struct log_config)                                                                        \
+	{                                                                                          \
+		.sev = { [LOG_DEBUG] = (debug),                                                    \
+			 [LOG_INFO] = (info),                                                      \
+			 [LOG_NOTICE] = (notice),                                                  \
+			 [LOG_WARNING] = (warning),                                                \
+			 [LOG_ERROR] = (error),                                                    \
+			 [LOG_CRITICAL] = (critical),                                              \
+			 [LOG_ALERT] = (alert),                                                    \
+			 [LOG_FATAL] = (fatal),                                                    \
+		}                                                                                  \
+	}
 
-#define LOG_CONFIG_DEBUG(debug) \
-	LOG_CONFIG_ALL((debug), 2, 2, 2, 2, 2, 2, 2)
-#define LOG_CONFIG_INFO(debug, info) \
-	LOG_CONFIG_ALL((debug), (info), 2, 2, 2, 2, 2, 2)
-#define LOG_CONFIG_WARNING(debug, info, notice, warning) \
+#define LOG_CONFIG_DEBUG(debug) LOG_CONFIG_ALL((debug), 2, 2, 2, 2, 2, 2, 2)
+#define LOG_CONFIG_INFO(debug, info) LOG_CONFIG_ALL((debug), (info), 2, 2, 2, 2, 2, 2)
+#define LOG_CONFIG_WARNING(debug, info, notice, warning)                                           \
 	LOG_CONFIG_ALL((debug), (info), (notice), (warning), 2, 2, 2, 2)
 
 void log_set_config(const struct log_config *config);
-int log_add_filter(const struct log_filter *filter,
-			const struct log_config *config);
+int log_add_filter(const struct log_filter *filter, const struct log_config *config);
 void log_rm_filter(int handle);
 void log_clean_filter();
 
@@ -176,41 +175,26 @@ void log_clean_filter();
  * some log-message at application start. This is a handy-helper to do this.
  */
 
-__attribute__((format(printf, 7, 0)))
-void log_submit(const char *file,
-		int line,
-		const char *func,
-		const struct log_config *config,
-		const char *subs,
-		unsigned int sev,
-		const char *format,
-		va_list args);
+__attribute__((format(printf, 7, 0))) void log_submit(const char *file, int line, const char *func,
+						      const struct log_config *config,
+						      const char *subs, unsigned int sev,
+						      const char *format, va_list args);
 
-__attribute__((format(printf, 7, 8)))
-void log_format(const char *file,
-		int line,
-		const char *func,
-		const struct log_config *config,
-		const char *subs,
-		unsigned int sev,
-		const char *format,
-		...);
+__attribute__((format(printf, 7, 8))) void log_format(const char *file, int line, const char *func,
+						      const struct log_config *config,
+						      const char *subs, unsigned int sev,
+						      const char *format, ...);
 
-__attribute__((format(printf, 7, 0)))
-void log_llog(void *data,
-	      const char *file,
-	      int line,
-	      const char *func,
-	      const char *subs,
-	      unsigned int sev,
-	      const char *format,
-	      va_list args);
+__attribute__((format(printf, 7, 0))) void log_llog(void *data, const char *file, int line,
+						    const char *func, const char *subs,
+						    unsigned int sev, const char *format,
+						    va_list args);
 
 int log_set_file(const char *file);
 void log_print_init(const char *appname);
 
-static inline __attribute__((format(printf, 2, 3)))
-void log_dummyf(unsigned int sev, const char *format, ...)
+static inline __attribute__((format(printf, 2, 3))) void log_dummyf(unsigned int sev,
+								    const char *format, ...)
 {
 }
 
@@ -256,8 +240,7 @@ extern const char *LOG_SUBSYSTEM;
 #define LOG_DEFAULT_CONF LOG_DEFAULT_BASE, &LOG_CONFIG
 #define LOG_DEFAULT LOG_DEFAULT_CONF, LOG_SUBSYSTEM
 
-#define log_printf(sev, format, ...) \
-	log_format(LOG_DEFAULT, (sev), (format), ##__VA_ARGS__)
+#define log_printf(sev, format, ...) log_format(LOG_DEFAULT, (sev), (format), ##__VA_ARGS__)
 
 /*
  * Helpers
@@ -268,27 +251,18 @@ extern const char *LOG_SUBSYSTEM;
  */
 
 #ifdef BUILD_ENABLE_DEBUG
-	#define log_debug(format, ...) \
-		log_printf(LOG_DEBUG, (format), ##__VA_ARGS__)
+#define log_debug(format, ...) log_printf(LOG_DEBUG, (format), ##__VA_ARGS__)
 #else
-	#define log_debug(format, ...) \
-		log_dummyf(LOG_DEBUG, (format), ##__VA_ARGS__)
+#define log_debug(format, ...) log_dummyf(LOG_DEBUG, (format), ##__VA_ARGS__)
 #endif
 
-#define log_info(format, ...) \
-	log_printf(LOG_INFO, (format), ##__VA_ARGS__)
-#define log_notice(format, ...) \
-	log_printf(LOG_NOTICE, (format), ##__VA_ARGS__)
-#define log_warning(format, ...) \
-	log_printf(LOG_WARNING, (format), ##__VA_ARGS__)
-#define log_error(format, ...) \
-	log_printf(LOG_ERROR, (format), ##__VA_ARGS__)
-#define log_critical(format, ...) \
-	log_printf(LOG_CRITICAL, (format), ##__VA_ARGS__)
-#define log_alert(format, ...) \
-	log_printf(LOG_ALERT, (format), ##__VA_ARGS__)
-#define log_fatal(format, ...) \
-	log_printf(LOG_FATAL, (format), ##__VA_ARGS__)
+#define log_info(format, ...) log_printf(LOG_INFO, (format), ##__VA_ARGS__)
+#define log_notice(format, ...) log_printf(LOG_NOTICE, (format), ##__VA_ARGS__)
+#define log_warning(format, ...) log_printf(LOG_WARNING, (format), ##__VA_ARGS__)
+#define log_error(format, ...) log_printf(LOG_ERROR, (format), ##__VA_ARGS__)
+#define log_critical(format, ...) log_printf(LOG_CRITICAL, (format), ##__VA_ARGS__)
+#define log_alert(format, ...) log_printf(LOG_ALERT, (format), ##__VA_ARGS__)
+#define log_fatal(format, ...) log_printf(LOG_FATAL, (format), ##__VA_ARGS__)
 
 #define log_dbg log_debug
 #define log_warn log_warning

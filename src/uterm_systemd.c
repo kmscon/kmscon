@@ -56,8 +56,8 @@ int uterm_sd_new(struct uterm_sd **out)
 
 	ret = sd_booted();
 	if (ret < 0) {
-		log_warning("cannot determine whether system booted with systemd (%d): %s",
-			    ret, strerror(-ret));
+		log_warning("cannot determine whether system booted with systemd (%d): %s", ret,
+			    strerror(-ret));
 		return -EOPNOTSUPP;
 	} else if (!ret) {
 		log_info("system not booted with systemd, disabling multi-seat support");
@@ -73,8 +73,7 @@ int uterm_sd_new(struct uterm_sd **out)
 
 	ret = sd_login_monitor_new("seat", &sd->mon);
 	if (ret) {
-		log_err("cannot create systemd login monitor (%d): %s",
-			ret, strerror(-ret));
+		log_err("cannot create systemd login monitor (%d): %s", ret, strerror(-ret));
 		ret = -EFAULT;
 		goto err_free;
 	}
@@ -122,8 +121,7 @@ int uterm_sd_get_seats(struct uterm_sd *sd, char ***seats)
 
 	ret = sd_get_seats(&s);
 	if (ret < 0) {
-		log_warning("cannot read seat information from systemd: %d",
-			    ret);
+		log_warning("cannot read seat information from systemd: %d", ret);
 		return -EFAULT;
 	}
 

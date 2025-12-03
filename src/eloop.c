@@ -329,8 +329,7 @@ struct ev_signal_shared {
  * can use signalfd only.
  */
 
-static void sig_child(struct ev_eloop *loop, struct signalfd_siginfo *info,
-		      void *data)
+static void sig_child(struct ev_eloop *loop, struct signalfd_siginfo *info, void *data)
 {
 	pid_t pid;
 	int status;
@@ -346,14 +345,12 @@ static void sig_child(struct ev_eloop *loop, struct signalfd_siginfo *info,
 			break;
 		} else if (WIFEXITED(status)) {
 			if (WEXITSTATUS(status) != 0)
-				llog_debug(loop, "child %d exited with status %d",
-					   pid, WEXITSTATUS(status));
+				llog_debug(loop, "child %d exited with status %d", pid,
+					   WEXITSTATUS(status));
 			else
-				llog_debug(loop, "child %d exited successfully",
-					   pid);
+				llog_debug(loop, "child %d exited successfully", pid);
 		} else if (WIFSIGNALED(status)) {
-			llog_debug(loop, "child %d exited by signal %d", pid,
-				   WTERMSIG(status));
+			llog_debug(loop, "child %d exited by signal %d", pid, WTERMSIG(status));
 		}
 
 		d.pid = pid;
@@ -391,8 +388,7 @@ static void shared_signal_cb(struct ev_fd *fd, int mask, void *data)
  *
  * Returns: 0 on success, otherwise negative error code
  */
-static int signal_new(struct ev_signal_shared **out, struct ev_eloop *loop,
-			int signum)
+static int signal_new(struct ev_signal_shared **out, struct ev_eloop *loop, int signum)
 {
 	sigset_t mask;
 	int ret, fd;
@@ -421,8 +417,7 @@ static int signal_new(struct ev_signal_shared **out, struct ev_eloop *loop,
 		goto err_hook;
 	}
 
-	ret = ev_eloop_new_fd(loop, &sig->fd, fd, EV_READABLE,
-				shared_signal_cb, sig);
+	ret = ev_eloop_new_fd(loop, &sig->fd, fd, EV_READABLE, shared_signal_cb, sig);
 	if (ret)
 		goto err_sig;
 
@@ -507,8 +502,7 @@ static void eloop_event(struct ev_fd *fd, int mask, void *data)
 		llog_warn(eloop, "HUP/ERR on eloop source");
 }
 
-static int write_eventfd(llog_submit_t llog, void *llog_data, int fd,
-			 uint64_t val)
+static int write_eventfd(llog_submit_t llog, void *llog_data, int fd, uint64_t val)
 {
 	int ret;
 
@@ -516,25 +510,22 @@ static int write_eventfd(llog_submit_t llog, void *llog_data, int fd,
 		return llog_dEINVAL(llog, llog_data);
 
 	if (val == 0xffffffffffffffffULL) {
-		llog_dwarning(llog, llog_data,
-			      "increasing counter with invalid value %" PRIu64,
+		llog_dwarning(llog, llog_data, "increasing counter with invalid value %" PRIu64,
 			      val);
-		return -EINVAL;;
+		return -EINVAL;
+		;
 	}
 
 	ret = write(fd, &val, sizeof(val));
 	if (ret < 0) {
 		if (errno == EAGAIN)
-			llog_dwarning(llog, llog_data,
-				      "eventfd overflow while writing %" PRIu64,
+			llog_dwarning(llog, llog_data, "eventfd overflow while writing %" PRIu64,
 				      val);
 		else
-			llog_dwarning(llog, llog_data,
-				      "eventfd write error (%d): %m", errno);
+			llog_dwarning(llog, llog_data, "eventfd write error (%d): %m", errno);
 		return -EFAULT;
 	} else if (ret != sizeof(val)) {
-		llog_dwarning(llog, llog_data,
-			      "wrote %d bytes instead of 8 to eventdfd", ret);
+		llog_dwarning(llog, llog_data, "wrote %d bytes instead of 8 to eventdfd", ret);
 		return -EFAULT;
 	}
 
@@ -557,22 +548,19 @@ static void eloop_idle_event(struct ev_eloop *loop, unsigned int mask)
 	ret = read(loop->idle_fd, &val, sizeof(val));
 	if (ret < 0) {
 		if (errno != EAGAIN) {
-			llog_warning(loop, "reading eventfd failed (%d): %m",
-				     errno);
+			llog_warning(loop, "reading eventfd failed (%d): %m", errno);
 			goto err_out;
 		}
 	} else if (ret == 0) {
 		llog_warning(loop, "EOF on eventfd");
 		goto err_out;
 	} else if (ret != sizeof(val)) {
-		llog_warning(loop, "read %d bytes instead of 8 on eventfd",
-			     ret);
+		llog_warning(loop, "read %d bytes instead of 8 on eventfd", ret);
 		goto err_out;
 	} else if (val > 0) {
 		shl_hook_call(loop->idlers, loop, NULL);
 		if (shl_hook_num(loop->idlers) > 0)
-			write_eventfd(loop->llog, loop->llog_data,
-				      loop->idle_fd, 1);
+			write_eventfd(loop->llog, loop->llog_data, loop->idle_fd, 1);
 	}
 
 	return;
@@ -580,8 +568,8 @@ static void eloop_idle_event(struct ev_eloop *loop, unsigned int mask)
 err_out:
 	ret = epoll_ctl(loop->efd, EPOLL_CTL_DEL, loop->idle_fd, NULL);
 	if (ret)
-		llog_warning(loop, "cannot remove fd %d from epollset (%d): %m",
-			     loop->idle_fd, errno);
+		llog_warning(loop, "cannot remove fd %d from epollset (%d): %m", loop->idle_fd,
+			     errno);
 }
 
 /**
@@ -616,8 +604,7 @@ int ev_eloop_new(struct ev_eloop **out, ev_log_t log, void *log_data)
 	shl_dlist_init(&loop->sig_list);
 
 	loop->cur_fds_size = 32;
-	loop->cur_fds = malloc(sizeof(struct epoll_event) *
-			       loop->cur_fds_size);
+	loop->cur_fds = malloc(sizeof(struct epoll_event) * loop->cur_fds_size);
 	if (!loop->cur_fds) {
 		ret = llog_ENOMEM(loop);
 		goto err_free;
@@ -646,8 +633,8 @@ int ev_eloop_new(struct ev_eloop **out, ev_log_t log, void *log_data)
 		goto err_posts;
 	}
 
-	ret = ev_fd_new(&loop->fd, loop->efd, EV_READABLE, eloop_event, loop,
-			loop->llog, loop->llog_data);
+	ret = ev_fd_new(&loop->fd, loop->efd, EV_READABLE, eloop_event, loop, loop->llog,
+			loop->llog_data);
 	if (ret)
 		goto err_close;
 
@@ -664,8 +651,7 @@ int ev_eloop_new(struct ev_eloop **out, ev_log_t log, void *log_data)
 
 	ret = epoll_ctl(loop->efd, EPOLL_CTL_ADD, loop->idle_fd, &ep);
 	if (ret) {
-		llog_warning(loop, "cannot add fd %d to epoll set (%d): %m",
-			     loop->idle_fd, errno);
+		llog_warning(loop, "cannot add fd %d to epoll set (%d): %m", loop->idle_fd, errno);
 		ret = -EFAULT;
 		goto err_idle_fd;
 	}
@@ -738,16 +724,14 @@ void ev_eloop_unref(struct ev_eloop *loop)
 		ev_eloop_unregister_signal_cb(loop, SIGCHLD, sig_child, loop);
 
 	while (loop->sig_list.next != &loop->sig_list) {
-		sig = shl_dlist_entry(loop->sig_list.next,
-					struct ev_signal_shared,
-					list);
+		sig = shl_dlist_entry(loop->sig_list.next, struct ev_signal_shared, list);
 		signal_free(sig);
 	}
 
 	ret = epoll_ctl(loop->efd, EPOLL_CTL_DEL, loop->idle_fd, NULL);
 	if (ret)
-		llog_warning(loop, "cannot remove fd %d from epollset (%d): %m",
-			     loop->idle_fd, errno);
+		llog_warning(loop, "cannot remove fd %d from epollset (%d): %m", loop->idle_fd,
+			     errno);
 	close(loop->idle_fd);
 
 	ev_fd_unref(loop->fd);
@@ -840,10 +824,7 @@ int ev_eloop_dispatch(struct ev_eloop *loop, int timeout)
 
 	shl_hook_call(loop->pres, loop, NULL);
 
-	count = epoll_wait(loop->efd,
-			   loop->cur_fds,
-			   loop->cur_fds_size,
-			   timeout);
+	count = epoll_wait(loop->efd, loop->cur_fds, loop->cur_fds_size, timeout);
 	if (count < 0) {
 		if (errno == EINTR) {
 			ret = 0;
@@ -875,11 +856,10 @@ int ev_eloop_dispatch(struct ev_eloop *loop, int timeout)
 	}
 
 	if (count == loop->cur_fds_size) {
-		ep = realloc(loop->cur_fds, sizeof(struct epoll_event) *
-			     loop->cur_fds_size * 2);
+		ep = realloc(loop->cur_fds, sizeof(struct epoll_event) * loop->cur_fds_size * 2);
 		if (!ep) {
 			llog_warning(loop, "cannot reallocate dispatch cache to size %zu",
-				    loop->cur_fds_size * 2);
+				     loop->cur_fds_size * 2);
 		} else {
 			loop->cur_fds = ep;
 			loop->cur_fds_size *= 2;
@@ -1113,8 +1093,8 @@ void ev_eloop_rm_eloop(struct ev_eloop *rm)
  * Returns: 0 on success, otherwise negative error code
  */
 SHL_EXPORT
-int ev_fd_new(struct ev_fd **out, int rfd, int mask, ev_fd_cb cb, void *data,
-	      ev_log_t log, void *log_data)
+int ev_fd_new(struct ev_fd **out, int rfd, int mask, ev_fd_cb cb, void *data, ev_log_t log,
+	      void *log_data)
 {
 	struct ev_fd *fd;
 
@@ -1195,8 +1175,7 @@ static int fd_epoll_add(struct ev_fd *fd)
 
 	ret = epoll_ctl(fd->loop->efd, EPOLL_CTL_ADD, fd->fd, &ep);
 	if (ret) {
-		llog_warning(fd, "cannot add fd %d to epoll set (%d): %m",
-			     fd->fd, errno);
+		llog_warning(fd, "cannot add fd %d to epoll set (%d): %m", fd->fd, errno);
 		return -EFAULT;
 	}
 
@@ -1212,8 +1191,7 @@ static void fd_epoll_remove(struct ev_fd *fd)
 
 	ret = epoll_ctl(fd->loop->efd, EPOLL_CTL_DEL, fd->fd, NULL);
 	if (ret && errno != EBADF)
-		llog_warning(fd, "cannot remove fd %d from epoll set (%d): %m",
-			     fd->fd, errno);
+		llog_warning(fd, "cannot remove fd %d from epoll set (%d): %m", fd->fd, errno);
 }
 
 static int fd_epoll_update(struct ev_fd *fd)
@@ -1233,10 +1211,9 @@ static int fd_epoll_update(struct ev_fd *fd)
 		ep.events |= EPOLLET;
 	ep.data.ptr = fd;
 
-	ret = epoll_ctl(fd->loop->efd,  EPOLL_CTL_MOD, fd->fd, &ep);
+	ret = epoll_ctl(fd->loop->efd, EPOLL_CTL_MOD, fd->fd, &ep);
 	if (ret) {
-		llog_warning(fd, "cannot update epoll fd %d (%d): %m",
-			     fd->fd, errno);
+		llog_warning(fd, "cannot update epoll fd %d (%d): %m", fd->fd, errno);
 		return -EFAULT;
 	}
 
@@ -1388,8 +1365,8 @@ int ev_fd_update(struct ev_fd *fd, int mask)
  * Returns: 0 on success, otherwise negative error code
  */
 SHL_EXPORT
-int ev_eloop_new_fd(struct ev_eloop *loop, struct ev_fd **out, int rfd,
-			int mask, ev_fd_cb cb, void *data)
+int ev_eloop_new_fd(struct ev_eloop *loop, struct ev_fd **out, int rfd, int mask, ev_fd_cb cb,
+		    void *data)
 {
 	struct ev_fd *fd;
 	int ret;
@@ -1514,8 +1491,7 @@ static int timer_drain(struct ev_timer *timer, uint64_t *out)
 		if (errno == EAGAIN) {
 			return 0;
 		} else {
-			llog_warning(timer, "cannot read timerfd (%d): %m",
-				     errno);
+			llog_warning(timer, "cannot read timerfd (%d): %m", errno);
 			return errno;
 		}
 	} else if (len == 0) {
@@ -1578,8 +1554,8 @@ static const struct itimerspec ev_timer_zero;
  * Returns: 0 on success, negative error on failure
  */
 SHL_EXPORT
-int ev_timer_new(struct ev_timer **out, const struct itimerspec *spec,
-		 ev_timer_cb cb, void *data, ev_log_t log, void *log_data)
+int ev_timer_new(struct ev_timer **out, const struct itimerspec *spec, ev_timer_cb cb, void *data,
+		 ev_log_t log, void *log_data)
 {
 	struct ev_timer *timer;
 	int ret;
@@ -1615,8 +1591,8 @@ int ev_timer_new(struct ev_timer **out, const struct itimerspec *spec,
 		goto err_close;
 	}
 
-	ret = ev_fd_new(&timer->efd, timer->fd, EV_READABLE, timer_cb, timer,
-			timer->llog, timer->llog_data);
+	ret = ev_fd_new(&timer->efd, timer->fd, EV_READABLE, timer_cb, timer, timer->llog,
+			timer->llog_data);
 	if (ret)
 		goto err_close;
 
@@ -1817,9 +1793,8 @@ int ev_timer_drain(struct ev_timer *timer, uint64_t *expirations)
  * Returns: 0 on success, negative error code on failure.
  */
 SHL_EXPORT
-int ev_eloop_new_timer(struct ev_eloop *loop, struct ev_timer **out,
-			const struct itimerspec *spec, ev_timer_cb cb,
-			void *data)
+int ev_eloop_new_timer(struct ev_eloop *loop, struct ev_timer **out, const struct itimerspec *spec,
+		       ev_timer_cb cb, void *data)
 {
 	struct ev_timer *timer;
 	int ret;
@@ -1959,8 +1934,8 @@ static void counter_event(struct ev_fd *fd, int mask, void *data)
  * Returns: 0 on success, negative error code on failure.
  */
 SHL_EXPORT
-int ev_counter_new(struct ev_counter **out, ev_counter_cb cb, void *data,
-		   ev_log_t log, void *log_data)
+int ev_counter_new(struct ev_counter **out, ev_counter_cb cb, void *data, ev_log_t log,
+		   void *log_data)
 {
 	struct ev_counter *cnt;
 	int ret;
@@ -1985,8 +1960,8 @@ int ev_counter_new(struct ev_counter **out, ev_counter_cb cb, void *data,
 		goto err_free;
 	}
 
-	ret = ev_fd_new(&cnt->efd, cnt->fd, EV_READABLE, counter_event, cnt,
-			cnt->llog, cnt->llog_data);
+	ret = ev_fd_new(&cnt->efd, cnt->fd, EV_READABLE, counter_event, cnt, cnt->llog,
+			cnt->llog_data);
 	if (ret)
 		goto err_close;
 
@@ -2111,8 +2086,7 @@ bool ev_counter_is_bound(struct ev_counter *cnt)
  * object.
  */
 SHL_EXPORT
-void ev_counter_set_cb_data(struct ev_counter *cnt, ev_counter_cb cb,
-			    void *data)
+void ev_counter_set_cb_data(struct ev_counter *cnt, ev_counter_cb cb, void *data)
 {
 	if (!cnt)
 		return;
@@ -2151,8 +2125,8 @@ int ev_counter_inc(struct ev_counter *cnt, uint64_t val)
  * Returns: 0 on success, negative error code on failure.
  */
 SHL_EXPORT
-int ev_eloop_new_counter(struct ev_eloop *eloop, struct ev_counter **out,
-			 ev_counter_cb cb, void *data)
+int ev_eloop_new_counter(struct ev_eloop *eloop, struct ev_counter **out, ev_counter_cb cb,
+			 void *data)
 {
 	int ret;
 	struct ev_counter *cnt;
@@ -2245,8 +2219,8 @@ void ev_eloop_rm_counter(struct ev_counter *cnt)
  * Returns: 0 on success, negative error code on failure.
  */
 SHL_EXPORT
-int ev_eloop_register_signal_cb(struct ev_eloop *loop, int signum,
-				ev_signal_shared_cb cb, void *data)
+int ev_eloop_register_signal_cb(struct ev_eloop *loop, int signum, ev_signal_shared_cb cb,
+				void *data)
 {
 	struct ev_signal_shared *sig = NULL;
 	int ret;
@@ -2257,7 +2231,8 @@ int ev_eloop_register_signal_cb(struct ev_eloop *loop, int signum,
 	if (signum < 0 || !cb)
 		return llog_EINVAL(loop);
 
-	shl_dlist_for_each(iter, &loop->sig_list) {
+	shl_dlist_for_each(iter, &loop->sig_list)
+	{
 		sig = shl_dlist_entry(iter, struct ev_signal_shared, list);
 		if (sig->signum == signum)
 			break;
@@ -2292,8 +2267,8 @@ int ev_eloop_register_signal_cb(struct ev_eloop *loop, int signum,
  * removed. It doesn't matter which callback is removed as both are identical.
  */
 SHL_EXPORT
-void ev_eloop_unregister_signal_cb(struct ev_eloop *loop, int signum,
-					ev_signal_shared_cb cb, void *data)
+void ev_eloop_unregister_signal_cb(struct ev_eloop *loop, int signum, ev_signal_shared_cb cb,
+				   void *data)
 {
 	struct ev_signal_shared *sig;
 	struct shl_dlist *iter;
@@ -2301,7 +2276,8 @@ void ev_eloop_unregister_signal_cb(struct ev_eloop *loop, int signum,
 	if (!loop)
 		return;
 
-	shl_dlist_for_each(iter, &loop->sig_list) {
+	shl_dlist_for_each(iter, &loop->sig_list)
+	{
 		sig = shl_dlist_entry(iter, struct ev_signal_shared, list);
 		if (sig->signum == signum) {
 			shl_hook_rm_cast(sig->hook, cb, data);
@@ -2323,8 +2299,7 @@ void ev_eloop_unregister_signal_cb(struct ev_eloop *loop, int signum,
  */
 
 SHL_EXPORT
-int ev_eloop_register_child_cb(struct ev_eloop *loop, ev_child_cb cb,
-			       void *data)
+int ev_eloop_register_child_cb(struct ev_eloop *loop, ev_child_cb cb, void *data)
 {
 	int ret;
 	bool empty;
@@ -2338,8 +2313,7 @@ int ev_eloop_register_child_cb(struct ev_eloop *loop, ev_child_cb cb,
 		return ret;
 
 	if (empty) {
-		ret = ev_eloop_register_signal_cb(loop, SIGCHLD, sig_child,
-						  loop);
+		ret = ev_eloop_register_signal_cb(loop, SIGCHLD, sig_child, loop);
 		if (ret) {
 			shl_hook_rm_cast(loop->chlds, cb, data);
 			return ret;
@@ -2350,8 +2324,7 @@ int ev_eloop_register_child_cb(struct ev_eloop *loop, ev_child_cb cb,
 }
 
 SHL_EXPORT
-void ev_eloop_unregister_child_cb(struct ev_eloop *loop, ev_child_cb cb,
-				  void *data)
+void ev_eloop_unregister_child_cb(struct ev_eloop *loop, ev_child_cb cb, void *data)
 {
 	if (!loop || !shl_hook_num(loop->chlds))
 		return;
@@ -2382,8 +2355,7 @@ void ev_eloop_unregister_child_cb(struct ev_eloop *loop, ev_child_cb cb,
  * Returns: 0 on success, negative error code on failure.
  */
 SHL_EXPORT
-int ev_eloop_register_idle_cb(struct ev_eloop *eloop, ev_idle_cb cb,
-			      void *data, unsigned int flags)
+int ev_eloop_register_idle_cb(struct ev_eloop *eloop, ev_idle_cb cb, void *data, unsigned int flags)
 {
 	int ret;
 	bool os = flags & EV_ONESHOT;
@@ -2422,8 +2394,8 @@ int ev_eloop_register_idle_cb(struct ev_eloop *eloop, ev_idle_cb cb,
  * they are identical.
  */
 SHL_EXPORT
-void ev_eloop_unregister_idle_cb(struct ev_eloop *eloop, ev_idle_cb cb,
-				 void *data, unsigned int flags)
+void ev_eloop_unregister_idle_cb(struct ev_eloop *eloop, ev_idle_cb cb, void *data,
+				 unsigned int flags)
 {
 	if (!eloop || (flags & ~EV_IDLE_ALL))
 		return;
@@ -2455,8 +2427,7 @@ void ev_eloop_unregister_idle_cb(struct ev_eloop *eloop, ev_idle_cb cb,
  * Returns: 0 on success, negative error code on failure.
  */
 SHL_EXPORT
-int ev_eloop_register_pre_cb(struct ev_eloop *eloop, ev_idle_cb cb,
-			     void *data)
+int ev_eloop_register_pre_cb(struct ev_eloop *eloop, ev_idle_cb cb, void *data)
 {
 	if (!eloop)
 		return -EINVAL;
@@ -2476,8 +2447,7 @@ int ev_eloop_register_pre_cb(struct ev_eloop *eloop, ev_idle_cb cb,
  * they are identical.
  */
 SHL_EXPORT
-void ev_eloop_unregister_pre_cb(struct ev_eloop *eloop, ev_idle_cb cb,
-				void *data)
+void ev_eloop_unregister_pre_cb(struct ev_eloop *eloop, ev_idle_cb cb, void *data)
 {
 	if (!eloop)
 		return;
@@ -2506,8 +2476,7 @@ void ev_eloop_unregister_pre_cb(struct ev_eloop *eloop, ev_idle_cb cb,
  * Returns: 0 on success, negative error code on failure.
  */
 SHL_EXPORT
-int ev_eloop_register_post_cb(struct ev_eloop *eloop, ev_idle_cb cb,
-			      void *data)
+int ev_eloop_register_post_cb(struct ev_eloop *eloop, ev_idle_cb cb, void *data)
 {
 	if (!eloop)
 		return -EINVAL;
@@ -2527,8 +2496,7 @@ int ev_eloop_register_post_cb(struct ev_eloop *eloop, ev_idle_cb cb,
  * they are identical.
  */
 SHL_EXPORT
-void ev_eloop_unregister_post_cb(struct ev_eloop *eloop, ev_idle_cb cb,
-				 void *data)
+void ev_eloop_unregister_post_cb(struct ev_eloop *eloop, ev_idle_cb cb, void *data)
 {
 	if (!eloop)
 		return;

@@ -32,11 +32,11 @@
 
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
+#include <GLES2/gl2.h>
+#include <GLES2/gl2ext.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <gbm.h>
-#include <GLES2/gl2.h>
-#include <GLES2/gl2ext.h>
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -47,14 +47,14 @@
 #include "eloop.h"
 #include "shl_gl.h"
 #include "shl_log.h"
-#include "uterm_drm_shared_internal.h"
+#include "uterm_drm3d_blend.frag.bin.h"
+#include "uterm_drm3d_blend.vert.bin.h"
+#include "uterm_drm3d_fill.frag.bin.h"
+#include "uterm_drm3d_fill.vert.bin.h"
 #include "uterm_drm3d_internal.h"
+#include "uterm_drm_shared_internal.h"
 #include "uterm_video.h"
 #include "uterm_video_internal.h"
-#include "uterm_drm3d_blend.vert.bin.h"
-#include "uterm_drm3d_blend.frag.bin.h"
-#include "uterm_drm3d_fill.vert.bin.h"
-#include "uterm_drm3d_fill.frag.bin.h"
 
 #define LOG_SUBSYSTEM "uterm_drm3d_render"
 
@@ -62,8 +62,8 @@ static int init_shaders(struct uterm_video *video)
 {
 	struct uterm_drm3d_video *v3d = uterm_drm_video_get_data(video);
 	int ret;
-	char *fill_attr[] = { "position", "color" };
-	char *blend_attr[] = { "position", "texture_position" };
+	char *fill_attr[] = {"position", "color"};
+	char *blend_attr[] = {"position", "texture_position"};
 	int blend_vlen, blend_flen, fill_vlen, fill_flen;
 	const char *blend_vert, *blend_frag;
 	const char *fill_vert, *fill_frag;
@@ -84,29 +84,22 @@ static int init_shaders(struct uterm_video *video)
 	fill_frag = _binary_uterm_drm3d_fill_frag_start;
 	fill_flen = _binary_uterm_drm3d_fill_frag_size;
 
-	ret = gl_shader_new(&v3d->fill_shader, fill_vert, fill_vlen,
-			    fill_frag, fill_flen, fill_attr, 2, log_llog,
-			    NULL);
+	ret = gl_shader_new(&v3d->fill_shader, fill_vert, fill_vlen, fill_frag, fill_flen,
+			    fill_attr, 2, log_llog, NULL);
 	if (ret)
 		return ret;
 
-	v3d->uni_fill_proj = gl_shader_get_uniform(v3d->fill_shader,
-						   "projection");
+	v3d->uni_fill_proj = gl_shader_get_uniform(v3d->fill_shader, "projection");
 
-	ret = gl_shader_new(&v3d->blend_shader, blend_vert, blend_vlen,
-			    blend_frag, blend_flen, blend_attr, 2, log_llog,
-			    NULL);
+	ret = gl_shader_new(&v3d->blend_shader, blend_vert, blend_vlen, blend_frag, blend_flen,
+			    blend_attr, 2, log_llog, NULL);
 	if (ret)
 		return ret;
 
-	v3d->uni_blend_proj = gl_shader_get_uniform(v3d->blend_shader,
-						    "projection");
-	v3d->uni_blend_tex = gl_shader_get_uniform(v3d->blend_shader,
-						   "texture");
-	v3d->uni_blend_fgcol = gl_shader_get_uniform(v3d->blend_shader,
-						     "fgcolor");
-	v3d->uni_blend_bgcol = gl_shader_get_uniform(v3d->blend_shader,
-						     "bgcolor");
+	v3d->uni_blend_proj = gl_shader_get_uniform(v3d->blend_shader, "projection");
+	v3d->uni_blend_tex = gl_shader_get_uniform(v3d->blend_shader, "texture");
+	v3d->uni_blend_fgcol = gl_shader_get_uniform(v3d->blend_shader, "fgcolor");
+	v3d->uni_blend_bgcol = gl_shader_get_uniform(v3d->blend_shader, "bgcolor");
 
 	gl_tex_new(&v3d->tex, 1);
 	v3d->sinit = 2;
@@ -127,10 +120,8 @@ void uterm_drm3d_deinit_shaders(struct uterm_video *video)
 	gl_shader_unref(v3d->fill_shader);
 }
 
-static int display_blend(struct uterm_display *disp,
-			 const struct uterm_video_buffer *buf,
-			 unsigned int x, unsigned int y,
-			 uint8_t fr, uint8_t fg, uint8_t fb,
+static int display_blend(struct uterm_display *disp, const struct uterm_video_buffer *buf,
+			 unsigned int x, unsigned int y, uint8_t fr, uint8_t fg, uint8_t fb,
 			 uint8_t br, uint8_t bg, uint8_t bb)
 {
 	struct uterm_drm3d_video *v3d;
@@ -222,12 +213,12 @@ static int display_blend(struct uterm_display *disp,
 
 	if (v3d->supports_rowlen) {
 		glPixelStorei(GL_UNPACK_ROW_LENGTH, buf->stride);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, width, height, 0,
-			     GL_ALPHA, GL_UNSIGNED_BYTE, buf->data);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, width, height, 0, GL_ALPHA,
+			     GL_UNSIGNED_BYTE, buf->data);
 		glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 	} else if (buf->stride == width) {
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, width, height, 0,
-			     GL_ALPHA, GL_UNSIGNED_BYTE, buf->data);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, width, height, 0, GL_ALPHA,
+			     GL_UNSIGNED_BYTE, buf->data);
 	} else {
 		packed = malloc(width * height);
 		if (!packed)
@@ -241,8 +232,8 @@ static int display_blend(struct uterm_display *disp,
 			src += buf->stride;
 		}
 
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, width, height, 0,
-			     GL_ALPHA, GL_UNSIGNED_BYTE, packed);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, width, height, 0, GL_ALPHA,
+			     GL_UNSIGNED_BYTE, packed);
 
 		free(packed);
 	}
@@ -267,8 +258,7 @@ static int display_blend(struct uterm_display *disp,
 }
 
 int uterm_drm3d_display_fake_blendv(struct uterm_display *disp,
-				    const struct uterm_video_blend_req *req,
-				    size_t num)
+				    const struct uterm_video_blend_req *req, size_t num)
 {
 	int ret;
 	unsigned int i;
@@ -280,8 +270,7 @@ int uterm_drm3d_display_fake_blendv(struct uterm_display *disp,
 		if (!req->buf)
 			continue;
 
-		ret = display_blend(disp, req->buf, req->x, req->y,
-				    req->fr, req->fg, req->fb,
+		ret = display_blend(disp, req->buf, req->x, req->y, req->fr, req->fg, req->fb,
 				    req->br, req->bg, req->bb);
 		if (ret)
 			return ret;
@@ -290,10 +279,9 @@ int uterm_drm3d_display_fake_blendv(struct uterm_display *disp,
 	return 0;
 }
 
-int uterm_drm3d_display_fill(struct uterm_display *disp,
-			     uint8_t r, uint8_t g, uint8_t b,
-			     unsigned int x, unsigned int y,
-			     unsigned int width, unsigned int height)
+int uterm_drm3d_display_fill(struct uterm_display *disp, uint8_t r, uint8_t g, uint8_t b,
+			     unsigned int x, unsigned int y, unsigned int width,
+			     unsigned int height)
 {
 	struct uterm_drm3d_video *v3d;
 	unsigned int sw, sh, tmp, i;
@@ -349,7 +337,7 @@ int uterm_drm3d_display_fill(struct uterm_display *disp,
 	 * and positive y-axis up, while other parts uses a coordinate system
 	 * with the origin at _upper-left_ corner and positive y-axis down.
 	 */
-	y = sh - y; // invert y-axis
+	y = sh - y;  // invert y-axis
 	y -= height; // move origin to lower left corner
 
 	glViewport(x, y, width, height);

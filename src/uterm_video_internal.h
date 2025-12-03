@@ -40,39 +40,36 @@
 /* backend-operations */
 
 struct mode_ops {
-	int (*init) (struct uterm_mode *mode);
-	void (*destroy) (struct uterm_mode *mode);
-	const char *(*get_name) (const struct uterm_mode *mode);
-	unsigned int (*get_width) (const struct uterm_mode *mode);
-	unsigned int (*get_height) (const struct uterm_mode *mode);
+	int (*init)(struct uterm_mode *mode);
+	void (*destroy)(struct uterm_mode *mode);
+	const char *(*get_name)(const struct uterm_mode *mode);
+	unsigned int (*get_width)(const struct uterm_mode *mode);
+	unsigned int (*get_height)(const struct uterm_mode *mode);
 };
 
 struct display_ops {
-	int (*init) (struct uterm_display *display);
-	void (*destroy) (struct uterm_display *display);
-	int (*activate) (struct uterm_display *disp, struct uterm_mode *mode);
-	void (*deactivate) (struct uterm_display *disp);
-	int (*set_dpms) (struct uterm_display *disp, int state);
-	int (*use) (struct uterm_display *disp, bool *opengl);
-	int (*get_buffers) (struct uterm_display *disp,
-			    struct uterm_video_buffer *buffer,
-			    unsigned int formats);
-	int (*swap) (struct uterm_display *disp, bool immediate);
-	int (*fake_blendv) (struct uterm_display *disp,
-			    const struct uterm_video_blend_req *req,
-			    size_t num);
-	int (*fill) (struct uterm_display *disp,
-		     uint8_t r, uint8_t g, uint8_t b, unsigned int x,
-		     unsigned int y, unsigned int width, unsigned int height);
+	int (*init)(struct uterm_display *display);
+	void (*destroy)(struct uterm_display *display);
+	int (*activate)(struct uterm_display *disp, struct uterm_mode *mode);
+	void (*deactivate)(struct uterm_display *disp);
+	int (*set_dpms)(struct uterm_display *disp, int state);
+	int (*use)(struct uterm_display *disp, bool *opengl);
+	int (*get_buffers)(struct uterm_display *disp, struct uterm_video_buffer *buffer,
+			   unsigned int formats);
+	int (*swap)(struct uterm_display *disp, bool immediate);
+	int (*fake_blendv)(struct uterm_display *disp, const struct uterm_video_blend_req *req,
+			   size_t num);
+	int (*fill)(struct uterm_display *disp, uint8_t r, uint8_t g, uint8_t b, unsigned int x,
+		    unsigned int y, unsigned int width, unsigned int height);
 };
 
 struct video_ops {
-	int (*init) (struct uterm_video *video, const char *node);
-	void (*destroy) (struct uterm_video *video);
-	void (*segfault) (struct uterm_video *video);
-	int (*poll) (struct uterm_video *video);
-	void (*sleep) (struct uterm_video *video);
-	int (*wake_up) (struct uterm_video *video);
+	int (*init)(struct uterm_video *video, const char *node);
+	void (*destroy)(struct uterm_video *video);
+	void (*segfault)(struct uterm_video *video);
+	int (*poll)(struct uterm_video *video);
+	void (*sleep)(struct uterm_video *video);
+	int (*wake_up)(struct uterm_video *video);
 };
 
 struct uterm_video_module {
@@ -100,13 +97,13 @@ void uterm_mode_unbind(struct uterm_mode *mode);
 
 /* uterm_display */
 
-#define DISPLAY_ONLINE		0x01
-#define DISPLAY_VSYNC		0x02
-#define DISPLAY_AVAILABLE	0x04
-#define DISPLAY_OPEN		0x08
-#define DISPLAY_DBUF		0x10
-#define DISPLAY_DITHERING	0x20
-#define DISPLAY_PFLIP		0x40
+#define DISPLAY_ONLINE 0x01
+#define DISPLAY_VSYNC 0x02
+#define DISPLAY_AVAILABLE 0x04
+#define DISPLAY_OPEN 0x08
+#define DISPLAY_DBUF 0x10
+#define DISPLAY_DITHERING 0x20
+#define DISPLAY_PFLIP 0x40
 
 struct uterm_display {
 	struct shl_dlist list;
@@ -131,16 +128,16 @@ struct uterm_display {
 };
 
 int display_new(struct uterm_display **out, const struct display_ops *ops);
-void display_set_vblank_timer(struct uterm_display *disp,
-			      unsigned int msecs);
+void display_set_vblank_timer(struct uterm_display *disp, unsigned int msecs);
 int display_schedule_vblank_timer(struct uterm_display *disp);
 int uterm_display_bind(struct uterm_display *disp, struct uterm_video *video);
 void uterm_display_unbind(struct uterm_display *disp);
 
-#define DISPLAY_CB(disp, act) shl_hook_call((disp)->hook, (disp), \
-		&(struct uterm_display_event){ \
-			.action = (act), \
-		})
+#define DISPLAY_CB(disp, act)                                                                      \
+	shl_hook_call((disp)->hook, (disp),                                                        \
+		      &(struct uterm_display_event){                                               \
+			      .action = (act),                                                     \
+		      })
 
 static inline bool display_is_online(const struct uterm_display *disp)
 {
@@ -149,8 +146,8 @@ static inline bool display_is_online(const struct uterm_display *disp)
 
 /* uterm_video */
 
-#define VIDEO_AWAKE		0x01
-#define VIDEO_HOTPLUG		0x02
+#define VIDEO_AWAKE 0x01
+#define VIDEO_HOTPLUG 0x02
 
 struct uterm_video {
 	unsigned long ref;
@@ -177,9 +174,10 @@ static inline bool video_need_hotplug(const struct uterm_video *video)
 	return video->flags & VIDEO_HOTPLUG;
 }
 
-#define VIDEO_CB(vid, disp, act) shl_hook_call((vid)->hook, (vid), \
-		&(struct uterm_video_hotplug){ \
-			.display = (disp), \
-			.action = (act), \
-		})
+#define VIDEO_CB(vid, disp, act)                                                                   \
+	shl_hook_call((vid)->hook, (vid),                                                          \
+		      &(struct uterm_video_hotplug){                                               \
+			      .display = (disp),                                                   \
+			      .action = (act),                                                     \
+		      })
 #endif /* UTERM_VIDEO_INTERNAL_H */

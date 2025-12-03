@@ -41,16 +41,14 @@
 
 struct shl_hook;
 struct shl_hook_entry;
-typedef void (*shl_hook_cb) (void *parent, void *arg, void *data);
+typedef void (*shl_hook_cb)(void *parent, void *arg, void *data);
 
-#define shl_hook_add_cast(hook, cb, data, oneshot) \
+#define shl_hook_add_cast(hook, cb, data, oneshot)                                                 \
 	shl_hook_add((hook), (shl_hook_cb)(cb), (data), (oneshot))
-#define shl_hook_add_single_cast(hook, cb, data, oneshot) \
+#define shl_hook_add_single_cast(hook, cb, data, oneshot)                                          \
 	shl_hook_add_single((hook), (shl_hook_cb)(cb), (data), (oneshot))
-#define shl_hook_rm_cast(hook, cb, data) \
-	shl_hook_rm((hook), (shl_hook_cb)(cb), (data))
-#define shl_hook_rm_all_cast(hook, cb, data) \
-	shl_hook_rm_all((hook), (shl_hook_cb)(cb), (data))
+#define shl_hook_rm_cast(hook, cb, data) shl_hook_rm((hook), (shl_hook_cb)(cb), (data))
+#define shl_hook_rm_all_cast(hook, cb, data) shl_hook_rm_all((hook), (shl_hook_cb)(cb), (data))
 
 struct shl_hook_entry {
 	struct shl_dlist list;
@@ -96,9 +94,7 @@ static inline void shl_hook_free(struct shl_hook *hook)
 	}
 
 	while (!shl_dlist_empty(&hook->entries)) {
-		entry = shl_dlist_entry(hook->entries.prev,
-					struct shl_hook_entry,
-					list);
+		entry = shl_dlist_entry(hook->entries.prev, struct shl_hook_entry, list);
 		shl_dlist_unlink(&entry->list);
 		free(entry);
 	}
@@ -114,8 +110,7 @@ static inline unsigned int shl_hook_num(struct shl_hook *hook)
 	return hook->num;
 }
 
-static inline int shl_hook_add(struct shl_hook *hook, shl_hook_cb cb,
-			       void *data, bool oneshot)
+static inline int shl_hook_add(struct shl_hook *hook, shl_hook_cb cb, void *data, bool oneshot)
 {
 	struct shl_hook_entry *entry;
 
@@ -138,8 +133,8 @@ static inline int shl_hook_add(struct shl_hook *hook, shl_hook_cb cb,
 /* This adds an entry only if it is not already in the list. But notice that if
  * the entry is already registered twice or with a different \oneshot flag, the
  * list will _not_ be changed! */
-static inline int shl_hook_add_single(struct shl_hook *hook, shl_hook_cb cb,
-				      void *data, bool oneshot)
+static inline int shl_hook_add_single(struct shl_hook *hook, shl_hook_cb cb, void *data,
+				      bool oneshot)
 {
 	struct shl_hook_entry *entry;
 	struct shl_dlist *iter;
@@ -147,7 +142,8 @@ static inline int shl_hook_add_single(struct shl_hook *hook, shl_hook_cb cb,
 	if (!hook || !cb)
 		return -EINVAL;
 
-	shl_dlist_for_each(iter, &hook->entries) {
+	shl_dlist_for_each(iter, &hook->entries)
+	{
 		entry = shl_dlist_entry(iter, struct shl_hook_entry, list);
 		if (entry->cb == cb && entry->data == data)
 			return 0;
@@ -156,8 +152,7 @@ static inline int shl_hook_add_single(struct shl_hook *hook, shl_hook_cb cb,
 	return shl_hook_add(hook, cb, data, oneshot);
 }
 
-static inline void shl_hook_rm(struct shl_hook *hook, shl_hook_cb cb,
-			       void *data)
+static inline void shl_hook_rm(struct shl_hook *hook, shl_hook_cb cb, void *data)
 {
 	struct shl_dlist *iter;
 	struct shl_hook_entry *entry;
@@ -165,7 +160,8 @@ static inline void shl_hook_rm(struct shl_hook *hook, shl_hook_cb cb,
 	if (!hook || !cb)
 		return;
 
-	shl_dlist_for_each_reverse(iter, &hook->entries) {
+	shl_dlist_for_each_reverse(iter, &hook->entries)
+	{
 		entry = shl_dlist_entry(iter, struct shl_hook_entry, list);
 		if (entry->cb == cb && entry->data == data) {
 			/* if *_call() is running we must not disturb it */
@@ -179,8 +175,7 @@ static inline void shl_hook_rm(struct shl_hook *hook, shl_hook_cb cb,
 	}
 }
 
-static inline void shl_hook_rm_all(struct shl_hook *hook, shl_hook_cb cb,
-				   void *data)
+static inline void shl_hook_rm_all(struct shl_hook *hook, shl_hook_cb cb, void *data)
 {
 	struct shl_dlist *iter, *tmp;
 	struct shl_hook_entry *entry;
@@ -188,7 +183,8 @@ static inline void shl_hook_rm_all(struct shl_hook *hook, shl_hook_cb cb,
 	if (!hook || !cb)
 		return;
 
-	shl_dlist_for_each_reverse_safe(iter, tmp, &hook->entries) {
+	shl_dlist_for_each_reverse_safe(iter, tmp, &hook->entries)
+	{
 		entry = shl_dlist_entry(iter, struct shl_hook_entry, list);
 		if (entry->cb == cb && entry->data == data) {
 			/* if *_call() is running we must not disturb it */
@@ -201,8 +197,7 @@ static inline void shl_hook_rm_all(struct shl_hook *hook, shl_hook_cb cb,
 	}
 }
 
-static inline void shl_hook_call(struct shl_hook *hook, void *parent,
-				 void *arg)
+static inline void shl_hook_call(struct shl_hook *hook, void *parent, void *arg)
 {
 	struct shl_hook_entry *entry;
 	bool oneshot;
@@ -210,10 +205,8 @@ static inline void shl_hook_call(struct shl_hook *hook, void *parent,
 	if (!hook || hook->cur_entry)
 		return;
 
-	for (hook->cur_entry = hook->entries.next;
-	     hook->cur_entry != &hook->entries; ) {
-		entry = shl_dlist_entry(hook->cur_entry,
-					struct shl_hook_entry, list);
+	for (hook->cur_entry = hook->entries.next; hook->cur_entry != &hook->entries;) {
+		entry = shl_dlist_entry(hook->cur_entry, struct shl_hook_entry, list);
 		hook->cur_entry = entry->list.next;
 		oneshot = entry->oneshot;
 

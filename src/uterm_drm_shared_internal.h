@@ -78,8 +78,7 @@ int uterm_drm_display_activate(struct uterm_display *disp, int fd);
 void uterm_drm_display_deactivate(struct uterm_display *disp, int fd);
 int uterm_drm_display_set_dpms(struct uterm_display *disp, int state);
 int uterm_drm_display_wait_pflip(struct uterm_display *disp);
-int uterm_drm_display_swap(struct uterm_display *disp, uint32_t fb,
-			   bool immediate);
+int uterm_drm_display_swap(struct uterm_display *disp, uint32_t fb, bool immediate);
 
 static inline void *uterm_drm_display_get_data(struct uterm_display *disp)
 {
@@ -90,7 +89,7 @@ static inline void *uterm_drm_display_get_data(struct uterm_display *disp)
 
 /* drm video */
 
-typedef void (*uterm_drm_page_flip_t) (struct uterm_display *disp);
+typedef void (*uterm_drm_page_flip_t)(struct uterm_display *disp);
 
 struct uterm_drm_video {
 	int fd;
@@ -103,18 +102,15 @@ struct uterm_drm_video {
 };
 
 int uterm_drm_video_init(struct uterm_video *video, const char *node,
-			 const struct display_ops *display_ops,
-			 uterm_drm_page_flip_t pflip, void *data);
+			 const struct display_ops *display_ops, uterm_drm_page_flip_t pflip,
+			 void *data);
 void uterm_drm_video_destroy(struct uterm_video *video);
-int uterm_drm_video_find_crtc(struct uterm_video *video, drmModeRes *res,
-			      drmModeEncoder *enc);
-int uterm_drm_video_hotplug(struct uterm_video *video, bool read_dpms,
-			    bool modeset);
+int uterm_drm_video_find_crtc(struct uterm_video *video, drmModeRes *res, drmModeEncoder *enc);
+int uterm_drm_video_hotplug(struct uterm_video *video, bool read_dpms, bool modeset);
 int uterm_drm_video_wake_up(struct uterm_video *video);
 void uterm_drm_video_sleep(struct uterm_video *video);
 int uterm_drm_video_poll(struct uterm_video *video);
-int uterm_drm_video_wait_pflip(struct uterm_video *video,
-			       unsigned int *mtimeout);
+int uterm_drm_video_wait_pflip(struct uterm_video *video, unsigned int *mtimeout);
 void uterm_drm_video_arm_vt_timer(struct uterm_video *video);
 
 static inline void *uterm_drm_video_get_data(struct uterm_video *video)

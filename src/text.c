@@ -76,11 +76,9 @@ int kmscon_text_register(const struct kmscon_text_ops *ops)
 
 	log_debug("register text backend %s", ops->name);
 
-	ret = shl_register_add_cb(&text_reg, ops->name, (void*)ops,
-				  kmscon_text_destroy);
+	ret = shl_register_add_cb(&text_reg, ops->name, (void *)ops, kmscon_text_destroy);
 	if (ret) {
-		log_error("cannot register text backend %s: %d", ops->name,
-			  ret);
+		log_error("cannot register text backend %s: %d", ops->name, ret);
 		return ret;
 	}
 
@@ -167,16 +165,13 @@ int kmscon_text_new(struct kmscon_text **out, const char *backend, const char *r
 		if (strncmp(rotate, "normal", 6) == 0) {
 			text->orientation = OR_NORMAL;
 			log_debug("using: orientation: normal");
-		}
-		else if (strncmp(rotate, "right", 5) == 0) {
+		} else if (strncmp(rotate, "right", 5) == 0) {
 			text->orientation = OR_RIGHT;
 			log_debug("using: orientation: right");
-		}
-		else if (strncmp(rotate, "upside-down", 8) == 0) {
+		} else if (strncmp(rotate, "upside-down", 8) == 0) {
 			text->orientation = OR_UPSIDE_DOWN;
 			log_debug("using: orientation: upside-down");
-		}
-		else if (strncmp(rotate, "left", 4) == 0) {
+		} else if (strncmp(rotate, "left", 4) == 0) {
 			text->orientation = OR_LEFT;
 			log_debug("using: orientation: left");
 		}
@@ -253,10 +248,8 @@ void kmscon_text_unref(struct kmscon_text *text)
  *
  * Returns: 0 on success, negative error code on failure.
  */
-int kmscon_text_set(struct kmscon_text *txt,
-		    struct kmscon_font *font,
-		    struct kmscon_font *bold_font,
-		    struct uterm_display *disp)
+int kmscon_text_set(struct kmscon_text *txt, struct kmscon_font *font,
+		    struct kmscon_font *bold_font, struct uterm_display *disp)
 {
 	int ret;
 
@@ -445,10 +438,8 @@ int kmscon_text_prepare(struct kmscon_text *txt)
  *
  * Returns: 0 on success or negative error code if this glyph couldn't be drawn.
  */
-int kmscon_text_draw(struct kmscon_text *txt,
-		     uint64_t id, const uint32_t *ch, size_t len,
-		     unsigned int width,
-		     unsigned int posx, unsigned int posy,
+int kmscon_text_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, size_t len,
+		     unsigned int width, unsigned int posx, unsigned int posy,
 		     const struct tsm_screen_attr *attr)
 {
 	bool previous_overflow;
@@ -480,9 +471,8 @@ int kmscon_text_draw(struct kmscon_text *txt,
  *
  * Returns: 0 on success or negative error code if it couldn't be drawn.
  */
-int kmscon_text_draw_pointer(struct kmscon_text *txt,
-			    unsigned int x, unsigned int y,
-			    const struct tsm_screen_attr *attr)
+int kmscon_text_draw_pointer(struct kmscon_text *txt, unsigned int x, unsigned int y,
+			     const struct tsm_screen_attr *attr)
 {
 	if (!txt || !txt->rendering || !txt->ops->draw_pointer)
 		return -EINVAL;
@@ -533,12 +523,9 @@ void kmscon_text_abort(struct kmscon_text *txt)
 	txt->rendering = false;
 }
 
-int kmscon_text_draw_cb(struct tsm_screen *con,
-			uint64_t id, const uint32_t *ch, size_t len,
-			unsigned int width,
-			unsigned int posx, unsigned int posy,
-			const struct tsm_screen_attr *attr,
-			tsm_age_t age, void *data)
+int kmscon_text_draw_cb(struct tsm_screen *con, uint64_t id, const uint32_t *ch, size_t len,
+			unsigned int width, unsigned int posx, unsigned int posy,
+			const struct tsm_screen_attr *attr, tsm_age_t age, void *data)
 {
 	return kmscon_text_draw(data, id, ch, len, width, posx, posy, attr);
 }

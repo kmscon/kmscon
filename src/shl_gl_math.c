@@ -113,8 +113,7 @@ void gl_m4_mult_dest(float *dest, const float *n, const float *m)
 		for (col = 0; col < 4; ++col) {
 			dest[row * 4 + col] = 0;
 			for (j = 0; j < 4; ++j)
-				dest[row * 4 + col] +=
-					n[row * 4 + j] * m[j * 4 + col];
+				dest[row * 4 + col] += n[row * 4 + j] * m[j * 4 + col];
 		}
 	}
 }
@@ -133,7 +132,7 @@ void gl_m4_mult(float *n, const float *m)
 
 void gl_m4_translate(float *m, float x, float y, float z)
 {
-	float trans[16] = { 1, 0, 0, x, 0, 1, 0, y, 0, 0, 1, z, 0, 0, 0, 1 };
+	float trans[16] = {1, 0, 0, x, 0, 1, 0, y, 0, 0, 1, z, 0, 0, 0, 1};
 
 	if (!m)
 		return;
@@ -143,7 +142,7 @@ void gl_m4_translate(float *m, float x, float y, float z)
 
 void gl_m4_scale(float *m, float x, float y, float z)
 {
-	float scale[16] = { x, 0, 0, 0, 0, y, 0, 0, 0, 0, z, 0, 0, 0, 0, 1 };
+	float scale[16] = {x, 0, 0, 0, 0, y, 0, 0, 0, 0, z, 0, 0, 0, 0, 1};
 
 	if (!m)
 		return;

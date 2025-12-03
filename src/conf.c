@@ -54,8 +54,7 @@ struct conf_ctx {
 	void *mem;
 };
 
-int conf_ctx_new(struct conf_ctx **out, const struct conf_option *opts,
-		  size_t onum, void *mem)
+int conf_ctx_new(struct conf_ctx **out, const struct conf_option *opts, size_t onum, void *mem)
 {
 	struct conf_ctx *ctx;
 	size_t size;
@@ -70,7 +69,7 @@ int conf_ctx_new(struct conf_ctx **out, const struct conf_option *opts,
 		return -ENOMEM;
 	}
 	memset(ctx, 0, size);
-	ctx->opts = (void*)((char*)ctx + sizeof(*ctx));
+	ctx->opts = (void *)((char *)ctx + sizeof(*ctx));
 	ctx->onum = onum;
 	ctx->mem = mem;
 	memcpy(ctx->opts, opts, onum * sizeof(*opts));
@@ -186,15 +185,13 @@ int conf_ctx_parse_argv(struct conf_ctx *ctx, int argc, char **argv)
 
 	short_options = malloc(sizeof(char) * (ctx->onum + 1) * 2);
 	if (!short_options) {
-		log_error("out of memory to parse cmd-line arguments (%d): %m",
-			  errno);
+		log_error("out of memory to parse cmd-line arguments (%d): %m", errno);
 		return -ENOMEM;
 	}
 
 	long_options = malloc(sizeof(struct option) * ctx->onum * 2);
 	if (!long_options) {
-		log_error("out of memory to parse cmd-line arguments (%d): %m",
-			  errno);
+		log_error("out of memory to parse cmd-line arguments (%d): %m", errno);
 		free(short_options);
 		return -ENOMEM;
 	}
@@ -212,8 +209,7 @@ int conf_ctx_parse_argv(struct conf_ctx *ctx, int argc, char **argv)
 		if (ctx->opts[i].long_name) {
 			/* skip the "no-" prefix */
 			opt->name = &ctx->opts[i].long_name[3];
-			opt->has_arg = !!(ctx->opts[i].type->flags &
-								CONF_HAS_ARG);
+			opt->has_arg = !!(ctx->opts[i].type->flags & CONF_HAS_ARG);
 			opt->flag = NULL;
 			opt->val = 100000 + i;
 			++opt;
@@ -232,24 +228,19 @@ int conf_ctx_parse_argv(struct conf_ctx *ctx, int argc, char **argv)
 
 	opterr = 0;
 	while (1) {
-		c = getopt_long(argc, argv, short_options,
-				long_options, NULL);
+		c = getopt_long(argc, argv, short_options, long_options, NULL);
 		if (c <= 0) {
 			break;
 		} else if (c == ':') {
-			fprintf(stderr, "Missing argument for: %s\n",
-				argv[optind - 1]);
+			fprintf(stderr, "Missing argument for: %s\n", argv[optind - 1]);
 			return -EFAULT;
 		} else if (c == '?') {
 			if (optopt && optopt < 100000)
-				fprintf(stderr, "Unknown argument: -%c\n",
-					optopt);
+				fprintf(stderr, "Unknown argument: -%c\n", optopt);
 			else if (!optopt)
-				fprintf(stderr, "Unknown argument: %s\n",
-					argv[optind - 1]);
+				fprintf(stderr, "Unknown argument: %s\n", argv[optind - 1]);
 			else
-				fprintf(stderr, "Option takes no arg: %s\n",
-					argv[optind - 1]);
+				fprintf(stderr, "Option takes no arg: %s\n", argv[optind - 1]);
 			return -EFAULT;
 		} else if (c < 100000) {
 			for (i = 0; i < ctx->onum; ++i) {
@@ -316,16 +307,14 @@ int conf_ctx_parse_argv(struct conf_ctx *ctx, int argc, char **argv)
 	}
 
 	if (optind < argc) {
-		fprintf(stderr, "Unparsed remaining args starting with: %s\n",
-			argv[optind]);
+		fprintf(stderr, "Unparsed remaining args starting with: %s\n", argv[optind]);
 		return -EFAULT;
 	}
 
 	return 0;
 }
 
-static int parse_kv_pair(struct conf_option *opts, size_t len,
-			 const char *key, const char *value)
+static int parse_kv_pair(struct conf_option *opts, size_t len, const char *key, const char *value)
 {
 	unsigned int i;
 	int ret;
@@ -356,12 +345,10 @@ static int parse_kv_pair(struct conf_option *opts, size_t len,
 		}
 
 		if (opt->type->flags & CONF_HAS_ARG && !value) {
-			log_error("config option '%s' requires an argument",
-				  key);
+			log_error("config option '%s' requires an argument", key);
 			return -EFAULT;
 		} else if (!(opt->type->flags & CONF_HAS_ARG) && value) {
-			log_error("config option '%s' does not take arguments",
-				  key);
+			log_error("config option '%s' does not take arguments", key);
 			return -EFAULT;
 		}
 
@@ -398,8 +385,7 @@ static void strip_spaces(char **buf)
 		*tail-- = 0;
 }
 
-static int parse_line(struct conf_option *opts, size_t olen,
-		      char **buf, size_t *size)
+static int parse_line(struct conf_option *opts, size_t olen, char **buf, size_t *size)
 {
 	char *key;
 	char *value = NULL;
@@ -415,9 +401,7 @@ static int parse_line(struct conf_option *opts, size_t olen,
 	key = line;
 	while (len) {
 		c = *line;
-		if (c == '\n' ||
-		    c == '#' ||
-		    c == '=')
+		if (c == '\n' || c == '#' || c == '=')
 			break;
 		++line;
 		--len;
@@ -443,8 +427,7 @@ static int parse_line(struct conf_option *opts, size_t olen,
 	value = line;
 	while (len) {
 		c = *line;
-		if (c == '\n' ||
-		    c == '#')
+		if (c == '\n' || c == '#')
 			break;
 		++line;
 		--len;
@@ -474,7 +457,7 @@ skip_comment:
 
 done:
 	strip_spaces(&key);
-	
+
 	klen = strlen(key);
 	if (klen > 0) {
 		if (value)
@@ -496,8 +479,7 @@ done:
 	return 0;
 }
 
-static int parse_buffer(struct conf_option *opts, size_t len,
-			char *buf, size_t size)
+static int parse_buffer(struct conf_option *opts, size_t len, char *buf, size_t size)
 {
 	int ret = 0;
 	struct conf_option *o;
@@ -526,8 +508,7 @@ static int parse_buffer(struct conf_option *opts, size_t len,
 
 /* This reads the file at \path in memory and parses it as if it was given as
  * command line options. */
-static int conf_parse_file(struct conf_option *opts, size_t len,
-			   const char *path)
+static int conf_parse_file(struct conf_option *opts, size_t len, const char *path)
 {
 	int fd, ret;
 	size_t size, pos;
@@ -559,7 +540,8 @@ static int conf_parse_file(struct conf_option *opts, size_t len,
 		if (size - pos < CONF_BUFSIZE) {
 			tmp = realloc(buf, size + CONF_BUFSIZE + 1);
 			if (!tmp) {
-				log_error("cannot allocate enough memory to parse config file %s (%d): %m",
+				log_error("cannot allocate enough memory to parse config file %s "
+					  "(%d): %m",
 					  path, errno);
 				ret = -ENOMEM;
 				goto out_free;
@@ -570,8 +552,7 @@ static int conf_parse_file(struct conf_option *opts, size_t len,
 
 		ret = read(fd, &buf[pos], CONF_BUFSIZE);
 		if (ret < 0) {
-			log_error("cannot read from config file %s (%d): %m",
-				  path, errno);
+			log_error("cannot read from config file %s (%d): %m", path, errno);
 			ret = -EFAULT;
 			goto out_free;
 		}
@@ -631,10 +612,10 @@ int conf_ctx_parse_file(struct conf_ctx *ctx, const char *format, ...)
 
 static void conf_free_value(struct conf_option *opt)
 {
-	if (*(void**)opt->mem) {
-		if (*(void**)opt->mem != opt->def)
-			free(*(void**)opt->mem);
-		*(void**)opt->mem = NULL;
+	if (*(void **)opt->mem) {
+		if (*(void **)opt->mem != opt->def)
+			free(*(void **)opt->mem);
+		*(void **)opt->mem = NULL;
 	}
 }
 
@@ -642,24 +623,23 @@ static void conf_free_value(struct conf_option *opt)
 
 static void conf_default_bool(struct conf_option *opt)
 {
-	*(bool*)opt->mem = (bool)opt->def;
+	*(bool *)opt->mem = (bool)opt->def;
 }
 
 static void conf_free_bool(struct conf_option *opt)
 {
-	*(bool*)opt->mem = false;
+	*(bool *)opt->mem = false;
 }
 
 static int conf_parse_bool(struct conf_option *opt, bool on, const char *arg)
 {
-	*(bool*)opt->mem = on;
+	*(bool *)opt->mem = on;
 	return 0;
 }
 
-static int conf_copy_bool(struct conf_option *opt,
-			  const struct conf_option *src)
+static int conf_copy_bool(struct conf_option *opt, const struct conf_option *src)
 {
-	*(bool*)opt->mem = *(bool*)src->mem;
+	*(bool *)opt->mem = *(bool *)src->mem;
 	return 0;
 }
 
@@ -675,24 +655,23 @@ const struct conf_type conf_bool = {
 
 static int conf_parse_int(struct conf_option *opt, bool on, const char *arg)
 {
-	*(int*)opt->mem = atoi(arg);
+	*(int *)opt->mem = atoi(arg);
 	return 0;
 }
 
 static void conf_free_int(struct conf_option *opt)
 {
-	*(int*)opt->mem = 0;
+	*(int *)opt->mem = 0;
 }
 
 static void conf_default_int(struct conf_option *opt)
 {
-	*(int*)opt->mem = (int)(unsigned long)opt->def;
+	*(int *)opt->mem = (int)(unsigned long)opt->def;
 }
 
-static int conf_copy_int(struct conf_option *opt,
-			 const struct conf_option *src)
+static int conf_copy_int(struct conf_option *opt, const struct conf_option *src)
 {
-	*(int*)opt->mem = *(int*)src->mem;
+	*(int *)opt->mem = *(int *)src->mem;
 	return 0;
 }
 
@@ -708,24 +687,23 @@ const struct conf_type conf_int = {
 
 static void conf_default_uint(struct conf_option *opt)
 {
-	*(unsigned int*)opt->mem = (unsigned int)(unsigned long)opt->def;
+	*(unsigned int *)opt->mem = (unsigned int)(unsigned long)opt->def;
 }
 
 static void conf_free_uint(struct conf_option *opt)
 {
-	*(unsigned int*)opt->mem = 0;
+	*(unsigned int *)opt->mem = 0;
 }
 
 static int conf_parse_uint(struct conf_option *opt, bool on, const char *arg)
 {
-	*(unsigned int*)opt->mem = atoi(arg);
+	*(unsigned int *)opt->mem = atoi(arg);
 	return 0;
 }
 
-static int conf_copy_uint(struct conf_option *opt,
-			  const struct conf_option *src)
+static int conf_copy_uint(struct conf_option *opt, const struct conf_option *src)
 {
-	*(unsigned int*)opt->mem = *(unsigned int*)src->mem;
+	*(unsigned int *)opt->mem = *(unsigned int *)src->mem;
 	return 0;
 }
 
@@ -742,7 +720,7 @@ const struct conf_type conf_uint = {
 static void conf_default_string(struct conf_option *opt)
 {
 	opt->type->free(opt);
-	*(void**)opt->mem = opt->def;
+	*(void **)opt->mem = opt->def;
 }
 
 static int conf_parse_string(struct conf_option *opt, bool on, const char *arg)
@@ -752,25 +730,24 @@ static int conf_parse_string(struct conf_option *opt, bool on, const char *arg)
 		return -ENOMEM;
 
 	opt->type->free(opt);
-	*(void**)opt->mem = val;
+	*(void **)opt->mem = val;
 	return 0;
 }
 
-static int conf_copy_string(struct conf_option *opt,
-			    const struct conf_option *src)
+static int conf_copy_string(struct conf_option *opt, const struct conf_option *src)
 {
 	char *val;
 
-	if (!*(void**)src->mem) {
+	if (!*(void **)src->mem) {
 		val = NULL;
 	} else {
-		val = strdup(*(void**)src->mem);
+		val = strdup(*(void **)src->mem);
 		if (!val)
 			return -ENOMEM;
 	}
 
 	opt->type->free(opt);
-	*(void**)opt->mem = val;
+	*(void **)opt->mem = val;
 	return 0;
 }
 
@@ -787,11 +764,10 @@ const struct conf_type conf_string = {
 static void conf_default_string_list(struct conf_option *opt)
 {
 	opt->type->free(opt);
-	*(void**)opt->mem = opt->def;
+	*(void **)opt->mem = opt->def;
 }
 
-static int conf_parse_string_list(struct conf_option *opt, bool on,
-				  const char *arg)
+static int conf_parse_string_list(struct conf_option *opt, bool on, const char *arg)
 {
 	int ret;
 	char **list;
@@ -801,26 +777,25 @@ static int conf_parse_string_list(struct conf_option *opt, bool on,
 		return ret;
 
 	opt->type->free(opt);
-	*(char***)opt->mem = list;
+	*(char ***)opt->mem = list;
 	return 0;
 }
 
-static int conf_copy_string_list(struct conf_option *opt,
-				 const struct conf_option *src)
+static int conf_copy_string_list(struct conf_option *opt, const struct conf_option *src)
 {
 	int ret;
 	char **t;
 
-	if (!(void***)src->mem) {
+	if (!(void ***)src->mem) {
 		t = NULL;
 	} else {
-		ret = shl_dup_array(&t, *(char***)src->mem);
+		ret = shl_dup_array(&t, *(char ***)src->mem);
 		if (ret)
 			return ret;
 	}
 
 	opt->type->free(opt);
-	*(char***)opt->mem = t;
+	*(char ***)opt->mem = t;
 	return 0;
 }
 
@@ -837,7 +812,7 @@ const struct conf_type conf_string_list = {
 static void conf_default_grab(struct conf_option *opt)
 {
 	opt->type->free(opt);
-	*(void**)opt->mem = opt->def;
+	*(void **)opt->mem = opt->def;
 }
 
 static void conf_free_grab(struct conf_option *opt)
@@ -845,8 +820,8 @@ static void conf_free_grab(struct conf_option *opt)
 	struct conf_grab *grab;
 	unsigned int i;
 
-	grab = *(void**)opt->mem;
-	*(void**)opt->mem = NULL;
+	grab = *(void **)opt->mem;
+	*(void **)opt->mem = NULL;
 
 	if (!grab || grab == opt->def)
 		return;
@@ -860,8 +835,7 @@ static void conf_free_grab(struct conf_option *opt)
 	free(grab);
 }
 
-static int parse_single_grab(char *arg, unsigned int *mods,
-			     uint32_t *keysym, bool allow_mods)
+static int parse_single_grab(char *arg, unsigned int *mods, uint32_t *keysym, bool allow_mods)
 {
 	char *tmp, *start, *end;
 	char buf[128];
@@ -890,8 +864,7 @@ static int parse_single_grab(char *arg, unsigned int *mods,
 			*mods |= SHL_SHIFT_MASK;
 		} else if (!strcasecmp(start, "lock")) {
 			*mods |= SHL_LOCK_MASK;
-		} else if (!strcasecmp(start, "control") ||
-			   !strcasecmp(start, "ctrl")) {
+		} else if (!strcasecmp(start, "control") || !strcasecmp(start, "ctrl")) {
 			*mods |= SHL_CONTROL_MASK;
 		} else if (!strcasecmp(start, "alt")) {
 			*mods |= SHL_ALT_MASK;
@@ -925,8 +898,7 @@ static int parse_single_grab(char *arg, unsigned int *mods,
 
 	*keysym = xkb_keysym_from_name(start, 0);
 	if (!*keysym) {
-		*keysym = xkb_keysym_from_name(start,
-					       XKB_KEYSYM_CASE_INSENSITIVE);
+		*keysym = xkb_keysym_from_name(start, XKB_KEYSYM_CASE_INSENSITIVE);
 		if (!*keysym) {
 			log_error("invalid key '%s'", start);
 			return -EFAULT;
@@ -1001,12 +973,10 @@ static int conf_parse_grab(struct conf_option *opt, bool on, const char *arg)
 
 		k = 0;
 		for (j = 0; j < key_num; ++j) {
-			ret = parse_single_grab(keys[j], &grab->mods[l],
-						&grab->keysyms[l][k],
+			ret = parse_single_grab(keys[j], &grab->mods[l], &grab->keysyms[l][k],
 						j == 0);
 			if (ret < 0) {
-				log_error("cannot parse grab '%s' in '%s'",
-					  list[i], arg);
+				log_error("cannot parse grab '%s' in '%s'", list[i], arg);
 				free(keys);
 				goto err_all;
 			}
@@ -1023,7 +993,7 @@ static int conf_parse_grab(struct conf_option *opt, bool on, const char *arg)
 
 	free(list);
 	opt->type->free(opt);
-	*(void**)opt->mem = grab;
+	*(void **)opt->mem = grab;
 	return 0;
 
 err_all:
@@ -1039,18 +1009,17 @@ err_list:
 	return ret;
 }
 
-static int conf_copy_grab(struct conf_option *opt,
-			  const struct conf_option *src)
+static int conf_copy_grab(struct conf_option *opt, const struct conf_option *src)
 {
 	struct conf_grab *grab, *s;
 	int ret;
 	unsigned int i;
 
-	s = *(void**)src->mem;
+	s = *(void **)src->mem;
 
 	if (!s) {
 		opt->type->free(opt);
-		*(void**)opt->mem = NULL;
+		*(void **)opt->mem = NULL;
 		return 0;
 	}
 
@@ -1073,8 +1042,7 @@ static int conf_copy_grab(struct conf_option *opt,
 			ret = -ENOMEM;
 			goto err_grab;
 		}
-		memcpy(grab->num_syms, s->num_syms,
-		       sizeof(*grab->num_syms) * grab->num);
+		memcpy(grab->num_syms, s->num_syms, sizeof(*grab->num_syms) * grab->num);
 
 		grab->keysyms = malloc(sizeof(*grab->keysyms) * grab->num);
 		if (!grab->keysyms) {
@@ -1085,18 +1053,16 @@ static int conf_copy_grab(struct conf_option *opt,
 	}
 
 	for (i = 0; i < grab->num; ++i) {
-		grab->keysyms[i] = malloc(sizeof(*s->keysyms[i]) *
-					  s->num_syms[i]);
+		grab->keysyms[i] = malloc(sizeof(*s->keysyms[i]) * s->num_syms[i]);
 		if (!grab->keysyms[i]) {
 			ret = -ENOMEM;
 			goto err_all;
 		}
-		memcpy(grab->keysyms[i], s->keysyms[i],
-		       sizeof(*s->keysyms[i]) * s->num_syms[i]);
+		memcpy(grab->keysyms[i], s->keysyms[i], sizeof(*s->keysyms[i]) * s->num_syms[i]);
 	}
 
 	opt->type->free(opt);
-	*(void**)opt->mem = grab;
+	*(void **)opt->mem = grab;
 	return 0;
 
 err_all:

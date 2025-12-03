@@ -26,6 +26,8 @@
 #include "shl_hashtable.h"
 #include "text.h"
 
-int kmscon_rotate_create_tables(struct shl_hashtable **normal, struct shl_hashtable **bold, shl_free_cb free_glyph);
+int kmscon_rotate_create_tables(struct shl_hashtable **normal, struct shl_hashtable **bold,
+				shl_free_cb free_glyph);
 void kmscon_rotate_free_tables(struct shl_hashtable *normal, struct shl_hashtable *bold);
-int kmscon_rotate_glyph(struct uterm_video_buffer *vb, const struct kmscon_glyph *glyph, enum Orientation orientation, uint8_t align);
+int kmscon_rotate_glyph(struct uterm_video_buffer *vb, const struct kmscon_glyph *glyph,
+			enum Orientation orientation, uint8_t align);

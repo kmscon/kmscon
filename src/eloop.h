@@ -61,14 +61,8 @@ struct ev_counter;
  * This is the type of a logging callback function. You can always pass NULL
  * instead of such a function to disable logging.
  */
-typedef void (*ev_log_t) (void *data,
-			  const char *file,
-			  int line,
-			  const char *func,
-			  const char *subs,
-			  unsigned int sev,
-			  const char *format,
-			  va_list args);
+typedef void (*ev_log_t)(void *data, const char *file, int line, const char *func, const char *subs,
+			 unsigned int sev, const char *format, va_list args);
 
 /**
  * ev_fd_cb:
@@ -78,7 +72,7 @@ typedef void (*ev_log_t) (void *data,
  *
  * This is the callback-type for file-descriptor event sources.
  */
-typedef void (*ev_fd_cb) (struct ev_fd *fd, int mask, void *data);
+typedef void (*ev_fd_cb)(struct ev_fd *fd, int mask, void *data);
 
 /**
  * ev_timer_cb:
@@ -89,8 +83,7 @@ typedef void (*ev_fd_cb) (struct ev_fd *fd, int mask, void *data);
  * This is the callback-type for timer event sources. If the process was too
  * busy to be woken up as fast as possible, then @num may be bigger than 1.
  */
-typedef void (*ev_timer_cb)
-			(struct ev_timer *timer, uint64_t num, void *data);
+typedef void (*ev_timer_cb)(struct ev_timer *timer, uint64_t num, void *data);
 
 /**
  * ev_counter_cb:
@@ -102,8 +95,7 @@ typedef void (*ev_timer_cb)
  * may be bigger if the timer was increased multiple times or by bigger values.
  * The counter is reset to 0 before this callback is called.
  */
-typedef void (*ev_counter_cb)
-			(struct ev_counter *cnt, uint64_t num, void *data);
+typedef void (*ev_counter_cb)(struct ev_counter *cnt, uint64_t num, void *data);
 
 /**
  * ev_signal_shared_cb:
@@ -113,8 +105,8 @@ typedef void (*ev_counter_cb)
  *
  * This is the callback-type for shared signal events.
  */
-typedef void (*ev_signal_shared_cb)
-	(struct ev_eloop *eloop, struct signalfd_siginfo *info, void *data);
+typedef void (*ev_signal_shared_cb)(struct ev_eloop *eloop, struct signalfd_siginfo *info,
+				    void *data);
 
 /**
  * ev_child_data:
@@ -137,8 +129,7 @@ struct ev_child_data {
  *
  * This is the callback-type for child-reaper events.
  */
-typedef void (*ev_child_cb)
-	(struct ev_eloop *eloop, struct ev_child_data *chld, void *data);
+typedef void (*ev_child_cb)(struct ev_eloop *eloop, struct ev_child_data *chld, void *data);
 
 /**
  * ev_idle_cb:
@@ -148,7 +139,7 @@ typedef void (*ev_child_cb)
  *
  * This is the callback-type for idle-source events.
  */
-typedef void (*ev_idle_cb) (struct ev_eloop *eloop, void *unused, void *data);
+typedef void (*ev_idle_cb)(struct ev_eloop *eloop, void *unused, void *data);
 
 /**
  * ev_eloop_flags:
@@ -190,8 +181,8 @@ void ev_eloop_rm_eloop(struct ev_eloop *rm);
 
 /* fd sources */
 
-int ev_fd_new(struct ev_fd **out, int fd, int mask, ev_fd_cb cb, void *data,
-	      ev_log_t log, void *log_data);
+int ev_fd_new(struct ev_fd **out, int fd, int mask, ev_fd_cb cb, void *data, ev_log_t log,
+	      void *log_data);
 void ev_fd_ref(struct ev_fd *fd);
 void ev_fd_unref(struct ev_fd *fd);
 
@@ -202,15 +193,15 @@ bool ev_fd_is_bound(struct ev_fd *fd);
 void ev_fd_set_cb_data(struct ev_fd *fd, ev_fd_cb cb, void *data);
 int ev_fd_update(struct ev_fd *fd, int mask);
 
-int ev_eloop_new_fd(struct ev_eloop *loop, struct ev_fd **out, int rfd,
-			int mask, ev_fd_cb cb, void *data);
+int ev_eloop_new_fd(struct ev_eloop *loop, struct ev_fd **out, int rfd, int mask, ev_fd_cb cb,
+		    void *data);
 int ev_eloop_add_fd(struct ev_eloop *loop, struct ev_fd *fd);
 void ev_eloop_rm_fd(struct ev_fd *fd);
 
 /* timer sources */
 
-int ev_timer_new(struct ev_timer **out, const struct itimerspec *spec,
-		 ev_timer_cb cb, void *data, ev_log_t log, void *log_data);
+int ev_timer_new(struct ev_timer **out, const struct itimerspec *spec, ev_timer_cb cb, void *data,
+		 ev_log_t log, void *log_data);
 void ev_timer_ref(struct ev_timer *timer);
 void ev_timer_unref(struct ev_timer *timer);
 
@@ -222,16 +213,15 @@ void ev_timer_set_cb_data(struct ev_timer *timer, ev_timer_cb cb, void *data);
 int ev_timer_update(struct ev_timer *timer, const struct itimerspec *spec);
 int ev_timer_drain(struct ev_timer *timer, uint64_t *expirations);
 
-int ev_eloop_new_timer(struct ev_eloop *loop, struct ev_timer **out,
-			const struct itimerspec *spec, ev_timer_cb cb,
-			void *data);
+int ev_eloop_new_timer(struct ev_eloop *loop, struct ev_timer **out, const struct itimerspec *spec,
+		       ev_timer_cb cb, void *data);
 int ev_eloop_add_timer(struct ev_eloop *loop, struct ev_timer *timer);
 void ev_eloop_rm_timer(struct ev_timer *timer);
 
 /* counter sources */
 
-int ev_counter_new(struct ev_counter **out, ev_counter_cb, void *data,
-		   ev_log_t log, void *log_data);
+int ev_counter_new(struct ev_counter **out, ev_counter_cb, void *data, ev_log_t log,
+		   void *log_data);
 void ev_counter_ref(struct ev_counter *cnt);
 void ev_counter_unref(struct ev_counter *cnt);
 
@@ -239,55 +229,48 @@ int ev_counter_enable(struct ev_counter *cnt);
 void ev_counter_disable(struct ev_counter *cnt);
 bool ev_counter_is_enabled(struct ev_counter *cnt);
 bool ev_counter_is_bound(struct ev_counter *cnt);
-void ev_counter_set_cb_data(struct ev_counter *cnt, ev_counter_cb cb,
-			    void *data);
+void ev_counter_set_cb_data(struct ev_counter *cnt, ev_counter_cb cb, void *data);
 int ev_counter_inc(struct ev_counter *cnt, uint64_t val);
 
-int ev_eloop_new_counter(struct ev_eloop *eloop, struct ev_counter **out,
-			 ev_counter_cb cb, void *data);
+int ev_eloop_new_counter(struct ev_eloop *eloop, struct ev_counter **out, ev_counter_cb cb,
+			 void *data);
 int ev_eloop_add_counter(struct ev_eloop *eloop, struct ev_counter *cnt);
 void ev_eloop_rm_counter(struct ev_counter *cnt);
 
 /* signal sources */
 
-int ev_eloop_register_signal_cb(struct ev_eloop *loop, int signum,
-				ev_signal_shared_cb cb, void *data);
-void ev_eloop_unregister_signal_cb(struct ev_eloop *loop, int signum,
-					ev_signal_shared_cb cb, void *data);
+int ev_eloop_register_signal_cb(struct ev_eloop *loop, int signum, ev_signal_shared_cb cb,
+				void *data);
+void ev_eloop_unregister_signal_cb(struct ev_eloop *loop, int signum, ev_signal_shared_cb cb,
+				   void *data);
 
 /* child reaper sources */
 
-int ev_eloop_register_child_cb(struct ev_eloop *loop, ev_child_cb cb,
-			       void *data);
-void ev_eloop_unregister_child_cb(struct ev_eloop *loop, ev_child_cb cb,
-				  void *data);
+int ev_eloop_register_child_cb(struct ev_eloop *loop, ev_child_cb cb, void *data);
+void ev_eloop_unregister_child_cb(struct ev_eloop *loop, ev_child_cb cb, void *data);
 
 /* idle sources */
 
 enum ev_idle_flags {
-	EV_NORMAL	= 0x00,
-	EV_ONESHOT	= 0x01,
-	EV_SINGLE	= 0x02,
-	EV_IDLE_ALL	= EV_ONESHOT | EV_SINGLE,
+	EV_NORMAL = 0x00,
+	EV_ONESHOT = 0x01,
+	EV_SINGLE = 0x02,
+	EV_IDLE_ALL = EV_ONESHOT | EV_SINGLE,
 };
 
-int ev_eloop_register_idle_cb(struct ev_eloop *eloop, ev_idle_cb cb,
-			      void *data, unsigned int flags);
-void ev_eloop_unregister_idle_cb(struct ev_eloop *eloop, ev_idle_cb cb,
-				 void *data, unsigned int flags);
+int ev_eloop_register_idle_cb(struct ev_eloop *eloop, ev_idle_cb cb, void *data,
+			      unsigned int flags);
+void ev_eloop_unregister_idle_cb(struct ev_eloop *eloop, ev_idle_cb cb, void *data,
+				 unsigned int flags);
 
 /* pre dispatch callbacks */
 
-int ev_eloop_register_pre_cb(struct ev_eloop *eloop, ev_idle_cb cb,
-			     void *data);
-void ev_eloop_unregister_pre_cb(struct ev_eloop *eloop, ev_idle_cb cb,
-				void *data);
+int ev_eloop_register_pre_cb(struct ev_eloop *eloop, ev_idle_cb cb, void *data);
+void ev_eloop_unregister_pre_cb(struct ev_eloop *eloop, ev_idle_cb cb, void *data);
 
 /* post dispatch callbacks */
 
-int ev_eloop_register_post_cb(struct ev_eloop *eloop, ev_idle_cb cb,
-			      void *data);
-void ev_eloop_unregister_post_cb(struct ev_eloop *eloop, ev_idle_cb cb,
-				 void *data);
+int ev_eloop_register_post_cb(struct ev_eloop *eloop, ev_idle_cb cb, void *data);
+void ev_eloop_unregister_post_cb(struct ev_eloop *eloop, ev_idle_cb cb, void *data);
 
 #endif /* EV_ELOOP_H */

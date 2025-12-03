@@ -44,11 +44,9 @@ struct shl_array {
 	void *data;
 };
 
-#define SHL_ARRAY_AT(_arr, _type, _pos) \
-	(&((_type*)shl_array_get_array(_arr))[(_pos)])
+#define SHL_ARRAY_AT(_arr, _type, _pos) (&((_type *)shl_array_get_array(_arr))[(_pos)])
 
-static inline int shl_array_new(struct shl_array **out, size_t element_size,
-				size_t initial_size)
+static inline int shl_array_new(struct shl_array **out, size_t element_size, size_t initial_size)
 {
 	struct shl_array *arr;
 
@@ -103,8 +101,8 @@ static inline int shl_array_zresize(struct shl_array *arr, size_t size)
 		arr->data = tmp;
 		arr->size = newsize;
 
-		memset(((uint8_t*)arr->data) + arr->element_size * arr->length,
-		       0, arr->element_size * (size - arr->length));
+		memset(((uint8_t *)arr->data) + arr->element_size * arr->length, 0,
+		       arr->element_size * (size - arr->length));
 	}
 
 	arr->length = size;
@@ -129,8 +127,7 @@ static inline int shl_array_push(struct shl_array *arr, const void *data)
 		arr->size = newsize;
 	}
 
-	memcpy(((uint8_t*)arr->data) + arr->element_size * arr->length,
-	       data, arr->element_size);
+	memcpy(((uint8_t *)arr->data) + arr->element_size * arr->length, data, arr->element_size);
 	++arr->length;
 
 	return 0;

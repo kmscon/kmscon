@@ -89,8 +89,7 @@ static inline bool shl_ring_is_empty(struct shl_ring *ring)
 	return ring->first == NULL;
 }
 
-static inline int shl_ring_write(struct shl_ring *ring, const char *val,
-				 size_t len)
+static inline int shl_ring_write(struct shl_ring *ring, const char *val, size_t len)
 {
 	struct shl_ring_entry *ent;
 	size_t space, cp;
@@ -131,8 +130,7 @@ next:
 	return 0;
 }
 
-static inline const char *shl_ring_peek(struct shl_ring *ring, size_t *len,
-					size_t offset)
+static inline const char *shl_ring_peek(struct shl_ring *ring, size_t *len, size_t offset)
 {
 	struct shl_ring_entry *iter;
 

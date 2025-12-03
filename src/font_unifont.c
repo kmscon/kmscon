@@ -39,15 +39,15 @@
  */
 
 #include <errno.h>
+#include <libtsm.h>
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
-#include <libtsm.h>
 #include "font.h"
+#include "font_unifont_data.bin.h"
 #include "shl_hashtable.h"
 #include "shl_log.h"
 #include "uterm_video.h"
-#include "font_unifont_data.bin.h"
 
 #define LOG_SUBSYSTEM "font_unifont"
 
@@ -115,14 +115,13 @@ static int find_glyph(uint32_t ch, const struct kmscon_glyph **out)
 	pthread_mutex_lock(&cache_mutex);
 
 	if (!cache) {
-		ret = shl_hashtable_new(&cache, shl_direct_hash,
-					shl_direct_equal, free_glyph);
+		ret = shl_hashtable_new(&cache, shl_direct_hash, shl_direct_equal, free_glyph);
 		if (ret) {
 			log_error("cannot create unifont hashtable: %d", ret);
 			goto out_unlock;
 		}
 	} else {
-		res = shl_hashtable_find(cache, (void**)out, ch);
+		res = shl_hashtable_find(cache, (void **)out, ch);
 		if (res) {
 			ret = 0;
 			goto out_unlock;
@@ -134,8 +133,8 @@ static int find_glyph(uint32_t ch, const struct kmscon_glyph **out)
 		goto out_unlock;
 	}
 
-	start = (const struct unifont_data*)_binary_font_unifont_data_start;
-	end = (const struct unifont_data*)_binary_font_unifont_data_end;
+	start = (const struct unifont_data *)_binary_font_unifont_data_start;
+	end = (const struct unifont_data *)_binary_font_unifont_data_end;
 	d = &start[ch];
 
 	if (d >= end) {
@@ -203,8 +202,7 @@ out_unlock:
 	return ret;
 }
 
-static int kmscon_font_unifont_init(struct kmscon_font *out,
-				    const struct kmscon_font_attr *attr)
+static int kmscon_font_unifont_init(struct kmscon_font *out, const struct kmscon_font_attr *attr)
 {
 	static const char name[] = "static-unifont";
 
@@ -214,7 +212,6 @@ static int kmscon_font_unifont_init(struct kmscon_font *out,
 		log_error("unifont glyph information not found in binary");
 		return -EFAULT;
 	}
-
 
 	memset(&out->attr, 0, sizeof(out->attr));
 	memcpy(out->attr.name, name, sizeof(name));
@@ -235,9 +232,8 @@ static void kmscon_font_unifont_destroy(struct kmscon_font *font)
 	cache_unref();
 }
 
-static int kmscon_font_unifont_render(struct kmscon_font *font, uint64_t id,
-				      const uint32_t *ch, size_t len,
-				      const struct kmscon_glyph **out)
+static int kmscon_font_unifont_render(struct kmscon_font *font, uint64_t id, const uint32_t *ch,
+				      size_t len, const struct kmscon_glyph **out)
 {
 	if (len > 1)
 		return -ERANGE;

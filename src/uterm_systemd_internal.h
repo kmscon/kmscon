@@ -52,18 +52,14 @@ static inline int uterm_sd_new(struct uterm_sd **out)
 	return -EOPNOTSUPP;
 }
 
-static inline void uterm_sd_free(struct uterm_sd *sd)
-{
-}
+static inline void uterm_sd_free(struct uterm_sd *sd) {}
 
 static inline int uterm_sd_get_fd(struct uterm_sd *sd)
 {
 	return -1;
 }
 
-static inline void uterm_sd_flush(struct uterm_sd *sd)
-{
-}
+static inline void uterm_sd_flush(struct uterm_sd *sd) {}
 
 static inline int uterm_sd_get_seats(struct uterm_sd *sd, char ***seats)
 {

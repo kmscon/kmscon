@@ -128,11 +128,9 @@ static int refresh_info(struct uterm_display *disp)
 	return 0;
 }
 
-static int display_activate_force(struct uterm_display *disp,
-				  struct uterm_mode *mode,
-				  bool force)
+static int display_activate_force(struct uterm_display *disp, struct uterm_mode *mode, bool force)
 {
-	static const char depths[] = { 32, 24, 16, 0 };
+	static const char depths[] = {32, 24, 16, 0};
 	struct fbdev_display *dfb = disp->data;
 	struct uterm_mode *m;
 	struct fbdev_mode *mfb;
@@ -212,21 +210,19 @@ static int display_activate_force(struct uterm_display *disp,
 	 * modes like pseudocolor or direct-color do not provide this. As I have
 	 * never seen a device that does not support TRUECOLOR, I think we can
 	 * ignore them here. */
-	if (finfo->visual != FB_VISUAL_TRUECOLOR ||
-	    vinfo->bits_per_pixel != 32) {
+	if (finfo->visual != FB_VISUAL_TRUECOLOR || vinfo->bits_per_pixel != 32) {
 		for (i = 0; depths[i]; ++i) {
 			/* Try to set a new mode and if it's successful... */
 			struct fb_var_screeninfo vinfo_new = *vinfo;
 			vinfo_new.bits_per_pixel = depths[i];
 			vinfo_new.activate = FB_ACTIVATE_NOW | FB_ACTIVATE_FORCE;
 
-			ret = ioctl(dfb->fd, FBIOPUT_VSCREENINFO,
-				    &vinfo_new);
+			ret = ioctl(dfb->fd, FBIOPUT_VSCREENINFO, &vinfo_new);
 			if (ret < 0)
 				continue;
 
 			/* ... keep it. */
-                        *vinfo = vinfo_new;
+			*vinfo = vinfo_new;
 
 			ret = refresh_info(disp);
 			if (ret)
@@ -237,42 +233,35 @@ static int display_activate_force(struct uterm_display *disp,
 		}
 	}
 
-	if (vinfo->bits_per_pixel != 32 &&
-	    vinfo->bits_per_pixel != 24 &&
+	if (vinfo->bits_per_pixel != 32 && vinfo->bits_per_pixel != 24 &&
 	    vinfo->bits_per_pixel != 16) {
-		log_error("device %s does not support 16/32 bpp but: %u",
-			  dfb->node, vinfo->bits_per_pixel);
+		log_error("device %s does not support 16/32 bpp but: %u", dfb->node,
+			  vinfo->bits_per_pixel);
 		ret = -EFAULT;
 		goto err_close;
 	}
 
 	if (vinfo->xres_virtual < vinfo->xres ||
-	    (disp->flags & DISPLAY_DBUF &&
-	     vinfo->yres_virtual < vinfo->yres * 2) ||
+	    (disp->flags & DISPLAY_DBUF && vinfo->yres_virtual < vinfo->yres * 2) ||
 	    vinfo->yres_virtual < vinfo->yres) {
-		log_warning("device %s has weird virtual buffer sizes (%d %d %d %d)",
-			    dfb->node, vinfo->xres, vinfo->xres_virtual,
-			    vinfo->yres, vinfo->yres_virtual);
+		log_warning("device %s has weird virtual buffer sizes (%d %d %d %d)", dfb->node,
+			    vinfo->xres, vinfo->xres_virtual, vinfo->yres, vinfo->yres_virtual);
 	}
 
 	if (finfo->visual != FB_VISUAL_TRUECOLOR) {
-		log_error("device %s does not support true-color",
-			  dfb->node);
+		log_error("device %s does not support true-color", dfb->node);
 		ret = -EFAULT;
 		goto err_close;
 	}
 
-	if (vinfo->red.length > 8 ||
-	    vinfo->green.length > 8 ||
-	    vinfo->blue.length > 8) {
-		log_error("device %s uses unusual color-ranges",
-			  dfb->node);
+	if (vinfo->red.length > 8 || vinfo->green.length > 8 || vinfo->blue.length > 8) {
+		log_error("device %s uses unusual color-ranges", dfb->node);
 		ret = -EFAULT;
 		goto err_close;
 	}
 
-	log_info("activating display %s to %ux%u %u bpp", dfb->node,
-		 vinfo->xres, vinfo->yres, vinfo->bits_per_pixel);
+	log_info("activating display %s to %ux%u %u bpp", dfb->node, vinfo->xres, vinfo->yres,
+		 vinfo->bits_per_pixel);
 
 	/* calculate monitor rate, default is 60 Hz */
 	quot = (vinfo->upper_margin + vinfo->lower_margin + vinfo->yres);
@@ -296,8 +285,7 @@ static int display_activate_force(struct uterm_display *disp,
 
 	val = 1000000 / dfb->rate;
 	display_set_vblank_timer(disp, val);
-	log_debug("vblank timer: %u ms, monitor refresh rate: %u Hz", val,
-		  dfb->rate / 1000);
+	log_debug("vblank timer: %u ms, monitor refresh rate: %u Hz", val, dfb->rate / 1000);
 
 	len = finfo->line_length * vinfo->yres;
 	if (disp->flags & DISPLAY_DBUF)
@@ -305,8 +293,7 @@ static int display_activate_force(struct uterm_display *disp,
 
 	dfb->map = mmap(0, len, PROT_READ | PROT_WRITE, MAP_SHARED, dfb->fd, 0);
 	if (dfb->map == MAP_FAILED) {
-		log_error("cannot mmap device %s (%d): %m", dfb->node,
-			  errno);
+		log_error("cannot mmap device %s (%d): %m", dfb->node, errno);
 		ret = -EFAULT;
 		goto err_close;
 	}
@@ -329,17 +316,14 @@ static int display_activate_force(struct uterm_display *disp,
 	dfb->dither_b = 0;
 	dfb->xrgb32 = false;
 	dfb->rgb16 = false;
-	if (dfb->len_r == 8 && dfb->len_g == 8 && dfb->len_b == 8 &&
-	    dfb->off_r == 16 && dfb->off_g ==  8 && dfb->off_b ==  0 &&
-	    dfb->Bpp == 4)
+	if (dfb->len_r == 8 && dfb->len_g == 8 && dfb->len_b == 8 && dfb->off_r == 16 &&
+	    dfb->off_g == 8 && dfb->off_b == 0 && dfb->Bpp == 4)
 		dfb->xrgb32 = true;
-	else if (dfb->len_r == 5 && dfb->len_g == 6 && dfb->len_b == 5 &&
-		 dfb->off_r == 11 && dfb->off_g == 5 && dfb->off_b == 0 &&
-		 dfb->Bpp == 2)
+	else if (dfb->len_r == 5 && dfb->len_g == 6 && dfb->len_b == 5 && dfb->off_r == 11 &&
+		 dfb->off_g == 5 && dfb->off_b == 0 && dfb->Bpp == 2)
 		dfb->rgb16 = true;
-	else if (dfb->len_r == 8 && dfb->len_g == 8 && dfb->len_b == 8 &&
-		 dfb->off_r == 16 && dfb->off_g == 8 && dfb->off_b == 0 &&
-		 dfb->Bpp == 3)
+	else if (dfb->len_r == 8 && dfb->len_g == 8 && dfb->len_b == 8 && dfb->off_r == 16 &&
+		 dfb->off_g == 8 && dfb->off_b == 0 && dfb->Bpp == 3)
 		dfb->rgb24 = true;
 
 	/* TODO: make dithering configurable */
@@ -425,13 +409,11 @@ static int display_set_dpms(struct uterm_display *disp, int state)
 		return -EINVAL;
 	}
 
-	log_info("setting DPMS of device %p to %s", dfb->node,
-		 uterm_dpms_to_name(state));
+	log_info("setting DPMS of device %p to %s", dfb->node, uterm_dpms_to_name(state));
 
 	ret = ioctl(dfb->fd, FBIOBLANK, set);
 	if (ret) {
-		log_error("cannot set DPMS on %s (%d): %m", dfb->node,
-			  errno);
+		log_error("cannot set DPMS on %s (%d): %m", dfb->node, errno);
 		return -EFAULT;
 	}
 
@@ -452,8 +434,7 @@ static int display_use(struct uterm_display *disp, bool *opengl)
 	return dfb->bufid ^ 1;
 }
 
-static int display_get_buffers(struct uterm_display *disp,
-			       struct uterm_video_buffer *buffer,
+static int display_get_buffers(struct uterm_display *disp, struct uterm_video_buffer *buffer,
 			       unsigned int formats)
 {
 	struct fbdev_display *dfb = disp->data;
@@ -508,8 +489,7 @@ static int display_swap(struct uterm_display *disp, bool immediate)
 
 	ret = ioctl(dfb->fd, FBIOPUT_VSCREENINFO, vinfo);
 	if (ret) {
-		log_warning("cannot swap buffers on %s (%d): %m",
-			    dfb->node, errno);
+		log_warning("cannot swap buffers on %s (%d): %m", dfb->node, errno);
 		return -EFAULT;
 	}
 
@@ -578,8 +558,7 @@ static int video_init(struct uterm_video *video, const char *node)
 		goto err_free;
 	}
 
-	ret = ev_eloop_register_idle_cb(video->eloop, intro_idle_event, video,
-					EV_NORMAL);
+	ret = ev_eloop_register_idle_cb(video->eloop, intro_idle_event, video, EV_NORMAL);
 	if (ret) {
 		log_error("cannot register idle event: %d", ret);
 		goto err_node;
@@ -602,8 +581,7 @@ static void video_destroy(struct uterm_video *video)
 	log_info("free device on %s", vfb->node);
 
 	if (vfb->pending_intro)
-		ev_eloop_unregister_idle_cb(video->eloop, intro_idle_event,
-					    video, EV_NORMAL);
+		ev_eloop_unregister_idle_cb(video->eloop, intro_idle_event, video, EV_NORMAL);
 
 	free(vfb->node);
 	free(vfb);
@@ -614,7 +592,8 @@ static void video_sleep(struct uterm_video *video)
 	struct uterm_display *iter;
 	struct shl_dlist *i;
 
-	shl_dlist_for_each(i, &video->displays) {
+	shl_dlist_for_each(i, &video->displays)
+	{
 		iter = shl_dlist_entry(i, struct uterm_display, list);
 
 		if (!display_is_online(iter))
@@ -631,7 +610,8 @@ static int video_wake_up(struct uterm_video *video)
 	int ret;
 
 	video->flags |= VIDEO_AWAKE;
-	shl_dlist_for_each(i, &video->displays) {
+	shl_dlist_for_each(i, &video->displays)
+	{
 		iter = shl_dlist_entry(i, struct uterm_display, list);
 
 		if (!display_is_online(iter))
@@ -648,15 +628,13 @@ static int video_wake_up(struct uterm_video *video)
 	return 0;
 }
 
-struct uterm_video_module fbdev_module = {
-	.name = "fbdev",
-	.owner = NULL,
-	.ops = {
-	.init = video_init,
-	.destroy = video_destroy,
-	.segfault = NULL, /* TODO */
-	.poll = NULL,
-	.sleep = video_sleep,
-	.wake_up = video_wake_up,
-	}
-};
+struct uterm_video_module fbdev_module = {.name = "fbdev",
+					  .owner = NULL,
+					  .ops = {
+						  .init = video_init,
+						  .destroy = video_destroy,
+						  .segfault = NULL, /* TODO */
+						  .poll = NULL,
+						  .sleep = video_sleep,
+						  .wake_up = video_wake_up,
+					  }};

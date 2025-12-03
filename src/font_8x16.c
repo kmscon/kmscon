@@ -56,8 +56,7 @@
 /* forward declaration; see end of file for real array */
 static const struct kmscon_glyph kmscon_font_8x16_glyphs[256];
 
-static int kmscon_font_8x16_init(struct kmscon_font *out,
-				 const struct kmscon_font_attr *attr)
+static int kmscon_font_8x16_init(struct kmscon_font *out, const struct kmscon_font_attr *attr)
 {
 	static const char name[] = "static-8x16";
 
@@ -80,9 +79,8 @@ static void kmscon_font_8x16_destroy(struct kmscon_font *font)
 	log_debug("unloading static 8x16 font");
 }
 
-static int kmscon_font_8x16_render(struct kmscon_font *font,
-				   uint64_t id, const uint32_t *ch, size_t len,
-				   const struct kmscon_glyph **out)
+static int kmscon_font_8x16_render(struct kmscon_font *font, uint64_t id, const uint32_t *ch,
+				   size_t len, const struct kmscon_glyph **out)
 {
 	if (len > 1 || *ch >= 256)
 		return -ERANGE;
@@ -91,15 +89,13 @@ static int kmscon_font_8x16_render(struct kmscon_font *font,
 	return 0;
 }
 
-static int kmscon_font_8x16_render_empty(struct kmscon_font *font,
-					 const struct kmscon_glyph **out)
+static int kmscon_font_8x16_render_empty(struct kmscon_font *font, const struct kmscon_glyph **out)
 {
 	*out = &kmscon_font_8x16_glyphs[0];
 	return 0;
 }
 
-static int kmscon_font_8x16_render_inval(struct kmscon_font *font,
-					 const struct kmscon_glyph **out)
+static int kmscon_font_8x16_render_inval(struct kmscon_font *font, const struct kmscon_glyph **out)
 {
 	*out = &kmscon_font_8x16_glyphs['?'];
 	return 0;

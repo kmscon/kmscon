@@ -30,12 +30,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
-#include "shl_module.h"
-#include "shl_module_interface.h"
 #include "shl_dlist.h"
 #include "shl_githead.h"
 #include "shl_log.h"
 #include "shl_misc.h"
+#include "shl_module.h"
+#include "shl_module_interface.h"
 
 #define LOG_SUBSYSTEM "module"
 
@@ -54,8 +54,7 @@ int shl_module_open(struct shl_module **out, const char *file)
 
 	handle = dlopen(file, RTLD_NOW);
 	if (!handle) {
-		log_error("cannot open module %s (%d): %s",
-			  file, errno, dlerror());
+		log_error("cannot open module %s (%d): %s", file, errno, dlerror());
 		return -EFAULT;
 	}
 
@@ -67,15 +66,14 @@ int shl_module_open(struct shl_module **out, const char *file)
 	}
 
 	if (strcmp(module->info.githead, shl_git_head)) {
-		log_error("incompatible module %s (%s != %s)",
-			  file, module->info.githead, shl_git_head);
+		log_error("incompatible module %s (%s != %s)", file, module->info.githead,
+			  shl_git_head);
 		ret = -EFAULT;
 		goto err_unload;
 	}
 
 	if (module->ref != 0) {
-		log_error("module %s already loaded (%ld)",
-			  file, module->ref);
+		log_error("module %s already loaded (%ld)", file, module->ref);
 		ret = -EFAULT;
 		goto err_unload;
 	}
@@ -94,17 +92,13 @@ int shl_module_open(struct shl_module **out, const char *file)
 
 	log_debug("  Date: %s %s", module->info.date, module->info.time);
 	log_debug("  GIT: %s", module->info.githead);
-	log_debug("  Hooks: %p %p %p %p",
-		  module->info.init,
-		  module->info.load,
-		  module->info.unload,
+	log_debug("  Hooks: %p %p %p %p", module->info.init, module->info.load, module->info.unload,
 		  module->info.exit);
 
 	if (module->info.init) {
 		ret = module->info.init();
 		if (ret) {
-			log_error("loading module %s failed: %d",
-				  module->file, ret);
+			log_error("loading module %s failed: %d", module->file, ret);
 			goto err_file;
 		}
 	}
@@ -195,21 +189,19 @@ void kmscon_load_modules(void)
 	ent = opendir(BUILD_MODULE_DIR);
 	if (!ent) {
 		if (errno == ENOTDIR || errno == ENOENT)
-			log_debug("module directory %s not available",
-				  BUILD_MODULE_DIR);
+			log_debug("module directory %s not available", BUILD_MODULE_DIR);
 		else
-			log_error("cannot open module directory %s (%d): %m",
-				  BUILD_MODULE_DIR, errno);
+			log_error("cannot open module directory %s (%d): %m", BUILD_MODULE_DIR,
+				  errno);
 		return;
 	}
 
 	while (true) {
-        errno = 0;
-        de = readdir(ent);
+		errno = 0;
+		de = readdir(ent);
 		if (!de && errno != 0) {
-            int errsv = errno;
-			log_error("cannot read directory %s: %d",
-				  BUILD_MODULE_DIR, errsv);
+			int errsv = errno;
+			log_error("cannot read directory %s: %d", BUILD_MODULE_DIR, errsv);
 			break;
 		} else if (!de) {
 			break;
@@ -218,11 +210,9 @@ void kmscon_load_modules(void)
 		if (de->d_type == DT_DIR)
 			continue;
 
-		if (de->d_type != DT_REG &&
-		    de->d_type != DT_LNK &&
-		    de->d_type != DT_UNKNOWN) {
-			log_warning("non-module file %s in module dir %s",
-				    de->d_name, BUILD_MODULE_DIR);
+		if (de->d_type != DT_REG && de->d_type != DT_LNK && de->d_type != DT_UNKNOWN) {
+			log_warning("non-module file %s in module dir %s", de->d_name,
+				    BUILD_MODULE_DIR);
 			continue;
 		}
 
@@ -260,8 +250,7 @@ void kmscon_unload_modules(void)
 	log_debug("unloading modules");
 
 	while (!shl_dlist_empty(&module_list)) {
-		module = shl_dlist_entry(module_list.prev, struct shl_module,
-					 list);
+		module = shl_dlist_entry(module_list.prev, struct shl_module, list);
 		shl_dlist_unlink(&module->list);
 		shl_module_unload(module);
 		shl_module_unref(module);

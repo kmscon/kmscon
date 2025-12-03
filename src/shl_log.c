@@ -76,18 +76,16 @@ static void log__time(long long *sec, long long *usec)
  */
 
 SHL_EXPORT
-const struct log_config LOG_CONFIG = {
-	.sev = {
-		[LOG_DEBUG] = 2,
-		[LOG_INFO] = 2,
-		[LOG_NOTICE] = 2,
-		[LOG_WARNING] = 2,
-		[LOG_ERROR] = 2,
-		[LOG_CRITICAL] = 2,
-		[LOG_ALERT] = 2,
-		[LOG_FATAL] = 2,
-	}
-};
+const struct log_config LOG_CONFIG = {.sev = {
+					      [LOG_DEBUG] = 2,
+					      [LOG_INFO] = 2,
+					      [LOG_NOTICE] = 2,
+					      [LOG_WARNING] = 2,
+					      [LOG_ERROR] = 2,
+					      [LOG_CRITICAL] = 2,
+					      [LOG_ALERT] = 2,
+					      [LOG_FATAL] = 2,
+				      }};
 
 const char *LOG_SUBSYSTEM = NULL;
 
@@ -116,18 +114,16 @@ const char *LOG_SUBSYSTEM = NULL;
  * are affected and the config parameter specifies what action is performed.
  */
 
-static struct log_config log__gconfig = {
-	.sev = {
-		[LOG_DEBUG] = 0,
-		[LOG_INFO] = 0,
-		[LOG_NOTICE] = 1,
-		[LOG_WARNING] = 1,
-		[LOG_ERROR] = 1,
-		[LOG_CRITICAL] = 1,
-		[LOG_ALERT] = 1,
-		[LOG_FATAL] = 1,
-	}
-};
+static struct log_config log__gconfig = {.sev = {
+						 [LOG_DEBUG] = 0,
+						 [LOG_INFO] = 0,
+						 [LOG_NOTICE] = 1,
+						 [LOG_WARNING] = 1,
+						 [LOG_ERROR] = 1,
+						 [LOG_CRITICAL] = 1,
+						 [LOG_ALERT] = 1,
+						 [LOG_FATAL] = 1,
+					 }};
 
 struct log_dynconf {
 	struct log_dynconf *next;
@@ -148,8 +144,7 @@ void log_set_config(const struct log_config *config)
 	log_unlock();
 }
 
-int log_add_filter(const struct log_filter *filter,
-			const struct log_config *config)
+int log_add_filter(const struct log_filter *filter, const struct log_config *config)
 {
 	struct log_dynconf *dconf;
 	int ret;
@@ -187,13 +182,14 @@ void log_rm_filter(int handle)
 		if (log__dconfig->handle == handle) {
 			dconf = log__dconfig;
 			log__dconfig = dconf->next;
-		} else for (i = log__dconfig; i->next; i = i->next) {
-			dconf = i->next;
-			if (dconf->handle == handle) {
-				i->next = dconf->next;
-				break;
+		} else
+			for (i = log__dconfig; i->next; i = i->next) {
+				dconf = i->next;
+				if (dconf->handle == handle) {
+					i->next = dconf->next;
+					break;
+				}
 			}
-		}
 	}
 	log_unlock();
 
@@ -212,11 +208,8 @@ void log_clean_filters()
 	log_unlock();
 }
 
-static bool log__matches(const struct log_filter *filter,
-				const char *file,
-				int line,
-				const char *func,
-				const char *subs)
+static bool log__matches(const struct log_filter *filter, const char *file, int line,
+			 const char *func, const char *subs)
 {
 	if (*filter->file) {
 		if (!file || strncmp(filter->file, file, LOG_STRMAX))
@@ -235,12 +228,8 @@ static bool log__matches(const struct log_filter *filter,
 	return true;
 }
 
-static bool log__omit(const char *file,
-			int line,
-			const char *func,
-			const struct log_config *config,
-			const char *subs,
-			enum log_severity sev)
+static bool log__omit(const char *file, int line, const char *func, const struct log_config *config,
+		      const char *subs, enum log_severity sev)
 {
 	int val;
 	struct log_dynconf *dconf;
@@ -281,23 +270,13 @@ static bool log__omit(const char *file,
  * Also set default log-subsystem to "log" for all logging inside this API.
  */
 
-static void log__submit(const char *file,
-			int line,
-			const char *func,
-			const struct log_config *config,
-			const char *subs,
-			unsigned int sev,
-			const char *format,
-			va_list args);
+static void log__submit(const char *file, int line, const char *func,
+			const struct log_config *config, const char *subs, unsigned int sev,
+			const char *format, va_list args);
 
-static void log__format(const char *file,
-			int line,
-			const char *func,
-			const struct log_config *config,
-			const char *subs,
-			unsigned int sev,
-			const char *format,
-			...);
+static void log__format(const char *file, int line, const char *func,
+			const struct log_config *config, const char *subs, unsigned int sev,
+			const char *format, ...);
 
 #define LOG_SUBSYSTEM "log"
 
@@ -320,8 +299,7 @@ int log_set_file(const char *file)
 	if (file) {
 		f = fopen(file, "a");
 		if (!f) {
-			log_err("cannot change log-file to %s (%d): %m",
-				file, errno);
+			log_err("cannot change log-file to %s (%d): %m", file, errno);
 			return -EFAULT;
 		}
 	} else {
@@ -333,8 +311,7 @@ int log_set_file(const char *file)
 
 	log_lock();
 	if (log__file != f) {
-		log__format(LOG_DEFAULT, LOG_NOTICE,
-				"set log-file to %s", file);
+		log__format(LOG_DEFAULT, LOG_NOTICE, "set log-file to %s", file);
 		old = log__file;
 		log__file = f;
 		f = NULL;
@@ -364,24 +341,14 @@ int log_set_file(const char *file)
  */
 
 static const char *log__sev2str[] = {
-	[LOG_DEBUG] = "DEBUG",
-	[LOG_INFO] = "INFO",
-	[LOG_NOTICE] = "NOTICE",
-	[LOG_WARNING] = "WARNING",
-	[LOG_ERROR] = "ERROR",
-	[LOG_CRITICAL] = "CRITICAL",
-	[LOG_ALERT] = "ALERT",
-	[LOG_FATAL] = "FATAL",
+	[LOG_DEBUG] = "DEBUG",	   [LOG_INFO] = "INFO",	  [LOG_NOTICE] = "NOTICE",
+	[LOG_WARNING] = "WARNING", [LOG_ERROR] = "ERROR", [LOG_CRITICAL] = "CRITICAL",
+	[LOG_ALERT] = "ALERT",	   [LOG_FATAL] = "FATAL",
 };
 
-static void log__submit(const char *file,
-			int line,
-			const char *func,
-			const struct log_config *config,
-			const char *subs,
-			unsigned int sev,
-			const char *format,
-			va_list args)
+static void log__submit(const char *file, int line, const char *func,
+			const struct log_config *config, const char *subs, unsigned int sev,
+			const char *format, va_list args)
 {
 	const char *prefix = NULL;
 	FILE *out;
@@ -404,11 +371,9 @@ static void log__submit(const char *file,
 
 	if (prefix) {
 		if (subs)
-			fprintf(out, "[%.4lld.%.6lld] %s: %s: ",
-				sec, usec, prefix, subs);
+			fprintf(out, "[%.4lld.%.6lld] %s: %s: ", sec, usec, prefix, subs);
 		else
-			fprintf(out, "[%.4lld.%.6lld] %s: ",
-				sec, usec, prefix);
+			fprintf(out, "[%.4lld.%.6lld] %s: ", sec, usec, prefix);
 	} else {
 		if (subs)
 			fprintf(out, "[%.4lld.%.6lld] %s: ", sec, usec, subs);
@@ -432,14 +397,9 @@ static void log__submit(const char *file,
 		fprintf(out, " (%s() in %s:%d)\n", func, file, line);
 }
 
-static void log__format(const char *file,
-			int line,
-			const char *func,
-			const struct log_config *config,
-			const char *subs,
-			unsigned int sev,
-			const char *format,
-			...)
+static void log__format(const char *file, int line, const char *func,
+			const struct log_config *config, const char *subs, unsigned int sev,
+			const char *format, ...)
 {
 	va_list list;
 
@@ -449,14 +409,8 @@ static void log__format(const char *file,
 }
 
 SHL_EXPORT
-void log_submit(const char *file,
-		int line,
-		const char *func,
-		const struct log_config *config,
-		const char *subs,
-		unsigned int sev,
-		const char *format,
-		va_list args)
+void log_submit(const char *file, int line, const char *func, const struct log_config *config,
+		const char *subs, unsigned int sev, const char *format, va_list args)
 {
 	int saved_errno = errno;
 
@@ -468,14 +422,8 @@ void log_submit(const char *file,
 }
 
 SHL_EXPORT
-void log_format(const char *file,
-		int line,
-		const char *func,
-		const struct log_config *config,
-		const char *subs,
-		unsigned int sev,
-		const char *format,
-		...)
+void log_format(const char *file, int line, const char *func, const struct log_config *config,
+		const char *subs, unsigned int sev, const char *format, ...)
 {
 	va_list list;
 	int saved_errno = errno;
@@ -490,14 +438,8 @@ void log_format(const char *file,
 }
 
 SHL_EXPORT
-void log_llog(void *data,
-	      const char *file,
-	      int line,
-	      const char *func,
-	      const char *subs,
-	      unsigned int sev,
-	      const char *format,
-	      va_list args)
+void log_llog(void *data, const char *file, int line, const char *func, const char *subs,
+	      unsigned int sev, const char *format, va_list args)
 {
 	log_submit(file, line, func, NULL, subs, sev, format, args);
 }
@@ -506,7 +448,6 @@ void log_print_init(const char *appname)
 {
 	if (!appname)
 		appname = "<unknown>";
-	log_format(LOG_DEFAULT_CONF, NULL, LOG_NOTICE,
-		   "%s Revision %s %s %s", appname,
+	log_format(LOG_DEFAULT_CONF, NULL, LOG_NOTICE, "%s Revision %s %s %s", appname,
 		   shl_git_head, __DATE__, __TIME__);
 }

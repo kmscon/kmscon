@@ -31,9 +31,9 @@
 
 #define GL_GLEXT_PROTOTYPES
 
-#include <errno.h>
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
+#include <errno.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -105,8 +105,7 @@ bool gl_has_error(struct gl_shader *shader)
 	return false;
 }
 
-static int compile_shader(struct gl_shader *shader, GLenum type,
-			  const char *source, int len)
+static int compile_shader(struct gl_shader *shader, GLenum type, const char *source, int len)
 {
 	char msg[512];
 	GLint status = 1, size;
@@ -133,10 +132,8 @@ static int compile_shader(struct gl_shader *shader, GLenum type,
 	return s;
 }
 
-int gl_shader_new(struct gl_shader **out, const char *vert, int vert_len,
-		  const char *frag, int frag_len,
-		  char **attr, size_t attr_count, llog_submit_t llog,
-		  void *llog_data)
+int gl_shader_new(struct gl_shader **out, const char *vert, int vert_len, const char *frag,
+		  int frag_len, char **attr, size_t attr_count, llog_submit_t llog, void *llog_data)
 {
 	struct gl_shader *shader;
 	int ret, i;
@@ -156,15 +153,13 @@ int gl_shader_new(struct gl_shader **out, const char *vert, int vert_len,
 
 	llog_debug(shader, "new shader");
 
-	shader->vshader = compile_shader(shader, GL_VERTEX_SHADER, vert,
-					 vert_len);
+	shader->vshader = compile_shader(shader, GL_VERTEX_SHADER, vert, vert_len);
 	if (shader->vshader == GL_NONE) {
 		ret = -EFAULT;
 		goto err_free;
 	}
 
-	shader->fshader = compile_shader(shader, GL_FRAGMENT_SHADER, frag,
-					 frag_len);
+	shader->fshader = compile_shader(shader, GL_FRAGMENT_SHADER, frag, frag_len);
 	if (shader->fshader == GL_NONE) {
 		ret = -EFAULT;
 		goto err_vshader;
@@ -251,14 +246,10 @@ void gl_tex_new(GLuint *tex, size_t num)
 
 	for (i = 0; i < num; ++i) {
 		glBindTexture(GL_TEXTURE_2D, tex[i]);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-				GL_LINEAR);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
-				GL_LINEAR);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,
-				GL_CLAMP_TO_EDGE);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,
-				GL_CLAMP_TO_EDGE);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	}
 }
 
@@ -267,8 +258,8 @@ void gl_tex_free(GLuint *tex, size_t num)
 	glDeleteTextures(num, tex);
 }
 
-void gl_tex_load(GLuint tex, unsigned int width, unsigned int stride,
-		 unsigned int height, uint8_t *buf)
+void gl_tex_load(GLuint tex, unsigned int width, unsigned int stride, unsigned int height,
+		 uint8_t *buf)
 {
 	if (!buf || !width || !height || !stride)
 		return;
@@ -284,7 +275,7 @@ void gl_tex_load(GLuint tex, unsigned int width, unsigned int stride,
 
 	glBindTexture(GL_TEXTURE_2D, tex);
 	/* glPixelStorei(GL_UNPACK_ROW_LENGTH, stride); */
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_BGRA_EXT, width, height, 0,
-			GL_BGRA_EXT, GL_UNSIGNED_BYTE, buf);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_BGRA_EXT, width, height, 0, GL_BGRA_EXT, GL_UNSIGNED_BYTE,
+		     buf);
 	/* glPixelStorei(GL_UNPACK_ROW_LENGTH, 0); */
 }

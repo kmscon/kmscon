@@ -33,11 +33,11 @@
 
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
+#include <GLES2/gl2.h>
+#include <GLES2/gl2ext.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <gbm.h>
-#include <GLES2/gl2.h>
-#include <GLES2/gl2ext.h>
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -49,7 +49,7 @@
 
 /* thanks khronos for breaking backwards compatibility.. */
 #if !defined(GL_UNPACK_ROW_LENGTH) && defined(GL_UNPACK_ROW_LENGTH_EXT)
-#  define GL_UNPACK_ROW_LENGTH GL_UNPACK_ROW_LENGTH_EXT
+#define GL_UNPACK_ROW_LENGTH GL_UNPACK_ROW_LENGTH_EXT
 #endif
 
 struct uterm_drm3d_rb {
@@ -88,11 +88,9 @@ struct uterm_drm3d_video {
 int uterm_drm3d_display_use(struct uterm_display *disp, bool *opengl);
 void uterm_drm3d_deinit_shaders(struct uterm_video *video);
 int uterm_drm3d_display_fake_blendv(struct uterm_display *disp,
-				    const struct uterm_video_blend_req *req,
-				    size_t num);
-int uterm_drm3d_display_fill(struct uterm_display *disp,
-			     uint8_t r, uint8_t g, uint8_t b,
-			     unsigned int x, unsigned int y,
-			     unsigned int width, unsigned int height);
+				    const struct uterm_video_blend_req *req, size_t num);
+int uterm_drm3d_display_fill(struct uterm_display *disp, uint8_t r, uint8_t g, uint8_t b,
+			     unsigned int x, unsigned int y, unsigned int width,
+			     unsigned int height);
 
 #endif /* UTERM_DRM3D_INTERNAL_H */

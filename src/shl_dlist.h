@@ -38,9 +38,10 @@
 
 /* miscellaneous */
 
-#define shl_offsetof(pointer, type, member) ({ \
-		const typeof(((type*)0)->member) *__ptr = (pointer); \
-		(type*)(((char*)__ptr) - offsetof(type, member)); \
+#define shl_offsetof(pointer, type, member)                                                        \
+	({                                                                                         \
+		const typeof(((type *)0)->member) *__ptr = (pointer);                              \
+		(type *)(((char *)__ptr) - offsetof(type, member));                                \
 	})
 
 /* double linked list */
@@ -50,7 +51,7 @@ struct shl_dlist {
 	struct shl_dlist *prev;
 };
 
-#define SHL_DLIST_INIT(head) { &(head), &(head) }
+#define SHL_DLIST_INIT(head) {&(head), &(head)}
 
 static inline void shl_dlist_init(struct shl_dlist *list)
 {
@@ -58,9 +59,8 @@ static inline void shl_dlist_init(struct shl_dlist *list)
 	list->prev = list;
 }
 
-static inline void shl_dlist__link(struct shl_dlist *prev,
-					struct shl_dlist *next,
-					struct shl_dlist *n)
+static inline void shl_dlist__link(struct shl_dlist *prev, struct shl_dlist *next,
+				   struct shl_dlist *n)
 {
 	next->prev = n;
 	n->next = next;
@@ -68,20 +68,17 @@ static inline void shl_dlist__link(struct shl_dlist *prev,
 	prev->next = n;
 }
 
-static inline void shl_dlist_link(struct shl_dlist *head,
-					struct shl_dlist *n)
+static inline void shl_dlist_link(struct shl_dlist *head, struct shl_dlist *n)
 {
 	return shl_dlist__link(head, head->next, n);
 }
 
-static inline void shl_dlist_link_tail(struct shl_dlist *head,
-					struct shl_dlist *n)
+static inline void shl_dlist_link_tail(struct shl_dlist *head, struct shl_dlist *n)
 {
 	return shl_dlist__link(head->prev, head, n);
 }
 
-static inline void shl_dlist__unlink(struct shl_dlist *prev,
-					struct shl_dlist *next)
+static inline void shl_dlist__unlink(struct shl_dlist *prev, struct shl_dlist *next)
 {
 	next->prev = prev;
 	prev->next = next;
@@ -99,45 +96,31 @@ static inline bool shl_dlist_empty(struct shl_dlist *head)
 	return head->next == head;
 }
 
-#define shl_dlist_entry(ptr, type, member) \
-	shl_offsetof((ptr), type, member)
+#define shl_dlist_entry(ptr, type, member) shl_offsetof((ptr), type, member)
 
-#define shl_dlist_first(head, type, member) \
-	shl_dlist_entry((head)->next, type, member)
+#define shl_dlist_first(head, type, member) shl_dlist_entry((head)->next, type, member)
 
-#define shl_dlist_last(head, type, member) \
-	shl_dlist_entry((head)->prev, type, member)
+#define shl_dlist_last(head, type, member) shl_dlist_entry((head)->prev, type, member)
 
-#define shl_dlist_for_each(iter, head) \
-	for (iter = (head)->next; iter != (head); iter = iter->next)
+#define shl_dlist_for_each(iter, head) for (iter = (head)->next; iter != (head); iter = iter->next)
 
-#define shl_dlist_for_each_but_one(iter, start, head) \
-	for (iter = ((start)->next == (head)) ? \
-				(start)->next->next : \
-				(start)->next; \
-	     iter != (start); \
-	     iter = (iter->next == (head) && (start) != (head)) ? \
-				iter->next->next : \
-				iter->next)
+#define shl_dlist_for_each_but_one(iter, start, head)                                              \
+	for (iter = ((start)->next == (head)) ? (start)->next->next : (start)->next;               \
+	     iter != (start);                                                                      \
+	     iter = (iter->next == (head) && (start) != (head)) ? iter->next->next : iter->next)
 
-#define shl_dlist_for_each_safe(iter, tmp, head) \
-	for (iter = (head)->next, tmp = iter->next; iter != (head); \
-		iter = tmp, tmp = iter->next)
+#define shl_dlist_for_each_safe(iter, tmp, head)                                                   \
+	for (iter = (head)->next, tmp = iter->next; iter != (head); iter = tmp, tmp = iter->next)
 
-#define shl_dlist_for_each_reverse(iter, head) \
+#define shl_dlist_for_each_reverse(iter, head)                                                     \
 	for (iter = (head)->prev; iter != (head); iter = iter->prev)
 
-#define shl_dlist_for_each_reverse_but_one(iter, start, head) \
-	for (iter = ((start)->prev == (head)) ? \
-				(start)->prev->prev : \
-				(start)->prev; \
-	     iter != (start); \
-	     iter = (iter->prev == (head) && (start) != (head)) ? \
-				iter->prev->prev : \
-				iter->prev)
+#define shl_dlist_for_each_reverse_but_one(iter, start, head)                                      \
+	for (iter = ((start)->prev == (head)) ? (start)->prev->prev : (start)->prev;               \
+	     iter != (start);                                                                      \
+	     iter = (iter->prev == (head) && (start) != (head)) ? iter->prev->prev : iter->prev)
 
-#define shl_dlist_for_each_reverse_safe(iter, tmp, head) \
-	for (iter = (head)->prev, tmp = iter->prev; iter != (head); \
-		iter = tmp, tmp = iter->prev)
+#define shl_dlist_for_each_reverse_safe(iter, tmp, head)                                           \
+	for (iter = (head)->prev, tmp = iter->prev; iter != (head); iter = tmp, tmp = iter->prev)
 
 #endif /* SHL_DLIST_H */

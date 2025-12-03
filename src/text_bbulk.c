@@ -132,7 +132,6 @@ static int bbulk_set(struct kmscon_text *txt)
 				req->y = sh - (j + 1) * FONT_WIDTH(txt);
 				break;
 			}
-
 		}
 	}
 	if (kmscon_rotate_create_tables(&bb->glyphs, &bb->bold_glyphs, free_glyph))
@@ -160,8 +159,8 @@ static int bbulk_rotate(struct kmscon_text *txt, enum Orientation orientation)
 	return bbulk_set(txt);
 }
 
-static int find_glyph(struct kmscon_text *txt, struct uterm_video_buffer **out,
-		      uint64_t id, const uint32_t *ch, size_t len, const struct tsm_screen_attr *attr)
+static int find_glyph(struct kmscon_text *txt, struct uterm_video_buffer **out, uint64_t id,
+		      const uint32_t *ch, size_t len, const struct tsm_screen_attr *attr)
 {
 	struct bbulk *bb = txt->data;
 	struct uterm_video_buffer *bb_glyph;
@@ -189,7 +188,7 @@ static int find_glyph(struct kmscon_text *txt, struct uterm_video_buffer **out,
 	else
 		font->attr.italic = false;
 
-	res = shl_hashtable_find(gtable, (void**)&bb_glyph, id);
+	res = shl_hashtable_find(gtable, (void **)&bb_glyph, id);
 	if (res) {
 		*out = bb_glyph;
 		return 0;
@@ -211,7 +210,7 @@ static int find_glyph(struct kmscon_text *txt, struct uterm_video_buffer **out,
 			goto err_free;
 	}
 
-	ret = kmscon_rotate_glyph( bb_glyph, glyph, txt->orientation, 1);
+	ret = kmscon_rotate_glyph(bb_glyph, glyph, txt->orientation, 1);
 	if (ret)
 		goto err_free;
 
@@ -229,10 +228,8 @@ err_free:
 	return ret;
 }
 
-static int bbulk_draw(struct kmscon_text *txt,
-		      uint64_t id, const uint32_t *ch, size_t len,
-		      unsigned int width,
-		      unsigned int posx, unsigned int posy,
+static int bbulk_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, size_t len,
+		      unsigned int width, unsigned int posx, unsigned int posy,
 		      const struct tsm_screen_attr *attr)
 {
 	struct bbulk *bb = txt->data;
@@ -281,9 +278,8 @@ static int bbulk_draw(struct kmscon_text *txt,
 	return 0;
 }
 
-static int bblit_draw_pointer(struct kmscon_text *txt,
-			      unsigned int pointer_x, unsigned int pointer_y,
-			      const struct tsm_screen_attr *attr)
+static int bblit_draw_pointer(struct kmscon_text *txt, unsigned int pointer_x,
+			      unsigned int pointer_y, const struct tsm_screen_attr *attr)
 {
 	struct bbulk *bb = txt->data;
 	struct uterm_video_blend_req *req;
@@ -367,8 +363,7 @@ static int bbulk_render(struct kmscon_text *txt)
 	struct bbulk *bb = txt->data;
 	int ret;
 
-	ret = uterm_display_fake_blendv(txt->disp, bb->reqs,
-					bb->req_len);
+	ret = uterm_display_fake_blendv(txt->disp, bb->reqs, bb->req_len);
 	return ret;
 }
 

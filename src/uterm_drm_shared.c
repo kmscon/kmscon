@@ -136,8 +136,7 @@ int uterm_drm_set_dpms(int fd, uint32_t conn_id, int state)
 		}
 
 		if (!strcmp(prop->name, "DPMS")) {
-			ret = drmModeConnectorSetProperty(fd, conn_id,
-							  prop->prop_id, set);
+			ret = drmModeConnectorSetProperty(fd, conn_id, prop->prop_id, set);
 			if (ret) {
 				log_info("cannot set DPMS");
 				ret = -EFAULT;
@@ -271,11 +270,8 @@ void uterm_drm_display_deactivate(struct uterm_display *disp, int fd)
 
 	if (ddrm->saved_crtc) {
 		if (disp->video->flags & VIDEO_AWAKE) {
-			drmModeSetCrtc(fd, ddrm->saved_crtc->crtc_id,
-				       ddrm->saved_crtc->buffer_id,
-				       ddrm->saved_crtc->x,
-				       ddrm->saved_crtc->y,
-				       &ddrm->conn_id, 1,
+			drmModeSetCrtc(fd, ddrm->saved_crtc->crtc_id, ddrm->saved_crtc->buffer_id,
+				       ddrm->saved_crtc->x, ddrm->saved_crtc->y, &ddrm->conn_id, 1,
 				       &ddrm->saved_crtc->mode);
 		}
 		drmModeFreeCrtc(ddrm->saved_crtc);
@@ -292,8 +288,7 @@ int uterm_drm_display_set_dpms(struct uterm_display *disp, int state)
 	struct uterm_drm_display *ddrm = disp->data;
 	struct uterm_drm_video *vdrm = disp->video->data;
 
-	log_info("setting DPMS of display %p to %s", disp,
-		 uterm_dpms_to_name(state));
+	log_info("setting DPMS of display %p to %s", disp, uterm_dpms_to_name(state));
 
 	ret = uterm_drm_set_dpms(vdrm->fd, ddrm->conn_id, state);
 	if (ret < 0)
@@ -323,16 +318,14 @@ int uterm_drm_display_wait_pflip(struct uterm_display *disp)
 	if (ret < 0)
 		return ret;
 	if (ret == 0 || !timeout) {
-		log_warning("timeout waiting for page-flip on display %p",
-			    disp);
+		log_warning("timeout waiting for page-flip on display %p", disp);
 		return -ETIMEDOUT;
 	}
 
 	return 0;
 }
 
-int uterm_drm_display_swap(struct uterm_display *disp, uint32_t fb,
-			   bool immediate)
+int uterm_drm_display_swap(struct uterm_display *disp, uint32_t fb, bool immediate)
 {
 	struct uterm_drm_display *ddrm = disp->data;
 	struct uterm_video *video = disp->video;
@@ -349,8 +342,7 @@ int uterm_drm_display_swap(struct uterm_display *disp, uint32_t fb,
 			return ret;
 
 		mode = uterm_drm_mode_get_info(disp->current_mode);
-		ret = drmModeSetCrtc(vdrm->fd, ddrm->crtc_id, fb, 0, 0,
-				     &ddrm->conn_id, 1, mode);
+		ret = drmModeSetCrtc(vdrm->fd, ddrm->crtc_id, fb, 0, 0, &ddrm->conn_id, 1, mode);
 		if (ret) {
 			log_error("cannot set DRM-CRTC (%d): %m", errno);
 			return -EFAULT;
@@ -359,16 +351,15 @@ int uterm_drm_display_swap(struct uterm_display *disp, uint32_t fb,
 		if ((disp->flags & DISPLAY_VSYNC))
 			return -EBUSY;
 
-		ret = drmModePageFlip(vdrm->fd, ddrm->crtc_id, fb,
-				      DRM_MODE_PAGE_FLIP_EVENT, disp);
+		ret = drmModePageFlip(vdrm->fd, ddrm->crtc_id, fb, DRM_MODE_PAGE_FLIP_EVENT, disp);
 		if (ret) {
 			if (disp->desired_mode != disp->default_mode) {
 				disp->desired_mode = disp->default_mode;
-				log_debug("Unable to page-flip desired mode! Switching to default mode.");
+				log_debug("Unable to page-flip desired mode! Switching to default "
+					  "mode.");
 				return -EAGAIN;
 			}
-			log_error("cannot page-flip on DRM-CRTC (%d): %m",
-				  errno);
+			log_error("cannot page-flip on DRM-CRTC (%d): %m", errno);
 			return -EFAULT;
 		}
 
@@ -390,8 +381,8 @@ static void uterm_drm_display_pflip(struct uterm_display *disp)
 	DISPLAY_CB(disp, UTERM_PAGE_FLIP);
 }
 
-static void display_event(int fd, unsigned int frame, unsigned int sec,
-			  unsigned int usec, void *data)
+static void display_event(int fd, unsigned int frame, unsigned int sec, unsigned int usec,
+			  void *data)
 {
 	struct uterm_display *disp = data;
 
@@ -429,7 +420,8 @@ static void do_pflips(struct ev_eloop *eloop, void *unused, void *data)
 	struct uterm_display *disp;
 	struct shl_dlist *iter;
 
-	shl_dlist_for_each(iter, &video->displays) {
+	shl_dlist_for_each(iter, &video->displays)
+	{
 		disp = shl_dlist_entry(iter, struct uterm_display, list);
 		if ((disp->flags & DISPLAY_PFLIP))
 			uterm_drm_display_pflip(disp);
@@ -459,7 +451,8 @@ static void io_event(struct ev_fd *fd, int mask, void *data)
 	if (ret)
 		return;
 
-	shl_dlist_for_each(iter, &video->displays) {
+	shl_dlist_for_each(iter, &video->displays)
+	{
 		disp = shl_dlist_entry(iter, struct uterm_display, list);
 		if ((disp->flags & DISPLAY_PFLIP))
 			uterm_drm_display_pflip(disp);
@@ -477,7 +470,8 @@ static void vt_timeout(struct ev_timer *timer, uint64_t exp, void *data)
 	r = uterm_drm_video_wake_up(video);
 	if (!r) {
 		ev_timer_update(vdrm->vt_timer, NULL);
-		shl_dlist_for_each(iter, &video->displays) {
+		shl_dlist_for_each(iter, &video->displays)
+		{
 			disp = shl_dlist_entry(iter, struct uterm_display, list);
 			VIDEO_CB(video, disp, UTERM_REFRESH);
 		}
@@ -497,8 +491,8 @@ void uterm_drm_video_arm_vt_timer(struct uterm_video *video)
 }
 
 int uterm_drm_video_init(struct uterm_video *video, const char *node,
-			 const struct display_ops *display_ops,
-			 uterm_drm_page_flip_t pflip, void *data)
+			 const struct display_ops *display_ops, uterm_drm_page_flip_t pflip,
+			 void *data)
 {
 	struct uterm_drm_video *vdrm;
 	int ret;
@@ -523,8 +517,7 @@ int uterm_drm_video_init(struct uterm_video *video, const char *node,
 	/* TODO: fix the race-condition with DRM-Master-on-open */
 	drmDropMaster(vdrm->fd);
 
-	ret = ev_eloop_new_fd(video->eloop, &vdrm->efd, vdrm->fd, EV_READABLE,
-			      io_event, video);
+	ret = ev_eloop_new_fd(video->eloop, &vdrm->efd, vdrm->fd, EV_READABLE, io_event, video);
 	if (ret)
 		goto err_close;
 
@@ -532,8 +525,7 @@ int uterm_drm_video_init(struct uterm_video *video, const char *node,
 	if (ret)
 		goto err_fd;
 
-	ret = ev_eloop_new_timer(video->eloop, &vdrm->vt_timer, NULL,
-				 vt_timeout, video);
+	ret = ev_eloop_new_timer(video->eloop, &vdrm->vt_timer, NULL, vt_timeout, video);
 	if (ret)
 		goto err_timer;
 
@@ -563,8 +555,7 @@ void uterm_drm_video_destroy(struct uterm_video *video)
 	free(video->data);
 }
 
-int uterm_drm_video_find_crtc(struct uterm_video *video, drmModeRes *res,
-			      drmModeEncoder *enc)
+int uterm_drm_video_find_crtc(struct uterm_video *video, drmModeRes *res, drmModeEncoder *enc)
 {
 	int i, crtc;
 	struct uterm_display *iter;
@@ -574,10 +565,9 @@ int uterm_drm_video_find_crtc(struct uterm_video *video, drmModeRes *res,
 	for (i = 0; i < res->count_crtcs; ++i) {
 		if (enc->possible_crtcs & (1 << i)) {
 			crtc = res->crtcs[i];
-			shl_dlist_for_each(it, &video->displays) {
-				iter = shl_dlist_entry(it,
-						       struct uterm_display,
-						       list);
+			shl_dlist_for_each(it, &video->displays)
+			{
+				iter = shl_dlist_entry(it, struct uterm_display, list);
 				ddrm = iter->data;
 				if (ddrm->crtc_id == crtc)
 					break;
@@ -601,8 +591,7 @@ static drmModeCrtc *get_current_crtc(int fd, uint32_t encoder_id)
 	return NULL;
 }
 
-static void bind_display(struct uterm_video *video, drmModeRes *res,
-			 drmModeConnector *conn)
+static void bind_display(struct uterm_video *video, drmModeRes *res, drmModeConnector *conn)
 {
 	struct uterm_drm_video *vdrm = video->data;
 	struct uterm_display *disp;
@@ -636,11 +625,11 @@ static void bind_display(struct uterm_video *video, drmModeRes *res,
 			disp->default_mode = mode;
 
 		/* Save the original KMS mode for later use */
-		if (current_crtc && memcmp(&conn->modes[i], &current_crtc->mode, sizeof(conn->modes[i])) == 0)
-		 	disp->original_mode = mode;
+		if (current_crtc &&
+		    memcmp(&conn->modes[i], &current_crtc->mode, sizeof(conn->modes[i])) == 0)
+			disp->original_mode = mode;
 
-		if (video->desired_width != 0 &&
-		    video->desired_height != 0 &&
+		if (video->desired_width != 0 && video->desired_height != 0 &&
 		    mode->ops->get_width(mode) == video->desired_width &&
 		    mode->ops->get_height(mode) == video->desired_height)
 			disp->desired_mode = mode;
@@ -654,12 +643,10 @@ static void bind_display(struct uterm_video *video, drmModeRes *res,
 		disp->desired_mode = disp->default_mode;
 	}
 
-	log_debug("Default mode %dx%d",
-		  disp->default_mode->ops->get_width(disp->default_mode),
+	log_debug("Default mode %dx%d", disp->default_mode->ops->get_width(disp->default_mode),
 		  disp->default_mode->ops->get_height(disp->default_mode));
 
-	log_debug("Desired mode %dx%d",
-		  disp->desired_mode->ops->get_width(disp->desired_mode),
+	log_debug("Desired mode %dx%d", disp->desired_mode->ops->get_width(disp->desired_mode),
 		  disp->desired_mode->ops->get_height(disp->desired_mode));
 
 	if (shl_dlist_empty(&disp->modes)) {
@@ -672,8 +659,7 @@ static void bind_display(struct uterm_video *video, drmModeRes *res,
 	disp->flags |= DISPLAY_AVAILABLE;
 	disp->dpms = uterm_drm_get_dpms(vdrm->fd, conn);
 
-	log_info("display %p DPMS is %s", disp,
-		 uterm_dpms_to_name(disp->dpms));
+	log_info("display %p DPMS is %s", disp, uterm_dpms_to_name(disp->dpms));
 
 	ret = uterm_display_bind(disp, video);
 	if (ret)
@@ -687,8 +673,7 @@ err_unref:
 	return;
 }
 
-int uterm_drm_video_hotplug(struct uterm_video *video,
-			    bool read_dpms, bool modeset)
+int uterm_drm_video_hotplug(struct uterm_video *video, bool read_dpms, bool modeset)
 {
 	struct uterm_drm_video *vdrm = video->data;
 	drmModeRes *res;
@@ -709,7 +694,8 @@ int uterm_drm_video_hotplug(struct uterm_video *video,
 		return -EACCES;
 	}
 
-	shl_dlist_for_each(iter, &video->displays) {
+	shl_dlist_for_each(iter, &video->displays)
+	{
 		disp = shl_dlist_entry(iter, struct uterm_display, list);
 		disp->flags &= ~DISPLAY_AVAILABLE;
 	}
@@ -723,9 +709,9 @@ int uterm_drm_video_hotplug(struct uterm_video *video,
 			continue;
 		}
 
-		shl_dlist_for_each(iter, &video->displays) {
-			disp = shl_dlist_entry(iter, struct uterm_display,
-					       list);
+		shl_dlist_for_each(iter, &video->displays)
+		{
+			disp = shl_dlist_entry(iter, struct uterm_display, list);
 			ddrm = disp->data;
 
 			if (ddrm->conn_id != res->connectors[i])
@@ -733,7 +719,8 @@ int uterm_drm_video_hotplug(struct uterm_video *video,
 
 			disp->flags |= DISPLAY_AVAILABLE;
 
-			// Clean up kms hardware cursor from display sessions that don't properly clean themselves up`
+			// Clean up kms hardware cursor from display sessions that don't properly
+			// clean themselves up`
 			if (drmModeSetCursor(vdrm->fd, ddrm->crtc_id, 0, 0, 0))
 				log_warn("cannot hide hardware cursor");
 
@@ -743,8 +730,7 @@ int uterm_drm_video_hotplug(struct uterm_video *video,
 			if (read_dpms) {
 				dpms = uterm_drm_get_dpms(vdrm->fd, conn);
 				if (dpms != disp->dpms) {
-					log_debug("DPMS state for display %p changed",
-						  disp);
+					log_debug("DPMS state for display %p changed", disp);
 					uterm_drm_display_set_dpms(disp, disp->dpms);
 				}
 			}
@@ -766,7 +752,8 @@ int uterm_drm_video_hotplug(struct uterm_video *video,
 
 	drmModeFreeResources(res);
 
-	shl_dlist_for_each_safe(iter, tmp, &video->displays) {
+	shl_dlist_for_each_safe(iter, tmp, &video->displays)
+	{
 		disp = shl_dlist_entry(iter, struct uterm_display, list);
 		if (!(disp->flags & DISPLAY_AVAILABLE))
 			uterm_display_unbind(disp);
@@ -815,8 +802,7 @@ int uterm_drm_video_poll(struct uterm_video *video)
 /* Waits for events on DRM fd for \mtimeout milliseconds and returns 0 if the
  * timeout expired, -ERR on errors and 1 if a page-flip event has been read.
  * \mtimeout is adjusted to the remaining time. */
-int uterm_drm_video_wait_pflip(struct uterm_video *video,
-			       unsigned int *mtimeout)
+int uterm_drm_video_wait_pflip(struct uterm_video *video, unsigned int *mtimeout)
 {
 	struct uterm_drm_video *vdrm = video->data;
 	struct pollfd pfd;
@@ -846,8 +832,8 @@ int uterm_drm_video_wait_pflip(struct uterm_video *video,
 		if (ret)
 			return ret;
 
-		ret = ev_eloop_register_idle_cb(video->eloop, do_pflips,
-						video, EV_ONESHOT | EV_SINGLE);
+		ret = ev_eloop_register_idle_cb(video->eloop, do_pflips, video,
+						EV_ONESHOT | EV_SINGLE);
 		if (ret)
 			return ret;
 

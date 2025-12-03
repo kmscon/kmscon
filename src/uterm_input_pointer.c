@@ -1,12 +1,11 @@
-#include <time.h>
 #include <linux/input-event-codes.h>
 #include <linux/input.h>
+#include <time.h>
 #include "eloop.h"
 #include "shl_hook.h"
 #include "shl_llog.h"
 #include "uterm_input.h"
 #include "uterm_input_internal.h"
-
 
 static void pointer_update_inactivity_timer(struct uterm_input_dev *dev)
 {
@@ -40,7 +39,8 @@ static void pointer_dev_send_wheel(struct uterm_input_dev *dev, int32_t value)
 	shl_hook_call(dev->input->pointer_hook, dev->input, &pev);
 }
 
-static void pointer_dev_send_button(struct uterm_input_dev *dev, uint8_t button, bool pressed, bool dbl_click)
+static void pointer_dev_send_button(struct uterm_input_dev *dev, uint8_t button, bool pressed,
+				    bool dbl_click)
 {
 	struct uterm_input_pointer_event pev = {0};
 
@@ -63,8 +63,7 @@ void pointer_dev_sync(struct uterm_input_dev *dev)
 	dev->pointer.touchpaddown = false;
 }
 
-void pointer_dev_rel(struct uterm_input_dev *dev,
-		      uint16_t code, int32_t value)
+void pointer_dev_rel(struct uterm_input_dev *dev, uint16_t code, int32_t value)
 {
 	switch (code) {
 	case REL_X:
@@ -91,8 +90,7 @@ void pointer_dev_rel(struct uterm_input_dev *dev,
 	}
 }
 
-void pointer_dev_abs(struct uterm_input_dev *dev,
-		     uint16_t code, int32_t value)
+void pointer_dev_abs(struct uterm_input_dev *dev, uint16_t code, int32_t value)
 {
 	switch (code) {
 	case ABS_X:
@@ -110,7 +108,9 @@ void pointer_dev_abs(struct uterm_input_dev *dev,
 				dev->pointer.off_x = dev->input->pointer_max_x - value;
 			}
 		} else if (dev->pointer.kind == POINTER_VMOUSE) {
-			dev->pointer.x = ((value - dev->pointer.min_x) * dev->input->pointer_max_x) / (dev->pointer.max_x - dev->pointer.min_x);
+			dev->pointer.x =
+				((value - dev->pointer.min_x) * dev->input->pointer_max_x) /
+				(dev->pointer.max_x - dev->pointer.min_x);
 		} else {
 			return;
 		}
@@ -130,7 +130,9 @@ void pointer_dev_abs(struct uterm_input_dev *dev,
 				dev->pointer.off_y = dev->input->pointer_max_y - value;
 			}
 		} else if (dev->pointer.kind == POINTER_VMOUSE) {
-			dev->pointer.y = ((value - dev->pointer.min_y) * dev->input->pointer_max_y) / (dev->pointer.max_y - dev->pointer.min_y);
+			dev->pointer.y =
+				((value - dev->pointer.min_y) * dev->input->pointer_max_y) /
+				(dev->pointer.max_y - dev->pointer.min_y);
 		} else {
 			return;
 		}
@@ -141,8 +143,7 @@ void pointer_dev_abs(struct uterm_input_dev *dev,
 	pointer_dev_send_move(dev);
 }
 
-void pointer_dev_button(struct uterm_input_dev *dev,
-			uint16_t code, int32_t value)
+void pointer_dev_button(struct uterm_input_dev *dev, uint16_t code, int32_t value)
 {
 	struct timespec tp;
 	uint64_t elapsed;
@@ -153,7 +154,8 @@ void pointer_dev_button(struct uterm_input_dev *dev,
 	case BTN_LEFT:
 		if (pressed) {
 			clock_gettime(CLOCK_MONOTONIC, &tp);
-			elapsed = (tp.tv_sec - dev->pointer.last_click.tv_sec) * 1000 + (tp.tv_nsec - dev->pointer.last_click.tv_nsec) / 1000000;
+			elapsed = (tp.tv_sec - dev->pointer.last_click.tv_sec) * 1000 +
+				  (tp.tv_nsec - dev->pointer.last_click.tv_nsec) / 1000000;
 			dbl_click = (elapsed < 500);
 			dev->pointer.last_click = tp;
 		}
@@ -174,4 +176,3 @@ void pointer_dev_button(struct uterm_input_dev *dev,
 		break;
 	}
 }
-

@@ -34,11 +34,11 @@
 #include "conf.h"
 #include "eloop.h"
 #include "kmscon_conf.h"
-#include "shl_module.h"
 #include "kmscon_seat.h"
 #include "shl_dlist.h"
 #include "shl_log.h"
 #include "shl_misc.h"
+#include "shl_module.h"
 #include "text.h"
 #include "uterm_input.h"
 #include "uterm_monitor.h"
@@ -85,8 +85,7 @@ const char be_drm3d[] = "drm3d";
 const char be_drm2d[] = "drm2d";
 const char be_fbdev[] = "fbdev";
 
-static int app_seat_event(struct kmscon_seat *s, unsigned int event,
-			  void *data)
+static int app_seat_event(struct kmscon_seat *s, unsigned int event, void *data)
 {
 	struct app_seat *seat = data;
 	struct kmscon_app *app = seat->app;
@@ -97,13 +96,15 @@ static int app_seat_event(struct kmscon_seat *s, unsigned int event,
 	case KMSCON_SEAT_FOREGROUND:
 		seat->awake = true;
 
-		shl_dlist_for_each(iter, &seat->videos) {
+		shl_dlist_for_each(iter, &seat->videos)
+		{
 			vid = shl_dlist_entry(iter, struct app_video, list);
 			uterm_video_wake_up(vid->video);
 		}
 		break;
 	case KMSCON_SEAT_BACKGROUND:
-		shl_dlist_for_each(iter, &seat->videos) {
+		shl_dlist_for_each(iter, &seat->videos)
+		{
 			vid = shl_dlist_entry(iter, struct app_video, list);
 			uterm_video_sleep(vid->video);
 		}
@@ -112,8 +113,7 @@ static int app_seat_event(struct kmscon_seat *s, unsigned int event,
 		break;
 	case KMSCON_SEAT_SLEEP:
 		if (app->vt_exit_count > 0) {
-			log_debug("deactivating VT on exit, %d to go",
-				  app->vt_exit_count - 1);
+			log_debug("deactivating VT on exit, %d to go", app->vt_exit_count - 1);
 			if (!--app->vt_exit_count)
 				ev_eloop_exit(app->eloop);
 		}
@@ -129,8 +129,7 @@ static int app_seat_event(struct kmscon_seat *s, unsigned int event,
 		if (!app->conf->listen) {
 			--app->running_seats;
 			if (!app->running_seats) {
-				log_debug("seat HUP on %s in default-mode; exiting...",
-					  seat->name);
+				log_debug("seat HUP on %s in default-mode; exiting...", seat->name);
 				ev_eloop_exit(app->eloop);
 			} else {
 				log_debug("seat HUP on %s in default-mode; %u more running seats",
@@ -146,8 +145,7 @@ static int app_seat_event(struct kmscon_seat *s, unsigned int event,
 			 * seat here and ignore it.
 			 * You can destroy and recreate the seat to make kmscon
 			 * pick it up again in listen-mode. */
-			log_warning("seat HUP on %s in listen-mode; dropping seat...",
-				    seat->name);
+			log_warning("seat HUP on %s in listen-mode; dropping seat...", seat->name);
 		}
 
 		break;
@@ -156,8 +154,7 @@ static int app_seat_event(struct kmscon_seat *s, unsigned int event,
 	return 0;
 }
 
-static int app_seat_new(struct kmscon_app *app, const char *sname,
-			struct uterm_monitor_seat *useat)
+static int app_seat_new(struct kmscon_app *app, const char *sname, struct uterm_monitor_seat *useat)
 {
 	struct app_seat *seat;
 	int ret;
@@ -187,8 +184,7 @@ static int app_seat_new(struct kmscon_app *app, const char *sname,
 	}
 
 	if (!found) {
-		log_info("ignoring new seat %s as not specified in seat-list",
-			 sname);
+		log_info("ignoring new seat %s as not specified in seat-list", sname);
 		return -ERANGE;
 	}
 
@@ -215,15 +211,13 @@ static int app_seat_new(struct kmscon_app *app, const char *sname,
 	if (!app->conf->listen)
 		types |= UTERM_VT_REAL;
 
-	ret = kmscon_seat_new(&seat->seat, app->conf_ctx, app->eloop, app->vtm,
-			      types, sname, app_seat_event, seat);
+	ret = kmscon_seat_new(&seat->seat, app->conf_ctx, app->eloop, app->vtm, types, sname,
+			      app_seat_event, seat);
 	if (ret) {
 		if (ret == -ERANGE)
-			log_debug("ignoring seat %s as it already has a seat manager",
-				  sname);
+			log_debug("ignoring seat %s as it already has a seat manager", sname);
 		else
-			log_error("cannot create seat object on seat %s: %d",
-				  sname, ret);
+			log_error("cannot create seat object on seat %s: %d", sname, ret);
 		goto err_name;
 	}
 	seat->conf_ctx = kmscon_seat_get_conf(seat->seat);
@@ -255,8 +249,7 @@ static void app_seat_free(struct app_seat *seat)
 	free(seat);
 }
 
-static void app_seat_video_event(struct uterm_video *video,
-				 struct uterm_video_hotplug *ev,
+static void app_seat_video_event(struct uterm_video *video, struct uterm_video_hotplug *ev,
 				 void *data)
 {
 	struct app_video *vid = data;
@@ -271,24 +264,20 @@ static void app_seat_video_event(struct uterm_video *video,
 		break;
 	case UTERM_REFRESH:
 		if (!vid->seat->app->exiting)
-			kmscon_seat_refresh_display(vid->seat->seat,
-						    ev->display);
+			kmscon_seat_refresh_display(vid->seat->seat, ev->display);
 		break;
 	}
 }
 
-static bool app_seat_gpu_is_ignored(struct app_seat *seat,
-				    unsigned int type,
-				    bool drm_backed,
-				    bool primary,
-				    bool aux,
-				    const char *node)
+static bool app_seat_gpu_is_ignored(struct app_seat *seat, unsigned int type, bool drm_backed,
+				    bool primary, bool aux, const char *node)
 {
 	switch (type) {
 	case UTERM_MONITOR_FBDEV:
 		if (seat->conf->drm) {
 			if (drm_backed) {
-				log_info("ignoring video device %s on seat %s as it is a DRM-fbdev device",
+				log_info("ignoring video device %s on seat %s as it is a DRM-fbdev "
+					 "device",
 					 node, seat->name);
 				return true;
 			}
@@ -296,25 +285,25 @@ static bool app_seat_gpu_is_ignored(struct app_seat *seat,
 		break;
 	case UTERM_MONITOR_DRM:
 		if (!seat->conf->drm) {
-			log_info("ignoring video device %s on seat %s as it is a DRM device",
-				  node, seat->name);
+			log_info("ignoring video device %s on seat %s as it is a DRM device", node,
+				 seat->name);
 			return true;
 		}
 		break;
 	default:
-		log_info("ignoring unknown video device %s on seat %s",
-			 node, seat->name);
+		log_info("ignoring unknown video device %s on seat %s", node, seat->name);
 		return true;
 	}
 
 	if (seat->conf->gpus == KMSCON_GPU_PRIMARY && !primary) {
-		log_info("ignoring video device %s on seat %s as it is no primary GPU",
-			 node, seat->name);
+		log_info("ignoring video device %s on seat %s as it is no primary GPU", node,
+			 seat->name);
 		return true;
 	}
 
 	if (seat->conf->gpus == KMSCON_GPU_AUX && !primary && !aux) {
-		log_info("ignoring video device %s on seat %s as it is neither a primary nor auxiliary GPU",
+		log_info("ignoring video device %s on seat %s as it is neither a primary nor "
+			 "auxiliary GPU",
 			 node, seat->name);
 		return true;
 	}
@@ -322,11 +311,8 @@ static bool app_seat_gpu_is_ignored(struct app_seat *seat,
 	return false;
 }
 
-static int app_seat_add_video(struct app_seat *seat,
-			      unsigned int type,
-			      unsigned int flags,
-			      const char *node,
-			      struct uterm_monitor_dev *udev)
+static int app_seat_add_video(struct app_seat *seat, unsigned int type, unsigned int flags,
+			      const char *node, struct uterm_monitor_dev *udev)
 {
 	int ret;
 	const char *backend;
@@ -335,19 +321,16 @@ static int app_seat_add_video(struct app_seat *seat,
 	if (seat->app->exiting)
 		return -EBUSY;
 
-	if (app_seat_gpu_is_ignored(seat, type,
-				    flags & UTERM_MONITOR_DRM_BACKED,
-				    flags & UTERM_MONITOR_PRIMARY,
-				    flags & UTERM_MONITOR_AUX,
-				    node))
+	if (app_seat_gpu_is_ignored(seat, type, flags & UTERM_MONITOR_DRM_BACKED,
+				    flags & UTERM_MONITOR_PRIMARY, flags & UTERM_MONITOR_AUX, node))
 		return -ERANGE;
 
 	log_debug("new video device %s on seat %s", node, seat->name);
 
 	vid = malloc(sizeof(*vid));
 	if (!vid) {
-		log_error("cannot allocate memory for video device %s on seat %s",
-			  node, seat->name);
+		log_error("cannot allocate memory for video device %s on seat %s", node,
+			  seat->name);
 		return -ENOMEM;
 	}
 	memset(vid, 0, sizeof(*vid));
@@ -356,8 +339,7 @@ static int app_seat_add_video(struct app_seat *seat,
 
 	vid->node = strdup(node);
 	if (!vid->node) {
-		log_error("cannot copy video device name %s on seat %s",
-			  node, seat->name);
+		log_error("cannot copy video device name %s on seat %s", node, seat->name);
 		ret = -ENOMEM;
 		goto err_free;
 	}
@@ -374,21 +356,23 @@ static int app_seat_add_video(struct app_seat *seat,
 	unsigned int desired_width = 0;
 	unsigned int desired_height = 0;
 	if (seat->conf->mode != NULL) {
-		int items_parsed = sscanf(seat->conf->mode, "%ux%u", &desired_width, &desired_height);
+		int items_parsed =
+			sscanf(seat->conf->mode, "%ux%u", &desired_width, &desired_height);
 		if (items_parsed != 2) {
-			log_warning("The argument to --mode is not in the format <width>x<height>. Ignoring");
+			log_warning("The argument to --mode is not in the format <width>x<height>. "
+				    "Ignoring");
 			desired_width = 0;
 			desired_height = 0;
 		}
 	}
-	ret = uterm_video_new(&vid->video, seat->app->eloop, node, backend,
-	                      desired_width, desired_height);
+	ret = uterm_video_new(&vid->video, seat->app->eloop, node, backend, desired_width,
+			      desired_height);
 	if (ret) {
 		if (backend == be_drm3d) {
 			log_info("cannot create drm3d device %s on seat %s (%d); trying drm2d mode",
 				 vid->node, seat->name, ret);
-			ret = uterm_video_new(&vid->video, seat->app->eloop,
-					      node, be_drm2d, desired_width, desired_height);
+			ret = uterm_video_new(&vid->video, seat->app->eloop, node, be_drm2d,
+					      desired_width, desired_height);
 			if (ret)
 				goto err_node;
 		} else {
@@ -398,8 +382,8 @@ static int app_seat_add_video(struct app_seat *seat,
 
 	ret = uterm_video_register_cb(vid->video, app_seat_video_event, vid);
 	if (ret) {
-		log_error("cannot register video callback for device %s on seat %s: %d",
-			  vid->node, seat->name, ret);
+		log_error("cannot register video callback for device %s on seat %s: %d", vid->node,
+			  seat->name, ret);
 		goto err_video;
 	}
 
@@ -440,9 +424,7 @@ static void app_seat_remove_video(struct app_seat *seat, struct app_video *vid)
 	free(vid);
 }
 
-static void app_monitor_event(struct uterm_monitor *mon,
-			      struct uterm_monitor_event *ev,
-			      void *data)
+static void app_monitor_event(struct uterm_monitor *mon, struct uterm_monitor_event *ev, void *data)
 {
 	struct kmscon_app *app = data;
 	struct app_seat *seat;
@@ -467,15 +449,13 @@ static void app_monitor_event(struct uterm_monitor *mon,
 		switch (ev->dev_type) {
 		case UTERM_MONITOR_DRM:
 		case UTERM_MONITOR_FBDEV:
-			ret = app_seat_add_video(seat, ev->dev_type,
-						 ev->dev_flags,
-						 ev->dev_node, ev->dev);
+			ret = app_seat_add_video(seat, ev->dev_type, ev->dev_flags, ev->dev_node,
+						 ev->dev);
 			if (ret)
 				return;
 			break;
 		case UTERM_MONITOR_INPUT:
-			log_debug("new input device %s on seat %s",
-				  ev->dev_node, seat->name);
+			log_debug("new input device %s on seat %s", ev->dev_node, seat->name);
 			kmscon_seat_add_input(seat->seat, ev->dev_node, seat->conf->mouse);
 			break;
 		}
@@ -492,8 +472,7 @@ static void app_monitor_event(struct uterm_monitor *mon,
 				app_seat_remove_video(seat, ev->dev_data);
 			break;
 		case UTERM_MONITOR_INPUT:
-			log_debug("free input device %s on seat %s",
-				  ev->dev_node, seat->name);
+			log_debug("free input device %s on seat %s", ev->dev_node, seat->name);
 			kmscon_seat_remove_input(seat->seat, ev->dev_node);
 			break;
 		}
@@ -510,8 +489,8 @@ static void app_monitor_event(struct uterm_monitor *mon,
 			if (!vid)
 				return;
 
-			log_debug("video hotplug event on device %s on seat %s",
-				  vid->node, seat->name);
+			log_debug("video hotplug event on device %s on seat %s", vid->node,
+				  seat->name);
 			uterm_video_poll(vid->video);
 			break;
 		}
@@ -519,9 +498,7 @@ static void app_monitor_event(struct uterm_monitor *mon,
 	}
 }
 
-static void app_sig_generic(struct ev_eloop *eloop,
-			    struct signalfd_siginfo *info,
-			    void *data)
+static void app_sig_generic(struct ev_eloop *eloop, struct signalfd_siginfo *info, void *data)
 {
 	struct kmscon_app *app = data;
 
@@ -529,22 +506,15 @@ static void app_sig_generic(struct ev_eloop *eloop,
 	ev_eloop_exit(app->eloop);
 }
 
-static void app_sig_ignore(struct ev_eloop *eloop,
-			   struct signalfd_siginfo *info,
-			   void *data)
-{
-}
+static void app_sig_ignore(struct ev_eloop *eloop, struct signalfd_siginfo *info, void *data) {}
 
 static void destroy_app(struct kmscon_app *app)
 {
 	uterm_monitor_unref(app->mon);
 	uterm_vt_master_unref(app->vtm);
-	ev_eloop_unregister_signal_cb(app->eloop, SIGPIPE, app_sig_ignore,
-				      app);
-	ev_eloop_unregister_signal_cb(app->eloop, SIGINT, app_sig_generic,
-				      app);
-	ev_eloop_unregister_signal_cb(app->eloop, SIGTERM, app_sig_generic,
-				      app);
+	ev_eloop_unregister_signal_cb(app->eloop, SIGPIPE, app_sig_ignore, app);
+	ev_eloop_unregister_signal_cb(app->eloop, SIGINT, app_sig_generic, app);
+	ev_eloop_unregister_signal_cb(app->eloop, SIGTERM, app_sig_generic, app);
 	ev_eloop_unref(app->eloop);
 }
 
@@ -560,22 +530,19 @@ static int setup_app(struct kmscon_app *app)
 		goto err_app;
 	}
 
-	ret = ev_eloop_register_signal_cb(app->eloop, SIGTERM,
-					  app_sig_generic, app);
+	ret = ev_eloop_register_signal_cb(app->eloop, SIGTERM, app_sig_generic, app);
 	if (ret) {
 		log_error("cannot register SIGTERM signal handler: %d", ret);
 		goto err_app;
 	}
 
-	ret = ev_eloop_register_signal_cb(app->eloop, SIGINT,
-					  app_sig_generic, app);
+	ret = ev_eloop_register_signal_cb(app->eloop, SIGINT, app_sig_generic, app);
 	if (ret) {
 		log_error("cannot register SIGINT signal handler: %d", ret);
 		goto err_app;
 	}
 
-	ret = ev_eloop_register_signal_cb(app->eloop, SIGPIPE,
-					  app_sig_ignore, app);
+	ret = ev_eloop_register_signal_cb(app->eloop, SIGPIPE, app_sig_ignore, app);
 	if (ret) {
 		log_error("cannot register SIGPIPE signal handler: %d", ret);
 		goto err_app;
@@ -676,8 +643,7 @@ err_unload:
 	kmscon_conf_free(conf_ctx);
 err_out:
 	if (ret)
-		log_err("cannot initialize kmscon, errno %d: %s",
-			ret, strerror(-ret));
+		log_err("cannot initialize kmscon, errno %d: %s", ret, strerror(-ret));
 	log_info("exiting");
 	return -ret;
 }

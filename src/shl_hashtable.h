@@ -41,9 +41,9 @@
 
 struct shl_hashtable;
 
-typedef unsigned int (*shl_hash_cb) (uint64_t data);
-typedef bool (*shl_equal_cb) (uint64_t data1, uint64_t data2);
-typedef void (*shl_free_cb) (void *data);
+typedef unsigned int (*shl_hash_cb)(uint64_t data);
+typedef bool (*shl_equal_cb)(uint64_t data1, uint64_t data2);
+typedef void (*shl_free_cb)(void *data);
 
 struct shl_hashentry {
 	uint64_t key;
@@ -75,10 +75,8 @@ static size_t shl_rehash(const void *ele, void *priv)
 	return tbl->hash_cb(ent->key);
 }
 
-static inline int shl_hashtable_new(struct shl_hashtable **out,
-				    shl_hash_cb hash_cb,
-				    shl_equal_cb equal_cb,
-				    shl_free_cb free_value)
+static inline int shl_hashtable_new(struct shl_hashtable **out, shl_hash_cb hash_cb,
+				    shl_equal_cb equal_cb, shl_free_cb free_value)
 {
 	struct shl_hashtable *tbl;
 
@@ -107,9 +105,7 @@ static inline void shl_hashtable_free(struct shl_hashtable *tbl)
 	if (!tbl)
 		return;
 
-	for (entry = htable_first(&tbl->tbl, &i);
-	     entry;
-	     entry = htable_next(&tbl->tbl, &i)) {
+	for (entry = htable_first(&tbl->tbl, &i); entry; entry = htable_next(&tbl->tbl, &i)) {
 		htable_delval(&tbl->tbl, &i);
 		if (tbl->free_value)
 			tbl->free_value(entry->value);
@@ -120,8 +116,7 @@ static inline void shl_hashtable_free(struct shl_hashtable *tbl)
 	free(tbl);
 }
 
-static inline int shl_hashtable_insert(struct shl_hashtable *tbl, uint64_t key,
-				       void *value)
+static inline int shl_hashtable_insert(struct shl_hashtable *tbl, uint64_t key, void *value)
 {
 	struct shl_hashentry *entry;
 	size_t hash;
@@ -156,8 +151,7 @@ static inline void shl_hashtable_remove(struct shl_hashtable *tbl, uint64_t key)
 
 	hash = tbl->hash_cb(key);
 
-	for (entry = htable_firstval(&tbl->tbl, &i, hash);
-	     entry;
+	for (entry = htable_firstval(&tbl->tbl, &i, hash); entry;
 	     entry = htable_nextval(&tbl->tbl, &i, hash)) {
 		if (tbl->equal_cb(key, entry->key)) {
 			htable_delval(&tbl->tbl, &i);
@@ -166,8 +160,7 @@ static inline void shl_hashtable_remove(struct shl_hashtable *tbl, uint64_t key)
 	}
 }
 
-static inline bool shl_hashtable_find(struct shl_hashtable *tbl, void **out,
-				      uint64_t key)
+static inline bool shl_hashtable_find(struct shl_hashtable *tbl, void **out, uint64_t key)
 {
 	struct htable_iter i;
 	struct shl_hashentry *entry;
@@ -178,8 +171,7 @@ static inline bool shl_hashtable_find(struct shl_hashtable *tbl, void **out,
 
 	hash = tbl->hash_cb(key);
 
-	for (entry = htable_firstval(&tbl->tbl, &i, hash);
-	     entry;
+	for (entry = htable_firstval(&tbl->tbl, &i, hash); entry;
 	     entry = htable_nextval(&tbl->tbl, &i, hash)) {
 		if (tbl->equal_cb(key, entry->key)) {
 			if (out)

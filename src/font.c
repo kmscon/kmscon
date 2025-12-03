@@ -57,10 +57,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include "font.h"
-#include "shl_module.h"
 #include "shl_dlist.h"
 #include "shl_log.h"
 #include "shl_misc.h"
+#include "shl_module.h"
 #include "shl_register.h"
 
 #define LOG_SUBSYSTEM "font"
@@ -89,8 +89,7 @@ void kmscon_font_attr_normalize(struct kmscon_font_attr *attr)
 		return;
 
 	if (!*attr->name)
-		memcpy(attr->name, KMSCON_FONT_DEFAULT_NAME,
-		       sizeof(KMSCON_FONT_DEFAULT_NAME));
+		memcpy(attr->name, KMSCON_FONT_DEFAULT_NAME, sizeof(KMSCON_FONT_DEFAULT_NAME));
 
 	if (!attr->ppi)
 		attr->ppi = KMSCON_FONT_DEFAULT_PPI;
@@ -116,8 +115,7 @@ void kmscon_font_attr_normalize(struct kmscon_font_attr *attr)
  * Returns: true if they match, otherwise false
  */
 SHL_EXPORT
-bool kmscon_font_attr_match(const struct kmscon_font_attr *a1,
-			    const struct kmscon_font_attr *a2)
+bool kmscon_font_attr_match(const struct kmscon_font_attr *a1, const struct kmscon_font_attr *a2)
 {
 	if (!a1 || !a2)
 		return false;
@@ -169,11 +167,9 @@ int kmscon_font_register(const struct kmscon_font_ops *ops)
 
 	log_debug("register font backend %s", ops->name);
 
-	ret = shl_register_add_cb(&font_reg, ops->name, (void*)ops,
-				  kmscon_font_destroy);
+	ret = shl_register_add_cb(&font_reg, ops->name, (void *)ops, kmscon_font_destroy);
 	if (ret) {
-		log_error("cannot register font backend %s: %d", ops->name,
-			  ret);
+		log_error("cannot register font backend %s: %d", ops->name, ret);
 		return ret;
 	}
 
@@ -195,8 +191,8 @@ void kmscon_font_unregister(const char *name)
 	shl_register_remove(&font_reg, name);
 }
 
-static int new_font(struct kmscon_font *font,
-		    const struct kmscon_font_attr *attr, const char *backend)
+static int new_font(struct kmscon_font *font, const struct kmscon_font_attr *attr,
+		    const char *backend)
 {
 	struct shl_register_record *record;
 	const char *name = backend ? backend : "<default>";
@@ -306,8 +302,7 @@ static int new_font(struct kmscon_font *font,
  *
  * Returns: 0 on success, error code on failure
  */
-int kmscon_font_find(struct kmscon_font **out,
-		     const struct kmscon_font_attr *attr,
+int kmscon_font_find(struct kmscon_font **out, const struct kmscon_font_attr *attr,
 		     const char *backend)
 {
 	struct kmscon_font *font;
@@ -316,9 +311,8 @@ int kmscon_font_find(struct kmscon_font **out,
 	if (!out || !attr)
 		return -EINVAL;
 
-	log_debug("searching for: be: %s nm: %s ppi: %u pt: %u b: %d i: %d he: %u wt: %u",
-		  backend, attr->name, attr->ppi, attr->points,
-		  attr->bold, attr->italic, attr->height,
+	log_debug("searching for: be: %s nm: %s ppi: %u pt: %u b: %d i: %d he: %u wt: %u", backend,
+		  attr->name, attr->ppi, attr->points, attr->bold, attr->italic, attr->height,
 		  attr->width);
 
 	font = malloc(sizeof(*font));
@@ -335,10 +329,9 @@ int kmscon_font_find(struct kmscon_font **out,
 			goto err_free;
 	}
 
-	log_debug("using: be: %s nm: %s ppi: %u pt: %u b: %d i: %d he: %u wt: %u",
-		  font->ops->name, font->attr.name, font->attr.ppi,
-		  font->attr.points, font->attr.bold, font->attr.italic,
-		  font->attr.height, font->attr.width);
+	log_debug("using: be: %s nm: %s ppi: %u pt: %u b: %d i: %d he: %u wt: %u", font->ops->name,
+		  font->attr.name, font->attr.ppi, font->attr.points, font->attr.bold,
+		  font->attr.italic, font->attr.height, font->attr.width);
 	*out = font;
 	return 0;
 
@@ -397,8 +390,7 @@ void kmscon_font_unref(struct kmscon_font *font)
  * Returns: 0 on success, negative error code on failure
  */
 SHL_EXPORT
-int kmscon_font_render(struct kmscon_font *font,
-		       uint64_t id, const uint32_t *ch, size_t len,
+int kmscon_font_render(struct kmscon_font *font, uint64_t id, const uint32_t *ch, size_t len,
 		       const struct kmscon_glyph **out)
 {
 	if (!font || !out || !ch || !len)
@@ -419,8 +411,7 @@ int kmscon_font_render(struct kmscon_font *font,
  * Returns: 0 on success, negative error code on failure
  */
 SHL_EXPORT
-int kmscon_font_render_empty(struct kmscon_font *font,
-			     const struct kmscon_glyph **out)
+int kmscon_font_render_empty(struct kmscon_font *font, const struct kmscon_glyph **out)
 {
 	if (!font || !out)
 		return -EINVAL;
@@ -441,8 +432,7 @@ int kmscon_font_render_empty(struct kmscon_font *font,
  * Returns: 0 on success ,engative error code on failure
  */
 SHL_EXPORT
-int kmscon_font_render_inval(struct kmscon_font *font,
-			     const struct kmscon_glyph **out)
+int kmscon_font_render_inval(struct kmscon_font *font, const struct kmscon_glyph **out)
 {
 	if (!font || !out)
 		return -EINVAL;
@@ -460,9 +450,7 @@ int kmscon_font_render_inval(struct kmscon_font *font,
  *
  * Returns: true when overflow needed, false when no overflow needed or on error
  */
-bool kmscon_font_get_overflow(struct kmscon_font *font,
-			      uint64_t id, const uint32_t *ch,
-			      size_t len)
+bool kmscon_font_get_overflow(struct kmscon_font *font, uint64_t id, const uint32_t *ch, size_t len)
 {
 	if (!font || !font->ops->get_overflow)
 		return false;

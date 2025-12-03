@@ -48,8 +48,7 @@ static int clamp_value(int val, int low, int up)
 		return val;
 }
 
-static uint_fast32_t xrgb32_to_device(struct uterm_display *disp,
-				      uint32_t pixel)
+static uint_fast32_t xrgb32_to_device(struct uterm_display *disp, uint32_t pixel)
 {
 	uint8_t r, g, b, nr, ng, nb;
 	int i;
@@ -57,8 +56,8 @@ static uint_fast32_t xrgb32_to_device(struct uterm_display *disp,
 	struct fbdev_display *fbdev = disp->data;
 
 	r = (pixel >> 16) & 0xff;
-	g = (pixel >>  8) & 0xff;
-	b = (pixel >>  0) & 0xff;
+	g = (pixel >> 8) & 0xff;
+	b = (pixel >> 0) & 0xff;
 
 	if (disp->flags & DISPLAY_DITHERING) {
 		/* This is some very basic dithering which simply does small
@@ -88,11 +87,11 @@ static uint_fast32_t xrgb32_to_device(struct uterm_display *disp,
 		fbdev->dither_g = ng - fbdev->dither_g;
 		fbdev->dither_b = nb - fbdev->dither_b;
 
-		res  = r << fbdev->off_r;
+		res = r << fbdev->off_r;
 		res |= g << fbdev->off_g;
 		res |= b << fbdev->off_b;
 	} else {
-		res  = (r >> (8 - fbdev->len_r)) << fbdev->off_r;
+		res = (r >> (8 - fbdev->len_r)) << fbdev->off_r;
 		res |= (g >> (8 - fbdev->len_g)) << fbdev->off_g;
 		res |= (b >> (8 - fbdev->len_b)) << fbdev->off_b;
 	}
@@ -102,22 +101,21 @@ static uint_fast32_t xrgb32_to_device(struct uterm_display *disp,
 
 static void write_24bit(uint8_t *dst, uint_fast32_t value)
 {
-	#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-		dst[0] = value;
-		dst[1] = value >> 8;
-		dst[2] = value >> 16;
-	#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-		dst[0] = value >> 16;
-		dst[1] = value >> 8;
-		dst[2] = value;
-	#else
-		#error "Unknown endianness"
-	#endif
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+	dst[0] = value;
+	dst[1] = value >> 8;
+	dst[2] = value >> 16;
+#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+	dst[0] = value >> 16;
+	dst[1] = value >> 8;
+	dst[2] = value;
+#else
+#error "Unknown endianness"
+#endif
 }
 
 int uterm_fbdev_display_fake_blendv(struct uterm_display *disp,
-				    const struct uterm_video_blend_req *req,
-				    size_t num)
+				    const struct uterm_video_blend_req *req, size_t num)
 {
 	unsigned int tmp;
 	uint8_t *dst, *src;
@@ -175,18 +173,15 @@ int uterm_fbdev_display_fake_blendv(struct uterm_display *disp,
 						g = req->fg;
 						b = req->fb;
 					} else {
-						r = req->fr * src[i] +
-						    req->br * (255 - src[i]);
+						r = req->fr * src[i] + req->br * (255 - src[i]);
 						r /= 256;
-						g = req->fg * src[i] +
-						    req->bg * (255 - src[i]);
+						g = req->fg * src[i] + req->bg * (255 - src[i]);
 						g /= 256;
-						b = req->fb * src[i] +
-						    req->bb * (255 - src[i]);
+						b = req->fb * src[i] + req->bb * (255 - src[i]);
 						b /= 256;
 					}
 					val = (r << 16) | (g << 8) | b;
-					((uint32_t*)dst)[i] = val;
+					((uint32_t *)dst)[i] = val;
 				}
 				dst += fbdev->stride;
 				src += req->buf->stride;
@@ -203,19 +198,15 @@ int uterm_fbdev_display_fake_blendv(struct uterm_display *disp,
 						g = req->fg;
 						b = req->fb;
 					} else {
-						r = req->fr * src[i] +
-						    req->br * (255 - src[i]);
+						r = req->fr * src[i] + req->br * (255 - src[i]);
 						r /= 256;
-						g = req->fg * src[i] +
-						    req->bg * (255 - src[i]);
+						g = req->fg * src[i] + req->bg * (255 - src[i]);
 						g /= 256;
-						b = req->fb * src[i] +
-						    req->bb * (255 - src[i]);
+						b = req->fb * src[i] + req->bb * (255 - src[i]);
 						b /= 256;
 					}
 					val = (r << 16) | (g << 8) | b;
-					((uint16_t*)dst)[i] =
-						xrgb32_to_device(disp, val);
+					((uint16_t *)dst)[i] = xrgb32_to_device(disp, val);
 				}
 				dst += fbdev->stride;
 				src += req->buf->stride;
@@ -232,14 +223,11 @@ int uterm_fbdev_display_fake_blendv(struct uterm_display *disp,
 						g = req->fg;
 						b = req->fb;
 					} else {
-						r = req->fr * src[i] +
-						    req->br * (255 - src[i]);
+						r = req->fr * src[i] + req->br * (255 - src[i]);
 						r /= 256;
-						g = req->fg * src[i] +
-						    req->bg * (255 - src[i]);
+						g = req->fg * src[i] + req->bg * (255 - src[i]);
 						g /= 256;
-						b = req->fb * src[i] +
-						    req->bb * (255 - src[i]);
+						b = req->fb * src[i] + req->bb * (255 - src[i]);
 						b /= 256;
 					}
 					val = (r << 16) | (g << 8) | b;
@@ -261,19 +249,15 @@ int uterm_fbdev_display_fake_blendv(struct uterm_display *disp,
 						g = req->fg;
 						b = req->fb;
 					} else {
-						r = req->fr * src[i] +
-						    req->br * (255 - src[i]);
+						r = req->fr * src[i] + req->br * (255 - src[i]);
 						r /= 256;
-						g = req->fg * src[i] +
-						    req->bg * (255 - src[i]);
+						g = req->fg * src[i] + req->bg * (255 - src[i]);
 						g /= 256;
-						b = req->fb * src[i] +
-						    req->bb * (255 - src[i]);
+						b = req->fb * src[i] + req->bb * (255 - src[i]);
 						b /= 256;
 					}
 					val = (r << 16) | (g << 8) | b;
-					((uint32_t*)dst)[i] =
-						xrgb32_to_device(disp, val);
+					((uint32_t *)dst)[i] = xrgb32_to_device(disp, val);
 				}
 				dst += fbdev->stride;
 				src += req->buf->stride;
@@ -286,10 +270,9 @@ int uterm_fbdev_display_fake_blendv(struct uterm_display *disp,
 	return 0;
 }
 
-int uterm_fbdev_display_fill(struct uterm_display *disp,
-			     uint8_t r, uint8_t g, uint8_t b,
-			     unsigned int x, unsigned int y,
-			     unsigned int width, unsigned int height)
+int uterm_fbdev_display_fill(struct uterm_display *disp, uint8_t r, uint8_t g, uint8_t b,
+			     unsigned int x, unsigned int y, unsigned int width,
+			     unsigned int height)
 {
 	unsigned int tmp, i;
 	uint8_t *dst;
@@ -313,25 +296,25 @@ int uterm_fbdev_display_fill(struct uterm_display *disp,
 		dst = &fbdev->map[fbdev->yres * fbdev->stride];
 	dst = &dst[y * fbdev->stride + x * fbdev->Bpp];
 
-	full_val  = ((r & 0xff) >> (8 - fbdev->len_r)) << fbdev->off_r;
+	full_val = ((r & 0xff) >> (8 - fbdev->len_r)) << fbdev->off_r;
 	full_val |= ((g & 0xff) >> (8 - fbdev->len_g)) << fbdev->off_g;
 	full_val |= ((b & 0xff) >> (8 - fbdev->len_b)) << fbdev->off_b;
 
 	if (fbdev->Bpp == 2) {
 		if (disp->flags & DISPLAY_DITHERING) {
-			rgb32  = (r & 0xff) << 16;
-			rgb32 |= (g & 0xff) <<  8;
-			rgb32 |= (b & 0xff) <<  0;
+			rgb32 = (r & 0xff) << 16;
+			rgb32 |= (g & 0xff) << 8;
+			rgb32 |= (b & 0xff) << 0;
 			while (height--) {
 				for (i = 0; i < width; ++i)
-					((uint16_t*)dst)[i] = xrgb32_to_device(disp, rgb32);
+					((uint16_t *)dst)[i] = xrgb32_to_device(disp, rgb32);
 				dst += fbdev->stride;
 			}
 		} else {
 			full_val &= 0xffff;
 			while (height--) {
 				for (i = 0; i < width; ++i)
-					((uint16_t*)dst)[i] = full_val;
+					((uint16_t *)dst)[i] = full_val;
 				dst += fbdev->stride;
 			}
 		}
@@ -345,7 +328,7 @@ int uterm_fbdev_display_fill(struct uterm_display *disp,
 	} else if (fbdev->Bpp == 4) {
 		while (height--) {
 			for (i = 0; i < width; ++i)
-				((uint32_t*)dst)[i] = full_val;
+				((uint32_t *)dst)[i] = full_val;
 			dst += fbdev->stride;
 		}
 	} else {

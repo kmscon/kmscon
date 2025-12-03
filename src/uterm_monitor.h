@@ -56,9 +56,9 @@ enum uterm_monitor_dev_type {
 };
 
 enum uterm_monitor_dev_flag {
-	UTERM_MONITOR_DRM_BACKED	= 0x01,
-	UTERM_MONITOR_PRIMARY		= 0x02,
-	UTERM_MONITOR_AUX		= 0x04,
+	UTERM_MONITOR_DRM_BACKED = 0x01,
+	UTERM_MONITOR_PRIMARY = 0x02,
+	UTERM_MONITOR_AUX = 0x04,
 };
 
 struct uterm_monitor_event {
@@ -75,12 +75,11 @@ struct uterm_monitor_event {
 	void *dev_data;
 };
 
-typedef void (*uterm_monitor_cb) (struct uterm_monitor *mon,
-				  struct uterm_monitor_event *event,
-				  void *data);
+typedef void (*uterm_monitor_cb)(struct uterm_monitor *mon, struct uterm_monitor_event *event,
+				 void *data);
 
-int uterm_monitor_new(struct uterm_monitor **out, struct ev_eloop *eloop,
-		      uterm_monitor_cb cb, void *data);
+int uterm_monitor_new(struct uterm_monitor **out, struct ev_eloop *eloop, uterm_monitor_cb cb,
+		      void *data);
 void uterm_monitor_ref(struct uterm_monitor *mon);
 void uterm_monitor_unref(struct uterm_monitor *mon);
 void uterm_monitor_scan(struct uterm_monitor *mon);

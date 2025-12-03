@@ -61,8 +61,8 @@ static void dummy_redraw(struct kmscon_dummy *dummy, struct display *d)
 	uterm_display_swap(d->disp, false);
 }
 
-static int dummy_session_event(struct kmscon_session *session,
-			       struct kmscon_session_event *ev, void *data)
+static int dummy_session_event(struct kmscon_session *session, struct kmscon_session_event *ev,
+			       void *data)
 {
 	struct kmscon_dummy *dummy = data;
 	struct display *d;
@@ -82,7 +82,8 @@ static int dummy_session_event(struct kmscon_session *session,
 			dummy_redraw(dummy, d);
 		break;
 	case KMSCON_SESSION_DISPLAY_GONE:
-		shl_dlist_for_each(iter, &dummy->displays) {
+		shl_dlist_for_each(iter, &dummy->displays)
+		{
 			d = shl_dlist_entry(iter, struct display, list);
 			if (d->disp != ev->disp)
 				continue;
@@ -93,7 +94,8 @@ static int dummy_session_event(struct kmscon_session *session,
 		}
 		break;
 	case KMSCON_SESSION_DISPLAY_REFRESH:
-		shl_dlist_for_each(iter, &dummy->displays) {
+		shl_dlist_for_each(iter, &dummy->displays)
+		{
 			d = shl_dlist_entry(iter, struct display, list);
 			if (d->disp != ev->disp)
 				continue;
@@ -105,7 +107,8 @@ static int dummy_session_event(struct kmscon_session *session,
 		break;
 	case KMSCON_SESSION_ACTIVATE:
 		dummy->active = true;
-		shl_dlist_for_each(iter, &dummy->displays) {
+		shl_dlist_for_each(iter, &dummy->displays)
+		{
 			d = shl_dlist_entry(iter, struct display, list);
 			dummy_redraw(dummy, d);
 		}
@@ -115,8 +118,7 @@ static int dummy_session_event(struct kmscon_session *session,
 		break;
 	case KMSCON_SESSION_UNREGISTER:
 		while (!shl_dlist_empty(&dummy->displays)) {
-			d = shl_dlist_entry(dummy->displays.prev,
-					    struct display, list);
+			d = shl_dlist_entry(dummy->displays.prev, struct display, list);
 			shl_dlist_unlink(&d->list);
 			free(d);
 		}
@@ -128,8 +130,7 @@ static int dummy_session_event(struct kmscon_session *session,
 	return 0;
 }
 
-int kmscon_dummy_register(struct kmscon_session **out,
-			  struct kmscon_seat *seat)
+int kmscon_dummy_register(struct kmscon_session **out, struct kmscon_seat *seat)
 {
 	struct kmscon_dummy *dummy;
 	int ret;
@@ -143,8 +144,7 @@ int kmscon_dummy_register(struct kmscon_session **out,
 	memset(dummy, 0, sizeof(*dummy));
 	shl_dlist_init(&dummy->displays);
 
-	ret = kmscon_seat_register_session(seat, &dummy->session,
-					   dummy_session_event, dummy);
+	ret = kmscon_seat_register_session(seat, &dummy->session, dummy_session_event, dummy);
 	if (ret) {
 		log_error("cannot register session for dummy: %d", ret);
 		goto err_free;
