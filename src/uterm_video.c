@@ -494,30 +494,6 @@ int uterm_display_fill(struct uterm_display *disp, uint8_t r, uint8_t g, uint8_t
 }
 
 SHL_EXPORT
-int uterm_display_fake_blend(struct uterm_display *disp, const struct uterm_video_buffer *buf,
-			     unsigned int x, unsigned int y, uint8_t fr, uint8_t fg, uint8_t fb,
-			     uint8_t br, uint8_t bg, uint8_t bb)
-{
-	struct uterm_video_blend_req req;
-
-	if (!disp || !display_is_online(disp) || !video_is_awake(disp->video))
-		return -EINVAL;
-
-	memset(&req, 0, sizeof(req));
-	req.buf = buf;
-	req.x = x;
-	req.y = y;
-	req.fr = fr;
-	req.fg = fg;
-	req.fb = fb;
-	req.br = br;
-	req.bg = bg;
-	req.bb = bb;
-
-	return VIDEO_CALL(disp->ops->fake_blendv, -EOPNOTSUPP, disp, &req, 1);
-}
-
-SHL_EXPORT
 int uterm_display_fake_blendv(struct uterm_display *disp, const struct uterm_video_blend_req *req,
 			      size_t num)
 {
