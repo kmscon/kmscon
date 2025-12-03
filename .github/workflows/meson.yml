@@ -7,6 +7,15 @@ on:
     branches: [ main ]
 
 jobs:
+  check-format:
+    name: Clang-format check
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install clang-format
+      run: sudo apt-get update && sudo apt-get install -y clang-format-20
+    - name: Check format
+      run: clang-format-20 -n --Werror src/*c src/*.h tests/*.c tests/*.h
   build:
     name: Ubuntu tests
     runs-on: ubuntu-latest
