@@ -413,6 +413,66 @@ static inline int shl_split_command_string(const char *arg, char ***out,
 	return 0;
 }
 
+static inline char *shl_replace_var(char *in)
+{
+	if (!in)
+		return NULL;
+	if (*in != '$')
+		return in;
+	in++;
+	/* if start with $$, remove 1 $ for escaping */
+	if (*in == '$')
+		return in;
+	return getenv(in);
+}
+
+static inline int shl_replace_array_with_env(char ***out, char **argv)
+{
+	char **t, *off;
+	char **nargv;
+	unsigned int size, i, j, len;
+
+	if (!out || !argv)
+		return -EINVAL;
+
+	for (len = 0; argv[len]; ++len)
+		/* empty */ ;
+
+	nargv = malloc(sizeof(*nargv) * (len + 1));
+	if (!nargv)
+		return -EINVAL;
+
+	size = 0;
+	for (i = 0; i < len; ++i) {
+		++size;
+		nargv[i] = shl_replace_var(argv[i]);
+		size += strlen(nargv[i]);
+	}
+	nargv[len] = NULL;
+	++i;
+
+	size += i * sizeof(char*);
+
+	t = malloc(size);
+	if (!t) {
+		free(nargv);
+		return -ENOMEM;
+	}
+	*out = t;
+
+	off = (char*)t + i * sizeof(char*);
+	for (i = 0; i < len; ++i) {
+		*t++ = off;
+		for (j = 0; nargv[i][j]; ++j)
+			*off++ = nargv[i][j];
+		*off++ = 0;
+	}
+	*t = NULL;
+
+	free(nargv);
+	return 0;
+}
+
 static inline int shl_dup_array_size(char ***out, char **argv, size_t len)
 {
 	char **t, *off;

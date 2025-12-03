@@ -256,6 +256,8 @@ exec_child(const char *term, const char *colorterm, char **argv,
 {
 	char **env;
 	char **def_argv;
+	char **argv_parsed;
+	int ret;
 
 	if (env_reset) {
 		env = malloc(sizeof(char*));
@@ -292,8 +294,11 @@ exec_child(const char *term, const char *colorterm, char **argv,
 	} else {
 		setenv("TERM_SESSION_TYPE", "fb", 1);
 	}
+	ret = shl_replace_array_with_env(&argv_parsed, argv);
+	if (ret)
+		argv_parsed = argv;
 
-	execve(argv[0], argv, environ);
+	execve(argv_parsed[0], argv_parsed, environ);
 
 	log_err("failed to exec child %s: %m", argv[0]);
 
