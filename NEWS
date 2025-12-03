@@ -1,5 +1,52 @@
 = KMSCON Release News =
 
+## CHANGES WITH 9.2.1
+	* Bug fixes:
+		- Remove release github workflow @kdj0c in https://github.com/kmscon/kmscon/pull/155
+		- Fix kmscon version @kdj0c in https://github.com/kmscon/kmscon/pull/158
+
+## CHANGES WITH 9.2.0
+	* New features!
+		- Add kmscon-launch-gui to start gui from kmscon @kdj0c in https://github.com/Aetf/kmscon/pull/118
+		- Add retry count and retry time to login program by @michael-oberpriller in https://github.com/Aetf/kmscon/pull/134
+		- Add rotation support by @kdj0c in https://github.com/Aetf/kmscon/pull/147
+		- Add mouse support by @kdj0c in https://github.com/Aetf/kmscon/pull/149
+		- Double width overflow support by @michael-oberpriller in https://github.com/Aetf/kmscon/pull/135
+
+	* Bug fixes
+		- Fix build of conf.c with xkbcommon by @kdj0c in https://github.com/Aetf/kmscon/pull/116
+		- Add basic CI for all pull request by @kdj0c in https://github.com/Aetf/kmscon/pull/117
+		- github-ci: update package list before installing by @kdj0c in https://github.com/Aetf/kmscon/pull/119
+		- Hide hardware cursor on vt switching by @michael-oberpriller in https://github.com/Aetf/kmscon/pull/123
+		- Fix github CI, after renaming develop to main by @kdj0c in https://github.com/Aetf/kmscon/pull/127
+		- Make sure the main thread gets SIGCHLD by @Vogtinator in https://github.com/Aetf/kmscon/pull/106
+		- Revert hup workaround by @kdj0c in https://github.com/Aetf/kmscon/pull/126
+		- Readme: add systemd-dev requirement on debian systems by @kdj0c in https://github.com/Aetf/kmscon/pull/128
+		- Remove custom SELinux module by @Vogtinator in https://github.com/Aetf/kmscon/pull/130
+		- Add a man-page for the kmscon.conf file. by @kdj0c in https://github.com/Aetf/kmscon/pull/131
+		- Disable session-control when running with real VTs by @michael-oberpriller in https://github.com/Aetf/kmscon/pull/137
+		- Pango: use font cache to check if the font overflows by @kdj0c in https://github.com/Aetf/kmscon/pull/141
+		- Pango: align stride to 4 bytes by @kdj0c in https://github.com/Aetf/kmscon/pull/142
+		- Update CI as libtsm has switched to meson by @kdj0c in https://github.com/Aetf/kmscon/pull/144
+		- Fix character overflow with JetBrainsMono Nerd Font Mono by @kdj0c in https://github.com/Aetf/kmscon/pull/146
+		- kmscon-launch-gui: don't use eval by @martinetd in https://github.com/Aetf/kmscon/pull/156
+		- Add a default kmscon.conf in /etc by @kdj0c in https://github.com/Aetf/kmscon/pull/154
+		- Build video_drm3d as a module by @kdj0c in https://github.com/Aetf/kmscon/pull/153
+		- Fix kmscon using 100% CPU when trying to read systemd seats configuration by @kdj0c in https://github.com/Aetf/kmscon/pull/157
+		- Set env variable KMS_START_SCRIPT  and TERM_SESSION_TYPE by @kdj0c in https://github.com/Aetf/kmscon/pull/160
+		- print backends by @kdj0c in https://github.com/Aetf/kmscon/pull/165
+		- Remove the pixman renderer by @kdj0c in https://github.com/Aetf/kmscon/pull/163
+		- Remove bblit renderer, and make bbulk built-ins by @kdj0c in https://github.com/Aetf/kmscon/pull/166
+		- Update Readme.md after moving back to github/kmscon/kmscon by @kdj0c https://github.com/kmscon/kmscon/pull/152
+		-  Remove render timing by @kdj0c https://github.com/kmscon/kmscon/pull/153
+		- Fix typo in README.md by @kdj0c https://github.com/kmscon/kmscon/pull/154
+
+## New Contributors
+- @martinetd made their first contribution in https://github.com/Aetf/kmscon/pull/156
+
+**Full Changelog**: https://github.com/kmscon/kmscon/compare/v9.1.0...v9.2.0
+
+
 CHANGES WITH 9.1.0:
 	* New features!
 	    - Add selinux permissions (#109)
