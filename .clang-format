@@ -1,0 +1,17 @@
+BasedOnStyle: LLVM
+IndentWidth: 8
+UseTab: Always
+BreakBeforeBraces: Linux
+AllowShortIfStatementsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Empty
+IndentCaseLabels: false
+ColumnLimit: 100
+ContinuationIndentWidth: 8
+IncludeCategories:
+  - Regex:           '<.*>'
+    Priority:        -1
+    SortPriority:    -1
+  - Regex:           '".*'
+    Priority:        0
+    SortPriority:    0
+
