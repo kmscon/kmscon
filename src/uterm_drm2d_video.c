@@ -234,28 +234,6 @@ static int display_use(struct uterm_display *disp, bool *opengl)
 	return d2d->current_rb ^ 1;
 }
 
-static int display_get_buffers(struct uterm_display *disp, struct uterm_video_buffer *buffer,
-			       unsigned int formats)
-{
-	struct uterm_drm2d_display *d2d = uterm_drm_display_get_data(disp);
-	struct uterm_drm2d_rb *rb;
-	int i;
-
-	if (!(formats & UTERM_FORMAT_XRGB32))
-		return -EOPNOTSUPP;
-
-	for (i = 0; i < 2; ++i) {
-		rb = &d2d->rb[i];
-		buffer[i].width = uterm_drm_mode_get_width(disp->current_mode);
-		buffer[i].height = uterm_drm_mode_get_height(disp->current_mode);
-		buffer[i].stride = rb->stride;
-		buffer[i].format = UTERM_FORMAT_XRGB32;
-		buffer[i].data = rb->map;
-	}
-
-	return 0;
-}
-
 static int display_swap(struct uterm_display *disp, bool immediate)
 {
 	int ret, rb;
@@ -277,7 +255,6 @@ static const struct display_ops drm2d_display_ops = {
 	.deactivate = display_deactivate,
 	.set_dpms = uterm_drm_display_set_dpms,
 	.use = display_use,
-	.get_buffers = display_get_buffers,
 	.swap = display_swap,
 	.fake_blendv = uterm_drm2d_display_fake_blendv,
 	.fill = uterm_drm2d_display_fill,

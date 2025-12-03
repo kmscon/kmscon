@@ -466,16 +466,6 @@ int uterm_display_use(struct uterm_display *disp, bool *opengl)
 }
 
 SHL_EXPORT
-int uterm_display_get_buffers(struct uterm_display *disp, struct uterm_video_buffer *buffer,
-			      unsigned int formats)
-{
-	if (!disp || !display_is_online(disp) || !buffer)
-		return -EINVAL;
-
-	return VIDEO_CALL(disp->ops->get_buffers, -EOPNOTSUPP, disp, buffer, formats);
-}
-
-SHL_EXPORT
 int uterm_display_swap(struct uterm_display *disp, bool immediate)
 {
 	if (!disp || !display_is_online(disp) || !video_is_awake(disp->video))
