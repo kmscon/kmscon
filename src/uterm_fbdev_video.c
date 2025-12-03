@@ -602,7 +602,6 @@ struct uterm_video_module fbdev_module = {.name = "fbdev",
 					  .ops = {
 						  .init = video_init,
 						  .destroy = video_destroy,
-						  .segfault = NULL, /* TODO */
 						  .poll = NULL,
 						  .sleep = video_sleep,
 						  .wake_up = video_wake_up,

@@ -604,7 +604,6 @@ struct uterm_video_module drm3d_module = {
 		{
 			.init = video_init,
 			.destroy = video_destroy,
-			.segfault = NULL, /* TODO: reset all saved CRTCs on segfault */
 			.poll = video_poll,
 			.sleep = video_sleep,
 			.wake_up = video_wake_up,

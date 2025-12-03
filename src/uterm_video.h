@@ -183,7 +183,6 @@ int uterm_video_new(struct uterm_video **out, struct ev_eloop *eloop, const char
 void uterm_video_ref(struct uterm_video *video);
 void uterm_video_unref(struct uterm_video *video);
 
-void uterm_video_segfault(struct uterm_video *video);
 struct uterm_display *uterm_video_get_displays(struct uterm_video *video);
 int uterm_video_register_cb(struct uterm_video *video, uterm_video_cb cb, void *data);
 void uterm_video_unregister_cb(struct uterm_video *video, uterm_video_cb cb, void *data);
