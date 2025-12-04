@@ -34,6 +34,7 @@
 #include "kmscon_seat.h"
 #include "shl_dlist.h"
 #include "shl_log.h"
+#include "uterm_video.h"
 
 #define LOG_SUBSYSTEM "dummy"
 
@@ -50,12 +51,10 @@ struct kmscon_dummy {
 
 static void dummy_redraw(struct kmscon_dummy *dummy, struct display *d)
 {
-	struct uterm_mode *mode;
 	unsigned int w, h;
 
-	mode = uterm_display_get_current(d->disp);
-	w = uterm_mode_get_width(mode);
-	h = uterm_mode_get_height(mode);
+	w = uterm_display_get_width(d->disp);
+	h = uterm_display_get_height(d->disp);
 
 	uterm_display_fill(d->disp, 0, 0, 0, 0, 0, w, h);
 	uterm_display_swap(d->disp, false);

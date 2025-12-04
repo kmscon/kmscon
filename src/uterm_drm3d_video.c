@@ -132,7 +132,7 @@ static struct uterm_drm3d_rb *bo_to_rb(struct uterm_display *disp, struct gbm_bo
 	return rb;
 }
 
-static int display_activate(struct uterm_display *disp, struct uterm_mode *mode)
+static int display_activate(struct uterm_display *disp)
 {
 	struct uterm_video *video = disp->video;
 	struct uterm_drm_video *vdrm;
@@ -143,12 +143,18 @@ static int display_activate(struct uterm_display *disp, struct uterm_mode *mode)
 	struct gbm_bo *bo;
 	drmModeModeInfo *minfo;
 
-	if (!mode)
-		return -EINVAL;
-
 	vdrm = video->data;
 	v3d = uterm_drm_video_get_data(video);
-	minfo = uterm_drm_mode_get_info(mode);
+
+	if (video->use_original)
+		ddrm->current_mode = ddrm->original_mode;
+	else
+		ddrm->current_mode = ddrm->desired_mode;
+
+	minfo = &ddrm->current_mode->info;
+	disp->width = minfo->hdisplay;
+	disp->height = minfo->vdisplay;
+
 	log_info("activating display %p to %ux%u", disp, minfo->hdisplay, minfo->vdisplay);
 
 	ret = uterm_drm_display_activate(disp, vdrm->fd);
@@ -157,7 +163,6 @@ static int display_activate(struct uterm_display *disp, struct uterm_mode *mode)
 
 	d3d->current = NULL;
 	d3d->next = NULL;
-	disp->current_mode = mode;
 
 	d3d->gbm =
 		gbm_surface_create(v3d->gbm, minfo->hdisplay, minfo->vdisplay, GBM_FORMAT_XRGB8888,
@@ -206,8 +211,9 @@ static int display_activate(struct uterm_display *disp, struct uterm_mode *mode)
 
 	ret = drmModeSetCrtc(vdrm->fd, ddrm->crtc_id, d3d->current->fb, 0, 0, &ddrm->conn_id, 1,
 			     minfo);
-	if (ret && mode == disp->desired_mode && mode != disp->default_mode) {
-		mode = disp->desired_mode = disp->default_mode;
+	if (ret && ddrm->current_mode == ddrm->desired_mode &&
+	    ddrm->current_mode != ddrm->default_mode) {
+		ddrm->current_mode = ddrm->desired_mode = ddrm->default_mode;
 		ret = -EAGAIN;
 		goto err_bo;
 	} else if (ret) {
@@ -228,7 +234,9 @@ err_surface:
 err_gbm:
 	gbm_surface_destroy(d3d->gbm);
 err_saved:
-	disp->current_mode = NULL;
+	disp->width = 0;
+	disp->height = 0;
+	ddrm->current_mode = NULL;
 	uterm_drm_display_deactivate(disp, vdrm->fd);
 	return ret;
 }
@@ -259,7 +267,8 @@ static void display_deactivate(struct uterm_display *disp)
 	}
 
 	gbm_surface_destroy(d3d->gbm);
-	disp->current_mode = NULL;
+	disp->width = 0;
+	disp->height = 0;
 }
 
 int uterm_drm3d_display_use(struct uterm_display *disp, bool *opengl)

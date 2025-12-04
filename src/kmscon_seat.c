@@ -155,13 +155,9 @@ static void activate_display(struct kmscon_display *d)
 	 * but we should also allow the user to specify different modes in the
 	 * configuration files. */
 	if (uterm_display_get_state(d->disp) == UTERM_DISPLAY_INACTIVE) {
-		if (seat->conf->use_original_mode)
-			ret = uterm_display_activate(d->disp, uterm_display_get_original(d->disp));
-		else
-			ret = uterm_display_activate(d->disp, NULL);
-
+		ret = uterm_display_activate(d->disp);
 		if (ret == -EAGAIN)
-			ret = uterm_display_activate(d->disp, NULL);
+			ret = uterm_display_activate(d->disp);
 		if (ret)
 			return;
 

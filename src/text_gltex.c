@@ -153,7 +153,6 @@ static int gltex_set(struct kmscon_text *txt)
 	static char *attr[] = {"position", "texture_position", "fgcolor", "bgcolor"};
 	GLint s;
 	const char *ext;
-	struct uterm_mode *mode;
 	bool opengl;
 
 	memset(gt, 0, sizeof(*gt));
@@ -196,9 +195,8 @@ static int gltex_set(struct kmscon_text *txt)
 		goto err_shader;
 	}
 
-	mode = uterm_display_get_current(txt->disp);
-	gt->sw = uterm_mode_get_width(mode);
-	gt->sh = uterm_mode_get_height(mode);
+	gt->sw = uterm_display_get_width(txt->disp);
+	gt->sh = uterm_display_get_height(txt->disp);
 
 	if (txt->orientation == OR_NORMAL || txt->orientation == OR_UPSIDE_DOWN) {
 		txt->cols = gt->sw / FONT_WIDTH(txt);

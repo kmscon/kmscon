@@ -86,15 +86,14 @@ static int bbulk_set(struct kmscon_text *txt)
 	struct bbulk *bb = txt->data;
 	unsigned int sw, sh, i, j;
 	struct uterm_video_blend_req *req;
-	struct uterm_mode *mode;
 
 	memset(bb, 0, sizeof(*bb));
 
-	mode = uterm_display_get_current(txt->disp);
-	if (!mode)
+	sw = uterm_display_get_width(txt->disp);
+	sh = uterm_display_get_height(txt->disp);
+
+	if (!sw || !sh)
 		return -EINVAL;
-	sw = uterm_mode_get_width(mode);
-	sh = uterm_mode_get_height(mode);
 
 	if (txt->orientation == OR_NORMAL || txt->orientation == OR_UPSIDE_DOWN) {
 		txt->cols = sw / FONT_WIDTH(txt);
@@ -284,18 +283,14 @@ static int bblit_draw_pointer(struct kmscon_text *txt, unsigned int pointer_x,
 	struct bbulk *bb = txt->data;
 	struct uterm_video_blend_req *req;
 	struct uterm_video_buffer *bb_glyph;
-	struct uterm_mode *mode;
 	uint32_t ch = 'I';
 	uint64_t id = ch;
 	unsigned int sw, sh;
 	unsigned int m_x, m_y, x, y;
 	int ret;
 
-	mode = uterm_display_get_current(txt->disp);
-	if (!mode)
-		return -EINVAL;
-	sw = uterm_mode_get_width(mode);
-	sh = uterm_mode_get_height(mode);
+	sw = uterm_display_get_width(txt->disp);
+	sh = uterm_display_get_height(txt->disp);
 
 	if (txt->orientation == OR_NORMAL || txt->orientation == OR_UPSIDE_DOWN) {
 		m_x = SHL_DIV_ROUND_UP(FONT_WIDTH(txt), 2);

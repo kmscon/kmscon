@@ -72,113 +72,6 @@ const char *uterm_dpms_to_name(int dpms)
 	}
 }
 
-SHL_EXPORT
-int mode_new(struct uterm_mode **out, const struct mode_ops *ops)
-{
-	struct uterm_mode *mode;
-	int ret;
-
-	if (!out || !ops)
-		return -EINVAL;
-
-	mode = malloc(sizeof(*mode));
-	if (!mode)
-		return -ENOMEM;
-	memset(mode, 0, sizeof(*mode));
-	mode->ref = 1;
-	mode->ops = ops;
-
-	ret = VIDEO_CALL(mode->ops->init, 0, mode);
-	if (ret)
-		goto err_free;
-
-	*out = mode;
-	return 0;
-
-err_free:
-	free(mode);
-	return ret;
-}
-
-SHL_EXPORT
-void uterm_mode_ref(struct uterm_mode *mode)
-{
-	if (!mode || !mode->ref)
-		return;
-
-	++mode->ref;
-}
-
-SHL_EXPORT
-void uterm_mode_unref(struct uterm_mode *mode)
-{
-	if (!mode || !mode->ref || --mode->ref)
-		return;
-
-	VIDEO_CALL(mode->ops->destroy, 0, mode);
-	free(mode);
-}
-
-SHL_EXPORT
-int uterm_mode_bind(struct uterm_mode *mode, struct uterm_display *disp)
-{
-	if (!mode || !disp || mode->disp)
-		return -EINVAL;
-
-	mode->disp = disp;
-	shl_dlist_link_tail(&disp->modes, &mode->list);
-	uterm_mode_ref(mode);
-
-	return 0;
-}
-
-SHL_EXPORT
-void uterm_mode_unbind(struct uterm_mode *mode)
-{
-	if (!mode)
-		return;
-
-	mode->disp = NULL;
-	shl_dlist_unlink(&mode->list);
-	uterm_mode_unref(mode);
-}
-
-SHL_EXPORT
-struct uterm_mode *uterm_mode_next(struct uterm_mode *mode)
-{
-	if (!mode || mode->list.next == &mode->disp->modes)
-		return NULL;
-
-	return shl_dlist_entry(mode->list.next, struct uterm_mode, list);
-}
-
-SHL_EXPORT
-const char *uterm_mode_get_name(const struct uterm_mode *mode)
-{
-	if (!mode)
-		return NULL;
-
-	return VIDEO_CALL(mode->ops->get_name, NULL, mode);
-}
-
-SHL_EXPORT
-unsigned int uterm_mode_get_width(const struct uterm_mode *mode)
-{
-	if (!mode)
-		return 0;
-
-	return VIDEO_CALL(mode->ops->get_width, 0, mode);
-}
-
-SHL_EXPORT
-unsigned int uterm_mode_get_height(const struct uterm_mode *mode)
-{
-	if (!mode)
-		return 0;
-
-	return VIDEO_CALL(mode->ops->get_height, 0, mode);
-}
-
 int display_new(struct uterm_display **out, const struct display_ops *ops)
 {
 	struct uterm_display *disp;
@@ -193,8 +86,6 @@ int display_new(struct uterm_display **out, const struct display_ops *ops)
 	memset(disp, 0, sizeof(*disp));
 	disp->ref = 1;
 	disp->ops = ops;
-	shl_dlist_init(&disp->modes);
-
 	log_info("new display %p", disp);
 
 	ret = shl_hook_new(&disp->hook);
@@ -227,17 +118,10 @@ void uterm_display_ref(struct uterm_display *disp)
 SHL_EXPORT
 void uterm_display_unref(struct uterm_display *disp)
 {
-	struct uterm_mode *mode;
-
 	if (!disp || !disp->ref || --disp->ref)
 		return;
 
 	log_info("free display %p", disp);
-
-	while (!shl_dlist_empty(&disp->modes)) {
-		mode = shl_dlist_entry(disp->modes.prev, struct uterm_mode, list);
-		uterm_mode_unbind(mode);
-	}
 
 	VIDEO_CALL(disp->ops->destroy, 0, disp);
 	shl_hook_free(disp->hook);
@@ -313,39 +197,21 @@ void uterm_display_unregister_cb(struct uterm_display *disp, uterm_display_cb cb
 }
 
 SHL_EXPORT
-struct uterm_mode *uterm_display_get_modes(struct uterm_display *disp)
+unsigned int uterm_display_get_width(struct uterm_display *disp)
 {
-	if (!disp || shl_dlist_empty(&disp->modes))
-		return NULL;
+	if (!disp)
+		return 0;
 
-	return shl_dlist_entry(disp->modes.next, struct uterm_mode, list);
+	return disp->width;
 }
 
 SHL_EXPORT
-struct uterm_mode *uterm_display_get_current(struct uterm_display *disp)
+unsigned int uterm_display_get_height(struct uterm_display *disp)
 {
 	if (!disp)
-		return NULL;
+		return 0;
 
-	return disp->current_mode;
-}
-
-SHL_EXPORT
-struct uterm_mode *uterm_display_get_default(struct uterm_display *disp)
-{
-	if (!disp)
-		return NULL;
-
-	return disp->default_mode;
-}
-
-SHL_EXPORT
-struct uterm_mode *uterm_display_get_original(struct uterm_display *disp)
-{
-	if (!disp)
-		return NULL;
-
-	return disp->original_mode;
+	return disp->height;
 }
 
 SHL_EXPORT
@@ -369,15 +235,12 @@ int uterm_display_get_state(struct uterm_display *disp)
 }
 
 SHL_EXPORT
-int uterm_display_activate(struct uterm_display *disp, struct uterm_mode *mode)
+int uterm_display_activate(struct uterm_display *disp)
 {
 	if (!disp || !disp->video || display_is_online(disp) || !video_is_awake(disp->video))
 		return -EINVAL;
 
-	if (!mode)
-		mode = disp->desired_mode;
-
-	return VIDEO_CALL(disp->ops->activate, 0, disp, mode);
+	return VIDEO_CALL(disp->ops->activate, 0, disp);
 }
 
 SHL_EXPORT
@@ -456,7 +319,8 @@ int uterm_display_fake_blendv(struct uterm_display *disp, const struct uterm_vid
 
 SHL_EXPORT
 int uterm_video_new(struct uterm_video **out, struct ev_eloop *eloop, const char *node,
-		    const char *backend, unsigned int desired_width, unsigned int desired_height)
+		    const char *backend, unsigned int desired_width, unsigned int desired_height,
+		    bool use_original)
 {
 	struct shl_register_record *record;
 	const char *name = backend ? backend : "<default>";

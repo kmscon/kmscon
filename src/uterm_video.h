@@ -132,16 +132,6 @@ typedef void (*uterm_display_cb)(struct uterm_display *disp, struct uterm_displa
 
 const char *uterm_dpms_to_name(int dpms);
 
-/* display modes interface */
-
-void uterm_mode_ref(struct uterm_mode *mode);
-void uterm_mode_unref(struct uterm_mode *mode);
-struct uterm_mode *uterm_mode_next(struct uterm_mode *mode);
-
-const char *uterm_mode_get_name(const struct uterm_mode *mode);
-unsigned int uterm_mode_get_width(const struct uterm_mode *mode);
-unsigned int uterm_mode_get_height(const struct uterm_mode *mode);
-
 /* display interface */
 
 void uterm_display_ref(struct uterm_display *disp);
@@ -158,8 +148,10 @@ struct uterm_mode *uterm_display_get_current(struct uterm_display *disp);
 struct uterm_mode *uterm_display_get_default(struct uterm_display *disp);
 struct uterm_mode *uterm_display_get_original(struct uterm_display *disp);
 
+unsigned int uterm_display_get_width(struct uterm_display *disp);
+unsigned int uterm_display_get_height(struct uterm_display *disp);
 int uterm_display_get_state(struct uterm_display *disp);
-int uterm_display_activate(struct uterm_display *disp, struct uterm_mode *mode);
+int uterm_display_activate(struct uterm_display *disp);
 void uterm_display_deactivate(struct uterm_display *disp);
 int uterm_display_set_dpms(struct uterm_display *disp, int state);
 int uterm_display_get_dpms(const struct uterm_display *disp);
@@ -176,7 +168,8 @@ int uterm_display_fake_blendv(struct uterm_display *disp, const struct uterm_vid
 /* video interface */
 
 int uterm_video_new(struct uterm_video **out, struct ev_eloop *eloop, const char *node,
-		    const char *backend, unsigned int desired_width, unsigned int desired_height);
+		    const char *backend, unsigned int desired_width, unsigned int desired_height,
+		    bool use_original);
 void uterm_video_ref(struct uterm_video *video);
 void uterm_video_unref(struct uterm_video *video);
 

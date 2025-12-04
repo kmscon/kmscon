@@ -36,7 +36,9 @@
 #include <unistd.h>
 #include <xf86drm.h>
 #include <xf86drmMode.h>
+#include "shl_dlist.h"
 #include "shl_log.h"
+#include "shl_misc.h"
 #include "shl_timer.h"
 #include "uterm_drm_shared_internal.h"
 #include "uterm_video.h"
@@ -44,59 +46,17 @@
 
 #define LOG_SUBSYSTEM "drm_shared"
 
-int uterm_drm_mode_init(struct uterm_mode *mode)
+static struct uterm_mode *mode_new(drmModeModeInfo *info)
 {
-	struct uterm_drm_mode *m;
+	struct uterm_mode *new;
 
-	m = malloc(sizeof(*m));
-	if (!m)
-		return -ENOMEM;
-	memset(m, 0, sizeof(*m));
-	mode->data = m;
+	new = malloc(sizeof(*new));
+	if (!new)
+		return NULL;
+	new->info = *info;
 
-	return 0;
+	return new;
 }
-
-void uterm_drm_mode_destroy(struct uterm_mode *mode)
-{
-	free(mode->data);
-}
-
-const char *uterm_drm_mode_get_name(const struct uterm_mode *mode)
-{
-	struct uterm_drm_mode *m = mode->data;
-
-	return m->info.name;
-}
-
-unsigned int uterm_drm_mode_get_width(const struct uterm_mode *mode)
-{
-	struct uterm_drm_mode *m = mode->data;
-
-	return m->info.hdisplay;
-}
-
-unsigned int uterm_drm_mode_get_height(const struct uterm_mode *mode)
-{
-	struct uterm_drm_mode *m = mode->data;
-
-	return m->info.vdisplay;
-}
-
-void uterm_drm_mode_set(struct uterm_mode *mode, drmModeModeInfo *info)
-{
-	struct uterm_drm_mode *m = mode->data;
-
-	m->info = *info;
-}
-
-const struct mode_ops uterm_drm_mode_ops = {
-	.init = uterm_drm_mode_init,
-	.destroy = uterm_drm_mode_destroy,
-	.get_name = uterm_drm_mode_get_name,
-	.get_width = uterm_drm_mode_get_width,
-	.get_height = uterm_drm_mode_get_height,
-};
 
 int uterm_drm_set_dpms(int fd, uint32_t conn_id, int state)
 {
@@ -203,6 +163,7 @@ int uterm_drm_display_init(struct uterm_display *disp, void *data)
 	if (!d)
 		return -ENOMEM;
 	memset(d, 0, sizeof(*d));
+	shl_dlist_init(&d->modes);
 	disp->data = d;
 	d->data = data;
 
@@ -211,6 +172,14 @@ int uterm_drm_display_init(struct uterm_display *disp, void *data)
 
 void uterm_drm_display_destroy(struct uterm_display *disp)
 {
+	struct uterm_mode *mode;
+	struct uterm_drm_display *ddrm = disp->data;
+
+	while (!shl_dlist_empty(&ddrm->modes)) {
+		mode = shl_dlist_entry(ddrm->modes.prev, struct uterm_mode, list);
+		shl_dlist_unlink(&mode->list);
+		free(mode);
+	}
 	free(disp->data);
 }
 
@@ -341,7 +310,7 @@ int uterm_drm_display_swap(struct uterm_display *disp, uint32_t fb, bool immedia
 		if (ret)
 			return ret;
 
-		mode = uterm_drm_mode_get_info(disp->current_mode);
+		mode = &ddrm->current_mode->info;
 		ret = drmModeSetCrtc(vdrm->fd, ddrm->crtc_id, fb, 0, 0, &ddrm->conn_id, 1, mode);
 		if (ret) {
 			log_error("cannot set DRM-CRTC (%d): %m", errno);
@@ -353,8 +322,8 @@ int uterm_drm_display_swap(struct uterm_display *disp, uint32_t fb, bool immedia
 
 		ret = drmModePageFlip(vdrm->fd, ddrm->crtc_id, fb, DRM_MODE_PAGE_FLIP_EVENT, disp);
 		if (ret) {
-			if (disp->desired_mode != disp->default_mode) {
-				disp->desired_mode = disp->default_mode;
+			if (ddrm->desired_mode != ddrm->default_mode) {
+				ddrm->desired_mode = ddrm->default_mode;
 				log_debug("Unable to page-flip desired mode! Switching to default "
 					  "mode.");
 				return -EAGAIN;
@@ -613,48 +582,40 @@ static void bind_display(struct uterm_video *video, drmModeRes *res, drmModeConn
 	current_crtc = get_current_crtc(vdrm->fd, conn->encoder_id);
 
 	for (i = 0; i < conn->count_modes; ++i) {
-		ret = mode_new(&mode, &uterm_drm_mode_ops);
-		if (ret)
+		mode = mode_new(&conn->modes[i]);
+		if (!mode)
 			continue;
 
-		uterm_drm_mode_set(mode, &conn->modes[i]);
-
-		ret = uterm_mode_bind(mode, disp);
-		if (ret) {
-			uterm_mode_unref(mode);
-			continue;
-		}
+		shl_dlist_link_tail(&ddrm->modes, &mode->list);
 
 		/* TODO: more sophisticated default-mode selection */
-		if (!disp->default_mode)
-			disp->default_mode = mode;
+		if (!ddrm->default_mode)
+			ddrm->default_mode = mode;
 
 		/* Save the original KMS mode for later use */
 		if (current_crtc &&
 		    memcmp(&conn->modes[i], &current_crtc->mode, sizeof(conn->modes[i])) == 0)
-			disp->original_mode = mode;
+			ddrm->original_mode = mode;
 
 		if (video->desired_width != 0 && video->desired_height != 0 &&
-		    mode->ops->get_width(mode) == video->desired_width &&
-		    mode->ops->get_height(mode) == video->desired_height)
-			disp->desired_mode = mode;
-
-		uterm_mode_unref(mode);
+		    mode->info.hdisplay == video->desired_width &&
+		    mode->info.vdisplay == video->desired_height)
+			ddrm->desired_mode = mode;
 	}
 	if (current_crtc)
 		drmModeFreeCrtc(current_crtc);
 
-	if (!disp->desired_mode) {
-		disp->desired_mode = disp->default_mode;
+	if (!ddrm->desired_mode) {
+		ddrm->desired_mode = ddrm->default_mode;
 	}
 
-	log_debug("Default mode %dx%d", disp->default_mode->ops->get_width(disp->default_mode),
-		  disp->default_mode->ops->get_height(disp->default_mode));
+	log_debug("Default mode %dx%d", ddrm->default_mode->info.hdisplay,
+		  ddrm->default_mode->info.vdisplay);
 
-	log_debug("Desired mode %dx%d", disp->desired_mode->ops->get_width(disp->desired_mode),
-		  disp->desired_mode->ops->get_height(disp->desired_mode));
+	log_debug("Desired mode %dx%d", ddrm->desired_mode->info.hdisplay,
+		  ddrm->desired_mode->info.vdisplay);
 
-	if (shl_dlist_empty(&disp->modes)) {
+	if (shl_dlist_empty(&ddrm->modes)) {
 		log_warn("no valid mode for display found");
 		ret = -EFAULT;
 		goto err_unref;

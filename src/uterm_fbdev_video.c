@@ -44,51 +44,6 @@
 
 #define LOG_SUBSYSTEM "video_fbdev"
 
-static int mode_init(struct uterm_mode *mode)
-{
-	struct fbdev_mode *fbdev;
-
-	fbdev = malloc(sizeof(*fbdev));
-	if (!fbdev)
-		return -ENOMEM;
-	memset(fbdev, 0, sizeof(*fbdev));
-	mode->data = fbdev;
-
-	return 0;
-}
-
-static void mode_destroy(struct uterm_mode *mode)
-{
-	free(mode->data);
-}
-
-static const char *mode_get_name(const struct uterm_mode *mode)
-{
-	return "<default>";
-}
-
-static unsigned int mode_get_width(const struct uterm_mode *mode)
-{
-	struct fbdev_mode *fbdev = mode->data;
-
-	return fbdev->width;
-}
-
-static unsigned int mode_get_height(const struct uterm_mode *mode)
-{
-	struct fbdev_mode *fbdev = mode->data;
-
-	return fbdev->height;
-}
-
-static const struct mode_ops fbdev_mode_ops = {
-	.init = mode_init,
-	.destroy = mode_destroy,
-	.get_name = mode_get_name,
-	.get_width = mode_get_width,
-	.get_height = mode_get_height,
-};
-
 static int display_schedule_vblank_timer(struct fbdev_display *fbdev)
 {
 	int ret;
@@ -176,12 +131,10 @@ static int refresh_info(struct uterm_display *disp)
 	return 0;
 }
 
-static int display_activate_force(struct uterm_display *disp, struct uterm_mode *mode, bool force)
+static int display_activate_force(struct uterm_display *disp, bool force)
 {
 	static const char depths[] = {32, 24, 16, 0};
 	struct fbdev_display *dfb = disp->data;
-	struct uterm_mode *m;
-	struct fbdev_mode *mfb;
 	struct fb_var_screeninfo *vinfo;
 	struct fb_fix_screeninfo *finfo;
 	int ret, i;
@@ -191,13 +144,6 @@ static int display_activate_force(struct uterm_display *disp, struct uterm_mode 
 
 	if (!force && (disp->flags & DISPLAY_ONLINE))
 		return 0;
-
-	/* TODO: We do not support explicit modesetting in fbdev, so we require
-	 * @mode to be NULL. You can still switch modes via "fbset" on the
-	 * console and then restart the app. It will automatically adapt to the
-	 * new mode. The only values changed here are bpp and color mode. */
-	if (mode)
-		return -EINVAL;
 
 	dfb->fd = open(dfb->node, O_RDWR | O_CLOEXEC | O_NONBLOCK);
 	if (dfb->fd < 0) {
@@ -376,39 +322,20 @@ static int display_activate_force(struct uterm_display *disp, struct uterm_mode 
 
 	/* TODO: make dithering configurable */
 	disp->flags |= DISPLAY_DITHERING;
-
-	if (disp->current_mode) {
-		m = disp->current_mode;
-	} else {
-		ret = mode_new(&m, &fbdev_mode_ops);
-		if (ret)
-			goto err_map;
-		ret = uterm_mode_bind(m, disp);
-		if (ret) {
-			uterm_mode_unref(m);
-			goto err_map;
-		}
-		disp->current_mode = m;
-		uterm_mode_unref(m);
-	}
-
-	mfb = m->data;
-	mfb->width = dfb->xres;
-	mfb->height = dfb->yres;
+	disp->width = dfb->xres;
+	disp->height = dfb->yres;
 
 	disp->flags |= DISPLAY_ONLINE;
 	return 0;
 
-err_map:
-	munmap(dfb->map, dfb->len);
 err_close:
 	close(dfb->fd);
 	return ret;
 }
 
-static int display_activate(struct uterm_display *disp, struct uterm_mode *mode)
+static int display_activate(struct uterm_display *disp)
 {
-	return display_activate_force(disp, mode, false);
+	return display_activate_force(disp, false);
 }
 
 static void display_deactivate_force(struct uterm_display *disp, bool force)
@@ -424,8 +351,8 @@ static void display_deactivate_force(struct uterm_display *disp, bool force)
 		dfb->map = NULL;
 	}
 	if (!force) {
-		uterm_mode_unbind(disp->current_mode);
-		disp->current_mode = NULL;
+		disp->width = 0;
+		disp->height = 0;
 		disp->flags &= ~DISPLAY_ONLINE;
 	}
 }
@@ -650,7 +577,7 @@ static int video_wake_up(struct uterm_video *video)
 		if (!display_is_online(iter))
 			continue;
 
-		ret = display_activate_force(iter, NULL, true);
+		ret = display_activate_force(iter, true);
 		if (ret)
 			return ret;
 

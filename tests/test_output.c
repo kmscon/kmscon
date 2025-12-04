@@ -66,13 +66,12 @@ static int blit_outputs(struct uterm_video *video)
 {
 	struct uterm_display *iter;
 	int j, ret;
-	struct uterm_mode *mode;
 
 	j = 0;
 	iter = uterm_video_get_displays(video);
 	for (; iter; iter = uterm_display_next(iter)) {
 		log_notice("Activating display %d %p...", j, iter);
-		ret = uterm_display_activate(iter, NULL);
+		ret = uterm_display_activate(iter);
 		if (ret)
 			log_err("Cannot activate display %d: %d", j, ret);
 		else
@@ -90,9 +89,9 @@ static int blit_outputs(struct uterm_video *video)
 		if (uterm_display_get_state(iter) != UTERM_DISPLAY_ACTIVE)
 			continue;
 
-		mode = uterm_display_get_current(iter);
-		ret = uterm_display_fill(iter, 0xff, 0xff, 0xff, 0, 0, uterm_mode_get_width(mode),
-					 uterm_mode_get_height(mode));
+		ret = uterm_display_fill(iter, 0xff, 0xff, 0xff, 0, 0,
+					 uterm_display_get_width(iter),
+					 uterm_display_get_height(iter));
 		if (ret) {
 			log_err("cannot fill framebuffer");
 			continue;
@@ -117,7 +116,6 @@ static int blit_outputs(struct uterm_video *video)
 static int list_outputs(struct uterm_video *video)
 {
 	struct uterm_display *iter;
-	struct uterm_mode *cur, *mode;
 	int i;
 
 	log_notice("List of Outputs:");
@@ -125,18 +123,8 @@ static int list_outputs(struct uterm_video *video)
 	i = 0;
 	iter = uterm_video_get_displays(video);
 	for (; iter; iter = uterm_display_next(iter)) {
-		cur = uterm_display_get_current(iter);
-
 		log_notice("Output %d:", i++);
 		log_notice("  active: %d", uterm_display_get_state(iter));
-		log_notice("  has current: %s", cur ? "yes" : "no");
-
-		mode = uterm_display_get_modes(iter);
-		for (; mode; mode = uterm_mode_next(mode)) {
-			log_notice("  Mode '%s':", uterm_mode_get_name(mode));
-			log_notice("    x: %u", uterm_mode_get_width(mode));
-			log_notice("    y: %u", uterm_mode_get_height(mode));
-		}
 	}
 
 	log_notice("End of Output list");
@@ -218,13 +206,13 @@ int main(int argc, char **argv)
 	log_notice("Creating video object using %s...", node);
 
 	ret = uterm_video_new(&video, eloop, node, mode, output_conf.desired_width,
-			      output_conf.desired_height);
+			      output_conf.desired_height, false);
 	if (ret) {
 		if (!output_conf.fbdev) {
 			log_notice("cannot create drm device; trying drm2d mode");
 			ret = uterm_video_new(&video, eloop, node, "drm2d",
-					      output_conf.desired_width,
-					      output_conf.desired_height);
+					      output_conf.desired_width, output_conf.desired_height,
+					      false);
 			if (ret)
 				goto err_exit;
 		} else {

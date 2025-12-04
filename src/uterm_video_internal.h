@@ -39,18 +39,10 @@
 
 /* backend-operations */
 
-struct mode_ops {
-	int (*init)(struct uterm_mode *mode);
-	void (*destroy)(struct uterm_mode *mode);
-	const char *(*get_name)(const struct uterm_mode *mode);
-	unsigned int (*get_width)(const struct uterm_mode *mode);
-	unsigned int (*get_height)(const struct uterm_mode *mode);
-};
-
 struct display_ops {
 	int (*init)(struct uterm_display *display);
 	void (*destroy)(struct uterm_display *display);
-	int (*activate)(struct uterm_display *disp, struct uterm_mode *mode);
+	int (*activate)(struct uterm_display *disp);
 	void (*deactivate)(struct uterm_display *disp);
 	int (*set_dpms)(struct uterm_display *disp, int state);
 	int (*use)(struct uterm_display *disp, bool *opengl);
@@ -78,21 +70,6 @@ struct uterm_video_module {
 
 #define VIDEO_CALL(func, els, ...) (func ? func(__VA_ARGS__) : els)
 
-/* uterm_mode */
-
-struct uterm_mode {
-	struct shl_dlist list;
-	unsigned long ref;
-	struct uterm_display *disp;
-
-	const struct mode_ops *ops;
-	void *data;
-};
-
-int mode_new(struct uterm_mode **out, const struct mode_ops *ops);
-int uterm_mode_bind(struct uterm_mode *mode, struct uterm_display *disp);
-void uterm_mode_unbind(struct uterm_mode *mode);
-
 /* uterm_display */
 
 #define DISPLAY_ONLINE 0x01
@@ -107,14 +84,12 @@ struct uterm_display {
 	struct shl_dlist list;
 	unsigned long ref;
 	unsigned int flags;
+	unsigned int width;
+	unsigned int height;
+
 	struct uterm_video *video;
 
 	struct shl_hook *hook;
-	struct shl_dlist modes;
-	struct uterm_mode *default_mode;
-	struct uterm_mode *desired_mode;
-	struct uterm_mode *current_mode;
-	struct uterm_mode *original_mode;
 	int dpms;
 
 	const struct display_ops *ops;
@@ -149,6 +124,7 @@ struct uterm_video {
 	struct shl_dlist displays;
 	struct shl_hook *hook;
 
+	bool use_original;
 	unsigned int desired_width;
 	unsigned int desired_height;
 

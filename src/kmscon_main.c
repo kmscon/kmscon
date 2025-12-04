@@ -366,13 +366,14 @@ static int app_seat_add_video(struct app_seat *seat, unsigned int type, unsigned
 		}
 	}
 	ret = uterm_video_new(&vid->video, seat->app->eloop, node, backend, desired_width,
-			      desired_height);
+			      desired_height, seat->conf->use_original_mode);
 	if (ret) {
 		if (backend == be_drm3d) {
 			log_info("cannot create drm3d device %s on seat %s (%d); trying drm2d mode",
 				 vid->node, seat->name, ret);
 			ret = uterm_video_new(&vid->video, seat->app->eloop, node, be_drm2d,
-					      desired_width, desired_height);
+					      desired_width, desired_height,
+					      seat->conf->use_original_mode);
 			if (ret)
 				goto err_node;
 		} else {

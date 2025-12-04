@@ -82,8 +82,8 @@ static int init_rb(struct uterm_display *disp, struct uterm_drm2d_rb *rb)
 	struct drm_mode_map_dumb mreq;
 
 	memset(&req, 0, sizeof(req));
-	req.width = uterm_drm_mode_get_width(disp->current_mode);
-	req.height = uterm_drm_mode_get_height(disp->current_mode);
+	req.width = disp->width;
+	req.height = disp->height;
 	req.bpp = 32;
 	req.flags = 0;
 
@@ -152,7 +152,7 @@ static void destroy_rb(struct uterm_display *disp, struct uterm_drm2d_rb *rb)
 		log_warning("cannot destroy dumb buffer (%d/%d): %m", ret, errno);
 }
 
-static int display_activate(struct uterm_display *disp, struct uterm_mode *mode)
+static int display_activate(struct uterm_display *disp)
 {
 	struct uterm_video *video = disp->video;
 	struct uterm_drm_video *vdrm = video->data;
@@ -161,11 +161,14 @@ static int display_activate(struct uterm_display *disp, struct uterm_mode *mode)
 	int ret;
 	drmModeModeInfo *minfo;
 
-	if (!mode)
-		return -EINVAL;
+	if (video->use_original)
+		ddrm->current_mode = ddrm->original_mode;
+	else
+		ddrm->current_mode = ddrm->desired_mode;
+	minfo = &ddrm->current_mode->info;
+	disp->width = minfo->hdisplay;
+	disp->height = minfo->vdisplay;
 
-	minfo = uterm_drm_mode_get_info(mode);
-	;
 	log_info("activating display %p to %ux%u", disp, minfo->hdisplay, minfo->vdisplay);
 
 	ret = uterm_drm_display_activate(disp, vdrm->fd);
@@ -173,7 +176,6 @@ static int display_activate(struct uterm_display *disp, struct uterm_mode *mode)
 		return ret;
 
 	d2d->current_rb = 0;
-	disp->current_mode = mode;
 
 	ret = init_rb(disp, &d2d->rb[0]);
 	if (ret)
@@ -186,8 +188,9 @@ static int display_activate(struct uterm_display *disp, struct uterm_mode *mode)
 	ret = drmModeSetCrtc(vdrm->fd, ddrm->crtc_id, d2d->rb[0].fb, 0, 0, &ddrm->conn_id, 1,
 			     minfo);
 
-	if (ret && mode == disp->desired_mode && mode != disp->default_mode) {
-		mode = disp->desired_mode = disp->default_mode;
+	if (ret && ddrm->current_mode == ddrm->desired_mode &&
+	    ddrm->current_mode != ddrm->default_mode) {
+		ddrm->current_mode = ddrm->desired_mode = ddrm->default_mode;
 		ret = -EAGAIN;
 		goto err_fb;
 	} else if (ret) {
@@ -204,7 +207,8 @@ err_fb:
 err_rb:
 	destroy_rb(disp, &d2d->rb[0]);
 err_saved:
-	disp->current_mode = NULL;
+	disp->width = 0;
+	disp->height = 0;
 	uterm_drm_display_deactivate(disp, vdrm->fd);
 	return ret;
 }
@@ -221,7 +225,8 @@ static void display_deactivate(struct uterm_display *disp)
 
 	destroy_rb(disp, &d2d->rb[1]);
 	destroy_rb(disp, &d2d->rb[0]);
-	disp->current_mode = NULL;
+	disp->width = 0;
+	disp->height = 0;
 }
 
 static int display_use(struct uterm_display *disp, bool *opengl)
