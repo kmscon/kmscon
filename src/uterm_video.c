@@ -179,39 +179,6 @@ unsigned int uterm_mode_get_height(const struct uterm_mode *mode)
 	return VIDEO_CALL(mode->ops->get_height, 0, mode);
 }
 
-int display_schedule_vblank_timer(struct uterm_display *disp)
-{
-	int ret;
-
-	if (disp->vblank_scheduled)
-		return 0;
-
-	ret = ev_timer_update(disp->vblank_timer, &disp->vblank_spec);
-	if (ret)
-		return ret;
-
-	disp->vblank_scheduled = true;
-	return 0;
-}
-
-void display_set_vblank_timer(struct uterm_display *disp, unsigned int msecs)
-{
-	if (msecs >= 1000)
-		msecs = 999;
-	else if (msecs == 0)
-		msecs = 15;
-
-	disp->vblank_spec.it_value.tv_nsec = msecs * 1000 * 1000;
-}
-
-static void display_vblank_timer_event(struct ev_timer *timer, uint64_t expirations, void *data)
-{
-	struct uterm_display *disp = data;
-
-	disp->vblank_scheduled = false;
-	DISPLAY_CB(disp, UTERM_PAGE_FLIP);
-}
-
 int display_new(struct uterm_display **out, const struct display_ops *ops)
 {
 	struct uterm_display *disp;
@@ -234,21 +201,13 @@ int display_new(struct uterm_display **out, const struct display_ops *ops)
 	if (ret)
 		goto err_free;
 
-	disp->vblank_spec.it_value.tv_nsec = 15 * 1000 * 1000;
-
-	ret = ev_timer_new(&disp->vblank_timer, NULL, display_vblank_timer_event, disp, NULL, NULL);
-	if (ret)
-		goto err_hook;
-
 	ret = VIDEO_CALL(disp->ops->init, 0, disp);
 	if (ret)
-		goto err_timer;
+		goto err_hook;
 
 	*out = disp;
 	return 0;
 
-err_timer:
-	ev_timer_unref(disp->vblank_timer);
 err_hook:
 	shl_hook_free(disp->hook);
 err_free:
@@ -281,7 +240,6 @@ void uterm_display_unref(struct uterm_display *disp)
 	}
 
 	VIDEO_CALL(disp->ops->destroy, 0, disp);
-	ev_timer_unref(disp->vblank_timer);
 	shl_hook_free(disp->hook);
 	free(disp);
 }
@@ -289,14 +247,8 @@ void uterm_display_unref(struct uterm_display *disp)
 SHL_EXPORT
 int uterm_display_bind(struct uterm_display *disp, struct uterm_video *video)
 {
-	int ret;
-
 	if (!disp || !video || disp->video)
 		return -EINVAL;
-
-	ret = ev_eloop_add_timer(video->eloop, disp->vblank_timer);
-	if (ret)
-		return ret;
 
 	shl_dlist_link_tail(&video->displays, &disp->list);
 	disp->video = video;
@@ -316,7 +268,6 @@ void uterm_display_unbind(struct uterm_display *disp)
 	uterm_display_deactivate(disp);
 	disp->video = NULL;
 	shl_dlist_unlink(&disp->list);
-	ev_eloop_rm_timer(disp->vblank_timer);
 	uterm_display_unref(disp);
 }
 
@@ -480,7 +431,7 @@ bool uterm_display_is_swapping(struct uterm_display *disp)
 	if (!disp)
 		return false;
 
-	return disp->vblank_scheduled || (disp->flags & DISPLAY_VSYNC);
+	return VIDEO_CALL(disp->ops->is_swapping, 0, disp);
 }
 
 SHL_EXPORT

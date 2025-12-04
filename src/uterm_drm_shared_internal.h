@@ -79,6 +79,7 @@ void uterm_drm_display_deactivate(struct uterm_display *disp, int fd);
 int uterm_drm_display_set_dpms(struct uterm_display *disp, int state);
 int uterm_drm_display_wait_pflip(struct uterm_display *disp);
 int uterm_drm_display_swap(struct uterm_display *disp, uint32_t fb, bool immediate);
+bool uterm_drm_is_swapping(struct uterm_display *disp);
 
 static inline void *uterm_drm_display_get_data(struct uterm_display *disp)
 {

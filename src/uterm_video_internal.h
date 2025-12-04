@@ -55,6 +55,7 @@ struct display_ops {
 	int (*set_dpms)(struct uterm_display *disp, int state);
 	int (*use)(struct uterm_display *disp, bool *opengl);
 	int (*swap)(struct uterm_display *disp, bool immediate);
+	bool (*is_swapping)(struct uterm_display *disp);
 	int (*fake_blendv)(struct uterm_display *disp, const struct uterm_video_blend_req *req,
 			   size_t num);
 	int (*fill)(struct uterm_display *disp, uint8_t r, uint8_t g, uint8_t b, unsigned int x,
@@ -116,17 +117,11 @@ struct uterm_display {
 	struct uterm_mode *original_mode;
 	int dpms;
 
-	bool vblank_scheduled;
-	struct itimerspec vblank_spec;
-	struct ev_timer *vblank_timer;
-
 	const struct display_ops *ops;
 	void *data;
 };
 
 int display_new(struct uterm_display **out, const struct display_ops *ops);
-void display_set_vblank_timer(struct uterm_display *disp, unsigned int msecs);
-int display_schedule_vblank_timer(struct uterm_display *disp);
 int uterm_display_bind(struct uterm_display *disp, struct uterm_video *video);
 void uterm_display_unbind(struct uterm_display *disp);
 

@@ -370,6 +370,11 @@ int uterm_drm_display_swap(struct uterm_display *disp, uint32_t fb, bool immedia
 	return 0;
 }
 
+bool uterm_drm_is_swapping(struct uterm_display *disp)
+{
+	return (disp->flags & DISPLAY_VSYNC) != 0;
+}
+
 static void uterm_drm_display_pflip(struct uterm_display *disp)
 {
 	struct uterm_drm_video *vdrm = disp->video->data;

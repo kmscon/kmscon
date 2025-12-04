@@ -89,9 +89,44 @@ static const struct mode_ops fbdev_mode_ops = {
 	.get_height = mode_get_height,
 };
 
+static int display_schedule_vblank_timer(struct fbdev_display *fbdev)
+{
+	int ret;
+
+	if (fbdev->vblank_scheduled)
+		return 0;
+
+	ret = ev_timer_update(fbdev->vblank_timer, &fbdev->vblank_spec);
+	if (ret)
+		return ret;
+
+	fbdev->vblank_scheduled = true;
+	return 0;
+}
+
+static void display_set_vblank_timer(struct fbdev_display *fbdev, unsigned int msecs)
+{
+	if (msecs >= 1000)
+		msecs = 999;
+	else if (msecs == 0)
+		msecs = 15;
+
+	fbdev->vblank_spec.it_value.tv_nsec = msecs * 1000 * 1000;
+}
+
+static void display_vblank_timer_event(struct ev_timer *timer, uint64_t expirations, void *data)
+{
+	struct uterm_display *disp = data;
+	struct fbdev_display *fbdev = disp->data;
+
+	fbdev->vblank_scheduled = false;
+	DISPLAY_CB(disp, UTERM_PAGE_FLIP);
+}
+
 static int display_init(struct uterm_display *disp)
 {
 	struct fbdev_display *fbdev;
+	int ret;
 
 	fbdev = malloc(sizeof(*fbdev));
 	if (!fbdev)
@@ -100,11 +135,24 @@ static int display_init(struct uterm_display *disp)
 	disp->data = fbdev;
 	disp->dpms = UTERM_DPMS_UNKNOWN;
 
+	fbdev->vblank_spec.it_value.tv_nsec = 15 * 1000 * 1000;
+	ret = ev_timer_new(&fbdev->vblank_timer, NULL, display_vblank_timer_event, disp, NULL,
+			   NULL);
+	if (ret)
+		goto err_free;
+
 	return 0;
+
+err_free:
+	free(fbdev);
+	return ret;
 }
 
 static void display_destroy(struct uterm_display *disp)
 {
+	struct fbdev_display *fbdev = disp->data;
+	ev_eloop_rm_timer(fbdev->vblank_timer);
+	ev_timer_unref(fbdev->vblank_timer);
 	free(disp->data);
 }
 
@@ -284,7 +332,7 @@ static int display_activate_force(struct uterm_display *disp, struct uterm_mode 
 	}
 
 	val = 1000000 / dfb->rate;
-	display_set_vblank_timer(disp, val);
+	display_set_vblank_timer(dfb, val);
 	log_debug("vblank timer: %u ms, monitor refresh rate: %u Hz", val, dfb->rate / 1000);
 
 	len = finfo->line_length * vinfo->yres;
@@ -443,7 +491,7 @@ static int display_swap(struct uterm_display *disp, bool immediate)
 	if (!(disp->flags & DISPLAY_DBUF)) {
 		if (immediate)
 			return 0;
-		return display_schedule_vblank_timer(disp);
+		return display_schedule_vblank_timer(dfb);
 	}
 
 	vinfo = &dfb->vinfo;
@@ -464,7 +512,14 @@ static int display_swap(struct uterm_display *disp, bool immediate)
 	}
 
 	dfb->bufid ^= 1;
-	return display_schedule_vblank_timer(disp);
+	return display_schedule_vblank_timer(dfb);
+}
+
+static bool display_is_swapping(struct uterm_display *disp)
+{
+	struct fbdev_display *fbdev = disp->data;
+
+	return fbdev->vblank_scheduled;
 }
 
 static const struct display_ops fbdev_display_ops = {
@@ -475,6 +530,7 @@ static const struct display_ops fbdev_display_ops = {
 	.set_dpms = display_set_dpms,
 	.use = display_use,
 	.swap = display_swap,
+	.is_swapping = display_is_swapping,
 	.fake_blendv = uterm_fbdev_display_fake_blendv,
 	.fill = uterm_fbdev_display_fill,
 };
@@ -498,10 +554,18 @@ static void intro_idle_event(struct ev_eloop *eloop, void *unused, void *data)
 
 	dfb = disp->data;
 	dfb->node = vfb->node;
+
+	ret = ev_eloop_add_timer(video->eloop, dfb->vblank_timer);
+	if (ret) {
+		log_error("cannot add fbdev timer: %d", ret);
+		return;
+	}
+
 	ret = uterm_display_bind(disp, video);
 	if (ret) {
 		log_error("cannot bind fbdev display: %d", ret);
 		uterm_display_unref(disp);
+		ev_eloop_rm_timer(dfb->vblank_timer);
 		return;
 	}
 

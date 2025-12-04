@@ -256,6 +256,7 @@ static const struct display_ops drm2d_display_ops = {
 	.set_dpms = uterm_drm_display_set_dpms,
 	.use = display_use,
 	.swap = display_swap,
+	.is_swapping = uterm_drm_is_swapping,
 	.fake_blendv = uterm_drm2d_display_fake_blendv,
 	.fill = uterm_drm2d_display_fill,
 };

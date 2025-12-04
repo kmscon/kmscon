@@ -67,6 +67,10 @@ struct fbdev_display {
 	int_fast32_t dither_r;
 	int_fast32_t dither_g;
 	int_fast32_t dither_b;
+
+	bool vblank_scheduled;
+	struct itimerspec vblank_spec;
+	struct ev_timer *vblank_timer;
 };
 
 struct fbdev_video {
