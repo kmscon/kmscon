@@ -7,7 +7,8 @@ fi
 
 # Store current tty number
 kms_tty=
-if [ -f /sys/class/tty/tty0/active ]; then
+active_tty_file=/sys/class/tty/tty0/active
+if [ -f "$active_tty_file" ]; then
     read -r kms_tty < /sys/class/tty/tty0/active
 fi
 
@@ -21,7 +22,7 @@ fi
 
 # If the current tty has changed, wait until the user switches back.
 if [ -n "${kms_tty}" ]; then
-    while { read -r check_kms_tty; [ "${check_kms_tty}" != "${kms_tty}" ]; }; do
+    while { read -r check_kms_tty < "$active_tty_file"; [ "${check_kms_tty}" != "${kms_tty}" ]; }; do
         sleep 1
     done
 fi
