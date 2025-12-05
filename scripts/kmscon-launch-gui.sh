@@ -13,8 +13,8 @@ if [ -f "$active_tty_file" ]; then
 fi
 
 case "${TERM_PROGRAM}" in
-tmux) printf "\033Ptmux;\033\033]setBackground\a\033\\" ;;
-*) printf "\033]setBackground\a" ;;
+tmux) printf '\033Ptmux;\033\033]setBackground\a\033\\' ;;
+*) printf '\033]setBackground\a' ;;
 esac
 
 "$@"
@@ -34,6 +34,6 @@ if [ -n "${kms_tty}" ]; then
 fi
 
 case "${TERM_PROGRAM}" in
-tmux) printf "\033Ptmux;\033\033]setForeground\a\033\\" ;;
-*) printf "\033]setForeground\a" ;;
+tmux) printf '\033Ptmux;\033\033]setForeground\a\033\\' ;;
+*) printf '\033]setForeground\a' ;;
 esac
