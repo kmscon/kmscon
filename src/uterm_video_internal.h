@@ -39,24 +39,15 @@
 
 /* backend-operations */
 
-struct mode_ops {
-	int (*init)(struct uterm_mode *mode);
-	void (*destroy)(struct uterm_mode *mode);
-	const char *(*get_name)(const struct uterm_mode *mode);
-	unsigned int (*get_width)(const struct uterm_mode *mode);
-	unsigned int (*get_height)(const struct uterm_mode *mode);
-};
-
 struct display_ops {
 	int (*init)(struct uterm_display *display);
 	void (*destroy)(struct uterm_display *display);
-	int (*activate)(struct uterm_display *disp, struct uterm_mode *mode);
+	int (*activate)(struct uterm_display *disp);
 	void (*deactivate)(struct uterm_display *disp);
 	int (*set_dpms)(struct uterm_display *disp, int state);
 	int (*use)(struct uterm_display *disp, bool *opengl);
-	int (*get_buffers)(struct uterm_display *disp, struct uterm_video_buffer *buffer,
-			   unsigned int formats);
 	int (*swap)(struct uterm_display *disp, bool immediate);
+	bool (*is_swapping)(struct uterm_display *disp);
 	int (*fake_blendv)(struct uterm_display *disp, const struct uterm_video_blend_req *req,
 			   size_t num);
 	int (*fill)(struct uterm_display *disp, uint8_t r, uint8_t g, uint8_t b, unsigned int x,
@@ -66,7 +57,6 @@ struct display_ops {
 struct video_ops {
 	int (*init)(struct uterm_video *video, const char *node);
 	void (*destroy)(struct uterm_video *video);
-	void (*segfault)(struct uterm_video *video);
 	int (*poll)(struct uterm_video *video);
 	void (*sleep)(struct uterm_video *video);
 	int (*wake_up)(struct uterm_video *video);
@@ -79,21 +69,6 @@ struct uterm_video_module {
 };
 
 #define VIDEO_CALL(func, els, ...) (func ? func(__VA_ARGS__) : els)
-
-/* uterm_mode */
-
-struct uterm_mode {
-	struct shl_dlist list;
-	unsigned long ref;
-	struct uterm_display *disp;
-
-	const struct mode_ops *ops;
-	void *data;
-};
-
-int mode_new(struct uterm_mode **out, const struct mode_ops *ops);
-int uterm_mode_bind(struct uterm_mode *mode, struct uterm_display *disp);
-void uterm_mode_unbind(struct uterm_mode *mode);
 
 /* uterm_display */
 
@@ -109,27 +84,19 @@ struct uterm_display {
 	struct shl_dlist list;
 	unsigned long ref;
 	unsigned int flags;
+	unsigned int width;
+	unsigned int height;
+
 	struct uterm_video *video;
 
 	struct shl_hook *hook;
-	struct shl_dlist modes;
-	struct uterm_mode *default_mode;
-	struct uterm_mode *desired_mode;
-	struct uterm_mode *current_mode;
-	struct uterm_mode *original_mode;
 	int dpms;
-
-	bool vblank_scheduled;
-	struct itimerspec vblank_spec;
-	struct ev_timer *vblank_timer;
 
 	const struct display_ops *ops;
 	void *data;
 };
 
 int display_new(struct uterm_display **out, const struct display_ops *ops);
-void display_set_vblank_timer(struct uterm_display *disp, unsigned int msecs);
-int display_schedule_vblank_timer(struct uterm_display *disp);
 int uterm_display_bind(struct uterm_display *disp, struct uterm_video *video);
 void uterm_display_unbind(struct uterm_display *disp);
 
@@ -157,6 +124,7 @@ struct uterm_video {
 	struct shl_dlist displays;
 	struct shl_hook *hook;
 
+	bool use_original;
 	unsigned int desired_width;
 	unsigned int desired_height;
 

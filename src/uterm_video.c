@@ -72,146 +72,6 @@ const char *uterm_dpms_to_name(int dpms)
 	}
 }
 
-SHL_EXPORT
-int mode_new(struct uterm_mode **out, const struct mode_ops *ops)
-{
-	struct uterm_mode *mode;
-	int ret;
-
-	if (!out || !ops)
-		return -EINVAL;
-
-	mode = malloc(sizeof(*mode));
-	if (!mode)
-		return -ENOMEM;
-	memset(mode, 0, sizeof(*mode));
-	mode->ref = 1;
-	mode->ops = ops;
-
-	ret = VIDEO_CALL(mode->ops->init, 0, mode);
-	if (ret)
-		goto err_free;
-
-	*out = mode;
-	return 0;
-
-err_free:
-	free(mode);
-	return ret;
-}
-
-SHL_EXPORT
-void uterm_mode_ref(struct uterm_mode *mode)
-{
-	if (!mode || !mode->ref)
-		return;
-
-	++mode->ref;
-}
-
-SHL_EXPORT
-void uterm_mode_unref(struct uterm_mode *mode)
-{
-	if (!mode || !mode->ref || --mode->ref)
-		return;
-
-	VIDEO_CALL(mode->ops->destroy, 0, mode);
-	free(mode);
-}
-
-SHL_EXPORT
-int uterm_mode_bind(struct uterm_mode *mode, struct uterm_display *disp)
-{
-	if (!mode || !disp || mode->disp)
-		return -EINVAL;
-
-	mode->disp = disp;
-	shl_dlist_link_tail(&disp->modes, &mode->list);
-	uterm_mode_ref(mode);
-
-	return 0;
-}
-
-SHL_EXPORT
-void uterm_mode_unbind(struct uterm_mode *mode)
-{
-	if (!mode)
-		return;
-
-	mode->disp = NULL;
-	shl_dlist_unlink(&mode->list);
-	uterm_mode_unref(mode);
-}
-
-SHL_EXPORT
-struct uterm_mode *uterm_mode_next(struct uterm_mode *mode)
-{
-	if (!mode || mode->list.next == &mode->disp->modes)
-		return NULL;
-
-	return shl_dlist_entry(mode->list.next, struct uterm_mode, list);
-}
-
-SHL_EXPORT
-const char *uterm_mode_get_name(const struct uterm_mode *mode)
-{
-	if (!mode)
-		return NULL;
-
-	return VIDEO_CALL(mode->ops->get_name, NULL, mode);
-}
-
-SHL_EXPORT
-unsigned int uterm_mode_get_width(const struct uterm_mode *mode)
-{
-	if (!mode)
-		return 0;
-
-	return VIDEO_CALL(mode->ops->get_width, 0, mode);
-}
-
-SHL_EXPORT
-unsigned int uterm_mode_get_height(const struct uterm_mode *mode)
-{
-	if (!mode)
-		return 0;
-
-	return VIDEO_CALL(mode->ops->get_height, 0, mode);
-}
-
-int display_schedule_vblank_timer(struct uterm_display *disp)
-{
-	int ret;
-
-	if (disp->vblank_scheduled)
-		return 0;
-
-	ret = ev_timer_update(disp->vblank_timer, &disp->vblank_spec);
-	if (ret)
-		return ret;
-
-	disp->vblank_scheduled = true;
-	return 0;
-}
-
-void display_set_vblank_timer(struct uterm_display *disp, unsigned int msecs)
-{
-	if (msecs >= 1000)
-		msecs = 999;
-	else if (msecs == 0)
-		msecs = 15;
-
-	disp->vblank_spec.it_value.tv_nsec = msecs * 1000 * 1000;
-}
-
-static void display_vblank_timer_event(struct ev_timer *timer, uint64_t expirations, void *data)
-{
-	struct uterm_display *disp = data;
-
-	disp->vblank_scheduled = false;
-	DISPLAY_CB(disp, UTERM_PAGE_FLIP);
-}
-
 int display_new(struct uterm_display **out, const struct display_ops *ops)
 {
 	struct uterm_display *disp;
@@ -226,29 +86,19 @@ int display_new(struct uterm_display **out, const struct display_ops *ops)
 	memset(disp, 0, sizeof(*disp));
 	disp->ref = 1;
 	disp->ops = ops;
-	shl_dlist_init(&disp->modes);
-
 	log_info("new display %p", disp);
 
 	ret = shl_hook_new(&disp->hook);
 	if (ret)
 		goto err_free;
 
-	disp->vblank_spec.it_value.tv_nsec = 15 * 1000 * 1000;
-
-	ret = ev_timer_new(&disp->vblank_timer, NULL, display_vblank_timer_event, disp, NULL, NULL);
-	if (ret)
-		goto err_hook;
-
 	ret = VIDEO_CALL(disp->ops->init, 0, disp);
 	if (ret)
-		goto err_timer;
+		goto err_hook;
 
 	*out = disp;
 	return 0;
 
-err_timer:
-	ev_timer_unref(disp->vblank_timer);
 err_hook:
 	shl_hook_free(disp->hook);
 err_free:
@@ -268,20 +118,12 @@ void uterm_display_ref(struct uterm_display *disp)
 SHL_EXPORT
 void uterm_display_unref(struct uterm_display *disp)
 {
-	struct uterm_mode *mode;
-
 	if (!disp || !disp->ref || --disp->ref)
 		return;
 
 	log_info("free display %p", disp);
 
-	while (!shl_dlist_empty(&disp->modes)) {
-		mode = shl_dlist_entry(disp->modes.prev, struct uterm_mode, list);
-		uterm_mode_unbind(mode);
-	}
-
 	VIDEO_CALL(disp->ops->destroy, 0, disp);
-	ev_timer_unref(disp->vblank_timer);
 	shl_hook_free(disp->hook);
 	free(disp);
 }
@@ -289,14 +131,8 @@ void uterm_display_unref(struct uterm_display *disp)
 SHL_EXPORT
 int uterm_display_bind(struct uterm_display *disp, struct uterm_video *video)
 {
-	int ret;
-
 	if (!disp || !video || disp->video)
 		return -EINVAL;
-
-	ret = ev_eloop_add_timer(video->eloop, disp->vblank_timer);
-	if (ret)
-		return ret;
 
 	shl_dlist_link_tail(&video->displays, &disp->list);
 	disp->video = video;
@@ -316,7 +152,6 @@ void uterm_display_unbind(struct uterm_display *disp)
 	uterm_display_deactivate(disp);
 	disp->video = NULL;
 	shl_dlist_unlink(&disp->list);
-	ev_eloop_rm_timer(disp->vblank_timer);
 	uterm_display_unref(disp);
 }
 
@@ -362,39 +197,21 @@ void uterm_display_unregister_cb(struct uterm_display *disp, uterm_display_cb cb
 }
 
 SHL_EXPORT
-struct uterm_mode *uterm_display_get_modes(struct uterm_display *disp)
+unsigned int uterm_display_get_width(struct uterm_display *disp)
 {
-	if (!disp || shl_dlist_empty(&disp->modes))
-		return NULL;
+	if (!disp)
+		return 0;
 
-	return shl_dlist_entry(disp->modes.next, struct uterm_mode, list);
+	return disp->width;
 }
 
 SHL_EXPORT
-struct uterm_mode *uterm_display_get_current(struct uterm_display *disp)
+unsigned int uterm_display_get_height(struct uterm_display *disp)
 {
 	if (!disp)
-		return NULL;
+		return 0;
 
-	return disp->current_mode;
-}
-
-SHL_EXPORT
-struct uterm_mode *uterm_display_get_default(struct uterm_display *disp)
-{
-	if (!disp)
-		return NULL;
-
-	return disp->default_mode;
-}
-
-SHL_EXPORT
-struct uterm_mode *uterm_display_get_original(struct uterm_display *disp)
-{
-	if (!disp)
-		return NULL;
-
-	return disp->original_mode;
+	return disp->height;
 }
 
 SHL_EXPORT
@@ -418,15 +235,12 @@ int uterm_display_get_state(struct uterm_display *disp)
 }
 
 SHL_EXPORT
-int uterm_display_activate(struct uterm_display *disp, struct uterm_mode *mode)
+int uterm_display_activate(struct uterm_display *disp)
 {
 	if (!disp || !disp->video || display_is_online(disp) || !video_is_awake(disp->video))
 		return -EINVAL;
 
-	if (!mode)
-		mode = disp->desired_mode;
-
-	return VIDEO_CALL(disp->ops->activate, 0, disp, mode);
+	return VIDEO_CALL(disp->ops->activate, 0, disp);
 }
 
 SHL_EXPORT
@@ -466,16 +280,6 @@ int uterm_display_use(struct uterm_display *disp, bool *opengl)
 }
 
 SHL_EXPORT
-int uterm_display_get_buffers(struct uterm_display *disp, struct uterm_video_buffer *buffer,
-			      unsigned int formats)
-{
-	if (!disp || !display_is_online(disp) || !buffer)
-		return -EINVAL;
-
-	return VIDEO_CALL(disp->ops->get_buffers, -EOPNOTSUPP, disp, buffer, formats);
-}
-
-SHL_EXPORT
 int uterm_display_swap(struct uterm_display *disp, bool immediate)
 {
 	if (!disp || !display_is_online(disp) || !video_is_awake(disp->video))
@@ -490,7 +294,7 @@ bool uterm_display_is_swapping(struct uterm_display *disp)
 	if (!disp)
 		return false;
 
-	return disp->vblank_scheduled || (disp->flags & DISPLAY_VSYNC);
+	return VIDEO_CALL(disp->ops->is_swapping, 0, disp);
 }
 
 SHL_EXPORT
@@ -501,30 +305,6 @@ int uterm_display_fill(struct uterm_display *disp, uint8_t r, uint8_t g, uint8_t
 		return -EINVAL;
 
 	return VIDEO_CALL(disp->ops->fill, -EOPNOTSUPP, disp, r, g, b, x, y, width, height);
-}
-
-SHL_EXPORT
-int uterm_display_fake_blend(struct uterm_display *disp, const struct uterm_video_buffer *buf,
-			     unsigned int x, unsigned int y, uint8_t fr, uint8_t fg, uint8_t fb,
-			     uint8_t br, uint8_t bg, uint8_t bb)
-{
-	struct uterm_video_blend_req req;
-
-	if (!disp || !display_is_online(disp) || !video_is_awake(disp->video))
-		return -EINVAL;
-
-	memset(&req, 0, sizeof(req));
-	req.buf = buf;
-	req.x = x;
-	req.y = y;
-	req.fr = fr;
-	req.fg = fg;
-	req.fb = fb;
-	req.br = br;
-	req.bg = bg;
-	req.bb = bb;
-
-	return VIDEO_CALL(disp->ops->fake_blendv, -EOPNOTSUPP, disp, &req, 1);
 }
 
 SHL_EXPORT
@@ -539,7 +319,8 @@ int uterm_display_fake_blendv(struct uterm_display *disp, const struct uterm_vid
 
 SHL_EXPORT
 int uterm_video_new(struct uterm_video **out, struct ev_eloop *eloop, const char *node,
-		    const char *backend, unsigned int desired_width, unsigned int desired_height)
+		    const char *backend, unsigned int desired_width, unsigned int desired_height,
+		    bool use_original)
 {
 	struct shl_register_record *record;
 	const char *name = backend ? backend : "<default>";
@@ -625,15 +406,6 @@ void uterm_video_unref(struct uterm_video *video)
 	shl_hook_free(video->hook);
 	ev_eloop_unref(video->eloop);
 	free(video);
-}
-
-SHL_EXPORT
-void uterm_video_segfault(struct uterm_video *video)
-{
-	if (!video)
-		return;
-
-	VIDEO_CALL(video->mod->ops.segfault, 0, video);
 }
 
 SHL_EXPORT

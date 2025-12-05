@@ -38,25 +38,10 @@
 
 /* drm mode */
 
-struct uterm_drm_mode {
+struct uterm_mode {
+	struct shl_dlist list;
 	drmModeModeInfo info;
 };
-
-int uterm_drm_mode_init(struct uterm_mode *mode);
-void uterm_drm_mode_destroy(struct uterm_mode *mode);
-const char *uterm_drm_mode_get_name(const struct uterm_mode *mode);
-unsigned int uterm_drm_mode_get_width(const struct uterm_mode *mode);
-unsigned int uterm_drm_mode_get_height(const struct uterm_mode *mode);
-void uterm_drm_mode_set(struct uterm_mode *mode, drmModeModeInfo *info);
-
-static inline drmModeModeInfo *uterm_drm_mode_get_info(struct uterm_mode *m)
-{
-	struct uterm_drm_mode *mode = m->data;
-
-	return &mode->info;
-}
-
-extern const struct mode_ops uterm_drm_mode_ops;
 
 /* drm dpms */
 
@@ -69,6 +54,12 @@ struct uterm_drm_display {
 	uint32_t conn_id;
 	int crtc_id;
 	drmModeCrtc *saved_crtc;
+
+	struct shl_dlist modes;
+	struct uterm_mode *default_mode;
+	struct uterm_mode *desired_mode;
+	struct uterm_mode *current_mode;
+	struct uterm_mode *original_mode;
 	void *data;
 };
 
@@ -79,6 +70,7 @@ void uterm_drm_display_deactivate(struct uterm_display *disp, int fd);
 int uterm_drm_display_set_dpms(struct uterm_display *disp, int state);
 int uterm_drm_display_wait_pflip(struct uterm_display *disp);
 int uterm_drm_display_swap(struct uterm_display *disp, uint32_t fb, bool immediate);
+bool uterm_drm_is_swapping(struct uterm_display *disp);
 
 static inline void *uterm_drm_display_get_data(struct uterm_display *disp)
 {

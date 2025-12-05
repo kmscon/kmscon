@@ -82,8 +82,8 @@ static int init_rb(struct uterm_display *disp, struct uterm_drm2d_rb *rb)
 	struct drm_mode_map_dumb mreq;
 
 	memset(&req, 0, sizeof(req));
-	req.width = uterm_drm_mode_get_width(disp->current_mode);
-	req.height = uterm_drm_mode_get_height(disp->current_mode);
+	req.width = disp->width;
+	req.height = disp->height;
 	req.bpp = 32;
 	req.flags = 0;
 
@@ -152,7 +152,7 @@ static void destroy_rb(struct uterm_display *disp, struct uterm_drm2d_rb *rb)
 		log_warning("cannot destroy dumb buffer (%d/%d): %m", ret, errno);
 }
 
-static int display_activate(struct uterm_display *disp, struct uterm_mode *mode)
+static int display_activate(struct uterm_display *disp)
 {
 	struct uterm_video *video = disp->video;
 	struct uterm_drm_video *vdrm = video->data;
@@ -161,11 +161,14 @@ static int display_activate(struct uterm_display *disp, struct uterm_mode *mode)
 	int ret;
 	drmModeModeInfo *minfo;
 
-	if (!mode)
-		return -EINVAL;
+	if (video->use_original)
+		ddrm->current_mode = ddrm->original_mode;
+	else
+		ddrm->current_mode = ddrm->desired_mode;
+	minfo = &ddrm->current_mode->info;
+	disp->width = minfo->hdisplay;
+	disp->height = minfo->vdisplay;
 
-	minfo = uterm_drm_mode_get_info(mode);
-	;
 	log_info("activating display %p to %ux%u", disp, minfo->hdisplay, minfo->vdisplay);
 
 	ret = uterm_drm_display_activate(disp, vdrm->fd);
@@ -173,7 +176,6 @@ static int display_activate(struct uterm_display *disp, struct uterm_mode *mode)
 		return ret;
 
 	d2d->current_rb = 0;
-	disp->current_mode = mode;
 
 	ret = init_rb(disp, &d2d->rb[0]);
 	if (ret)
@@ -186,8 +188,9 @@ static int display_activate(struct uterm_display *disp, struct uterm_mode *mode)
 	ret = drmModeSetCrtc(vdrm->fd, ddrm->crtc_id, d2d->rb[0].fb, 0, 0, &ddrm->conn_id, 1,
 			     minfo);
 
-	if (ret && mode == disp->desired_mode && mode != disp->default_mode) {
-		mode = disp->desired_mode = disp->default_mode;
+	if (ret && ddrm->current_mode == ddrm->desired_mode &&
+	    ddrm->current_mode != ddrm->default_mode) {
+		ddrm->current_mode = ddrm->desired_mode = ddrm->default_mode;
 		ret = -EAGAIN;
 		goto err_fb;
 	} else if (ret) {
@@ -204,7 +207,8 @@ err_fb:
 err_rb:
 	destroy_rb(disp, &d2d->rb[0]);
 err_saved:
-	disp->current_mode = NULL;
+	disp->width = 0;
+	disp->height = 0;
 	uterm_drm_display_deactivate(disp, vdrm->fd);
 	return ret;
 }
@@ -221,7 +225,8 @@ static void display_deactivate(struct uterm_display *disp)
 
 	destroy_rb(disp, &d2d->rb[1]);
 	destroy_rb(disp, &d2d->rb[0]);
-	disp->current_mode = NULL;
+	disp->width = 0;
+	disp->height = 0;
 }
 
 static int display_use(struct uterm_display *disp, bool *opengl)
@@ -232,28 +237,6 @@ static int display_use(struct uterm_display *disp, bool *opengl)
 		*opengl = false;
 
 	return d2d->current_rb ^ 1;
-}
-
-static int display_get_buffers(struct uterm_display *disp, struct uterm_video_buffer *buffer,
-			       unsigned int formats)
-{
-	struct uterm_drm2d_display *d2d = uterm_drm_display_get_data(disp);
-	struct uterm_drm2d_rb *rb;
-	int i;
-
-	if (!(formats & UTERM_FORMAT_XRGB32))
-		return -EOPNOTSUPP;
-
-	for (i = 0; i < 2; ++i) {
-		rb = &d2d->rb[i];
-		buffer[i].width = uterm_drm_mode_get_width(disp->current_mode);
-		buffer[i].height = uterm_drm_mode_get_height(disp->current_mode);
-		buffer[i].stride = rb->stride;
-		buffer[i].format = UTERM_FORMAT_XRGB32;
-		buffer[i].data = rb->map;
-	}
-
-	return 0;
 }
 
 static int display_swap(struct uterm_display *disp, bool immediate)
@@ -277,8 +260,8 @@ static const struct display_ops drm2d_display_ops = {
 	.deactivate = display_deactivate,
 	.set_dpms = uterm_drm_display_set_dpms,
 	.use = display_use,
-	.get_buffers = display_get_buffers,
 	.swap = display_swap,
+	.is_swapping = uterm_drm_is_swapping,
 	.fake_blendv = uterm_drm2d_display_fake_blendv,
 	.fill = uterm_drm2d_display_fill,
 };
@@ -375,7 +358,6 @@ struct uterm_video_module drm2d_module = {
 		{
 			.init = video_init,
 			.destroy = video_destroy,
-			.segfault = NULL, /* TODO: reset all saved CRTCs on segfault */
 			.poll = video_poll,
 			.sleep = video_sleep,
 			.wake_up = video_wake_up,

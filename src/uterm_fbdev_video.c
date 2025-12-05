@@ -44,54 +44,44 @@
 
 #define LOG_SUBSYSTEM "video_fbdev"
 
-static int mode_init(struct uterm_mode *mode)
+static int display_schedule_vblank_timer(struct fbdev_display *fbdev)
 {
-	struct fbdev_mode *fbdev;
+	int ret;
 
-	fbdev = malloc(sizeof(*fbdev));
-	if (!fbdev)
-		return -ENOMEM;
-	memset(fbdev, 0, sizeof(*fbdev));
-	mode->data = fbdev;
+	if (fbdev->vblank_scheduled)
+		return 0;
 
+	ret = ev_timer_update(fbdev->vblank_timer, &fbdev->vblank_spec);
+	if (ret)
+		return ret;
+
+	fbdev->vblank_scheduled = true;
 	return 0;
 }
 
-static void mode_destroy(struct uterm_mode *mode)
+static void display_set_vblank_timer(struct fbdev_display *fbdev, unsigned int msecs)
 {
-	free(mode->data);
+	if (msecs >= 1000)
+		msecs = 999;
+	else if (msecs == 0)
+		msecs = 15;
+
+	fbdev->vblank_spec.it_value.tv_nsec = msecs * 1000 * 1000;
 }
 
-static const char *mode_get_name(const struct uterm_mode *mode)
+static void display_vblank_timer_event(struct ev_timer *timer, uint64_t expirations, void *data)
 {
-	return "<default>";
+	struct uterm_display *disp = data;
+	struct fbdev_display *fbdev = disp->data;
+
+	fbdev->vblank_scheduled = false;
+	DISPLAY_CB(disp, UTERM_PAGE_FLIP);
 }
-
-static unsigned int mode_get_width(const struct uterm_mode *mode)
-{
-	struct fbdev_mode *fbdev = mode->data;
-
-	return fbdev->width;
-}
-
-static unsigned int mode_get_height(const struct uterm_mode *mode)
-{
-	struct fbdev_mode *fbdev = mode->data;
-
-	return fbdev->height;
-}
-
-static const struct mode_ops fbdev_mode_ops = {
-	.init = mode_init,
-	.destroy = mode_destroy,
-	.get_name = mode_get_name,
-	.get_width = mode_get_width,
-	.get_height = mode_get_height,
-};
 
 static int display_init(struct uterm_display *disp)
 {
 	struct fbdev_display *fbdev;
+	int ret;
 
 	fbdev = malloc(sizeof(*fbdev));
 	if (!fbdev)
@@ -100,11 +90,24 @@ static int display_init(struct uterm_display *disp)
 	disp->data = fbdev;
 	disp->dpms = UTERM_DPMS_UNKNOWN;
 
+	fbdev->vblank_spec.it_value.tv_nsec = 15 * 1000 * 1000;
+	ret = ev_timer_new(&fbdev->vblank_timer, NULL, display_vblank_timer_event, disp, NULL,
+			   NULL);
+	if (ret)
+		goto err_free;
+
 	return 0;
+
+err_free:
+	free(fbdev);
+	return ret;
 }
 
 static void display_destroy(struct uterm_display *disp)
 {
+	struct fbdev_display *fbdev = disp->data;
+	ev_eloop_rm_timer(fbdev->vblank_timer);
+	ev_timer_unref(fbdev->vblank_timer);
 	free(disp->data);
 }
 
@@ -128,12 +131,10 @@ static int refresh_info(struct uterm_display *disp)
 	return 0;
 }
 
-static int display_activate_force(struct uterm_display *disp, struct uterm_mode *mode, bool force)
+static int display_activate_force(struct uterm_display *disp, bool force)
 {
 	static const char depths[] = {32, 24, 16, 0};
 	struct fbdev_display *dfb = disp->data;
-	struct uterm_mode *m;
-	struct fbdev_mode *mfb;
 	struct fb_var_screeninfo *vinfo;
 	struct fb_fix_screeninfo *finfo;
 	int ret, i;
@@ -143,13 +144,6 @@ static int display_activate_force(struct uterm_display *disp, struct uterm_mode 
 
 	if (!force && (disp->flags & DISPLAY_ONLINE))
 		return 0;
-
-	/* TODO: We do not support explicit modesetting in fbdev, so we require
-	 * @mode to be NULL. You can still switch modes via "fbset" on the
-	 * console and then restart the app. It will automatically adapt to the
-	 * new mode. The only values changed here are bpp and color mode. */
-	if (mode)
-		return -EINVAL;
 
 	dfb->fd = open(dfb->node, O_RDWR | O_CLOEXEC | O_NONBLOCK);
 	if (dfb->fd < 0) {
@@ -284,7 +278,7 @@ static int display_activate_force(struct uterm_display *disp, struct uterm_mode 
 	}
 
 	val = 1000000 / dfb->rate;
-	display_set_vblank_timer(disp, val);
+	display_set_vblank_timer(dfb, val);
 	log_debug("vblank timer: %u ms, monitor refresh rate: %u Hz", val, dfb->rate / 1000);
 
 	len = finfo->line_length * vinfo->yres;
@@ -328,39 +322,20 @@ static int display_activate_force(struct uterm_display *disp, struct uterm_mode 
 
 	/* TODO: make dithering configurable */
 	disp->flags |= DISPLAY_DITHERING;
-
-	if (disp->current_mode) {
-		m = disp->current_mode;
-	} else {
-		ret = mode_new(&m, &fbdev_mode_ops);
-		if (ret)
-			goto err_map;
-		ret = uterm_mode_bind(m, disp);
-		if (ret) {
-			uterm_mode_unref(m);
-			goto err_map;
-		}
-		disp->current_mode = m;
-		uterm_mode_unref(m);
-	}
-
-	mfb = m->data;
-	mfb->width = dfb->xres;
-	mfb->height = dfb->yres;
+	disp->width = dfb->xres;
+	disp->height = dfb->yres;
 
 	disp->flags |= DISPLAY_ONLINE;
 	return 0;
 
-err_map:
-	munmap(dfb->map, dfb->len);
 err_close:
 	close(dfb->fd);
 	return ret;
 }
 
-static int display_activate(struct uterm_display *disp, struct uterm_mode *mode)
+static int display_activate(struct uterm_display *disp)
 {
-	return display_activate_force(disp, mode, false);
+	return display_activate_force(disp, false);
 }
 
 static void display_deactivate_force(struct uterm_display *disp, bool force)
@@ -376,8 +351,8 @@ static void display_deactivate_force(struct uterm_display *disp, bool force)
 		dfb->map = NULL;
 	}
 	if (!force) {
-		uterm_mode_unbind(disp->current_mode);
-		disp->current_mode = NULL;
+		disp->width = 0;
+		disp->height = 0;
 		disp->flags &= ~DISPLAY_ONLINE;
 	}
 }
@@ -434,36 +409,6 @@ static int display_use(struct uterm_display *disp, bool *opengl)
 	return dfb->bufid ^ 1;
 }
 
-static int display_get_buffers(struct uterm_display *disp, struct uterm_video_buffer *buffer,
-			       unsigned int formats)
-{
-	struct fbdev_display *dfb = disp->data;
-	unsigned int f = 0, i;
-
-	if (dfb->xrgb32)
-		f = UTERM_FORMAT_XRGB32;
-	else if (dfb->rgb16)
-		f = UTERM_FORMAT_RGB16;
-	else if (dfb->rgb24)
-		f = UTERM_FORMAT_RGB24;
-
-	if (!(formats & f))
-		return -EOPNOTSUPP;
-
-	for (i = 0; i < 2; ++i) {
-		buffer[i].width = dfb->xres;
-		buffer[i].height = dfb->yres;
-		buffer[i].stride = dfb->stride;
-		buffer[i].format = f;
-		if (!(disp->flags & DISPLAY_DBUF) || !i)
-			buffer[i].data = dfb->map;
-		else
-			buffer[i].data = &dfb->map[dfb->yres * dfb->stride];
-	}
-
-	return 0;
-}
-
 static int display_swap(struct uterm_display *disp, bool immediate)
 {
 	struct fbdev_display *dfb = disp->data;
@@ -473,7 +418,7 @@ static int display_swap(struct uterm_display *disp, bool immediate)
 	if (!(disp->flags & DISPLAY_DBUF)) {
 		if (immediate)
 			return 0;
-		return display_schedule_vblank_timer(disp);
+		return display_schedule_vblank_timer(dfb);
 	}
 
 	vinfo = &dfb->vinfo;
@@ -494,7 +439,14 @@ static int display_swap(struct uterm_display *disp, bool immediate)
 	}
 
 	dfb->bufid ^= 1;
-	return display_schedule_vblank_timer(disp);
+	return display_schedule_vblank_timer(dfb);
+}
+
+static bool display_is_swapping(struct uterm_display *disp)
+{
+	struct fbdev_display *fbdev = disp->data;
+
+	return fbdev->vblank_scheduled;
 }
 
 static const struct display_ops fbdev_display_ops = {
@@ -504,8 +456,8 @@ static const struct display_ops fbdev_display_ops = {
 	.deactivate = display_deactivate,
 	.set_dpms = display_set_dpms,
 	.use = display_use,
-	.get_buffers = display_get_buffers,
 	.swap = display_swap,
+	.is_swapping = display_is_swapping,
 	.fake_blendv = uterm_fbdev_display_fake_blendv,
 	.fill = uterm_fbdev_display_fill,
 };
@@ -529,10 +481,18 @@ static void intro_idle_event(struct ev_eloop *eloop, void *unused, void *data)
 
 	dfb = disp->data;
 	dfb->node = vfb->node;
+
+	ret = ev_eloop_add_timer(video->eloop, dfb->vblank_timer);
+	if (ret) {
+		log_error("cannot add fbdev timer: %d", ret);
+		return;
+	}
+
 	ret = uterm_display_bind(disp, video);
 	if (ret) {
 		log_error("cannot bind fbdev display: %d", ret);
 		uterm_display_unref(disp);
+		ev_eloop_rm_timer(dfb->vblank_timer);
 		return;
 	}
 
@@ -617,7 +577,7 @@ static int video_wake_up(struct uterm_video *video)
 		if (!display_is_online(iter))
 			continue;
 
-		ret = display_activate_force(iter, NULL, true);
+		ret = display_activate_force(iter, true);
 		if (ret)
 			return ret;
 
@@ -633,7 +593,6 @@ struct uterm_video_module fbdev_module = {.name = "fbdev",
 					  .ops = {
 						  .init = video_init,
 						  .destroy = video_destroy,
-						  .segfault = NULL, /* TODO */
 						  .poll = NULL,
 						  .sleep = video_sleep,
 						  .wake_up = video_wake_up,

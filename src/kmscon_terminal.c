@@ -101,16 +101,14 @@ struct kmscon_terminal {
 static void do_clear_margins(struct screen *scr)
 {
 	unsigned int w, h, sw, sh;
-	struct uterm_mode *mode;
 	struct tsm_screen_attr attr;
 	int dh, dw;
 
-	mode = uterm_display_get_current(scr->disp);
-	if (!mode)
-		return;
+	sw = uterm_display_get_width(scr->disp);
+	sh = uterm_display_get_height(scr->disp);
 
-	sw = uterm_mode_get_width(mode);
-	sh = uterm_mode_get_height(mode);
+	if (!sw || !sh)
+		return;
 
 	tsm_vte_get_def_attr(scr->term->vte, &attr);
 
@@ -188,7 +186,7 @@ static void do_redraw_screen(struct screen *scr)
 
 	if (ret == -EAGAIN) {
 		uterm_display_deactivate(scr->disp);
-		ret = uterm_display_activate(scr->disp, NULL);
+		ret = uterm_display_activate(scr->disp);
 		if (!ret)
 			ret = font_set(scr->term);
 		if (!ret)
@@ -252,7 +250,6 @@ static void update_pointer_max_all(struct kmscon_terminal *term)
 {
 	struct shl_dlist *iter;
 	struct screen *scr;
-	struct uterm_mode *mode;
 	unsigned int max_x = INT_MAX;
 	unsigned int max_y = INT_MAX;
 	unsigned int sw, sh;
@@ -264,16 +261,12 @@ static void update_pointer_max_all(struct kmscon_terminal *term)
 	{
 		scr = shl_dlist_entry(iter, struct screen, list);
 
-		mode = uterm_display_get_current(scr->disp);
-		if (!mode)
-			continue;
-
 		if (scr->txt->orientation == OR_NORMAL || scr->txt->orientation == OR_UPSIDE_DOWN) {
-			sw = uterm_mode_get_width(mode);
-			sh = uterm_mode_get_height(mode);
+			sw = uterm_display_get_width(scr->disp);
+			sh = uterm_display_get_height(scr->disp);
 		} else {
-			sw = uterm_mode_get_height(mode);
-			sh = uterm_mode_get_width(mode);
+			sw = uterm_display_get_height(scr->disp);
+			sh = uterm_display_get_width(scr->disp);
 		}
 		if (!sw || !sh)
 			continue;

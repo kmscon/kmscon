@@ -142,8 +142,8 @@ static int display_blend(struct uterm_display *disp, const struct uterm_video_bu
 	if (ret)
 		return ret;
 
-	sw = uterm_drm_mode_get_width(disp->current_mode);
-	sh = uterm_drm_mode_get_height(disp->current_mode);
+	sw = disp->width;
+	sh = disp->height;
 
 	vertices[0] = -1.0;
 	vertices[1] = -1.0;
@@ -297,8 +297,8 @@ int uterm_drm3d_display_fill(struct uterm_display *disp, uint8_t r, uint8_t g, u
 	if (ret)
 		return ret;
 
-	sw = uterm_drm_mode_get_width(disp->current_mode);
-	sh = uterm_drm_mode_get_height(disp->current_mode);
+	sw = disp->width;
+	sh = disp->height;
 
 	for (i = 0; i < 6; ++i) {
 		colors[i * 4 + 0] = r / 255.0;

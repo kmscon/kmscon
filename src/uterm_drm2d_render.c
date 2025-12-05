@@ -61,8 +61,8 @@ int uterm_drm2d_display_fake_blendv(struct uterm_display *disp,
 		return -EINVAL;
 
 	rb = &d2d->rb[d2d->current_rb ^ 1];
-	sw = uterm_drm_mode_get_width(disp->current_mode);
-	sh = uterm_drm_mode_get_height(disp->current_mode);
+	sw = disp->width;
+	sh = disp->height;
 
 	for (j = 0; j < num; ++j, ++req) {
 		if (!req->buf)
@@ -144,8 +144,8 @@ int uterm_drm2d_display_fill(struct uterm_display *disp, uint8_t r, uint8_t g, u
 	struct uterm_drm2d_display *d2d = uterm_drm_display_get_data(disp);
 
 	rb = &d2d->rb[d2d->current_rb ^ 1];
-	sw = uterm_drm_mode_get_width(disp->current_mode);
-	sh = uterm_drm_mode_get_height(disp->current_mode);
+	sw = disp->width;
+	sh = disp->height;
 
 	tmp = x + width;
 	if (tmp < x || x >= sw)
