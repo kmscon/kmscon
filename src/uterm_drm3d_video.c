@@ -34,6 +34,7 @@
 #include <EGL/eglext.h>
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
+#include <drm/drm_fourcc.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <gbm.h>
@@ -88,8 +89,18 @@ static void bo_destroy_event(struct gbm_bo *bo, void *data)
 		return;
 
 	vdrm = rb->disp->video->data;
-	drmModeRmFB(vdrm->fd, rb->fb);
+	drmModeRmFB(vdrm->fd, rb->id);
 	free(rb);
+}
+
+static int drm_addfb2(int fd, struct uterm_drm3d_rb *rb)
+{
+	uint32_t handles[4] = {gbm_bo_get_handle(rb->bo).u32, 0, 0, 0};
+	uint32_t pitches[4] = {gbm_bo_get_stride(rb->bo), 0, 0, 0};
+	uint32_t offsets[4] = {0, 0, 0, 0};
+
+	return drmModeAddFB2(fd, gbm_bo_get_width(rb->bo), gbm_bo_get_height(rb->bo),
+			     DRM_FORMAT_XRGB8888, handles, pitches, offsets, &rb->id, 0);
 }
 
 static struct uterm_drm3d_rb *bo_to_rb(struct uterm_display *disp, struct gbm_bo *bo)
@@ -98,8 +109,6 @@ static struct uterm_drm3d_rb *bo_to_rb(struct uterm_display *disp, struct gbm_bo
 	struct uterm_video *video = disp->video;
 	struct uterm_drm_video *vdrm = video->data;
 	int ret;
-	unsigned int stride, handle, width, height;
-	;
 
 	if (rb)
 		return rb;
@@ -112,16 +121,7 @@ static struct uterm_drm3d_rb *bo_to_rb(struct uterm_display *disp, struct gbm_bo
 	rb->disp = disp;
 	rb->bo = bo;
 
-#ifdef BUILD_HAVE_GBM_BO_GET_PITCH
-	stride = gbm_bo_get_pitch(rb->bo);
-#else
-	stride = gbm_bo_get_stride(rb->bo);
-#endif
-	handle = gbm_bo_get_handle(rb->bo).u32;
-	width = gbm_bo_get_width(rb->bo);
-	height = gbm_bo_get_height(rb->bo);
-
-	ret = drmModeAddFB(vdrm->fd, width, height, 24, 32, stride, handle, &rb->fb);
+	ret = drm_addfb2(vdrm->fd, rb);
 	if (ret) {
 		log_err("cannot add drm-fb (%d): %m", errno);
 		free(rb);
@@ -209,7 +209,7 @@ static int display_activate(struct uterm_display *disp)
 		goto err_bo;
 	}
 
-	ret = drmModeSetCrtc(vdrm->fd, ddrm->crtc_id, d3d->current->fb, 0, 0, &ddrm->conn_id, 1,
+	ret = drmModeSetCrtc(vdrm->fd, ddrm->crtc_id, d3d->current->id, 0, 0, &ddrm->conn_id, 1,
 			     minfo);
 	if (ret && ddrm->current_mode == ddrm->desired_mode &&
 	    ddrm->current_mode != ddrm->default_mode) {
@@ -319,7 +319,7 @@ static int display_swap(struct uterm_display *disp, bool immediate)
 		return -EFAULT;
 	}
 
-	ret = uterm_drm_display_swap(disp, rb->fb, immediate);
+	ret = uterm_drm_display_swap(disp, rb->id, immediate);
 	if (ret) {
 		gbm_surface_release_buffer(d3d->gbm, bo);
 		return ret;

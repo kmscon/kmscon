@@ -55,7 +55,7 @@
 struct uterm_drm3d_rb {
 	struct uterm_display *disp;
 	struct gbm_bo *bo;
-	uint32_t fb;
+	uint32_t id;
 };
 
 struct uterm_drm3d_display {
