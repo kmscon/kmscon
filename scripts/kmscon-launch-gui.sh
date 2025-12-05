@@ -11,7 +11,7 @@ if [ -d /sys/class/tty/tty0 ]; then
 fi
 
 if [ "${TERM_PROGRAM}" != "tmux" ]; then
-    printf "\x1B]setBackground\a"
+    printf "\033]setBackground\a"
 else
     printf "\033Ptmux;\033\033]setBackground\a\033\\"
 fi
@@ -26,7 +26,7 @@ if [ -n "${kms_tty}" ]; then
 fi
 
 if [ "${TERM_PROGRAM}" != "tmux" ]; then
-    printf "\x1B]setForeground\a"
+    printf "\033]setForeground\a"
 else
     printf "\033Ptmux;\033\033]setForeground\a\033\\"
 fi
