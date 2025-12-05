@@ -9,7 +9,7 @@ fi
 kms_tty=
 active_tty_file=/sys/class/tty/tty0/active
 if [ -f "$active_tty_file" ]; then
-    read -r kms_tty < /sys/class/tty/tty0/active
+    read -r kms_tty < "$active_tty_file"
 fi
 
 if [ "${TERM_PROGRAM}" != "tmux" ]; then
