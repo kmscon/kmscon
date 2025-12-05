@@ -588,8 +588,8 @@ static void bind_display(struct uterm_video *video, drmModeRes *res, drmModeConn
 
 		shl_dlist_link_tail(&ddrm->modes, &mode->list);
 
-		/* TODO: more sophisticated default-mode selection */
-		if (!ddrm->default_mode)
+		/* Use the mode marked as preferred, or the first if none is marked */
+		if (!ddrm->default_mode || mode->info.type & DRM_MODE_TYPE_PREFERRED)
 			ddrm->default_mode = mode;
 
 		/* Save the original KMS mode for later use */
