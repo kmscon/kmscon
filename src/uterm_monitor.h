@@ -79,7 +79,7 @@ typedef void (*uterm_monitor_cb)(struct uterm_monitor *mon, struct uterm_monitor
 				 void *data);
 
 int uterm_monitor_new(struct uterm_monitor **out, struct ev_eloop *eloop, uterm_monitor_cb cb,
-		      void *data);
+		      bool vt, void *data);
 void uterm_monitor_ref(struct uterm_monitor *mon);
 void uterm_monitor_unref(struct uterm_monitor *mon);
 void uterm_monitor_scan(struct uterm_monitor *mon);

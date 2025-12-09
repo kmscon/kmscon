@@ -744,7 +744,7 @@ static void monitor_udev_event(struct ev_fd *fd, int mask, void *data)
 
 SHL_EXPORT
 int uterm_monitor_new(struct uterm_monitor **out, struct ev_eloop *eloop, uterm_monitor_cb cb,
-		      void *data)
+		      bool vt, void *data)
 {
 	struct uterm_monitor *mon;
 	int ret, ufd, set;
@@ -762,9 +762,12 @@ int uterm_monitor_new(struct uterm_monitor **out, struct ev_eloop *eloop, uterm_
 	mon->data = data;
 	shl_dlist_init(&mon->seats);
 
-	ret = monitor_sd_init(mon);
-	if (ret)
-		goto err_free;
+	/* Monitor seats if VT is disabled */
+	if (!vt) {
+		ret = monitor_sd_init(mon);
+		if (ret)
+			goto err_free;
+	}
 
 	mon->udev = udev_new();
 	if (!mon->udev) {

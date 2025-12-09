@@ -522,6 +522,7 @@ static void destroy_app(struct kmscon_app *app)
 static int setup_app(struct kmscon_app *app)
 {
 	int ret;
+	bool use_vt = (app->conf->vt != 0);
 
 	shl_dlist_init(&app->seats);
 
@@ -555,7 +556,7 @@ static int setup_app(struct kmscon_app *app)
 		goto err_app;
 	}
 
-	ret = uterm_monitor_new(&app->mon, app->eloop, app_monitor_event, app);
+	ret = uterm_monitor_new(&app->mon, app->eloop, app_monitor_event, use_vt, app);
 	if (ret) {
 		log_error("cannot create device monitor: %d", ret);
 		goto err_app;
