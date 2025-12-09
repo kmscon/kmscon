@@ -34,7 +34,3 @@ option('session_dummy', type: 'feature', value: 'auto',
   description: 'dummy session')
 option('session_terminal', type: 'feature', value: 'auto',
   description: 'terminal session')
-
-# terminal options
-option('backspace_sends_delete', type: 'boolean', value: false,
-  description: 'backspace sends ASCII delete (0177) instead of ASCII backspace (010)')

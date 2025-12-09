@@ -69,6 +69,7 @@ struct kmscon_pty {
 	char *seat;
 	char *vtnr;
 	bool env_reset;
+	bool backspace_delete;
 
 	time_t last_spawn_time;
 	int retry_count;
@@ -139,12 +140,13 @@ void kmscon_pty_unref(struct kmscon_pty *pty)
 }
 
 int kmscon_pty_set_conf(struct kmscon_pty *pty, const char *term, const char *colorterm,
-			char **argv, const char *seat, bool do_reset)
+			char **argv, const char *seat, bool do_reset, bool backspace)
 {
 	if (!pty)
 		return -EINVAL;
 
 	pty->env_reset = do_reset;
+	pty->backspace_delete = backspace;
 
 	if (term) {
 		pty->term = strdup(term);
@@ -242,7 +244,7 @@ static void __attribute__((noreturn)) exec_child(const char *term, const char *c
 	exit(EXIT_FAILURE);
 }
 
-static void setup_child(int master, struct winsize *ws)
+static void setup_child(int master, bool backspace_delete, struct winsize *ws)
 {
 	int ret;
 	sigset_t sigset;
@@ -298,7 +300,7 @@ static void setup_child(int master, struct winsize *ws)
 		goto err_out;
 	}
 
-	if (BUILD_BACKSPACE_SENDS_DELETE) {
+	if (backspace_delete) {
 		/* erase character should be delete */
 		attr.c_cc[VERASE] = 0177;
 	} else {
@@ -358,7 +360,7 @@ static int pty_spawn(struct kmscon_pty *pty, int master, unsigned short width,
 		log_err("cannot fork: %m");
 		return -errno;
 	case 0:
-		setup_child(master, &ws);
+		setup_child(master, pty->backspace_delete, &ws);
 		exec_child(pty->term, pty->colorterm, pty->argv, pty->seat, pty->vtnr,
 			   pty->env_reset, drm);
 		exit(EXIT_FAILURE);

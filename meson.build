@@ -121,7 +121,6 @@ endforeach
 config.set('BUILD_ENABLE_DEBUG', get_option('extra_debug'))
 config.set_quoted('BUILD_MODULE_DIR', prefix / moduledir)
 config.set_quoted('BUILD_CONFIG_DIR', prefix / sysconfdir)
-config.set10('BUILD_BACKSPACE_SENDS_DELETE', get_option('backspace_sends_delete'))
 
 # Make all files include "config.h" by default. This shouldn't cause any
 # problems and we cannot forget to include it anymore.
@@ -161,7 +160,6 @@ summary({
   'extra_debug': get_option('extra_debug'),
   'tests': get_option('tests'),
   'docs': enable_docs,
-  'backspace_sends_delete': get_option('backspace_sends_delete'),
 }, section: 'Miscellaneous')
 
 #

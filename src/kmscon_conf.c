@@ -94,6 +94,9 @@ static void print_help()
 		"\t    --reset-env             [on]\n"
 		"\t                              Reset environment before running child\n"
 		"\t                              process\n"
+		"\t    --backspace-delete      [on]\n"
+		"\t                              Send delete character when backspace is\n"
+		"\t                              pressed\n"
 		"\t    --sb-size <num>         [1000]\n"
 		"\t                              Size of the scrollback-buffer in lines\n"
 		"\n"
@@ -708,6 +711,7 @@ int kmscon_conf_new(struct conf_ctx **out)
 			    &conf->login, false),
 		CONF_OPTION_STRING('t', "term", &conf->term, "xterm-256color"),
 		CONF_OPTION_BOOL(0, "reset-env", &conf->reset_env, true),
+		CONF_OPTION_BOOL(0, "backspace-delete", &conf->backspace_delete, true),
 		CONF_OPTION_UINT(0, "sb-size", &conf->sb_size, 1000),
 
 		/* Input Options */

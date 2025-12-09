@@ -246,6 +246,14 @@
       </varlistentry>
 
       <varlistentry>
+        <term><option>--backspace-delete</option></term>
+        <listitem>
+          <para>Send delete character when backspace is pressed.
+                (default: on)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
         <term><option>--sb-size {size}</option></term>
         <listitem>
           <para>Specify the size of the scrollback buffer (in lines). (default: 1000)</para>

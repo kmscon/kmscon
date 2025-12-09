@@ -935,7 +935,7 @@ int kmscon_terminal_register(struct kmscon_session **out, struct kmscon_seat *se
 	if (ret)
 		goto err_con;
 
-	tsm_vte_set_backspace_sends_delete(term->vte, BUILD_BACKSPACE_SENDS_DELETE);
+	tsm_vte_set_backspace_sends_delete(term->vte, term->conf->backspace_delete);
 
 	tsm_vte_set_osc_cb(term->vte, osc_event, (void *)term);
 	tsm_vte_set_mouse_cb(term->vte, mouse_event, (void *)term);
@@ -957,7 +957,8 @@ int kmscon_terminal_register(struct kmscon_session **out, struct kmscon_seat *se
 		goto err_font;
 
 	ret = kmscon_pty_set_conf(term->pty, term->conf->term, "kmscon", term->conf->argv,
-				  kmscon_seat_get_name(seat), term->conf->reset_env);
+				  kmscon_seat_get_name(seat), term->conf->reset_env,
+				  term->conf->backspace_delete);
 	if (ret)
 		goto err_pty;
 

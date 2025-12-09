@@ -91,6 +91,8 @@ struct kmscon_conf_t {
 	char *term;
 	/* reset environment */
 	bool reset_env;
+	/* Send delete when backspace is pressed */
+	bool backspace_delete;
 	/* terminal scroll-back buffer size */
 	unsigned int sb_size;
 

@@ -200,6 +200,13 @@ font-name=Ubuntu Mono
       </varlistentry>
 
       <varlistentry>
+        <term><option>backspace-delete</option></term>
+        <listitem>
+          <para>Send delete character when backspace is pressed. (default: on)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
         <term><option>palette</option></term>
         <listitem>
           <para>Select the used color palette. (default: default)</para>
