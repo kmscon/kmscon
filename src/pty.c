@@ -138,94 +138,33 @@ void kmscon_pty_unref(struct kmscon_pty *pty)
 	free(pty);
 }
 
-int kmscon_pty_set_term(struct kmscon_pty *pty, const char *term)
-{
-	char *t;
-
-	if (!pty || !term)
-		return -EINVAL;
-
-	t = strdup(term);
-	if (!t)
-		return -ENOMEM;
-	free(pty->term);
-	pty->term = t;
-
-	return 0;
-}
-
-int kmscon_pty_set_colorterm(struct kmscon_pty *pty, const char *colorterm)
-{
-	char *t;
-
-	if (!pty || !colorterm)
-		return -EINVAL;
-
-	t = strdup(colorterm);
-	if (!t)
-		return -ENOMEM;
-	free(pty->colorterm);
-	pty->colorterm = t;
-
-	return 0;
-}
-
-int kmscon_pty_set_argv(struct kmscon_pty *pty, char **argv)
-{
-	char **t;
-	int ret;
-
-	if (!pty || !argv || !*argv || !**argv)
-		return -EINVAL;
-
-	ret = shl_dup_array(&t, argv);
-	if (ret)
-		return ret;
-
-	free(pty->argv);
-	pty->argv = t;
-	return 0;
-}
-
-int kmscon_pty_set_seat(struct kmscon_pty *pty, const char *seat)
-{
-	char *t;
-
-	if (!pty || !seat)
-		return -EINVAL;
-
-	t = strdup(seat);
-	if (!t)
-		return -ENOMEM;
-	free(pty->seat);
-	pty->seat = t;
-
-	return 0;
-}
-
-int kmscon_pty_set_vtnr(struct kmscon_pty *pty, unsigned int vtnr)
-{
-	char *t;
-	int ret;
-
-	if (!pty)
-		return -EINVAL;
-
-	ret = asprintf(&t, "%u", vtnr);
-	if (ret < 0)
-		return -ENOMEM;
-	free(pty->vtnr);
-	pty->vtnr = t;
-
-	return 0;
-}
-
-void kmscon_pty_set_env_reset(struct kmscon_pty *pty, bool do_reset)
+int kmscon_pty_set_conf(struct kmscon_pty *pty, const char *term, const char *colorterm,
+			char **argv, const char *seat, bool do_reset)
 {
 	if (!pty)
-		return;
+		return -EINVAL;
 
 	pty->env_reset = do_reset;
+
+	if (term) {
+		pty->term = strdup(term);
+		if (!pty->term)
+			return -ENOMEM;
+	}
+	if (colorterm) {
+		pty->colorterm = strdup(colorterm);
+		if (!pty->colorterm)
+			return -ENOMEM;
+	}
+	if (seat) {
+		pty->seat = strdup(seat);
+		if (!pty->seat)
+			return -ENOMEM;
+	}
+
+	if (argv && *argv && **argv)
+		return shl_dup_array(&pty->argv, argv);
+	return 0;
 }
 
 int kmscon_pty_get_fd(struct kmscon_pty *pty)

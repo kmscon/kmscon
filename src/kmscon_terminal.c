@@ -956,29 +956,10 @@ int kmscon_terminal_register(struct kmscon_session **out, struct kmscon_seat *se
 	if (ret)
 		goto err_font;
 
-	kmscon_pty_set_env_reset(term->pty, term->conf->reset_env);
-
-	ret = kmscon_pty_set_term(term->pty, term->conf->term);
+	ret = kmscon_pty_set_conf(term->pty, term->conf->term, "kmscon", term->conf->argv,
+				  kmscon_seat_get_name(seat), term->conf->reset_env);
 	if (ret)
 		goto err_pty;
-
-	ret = kmscon_pty_set_colorterm(term->pty, "kmscon");
-	if (ret)
-		goto err_pty;
-
-	ret = kmscon_pty_set_argv(term->pty, term->conf->argv);
-	if (ret)
-		goto err_pty;
-
-	ret = kmscon_pty_set_seat(term->pty, kmscon_seat_get_name(seat));
-	if (ret)
-		goto err_pty;
-
-	if (vtnr > 0) {
-		ret = kmscon_pty_set_vtnr(term->pty, vtnr);
-		if (ret)
-			goto err_pty;
-	}
 
 	ret = ev_eloop_new_fd(term->eloop, &term->ptyfd, kmscon_pty_get_fd(term->pty), EV_READABLE,
 			      pty_event, term);
