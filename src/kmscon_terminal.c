@@ -492,7 +492,7 @@ static int add_display(struct kmscon_terminal *term, struct uterm_display *disp)
 		goto err_free;
 	}
 
-	ret = uterm_display_use(scr->disp, &opengl);
+	opengl = uterm_display_has_opengl(scr->disp);
 	if (term->conf->render_engine)
 		be = term->conf->render_engine;
 	else if (ret >= 0 && opengl)

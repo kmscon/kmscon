@@ -70,6 +70,7 @@ static int display_init(struct uterm_display *disp)
 		free(d3d);
 		return ret;
 	}
+	disp->flags |= DISPLAY_OPENGL;
 
 	return 0;
 }
@@ -271,7 +272,7 @@ static void display_deactivate(struct uterm_display *disp)
 	disp->height = 0;
 }
 
-int uterm_drm3d_display_use(struct uterm_display *disp, bool *opengl)
+int uterm_drm3d_display_use(struct uterm_display *disp)
 {
 	struct uterm_drm3d_display *d3d = uterm_drm_display_get_data(disp);
 	struct uterm_drm3d_video *v3d;
@@ -281,9 +282,6 @@ int uterm_drm3d_display_use(struct uterm_display *disp, bool *opengl)
 		log_error("cannot activate EGL context");
 		return -EFAULT;
 	}
-
-	if (opengl)
-		*opengl = true;
 
 	/* TODO: lets find a way how to retrieve the current front buffer */
 	return 0;
@@ -372,7 +370,7 @@ static void show_displays(struct uterm_video *video)
 		if (iter->dpms != UTERM_DPMS_ON)
 			continue;
 
-		ret = uterm_drm3d_display_use(iter, NULL);
+		ret = uterm_drm3d_display_use(iter);
 		if (ret)
 			continue;
 

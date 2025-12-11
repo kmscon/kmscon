@@ -162,6 +162,12 @@ bool uterm_display_is_drm(struct uterm_display *disp)
 }
 
 SHL_EXPORT
+bool uterm_display_has_opengl(struct uterm_display *disp)
+{
+	return (disp->flags & DISPLAY_OPENGL) != 0;
+}
+
+SHL_EXPORT
 const char *uterm_display_backend_name(struct uterm_display *disp)
 {
 	if (disp && disp->video && disp->video->mod)
@@ -271,12 +277,12 @@ int uterm_display_get_dpms(const struct uterm_display *disp)
 }
 
 SHL_EXPORT
-int uterm_display_use(struct uterm_display *disp, bool *opengl)
+int uterm_display_use(struct uterm_display *disp)
 {
 	if (!disp || !display_is_online(disp))
 		return -EINVAL;
 
-	return VIDEO_CALL(disp->ops->use, -EOPNOTSUPP, disp, opengl);
+	return VIDEO_CALL(disp->ops->use, -EOPNOTSUPP, disp);
 }
 
 SHL_EXPORT

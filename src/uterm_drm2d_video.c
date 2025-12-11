@@ -222,16 +222,6 @@ static void display_deactivate(struct uterm_display *disp)
 	disp->height = 0;
 }
 
-static int display_use(struct uterm_display *disp, bool *opengl)
-{
-	struct uterm_drm2d_display *d2d = uterm_drm_display_get_data(disp);
-
-	if (opengl)
-		*opengl = false;
-
-	return d2d->current_rb ^ 1;
-}
-
 static int display_swap(struct uterm_display *disp, bool immediate)
 {
 	int ret, rb;
@@ -252,7 +242,7 @@ static const struct display_ops drm2d_display_ops = {
 	.activate = display_activate,
 	.deactivate = display_deactivate,
 	.set_dpms = uterm_drm_display_set_dpms,
-	.use = display_use,
+	.use = NULL,
 	.swap = display_swap,
 	.is_swapping = uterm_drm_is_swapping,
 	.fake_blendv = uterm_drm2d_display_fake_blendv,

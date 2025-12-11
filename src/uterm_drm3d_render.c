@@ -135,7 +135,7 @@ static int display_blend(struct uterm_display *disp, const struct uterm_video_bu
 		return -EINVAL;
 
 	v3d = uterm_drm_video_get_data(disp->video);
-	ret = uterm_drm3d_display_use(disp, NULL);
+	ret = uterm_drm3d_display_use(disp);
 	if (ret)
 		return ret;
 	ret = init_shaders(disp->video);
@@ -290,7 +290,7 @@ int uterm_drm3d_display_fill(struct uterm_display *disp, uint8_t r, uint8_t g, u
 	int ret;
 
 	v3d = uterm_drm_video_get_data(disp->video);
-	ret = uterm_drm3d_display_use(disp, NULL);
+	ret = uterm_drm3d_display_use(disp);
 	if (ret)
 		return ret;
 	ret = init_shaders(disp->video);

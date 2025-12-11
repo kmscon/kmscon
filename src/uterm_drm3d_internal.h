@@ -85,7 +85,7 @@ struct uterm_drm3d_video {
 	GLuint uni_blend_bgcol;
 };
 
-int uterm_drm3d_display_use(struct uterm_display *disp, bool *opengl);
+int uterm_drm3d_display_use(struct uterm_display *disp);
 void uterm_drm3d_deinit_shaders(struct uterm_video *video);
 int uterm_drm3d_display_fake_blendv(struct uterm_display *disp,
 				    const struct uterm_video_blend_req *req, size_t num);

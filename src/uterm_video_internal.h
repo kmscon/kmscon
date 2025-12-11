@@ -45,7 +45,7 @@ struct display_ops {
 	int (*activate)(struct uterm_display *disp);
 	void (*deactivate)(struct uterm_display *disp);
 	int (*set_dpms)(struct uterm_display *disp, int state);
-	int (*use)(struct uterm_display *disp, bool *opengl);
+	int (*use)(struct uterm_display *disp);
 	int (*swap)(struct uterm_display *disp, bool immediate);
 	bool (*is_swapping)(struct uterm_display *disp);
 	int (*fake_blendv)(struct uterm_display *disp, const struct uterm_video_blend_req *req,
@@ -79,6 +79,7 @@ struct uterm_video_module {
 #define DISPLAY_DBUF 0x10
 #define DISPLAY_DITHERING 0x20
 #define DISPLAY_PFLIP 0x40
+#define DISPLAY_OPENGL 0x80
 
 struct uterm_display {
 	struct shl_dlist list;

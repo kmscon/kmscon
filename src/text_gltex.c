@@ -153,7 +153,13 @@ static int gltex_set(struct kmscon_text *txt)
 	static char *attr[] = {"position", "texture_position", "fgcolor", "bgcolor"};
 	GLint s;
 	const char *ext;
-	bool opengl;
+
+	if (!uterm_display_has_opengl(txt->disp))
+		return -EINVAL;
+
+	ret = uterm_display_use(txt->disp);
+	if (ret < 0)
+		return ret;
 
 	memset(gt, 0, sizeof(*gt));
 	shl_dlist_init(&gt->atlases);
@@ -165,13 +171,6 @@ static int gltex_set(struct kmscon_text *txt)
 	ret = shl_hashtable_new(&gt->bold_glyphs, shl_direct_hash, shl_direct_equal, free_glyph);
 	if (ret)
 		goto err_htable;
-
-	ret = uterm_display_use(txt->disp, &opengl);
-	if (ret < 0 || !opengl) {
-		if (ret == -EOPNOTSUPP)
-			log_error("display doesn't support hardware-acceleration");
-		goto err_bold_htable;
-	}
 
 	vert = _binary_text_gltex_atlas_vert_start;
 	vlen = _binary_text_gltex_atlas_vert_size;
@@ -242,7 +241,7 @@ static void gltex_unset(struct kmscon_text *txt)
 	struct atlas *atlas;
 	bool gl = true;
 
-	ret = uterm_display_use(txt->disp, NULL);
+	ret = uterm_display_use(txt->disp);
 	if (ret) {
 		gl = false;
 		log_warning("cannot activate OpenGL-CTX during destruction");
@@ -553,7 +552,7 @@ static int gltex_prepare(struct kmscon_text *txt)
 	struct shl_dlist *iter;
 	int ret;
 
-	ret = uterm_display_use(txt->disp, NULL);
+	ret = uterm_display_use(txt->disp);
 	if (ret)
 		return ret;
 
