@@ -266,7 +266,7 @@ font-name=Ubuntu Mono
       <varlistentry>
         <term><option>--mouse</option></term>
         <listitem>
-          <para>Enable mouse/touchpad/trackpoint in kmscon (default: off).
+          <para>Enable mouse/touchpad/trackpoint in kmscon (default: on).
                 It allows to select, and copy/paste text with a pointing device,
                 and also to scroll with the mouse wheel.
                 It's still experimental, and may not work with specific devices.

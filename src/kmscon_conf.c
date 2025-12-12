@@ -110,8 +110,8 @@ static void print_help()
 		"\t                                 Initial delay for key-repeat in ms\n"
 		"\t    --xkb-repeat-rate <msecs>  [50]\n"
 		"\t                                 Delay between two key repeats in ms\n"
-		"\t    --mouse                    [off]\n"
-		"\t                                 Enable experimental mouse support\n"
+		"\t    --mouse                    [on]\n"
+		"\t                                 Enable mouse support\n"
 		"\n"
 		"Grabs / Keyboard-Shortcuts:\n"
 		"\t    --grab-scroll-up <grab>     [<Shift>Up]\n"
@@ -719,7 +719,7 @@ int kmscon_conf_new(struct conf_ctx **out)
 		CONF_OPTION_STRING(0, "xkb-compose-file", &conf->xkb_compose_file, ""),
 		CONF_OPTION_UINT(0, "xkb-repeat-delay", &conf->xkb_repeat_delay, 250),
 		CONF_OPTION_UINT(0, "xkb-repeat-rate", &conf->xkb_repeat_rate, 50),
-		CONF_OPTION_BOOL(0, "mouse", &conf->mouse, false),
+		CONF_OPTION_BOOL(0, "mouse", &conf->mouse, true),
 
 		/* Grabs / Keyboard-Shortcuts */
 		CONF_OPTION_GRAB(0, "grab-scroll-up", &conf->grab_scroll_up, &def_grab_scroll_up),
