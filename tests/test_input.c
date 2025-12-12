@@ -221,7 +221,7 @@ int main(int argc, char **argv)
 		goto err_exit;
 	}
 
-	ret = uterm_monitor_new(&mon, eloop, monitor_event, NULL);
+	ret = uterm_monitor_new(&mon, eloop, monitor_event, true, NULL);
 	if (ret)
 		goto err_exit;
 
