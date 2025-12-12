@@ -316,8 +316,10 @@ static int display_swap(struct uterm_display *disp, bool immediate)
 		gbm_surface_release_buffer(d3d->gbm, bo);
 		return -EFAULT;
 	}
-
-	ret = uterm_drm_display_swap(disp, rb->id, immediate);
+	if (immediate)
+		ret = uterm_drm_modeset(disp, rb->id);
+	else
+		ret = uterm_drm_display_swap(disp, rb->id);
 	if (ret) {
 		gbm_surface_release_buffer(d3d->gbm, bo);
 		return ret;

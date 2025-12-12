@@ -294,47 +294,57 @@ int uterm_drm_display_wait_pflip(struct uterm_display *disp)
 	return 0;
 }
 
-int uterm_drm_display_swap(struct uterm_display *disp, uint32_t fb, bool immediate)
+int uterm_drm_modeset(struct uterm_display *disp, uint32_t fb)
+{
+	struct uterm_drm_display *ddrm = disp->data;
+	struct uterm_video *video = disp->video;
+	struct uterm_drm_video *vdrm = video->data;
+	drmModeModeInfo *mode;
+	int ret;
+
+	if (disp->dpms != UTERM_DPMS_ON)
+		return -EINVAL;
+
+	ret = uterm_drm_display_wait_pflip(disp);
+	if (ret)
+		return ret;
+
+	mode = &ddrm->current_mode->info;
+	ret = drmModeSetCrtc(vdrm->fd, ddrm->crtc_id, fb, 0, 0, &ddrm->conn_id, 1, mode);
+	if (ret) {
+		log_error("cannot set DRM-CRTC (%d): %m", errno);
+		return -EFAULT;
+	}
+	return 0;
+}
+
+int uterm_drm_display_swap(struct uterm_display *disp, uint32_t fb)
 {
 	struct uterm_drm_display *ddrm = disp->data;
 	struct uterm_video *video = disp->video;
 	struct uterm_drm_video *vdrm = video->data;
 	int ret;
-	drmModeModeInfo *mode;
 
 	if (disp->dpms != UTERM_DPMS_ON)
 		return -EINVAL;
 
-	if (immediate) {
-		ret = uterm_drm_display_wait_pflip(disp);
-		if (ret)
-			return ret;
+	if ((disp->flags & DISPLAY_VSYNC))
+		return -EBUSY;
 
-		mode = &ddrm->current_mode->info;
-		ret = drmModeSetCrtc(vdrm->fd, ddrm->crtc_id, fb, 0, 0, &ddrm->conn_id, 1, mode);
-		if (ret) {
-			log_error("cannot set DRM-CRTC (%d): %m", errno);
-			return -EFAULT;
+	ret = drmModePageFlip(vdrm->fd, ddrm->crtc_id, fb, DRM_MODE_PAGE_FLIP_EVENT, disp);
+	if (ret) {
+		if (ddrm->desired_mode != ddrm->default_mode) {
+			ddrm->desired_mode = ddrm->default_mode;
+			log_debug("Unable to page-flip desired mode! Switching to default "
+				  "mode.");
+			return -EAGAIN;
 		}
-	} else {
-		if ((disp->flags & DISPLAY_VSYNC))
-			return -EBUSY;
-
-		ret = drmModePageFlip(vdrm->fd, ddrm->crtc_id, fb, DRM_MODE_PAGE_FLIP_EVENT, disp);
-		if (ret) {
-			if (ddrm->desired_mode != ddrm->default_mode) {
-				ddrm->desired_mode = ddrm->default_mode;
-				log_debug("Unable to page-flip desired mode! Switching to default "
-					  "mode.");
-				return -EAGAIN;
-			}
-			log_error("cannot page-flip on DRM-CRTC (%d): %m", errno);
-			return -EFAULT;
-		}
-
-		uterm_display_ref(disp);
-		disp->flags |= DISPLAY_VSYNC;
+		log_error("cannot page-flip on DRM-CRTC (%d): %m", errno);
+		return -EFAULT;
 	}
+
+	uterm_display_ref(disp);
+	disp->flags |= DISPLAY_VSYNC;
 
 	return 0;
 }

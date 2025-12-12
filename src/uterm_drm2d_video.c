@@ -228,7 +228,10 @@ static int display_swap(struct uterm_display *disp, bool immediate)
 	struct uterm_drm2d_display *d2d = uterm_drm_display_get_data(disp);
 
 	rb = d2d->current_rb ^ 1;
-	ret = uterm_drm_display_swap(disp, d2d->rb[rb].id, immediate);
+	if (immediate)
+		ret = uterm_drm_modeset(disp, d2d->rb[rb].id);
+	else
+		ret = uterm_drm_display_swap(disp, d2d->rb[rb].id);
 	if (ret)
 		return ret;
 
