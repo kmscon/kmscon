@@ -183,7 +183,7 @@ void uterm_drm_display_destroy(struct uterm_display *disp)
 	free(disp->data);
 }
 
-int uterm_drm_display_activate(struct uterm_display *disp, int fd)
+int uterm_drm_display_init_crtc(struct uterm_display *disp, int fd)
 {
 	struct uterm_video *video = disp->video;
 	struct uterm_drm_display *ddrm = disp->data;
@@ -231,7 +231,7 @@ int uterm_drm_display_activate(struct uterm_display *disp, int fd)
 	return 0;
 }
 
-void uterm_drm_display_deactivate(struct uterm_display *disp, int fd)
+void uterm_drm_display_clear_crtc(struct uterm_display *disp, int fd)
 {
 	struct uterm_drm_display *ddrm = disp->data;
 
@@ -318,8 +318,9 @@ int uterm_drm_modeset(struct uterm_display *disp, uint32_t fb)
 	ret = drmModeSetCrtc(vdrm->fd, ddrm->crtc_id, fb, 0, 0, &ddrm->conn_id, 1, mode);
 	if (ret) {
 		log_error("cannot set DRM-CRTC (%d): %m", errno);
-		return -EFAULT;
+		return -EAGAIN;
 	}
+	disp->flags |= DISPLAY_ONLINE;
 	return 0;
 }
 
@@ -580,6 +581,30 @@ static drmModeCrtc *get_current_crtc(int fd, uint32_t encoder_id)
 	return NULL;
 }
 
+static int display_try_mode(struct uterm_display *disp)
+{
+	struct uterm_drm_display *ddrm = disp->data;
+	struct uterm_drm_video *vdrm = disp->video->data;
+	uint32_t fb;
+	int ret;
+
+	ret = uterm_drm_display_init_crtc(disp, vdrm->fd);
+	if (ret)
+		return ret;
+
+	ret = ddrm->preparefb(disp, &fb);
+	if (ret) {
+		uterm_drm_display_clear_crtc(disp, vdrm->fd);
+		return ret;
+	}
+	ret = uterm_drm_modeset(disp, fb);
+	if (ret) {
+		uterm_drm_display_clear_crtc(disp, vdrm->fd);
+		ddrm->freefb(disp);
+	}
+	return ret;
+}
+
 static void bind_display(struct uterm_video *video, drmModeRes *res, drmModeConnector *conn)
 {
 	struct uterm_drm_video *vdrm = video->data;
@@ -642,14 +667,24 @@ static void bind_display(struct uterm_video *video, drmModeRes *res, drmModeConn
 
 	log_info("display %p DPMS is %s", disp, uterm_dpms_to_name(disp->dpms));
 
-	ret = uterm_display_bind(disp);
+	if (video->use_original)
+		ddrm->current_mode = ddrm->original_mode;
+	else
+		ddrm->current_mode = ddrm->desired_mode;
+
+	ret = display_try_mode(disp);
+	if (ret == -EAGAIN) {
+		ddrm->current_mode = ddrm->desired_mode = ddrm->default_mode;
+		ret = display_try_mode(disp);
+	}
 	if (ret)
 		goto err_unref;
 
-	uterm_display_unref(disp);
-	return;
+	uterm_display_bind(disp);
 
 err_unref:
+	/* if bind is successful, it takes an additional ref, if it fails
+	 * this will remove the last one, and free disp */
 	uterm_display_unref(disp);
 	return;
 }

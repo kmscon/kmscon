@@ -61,12 +61,15 @@ struct uterm_drm_display {
 	struct uterm_mode *current_mode;
 	struct uterm_mode *original_mode;
 	void *data;
+
+	int (*preparefb)(struct uterm_display *disp, uint32_t *fb);
+	void (*freefb)(struct uterm_display *disp);
 };
 
 int uterm_drm_display_init(struct uterm_display *disp, void *data);
 void uterm_drm_display_destroy(struct uterm_display *disp);
-int uterm_drm_display_activate(struct uterm_display *disp, int fd);
-void uterm_drm_display_deactivate(struct uterm_display *disp, int fd);
+int uterm_drm_display_init_crtc(struct uterm_display *disp, int fd);
+void uterm_drm_display_clear_crtc(struct uterm_display *disp, int fd);
 int uterm_drm_display_set_dpms(struct uterm_display *disp, int state);
 int uterm_drm_display_wait_pflip(struct uterm_display *disp);
 int uterm_drm_modeset(struct uterm_display *disp, uint32_t fb);

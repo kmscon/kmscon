@@ -183,16 +183,6 @@ static void do_redraw_screen(struct screen *scr)
 	kmscon_text_render(scr->txt);
 
 	ret = uterm_display_swap(scr->disp, false);
-
-	if (ret == -EAGAIN) {
-		uterm_display_deactivate(scr->disp);
-		ret = uterm_display_activate(scr->disp);
-		if (!ret)
-			ret = font_set(scr->term);
-		if (!ret)
-			ret = uterm_display_swap(scr->disp, false);
-	}
-
 	if (ret) {
 		log_warning("cannot swap display %p", scr->disp);
 		return;

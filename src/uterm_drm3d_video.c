@@ -107,10 +107,9 @@ static struct uterm_drm3d_rb *bo_to_rb(struct uterm_display *disp, struct gbm_bo
 	return rb;
 }
 
-static int display_activate(struct uterm_display *disp)
+static int display_preparefb(struct uterm_display *disp, uint32_t *fb)
 {
 	struct uterm_video *video = disp->video;
-	struct uterm_drm_video *vdrm;
 	struct uterm_drm3d_video *v3d;
 	struct uterm_drm_display *ddrm = disp->data;
 	struct uterm_drm3d_display *d3d = uterm_drm_display_get_data(disp);
@@ -118,23 +117,13 @@ static int display_activate(struct uterm_display *disp)
 	struct gbm_bo *bo;
 	drmModeModeInfo *minfo;
 
-	vdrm = video->data;
 	v3d = uterm_drm_video_get_data(video);
-
-	if (video->use_original)
-		ddrm->current_mode = ddrm->original_mode;
-	else
-		ddrm->current_mode = ddrm->desired_mode;
 
 	minfo = &ddrm->current_mode->info;
 	disp->width = minfo->hdisplay;
 	disp->height = minfo->vdisplay;
 
-	log_info("activating display %p to %ux%u", disp, minfo->hdisplay, minfo->vdisplay);
-
-	ret = uterm_drm_display_activate(disp, vdrm->fd);
-	if (ret)
-		return ret;
+	log_info("preparefb display %p to %ux%u", disp, minfo->hdisplay, minfo->vdisplay);
 
 	d3d->current = NULL;
 	d3d->next = NULL;
@@ -184,20 +173,7 @@ static int display_activate(struct uterm_display *disp)
 		goto err_bo;
 	}
 
-	ret = drmModeSetCrtc(vdrm->fd, ddrm->crtc_id, d3d->current->id, 0, 0, &ddrm->conn_id, 1,
-			     minfo);
-	if (ret && ddrm->current_mode == ddrm->desired_mode &&
-	    ddrm->current_mode != ddrm->default_mode) {
-		ddrm->current_mode = ddrm->desired_mode = ddrm->default_mode;
-		ret = -EAGAIN;
-		goto err_bo;
-	} else if (ret) {
-		log_err("cannot set drm-crtc");
-		ret = -EFAULT;
-		goto err_bo;
-	}
-
-	disp->flags |= DISPLAY_ONLINE;
+	*fb = d3d->current->id;
 	return 0;
 
 err_bo:
@@ -212,25 +188,22 @@ err_saved:
 	disp->width = 0;
 	disp->height = 0;
 	ddrm->current_mode = NULL;
-	uterm_drm_display_deactivate(disp, vdrm->fd);
 	return ret;
 }
 
-static void display_deactivate(struct uterm_display *disp)
+static void display_freefb(struct uterm_display *disp)
 {
 	struct uterm_drm3d_display *d3d = uterm_drm_display_get_data(disp);
 	struct uterm_video *video = disp->video;
-	struct uterm_drm_video *vdrm;
 	struct uterm_drm3d_video *v3d;
 
-	log_info("deactivating display %p", disp);
-
-	vdrm = video->data;
 	v3d = uterm_drm_video_get_data(video);
-	uterm_drm_display_deactivate(disp, vdrm->fd);
 
-	eglMakeCurrent(v3d->disp, EGL_NO_SURFACE, EGL_NO_SURFACE, v3d->ctx);
-	eglDestroySurface(v3d->disp, d3d->surface);
+	if (v3d->ctx)
+		eglMakeCurrent(v3d->disp, EGL_NO_SURFACE, EGL_NO_SURFACE, v3d->ctx);
+
+	if (d3d->surface)
+		eglDestroySurface(v3d->disp, d3d->surface);
 
 	if (d3d->current) {
 		gbm_surface_release_buffer(d3d->gbm, d3d->current->bo);
@@ -240,15 +213,13 @@ static void display_deactivate(struct uterm_display *disp)
 		gbm_surface_release_buffer(d3d->gbm, d3d->next->bo);
 		d3d->next = NULL;
 	}
-
 	gbm_surface_destroy(d3d->gbm);
-	disp->width = 0;
-	disp->height = 0;
 }
 
 static int display_init(struct uterm_display *disp)
 {
 	struct uterm_drm3d_display *d3d;
+	struct uterm_drm_display *ddrm;
 	int ret;
 
 	d3d = malloc(sizeof(*d3d));
@@ -262,12 +233,19 @@ static int display_init(struct uterm_display *disp)
 		return ret;
 	}
 	disp->flags |= DISPLAY_OPENGL;
+	ddrm = disp->data;
+	ddrm->preparefb = display_preparefb;
+	ddrm->freefb = display_freefb;
 
 	return 0;
 }
 
 static void display_destroy(struct uterm_display *disp)
 {
+	struct uterm_drm_video *vdrm = disp->video->data;
+
+	uterm_drm_display_clear_crtc(disp, vdrm->fd);
+	display_freefb(disp);
 	free(uterm_drm_display_get_data(disp));
 	uterm_drm_display_destroy(disp);
 }
@@ -344,8 +322,6 @@ static int display_swap(struct uterm_display *disp, bool immediate)
 static const struct display_ops drm_display_ops = {
 	.init = display_init,
 	.destroy = display_destroy,
-	.activate = display_activate,
-	.deactivate = display_deactivate,
 	.set_dpms = uterm_drm_display_set_dpms,
 	.use = uterm_drm3d_display_use,
 	.swap = display_swap,

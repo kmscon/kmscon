@@ -150,7 +150,6 @@ void uterm_display_unbind(struct uterm_display *disp)
 		return;
 
 	VIDEO_CB(disp->video, disp, UTERM_GONE);
-	uterm_display_deactivate(disp);
 	shl_dlist_unlink(&disp->list);
 	uterm_display_unref(disp);
 }
@@ -231,24 +230,6 @@ int uterm_display_get_state(struct uterm_display *disp)
 		return UTERM_DISPLAY_INACTIVE;
 	}
 	return UTERM_DISPLAY_ASLEEP;
-}
-
-SHL_EXPORT
-int uterm_display_activate(struct uterm_display *disp)
-{
-	if (!disp || !disp->video || display_is_online(disp) || !video_is_awake(disp->video))
-		return -EINVAL;
-
-	return VIDEO_CALL(disp->ops->activate, 0, disp);
-}
-
-SHL_EXPORT
-void uterm_display_deactivate(struct uterm_display *disp)
-{
-	if (!disp || !display_is_online(disp))
-		return;
-
-	VIDEO_CALL(disp->ops->deactivate, 0, disp);
 }
 
 SHL_EXPORT

@@ -333,11 +333,6 @@ err_close:
 	return ret;
 }
 
-static int display_activate(struct uterm_display *disp)
-{
-	return display_activate_force(disp, false);
-}
-
 static void display_deactivate_force(struct uterm_display *disp, bool force)
 {
 	struct fbdev_display *dfb = disp->data;
@@ -355,11 +350,6 @@ static void display_deactivate_force(struct uterm_display *disp, bool force)
 		disp->height = 0;
 		disp->flags &= ~DISPLAY_ONLINE;
 	}
-}
-
-static void display_deactivate(struct uterm_display *disp)
-{
-	return display_deactivate_force(disp, false);
 }
 
 static int display_set_dpms(struct uterm_display *disp, int state)
@@ -439,8 +429,6 @@ static bool display_is_swapping(struct uterm_display *disp)
 static const struct display_ops fbdev_display_ops = {
 	.init = display_init,
 	.destroy = display_destroy,
-	.activate = display_activate,
-	.deactivate = display_deactivate,
 	.set_dpms = display_set_dpms,
 	.use = NULL,
 	.swap = display_swap,
@@ -561,8 +549,11 @@ static int video_wake_up(struct uterm_video *video)
 	{
 		iter = shl_dlist_entry(i, struct uterm_display, list);
 
-		if (!display_is_online(iter))
-			continue;
+		if (!display_is_online(iter)) {
+			ret = display_activate_force(iter, false);
+			if (ret)
+				return ret;
+		}
 
 		ret = display_activate_force(iter, true);
 		if (ret)

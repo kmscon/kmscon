@@ -42,8 +42,6 @@
 struct display_ops {
 	int (*init)(struct uterm_display *display);
 	void (*destroy)(struct uterm_display *display);
-	int (*activate)(struct uterm_display *disp);
-	void (*deactivate)(struct uterm_display *disp);
 	int (*set_dpms)(struct uterm_display *disp, int state);
 	int (*use)(struct uterm_display *disp);
 	int (*swap)(struct uterm_display *disp, bool immediate);
