@@ -223,21 +223,14 @@ unsigned int uterm_display_get_height(struct uterm_display *disp)
 SHL_EXPORT
 int uterm_display_get_state(struct uterm_display *disp)
 {
-	if (!disp)
+	if (!disp || !disp->video)
 		return UTERM_DISPLAY_GONE;
-
-	if (disp->video) {
-		if (disp->flags & DISPLAY_ONLINE) {
-			if (disp->video->flags & VIDEO_AWAKE)
-				return UTERM_DISPLAY_ACTIVE;
-			else
-				return UTERM_DISPLAY_ASLEEP;
-		} else {
-			return UTERM_DISPLAY_INACTIVE;
-		}
-	} else {
-		return UTERM_DISPLAY_GONE;
+	if (disp->flags & DISPLAY_ONLINE) {
+		if (disp->video->flags & VIDEO_AWAKE)
+			return UTERM_DISPLAY_ACTIVE;
+		return UTERM_DISPLAY_INACTIVE;
 	}
+	return UTERM_DISPLAY_ASLEEP;
 }
 
 SHL_EXPORT
