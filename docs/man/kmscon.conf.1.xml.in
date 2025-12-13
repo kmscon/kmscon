@@ -373,6 +373,17 @@ font-name=Ubuntu Mono
         </listitem>
       </varlistentry>
 
+      <varlistentry>
+        <term><option>grab-reboot</option></term>
+        <listitem>
+          <para>Reboot the system when this keyboard shortcut is pressed.
+                This option is disabled by default.
+                Use with caution as the reboot is immediate.
+                Example: grab-reboot=&lt;Ctrl&gt;&lt;Alt&gt;Delete
+                (default: disabled)</para>
+        </listitem>
+      </varlistentry>
+
       <para><emphasis>### Video Options ###</emphasis></para>
       <varlistentry>
         <term><option>drm</option></term>

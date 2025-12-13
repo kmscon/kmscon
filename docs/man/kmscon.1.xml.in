@@ -475,6 +475,16 @@
                 (default: &lt;Logo&gt;Minus)</para>
         </listitem>
       </varlistentry>
+      <varlistentry>
+        <term><option>--grab-reboot {grab}</option></term>
+        <listitem>
+          <para>Reboot the system when this keyboard shortcut is pressed.
+                This option is disabled by default (no default key binding).
+                Use with caution as the reboot is immediate without confirmation.
+                Example: --grab-reboot=&lt;Ctrl&gt;&lt;Alt&gt;Delete
+                (default: disabled)</para>
+        </listitem>
+      </varlistentry>
     </variablelist>
 
     <para>Video Options:</para>

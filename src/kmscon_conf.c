@@ -143,6 +143,8 @@ static void print_help()
 		"\t                                  Rotate output clock-wise\n"
 		"\t    --grab-rotate-ccw <grab>    [<Logo>Minus]\n"
 		"\t                                  Rotate output counter-clock-wise\n"
+		"\t    --grab-reboot <grab>        []\n"
+		"\t                                  Reboot the system (disabled by default)\n"
 		"\n"
 		"Video Options:\n"
 		"\t    --drm                     [on]    Use DRM if available\n"
@@ -746,6 +748,7 @@ int kmscon_conf_new(struct conf_ctx **out)
 		CONF_OPTION_GRAB(0, "grab-rotate-cw", &conf->grab_rotate_cw, &def_grab_rotate_cw),
 		CONF_OPTION_GRAB(0, "grab-rotate-ccw", &conf->grab_rotate_ccw,
 				 &def_grab_rotate_ccw),
+		CONF_OPTION_GRAB(0, "grab-reboot", &conf->grab_reboot, NULL),
 
 		/* Video Options */
 		CONF_OPTION_BOOL_FULL(0, "drm", aftercheck_drm, NULL, NULL, &conf->drm, true),
