@@ -683,6 +683,9 @@ static void forward_pointer_event(struct kmscon_terminal *term,
 				  struct uterm_input_pointer_event *ev)
 {
 	unsigned int event;
+	unsigned int button;
+
+	button = ev->button;
 
 	switch (ev->event) {
 	case UTERM_MOVED:
@@ -694,11 +697,19 @@ static void forward_pointer_event(struct kmscon_terminal *term,
 		else
 			event = TSM_MOUSE_EVENT_RELEASED;
 		break;
+	case UTERM_WHEEL:
+		/* Convert wheel events to button 4 (scroll up) or 5 (scroll down) */
+		event = TSM_MOUSE_EVENT_PRESSED;
+		if (ev->wheel > 0)
+			button = 4; /* Scroll up */
+		else
+			button = 5; /* Scroll down */
+		break;
 	default:
 		return;
 	}
 	tsm_vte_handle_mouse(term->vte, term->pointer.posx, term->pointer.posy, term->pointer.x,
-			     term->pointer.y, ev->button, event, 0);
+			     term->pointer.y, button, event, 0);
 }
 
 static void handle_pointer_button(struct kmscon_terminal *term,
