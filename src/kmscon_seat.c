@@ -32,8 +32,8 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <sys/reboot.h>
+#include <unistd.h>
 #include "conf.h"
 #include "eloop.h"
 #include "kmscon_conf.h"
@@ -565,13 +565,12 @@ static void seat_trigger_reboot(struct kmscon_seat *seat)
 {
 	log_warning("reboot triggered by keyboard shortcut on seat %s", seat->name);
 
-	sync();  /* Synchronize disk buffers */
+	sync(); /* Synchronize disk buffers */
 
 	if (reboot(RB_AUTOBOOT) < 0) {
 		log_error("failed to reboot system: %m");
 	}
 }
-
 
 static void seat_input_event(struct uterm_input *input, struct uterm_input_key_event *ev,
 			     void *data)
@@ -654,7 +653,7 @@ static void seat_input_event(struct uterm_input *input, struct uterm_input_key_e
 		seat_trigger_reboot(seat);
 		return;
 	}
-	}
+}
 
 /*
  * Locale sucks, but we need its value for Compose support. Since we don't want
