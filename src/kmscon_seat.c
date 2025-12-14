@@ -98,6 +98,10 @@ struct kmscon_seat {
 
 	unsigned int async_schedule;
 
+	/* DPMS timeout management */
+	struct ev_timer *dpms_timer;
+	bool dpms_blanked;
+
 	kmscon_seat_cb_t cb;
 	void *data;
 };
@@ -565,6 +569,78 @@ static void seat_trigger_reboot(struct kmscon_seat *seat)
 		log_error("failed to reboot system: %m");
 	}
 }
+static void seat_dpms_timeout(struct ev_timer *timer, uint64_t num, void *data)
+{
+	struct kmscon_seat *seat = data;
+	struct shl_dlist *iter;
+	struct kmscon_display *d;
+	int ret;
+
+	if (!seat->conf->dpms_timeout)
+		return;
+
+	log_debug("DPMS: blanking screen due to inactivity");
+
+	/* Turn off all displays */
+	shl_dlist_for_each(iter, &seat->displays)
+	{
+		d = shl_dlist_entry(iter, struct kmscon_display, list);
+
+		/* Only set DPMS on activated displays */
+		if (!d->activated)
+			continue;
+		ret = uterm_display_set_dpms(d->disp, UTERM_DPMS_OFF);
+		if (ret)
+			log_warning("cannot set DPMS to OFF for display: %d", ret);
+	}
+
+	seat->dpms_blanked = true;
+}
+
+static void seat_dpms_reset_timer(struct kmscon_seat *seat)
+{
+	struct shl_dlist *iter;
+	struct kmscon_display *d;
+	struct itimerspec spec;
+	int ret;
+
+	if (!seat->conf->dpms_timeout || !seat->dpms_timer)
+		return;
+
+	/* If screen is blanked, unblank it */
+	if (seat->dpms_blanked) {
+		log_debug("DPMS: unblanking screen");
+		shl_dlist_for_each(iter, &seat->displays)
+		{
+			d = shl_dlist_entry(iter, struct kmscon_display, list);
+
+			/* Only set DPMS on activated displays */
+			if (!d->activated)
+				continue;
+			ret = uterm_display_set_dpms(d->disp, UTERM_DPMS_ON);
+			if (ret)
+				log_warning("cannot set DPMS to ON for display: %d", ret);
+		}
+		seat->dpms_blanked = false;
+	}
+
+	/* Reset the timer */
+	memset(&spec, 0, sizeof(spec));
+	spec.it_value.tv_sec = seat->conf->dpms_timeout;
+	spec.it_value.tv_nsec = 0;
+	ev_timer_update(seat->dpms_timer, &spec);
+}
+
+static void seat_pointer_event(struct uterm_input *input, struct uterm_input_pointer_event *ev,
+			       void *data)
+{
+	struct kmscon_seat *seat = data;
+
+	/* Reset DPMS timer only on real user actions (not SYNC or HIDE_TIMEOUT) */
+	if (ev->event != UTERM_MOVED && ev->event != UTERM_BUTTON && ev->event != UTERM_WHEEL)
+		return;
+	seat_dpms_reset_timer(seat);
+}
 
 static void seat_input_event(struct uterm_input *input, struct uterm_input_key_event *ev,
 			     void *data)
@@ -572,6 +648,9 @@ static void seat_input_event(struct uterm_input *input, struct uterm_input_key_e
 	struct kmscon_seat *seat = data;
 	struct kmscon_session *s;
 	int ret;
+
+	/* Reset DPMS timer on any input event */
+	seat_dpms_reset_timer(seat);
 
 	if (ev->handled || !seat->awake)
 		return;
@@ -748,6 +827,32 @@ int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf, struct
 	if (ret)
 		goto err_input;
 
+	/* Register pointer event handler for DPMS management */
+	ret = uterm_input_register_pointer_cb(seat->input, seat_pointer_event, seat);
+	if (ret) {
+		log_warning("cannot register pointer callback: %d", ret);
+		/* Not fatal, continue without pointer DPMS support */
+	}
+
+	/* Initialize DPMS timeout management */
+	seat->dpms_timer = NULL;
+	seat->dpms_blanked = false;
+
+	/* Create DPMS timer if timeout is configured */
+	if (seat->conf->dpms_timeout > 0) {
+		struct itimerspec spec;
+		ret = ev_eloop_new_timer(seat->eloop, &seat->dpms_timer, NULL, seat_dpms_timeout,
+					 seat);
+		if (ret) {
+			log_warning("cannot create DPMS timer: %d", ret);
+		} else {
+			/* Start the timer */
+			memset(&spec, 0, sizeof(spec));
+			spec.it_value.tv_sec = seat->conf->dpms_timeout;
+			ev_timer_update(seat->dpms_timer, &spec);
+		}
+	}
+
 	ret = uterm_vt_allocate(seat->vtm, &seat->vt, vt_types, seat->name, seat->input,
 				seat->conf->vt, seat_vt_event, seat);
 	if (ret)
@@ -766,6 +871,7 @@ int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf, struct
 
 err_input_cb:
 	uterm_input_unregister_key_cb(seat->input, seat_input_event, seat);
+	uterm_input_unregister_pointer_cb(seat->input, seat_pointer_event, seat);
 err_input:
 	uterm_input_unref(seat->input);
 err_conf:
@@ -805,8 +911,12 @@ void kmscon_seat_free(struct kmscon_seat *seat)
 		seat_remove_display(seat, d);
 	}
 
+	if (seat->dpms_timer)
+		ev_timer_unref(seat->dpms_timer);
+
 	uterm_vt_deallocate(seat->vt);
 	uterm_input_unregister_key_cb(seat->input, seat_input_event, seat);
+	uterm_input_unregister_pointer_cb(seat->input, seat_pointer_event, seat);
 	uterm_input_unref(seat->input);
 	kmscon_conf_free(seat->conf_ctx);
 	free(seat->name);

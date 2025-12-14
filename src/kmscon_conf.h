@@ -115,6 +115,8 @@ struct kmscon_conf_t {
 	unsigned int xkb_repeat_rate;
 	/* Enable mouse support */
 	bool mouse;
+	/* DPMS screen timeout in seconds (0 = disabled) */
+	unsigned int dpms_timeout;
 
 	/* Grabs / Keyboard-Shortcuts */
 	/* scroll-up grab */
