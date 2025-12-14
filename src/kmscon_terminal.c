@@ -694,6 +694,20 @@ static void forward_pointer_event(struct kmscon_terminal *term,
 		else
 			event = TSM_MOUSE_EVENT_RELEASED;
 		break;
+	case UTERM_WHEEL: {
+		/* Convert wheel events to button 4 (scroll up) or 5 (scroll down)
+		 * Send both PRESSED and RELEASED for compatibility with all xterm protocols */
+		unsigned int button = (ev->wheel > 0) ? 4 : 5;
+		/* Send press event */
+		tsm_vte_handle_mouse(term->vte, term->pointer.posx, term->pointer.posy,
+				     term->pointer.x, term->pointer.y, button,
+				     TSM_MOUSE_EVENT_PRESSED, 0);
+		/* Send release event */
+		tsm_vte_handle_mouse(term->vte, term->pointer.posx, term->pointer.posy,
+				     term->pointer.x, term->pointer.y, button,
+				     TSM_MOUSE_EVENT_RELEASED, 0);
+		return;
+	}
 	default:
 		return;
 	}
