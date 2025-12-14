@@ -69,6 +69,7 @@ xkb-layout=de
 xkb-repeat-delay=200
 xkb-repeat-rate=65
 mouse
+dpms-timeout=0
 
 ### Video Options ###
 drm
@@ -277,6 +278,19 @@ font-name=Ubuntu Mono
                 It allows to select, and copy/paste text with a pointing device,
                 and also to scroll with the mouse wheel.
                 It's still experimental, and may not work with specific devices.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>--dpms-timeout</option></term>
+        <listitem>
+          <para>Set screen timeout in seconds (default: 0 = disabled).
+                When enabled, the screen will automatically turn off (DPMS OFF)
+                after the specified period of keyboard and mouse inactivity.
+                Any keyboard or mouse input will turn the screen back on and
+                reset the timer. This feature is useful for power saving on
+                systems where the screen is not always needed.
           </para>
         </listitem>
       </varlistentry>
