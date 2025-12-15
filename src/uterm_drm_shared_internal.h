@@ -36,13 +36,6 @@
 #include "uterm_video.h"
 #include "uterm_video_internal.h"
 
-/* drm mode */
-
-struct uterm_mode {
-	struct shl_dlist list;
-	drmModeModeInfo info;
-};
-
 /* drm dpms */
 
 int uterm_drm_set_dpms(int fd, uint32_t conn_id, int state);
@@ -55,11 +48,11 @@ struct uterm_drm_display {
 	int crtc_id;
 	drmModeCrtc *saved_crtc;
 
-	struct shl_dlist modes;
-	struct uterm_mode *default_mode;
-	struct uterm_mode *desired_mode;
-	struct uterm_mode *current_mode;
-	struct uterm_mode *original_mode;
+	drmModeModeInfoPtr current_mode;
+	drmModeModeInfo default_mode;
+	drmModeModeInfo desired_mode;
+	drmModeModeInfo original_mode;
+
 	void *data;
 
 	int (*preparefb)(struct uterm_display *disp, uint32_t *fb);

@@ -119,7 +119,7 @@ static int display_preparefb(struct uterm_display *disp, uint32_t *fb)
 
 	v3d = uterm_drm_video_get_data(video);
 
-	minfo = &ddrm->current_mode->info;
+	minfo = ddrm->current_mode;
 	disp->width = minfo->hdisplay;
 	disp->height = minfo->vdisplay;
 

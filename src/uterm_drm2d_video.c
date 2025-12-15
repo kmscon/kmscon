@@ -124,8 +124,8 @@ static int display_preparefb(struct uterm_display *disp, uint32_t *fb)
 	struct uterm_drm2d_display *d2d = ddrm->data;
 	int ret;
 
-	disp->width = ddrm->current_mode->info.hdisplay;
-	disp->height = ddrm->current_mode->info.vdisplay;
+	disp->width = ddrm->current_mode->hdisplay;
+	disp->height = ddrm->current_mode->vdisplay;
 
 	d2d->current_rb = 0;
 
