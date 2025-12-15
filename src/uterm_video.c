@@ -72,7 +72,8 @@ const char *uterm_dpms_to_name(int dpms)
 	}
 }
 
-int display_new(struct uterm_display **out, const struct display_ops *ops)
+int display_new(struct uterm_display **out, const struct display_ops *ops,
+		struct uterm_video *video)
 {
 	struct uterm_display *disp;
 	int ret;
@@ -87,6 +88,7 @@ int display_new(struct uterm_display **out, const struct display_ops *ops)
 	disp->ref = 1;
 	disp->ops = ops;
 	log_info("new display %p", disp);
+	disp->video = video;
 
 	ret = shl_hook_new(&disp->hook);
 	if (ret)
@@ -129,13 +131,12 @@ void uterm_display_unref(struct uterm_display *disp)
 }
 
 SHL_EXPORT
-int uterm_display_bind(struct uterm_display *disp, struct uterm_video *video)
+int uterm_display_bind(struct uterm_display *disp)
 {
-	if (!disp || !video || disp->video)
+	if (!disp || !disp->video)
 		return -EINVAL;
 
-	shl_dlist_link_tail(&video->displays, &disp->list);
-	disp->video = video;
+	shl_dlist_link_tail(&disp->video->displays, &disp->list);
 	uterm_display_ref(disp);
 	VIDEO_CB(disp->video, disp, UTERM_NEW);
 
@@ -150,7 +151,6 @@ void uterm_display_unbind(struct uterm_display *disp)
 
 	VIDEO_CB(disp->video, disp, UTERM_GONE);
 	uterm_display_deactivate(disp);
-	disp->video = NULL;
 	shl_dlist_unlink(&disp->list);
 	uterm_display_unref(disp);
 }
