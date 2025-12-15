@@ -460,7 +460,7 @@ static void intro_idle_event(struct ev_eloop *eloop, void *unused, void *data)
 	vfb->pending_intro = false;
 	ev_eloop_unregister_idle_cb(eloop, intro_idle_event, data, EV_NORMAL);
 
-	ret = display_new(&disp, &fbdev_display_ops);
+	ret = display_new(&disp, &fbdev_display_ops, video);
 	if (ret) {
 		log_error("cannot create fbdev display: %d", ret);
 		return;
@@ -475,7 +475,7 @@ static void intro_idle_event(struct ev_eloop *eloop, void *unused, void *data)
 		return;
 	}
 
-	ret = uterm_display_bind(disp, video);
+	ret = uterm_display_bind(disp);
 	if (ret) {
 		log_error("cannot bind fbdev display: %d", ret);
 		uterm_display_unref(disp);

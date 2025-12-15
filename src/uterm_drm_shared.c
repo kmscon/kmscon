@@ -584,7 +584,7 @@ static void bind_display(struct uterm_video *video, drmModeRes *res, drmModeConn
 	drmModeCrtc *current_crtc;
 	int ret, i;
 
-	ret = display_new(&disp, vdrm->display_ops);
+	ret = display_new(&disp, vdrm->display_ops, video);
 	if (ret)
 		return;
 	ddrm = disp->data;
@@ -637,7 +637,7 @@ static void bind_display(struct uterm_video *video, drmModeRes *res, drmModeConn
 
 	log_info("display %p DPMS is %s", disp, uterm_dpms_to_name(disp->dpms));
 
-	ret = uterm_display_bind(disp, video);
+	ret = uterm_display_bind(disp);
 	if (ret)
 		goto err_unref;
 

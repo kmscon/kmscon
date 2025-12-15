@@ -97,8 +97,9 @@ struct uterm_display {
 	void *data;
 };
 
-int display_new(struct uterm_display **out, const struct display_ops *ops);
-int uterm_display_bind(struct uterm_display *disp, struct uterm_video *video);
+int display_new(struct uterm_display **out, const struct display_ops *ops,
+		struct uterm_video *video);
+int uterm_display_bind(struct uterm_display *disp);
 void uterm_display_unbind(struct uterm_display *disp);
 
 #define DISPLAY_CB(disp, act)                                                                      \
