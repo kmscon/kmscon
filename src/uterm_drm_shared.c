@@ -309,6 +309,11 @@ int uterm_drm_modeset(struct uterm_display *disp, uint32_t fb)
 	if (ret)
 		return ret;
 
+	// Clean up kms hardware cursor from display sessions that don't properly
+	// clean themselves up`
+	if (drmModeSetCursor(vdrm->fd, ddrm->crtc_id, 0, 0, 0))
+		log_warn("cannot hide hardware cursor");
+
 	mode = &ddrm->current_mode->info;
 	ret = drmModeSetCrtc(vdrm->fd, ddrm->crtc_id, fb, 0, 0, &ddrm->conn_id, 1, mode);
 	if (ret) {
@@ -694,11 +699,6 @@ int uterm_drm_video_hotplug(struct uterm_video *video, bool read_dpms, bool mode
 				continue;
 
 			disp->flags |= DISPLAY_AVAILABLE;
-
-			// Clean up kms hardware cursor from display sessions that don't properly
-			// clean themselves up`
-			if (drmModeSetCursor(vdrm->fd, ddrm->crtc_id, 0, 0, 0))
-				log_warn("cannot hide hardware cursor");
 
 			if (!display_is_online(disp))
 				break;
