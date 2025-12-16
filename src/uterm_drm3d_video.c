@@ -111,15 +111,14 @@ static int display_preparefb(struct uterm_display *disp, uint32_t *fb)
 {
 	struct uterm_video *video = disp->video;
 	struct uterm_drm3d_video *v3d;
-	struct uterm_drm_display *ddrm = disp->data;
-	struct uterm_drm3d_display *d3d = uterm_drm_display_get_data(disp);
+	struct uterm_drm3d_display *d3d = disp->data;
 	int ret;
 	struct gbm_bo *bo;
 	drmModeModeInfo *minfo;
 
 	v3d = uterm_drm_video_get_data(video);
 
-	minfo = ddrm->current_mode;
+	minfo = d3d->ddrm.current_mode;
 	disp->width = minfo->hdisplay;
 	disp->height = minfo->vdisplay;
 
@@ -187,13 +186,13 @@ err_gbm:
 err_saved:
 	disp->width = 0;
 	disp->height = 0;
-	ddrm->current_mode = NULL;
+	d3d->ddrm.current_mode = NULL;
 	return ret;
 }
 
 static void display_freefb(struct uterm_display *disp)
 {
-	struct uterm_drm3d_display *d3d = uterm_drm_display_get_data(disp);
+	struct uterm_drm3d_display *d3d = disp->data;
 	struct uterm_video *video = disp->video;
 	struct uterm_drm3d_video *v3d;
 
@@ -219,23 +218,16 @@ static void display_freefb(struct uterm_display *disp)
 static int display_init(struct uterm_display *disp)
 {
 	struct uterm_drm3d_display *d3d;
-	struct uterm_drm_display *ddrm;
-	int ret;
 
 	d3d = malloc(sizeof(*d3d));
 	if (!d3d)
 		return -ENOMEM;
 	memset(d3d, 0, sizeof(*d3d));
 
-	ret = uterm_drm_display_init(disp, d3d);
-	if (ret) {
-		free(d3d);
-		return ret;
-	}
 	disp->flags |= DISPLAY_OPENGL;
-	ddrm = disp->data;
-	ddrm->preparefb = display_preparefb;
-	ddrm->freefb = display_freefb;
+	disp->data = d3d;
+	d3d->ddrm.preparefb = display_preparefb;
+	d3d->ddrm.freefb = display_freefb;
 
 	return 0;
 }
@@ -246,13 +238,12 @@ static void display_destroy(struct uterm_display *disp)
 
 	uterm_drm_display_clear_crtc(disp, vdrm->fd);
 	display_freefb(disp);
-	free(uterm_drm_display_get_data(disp));
-	uterm_drm_display_destroy(disp);
+	free(disp->data);
 }
 
 int uterm_drm3d_display_use(struct uterm_display *disp)
 {
-	struct uterm_drm3d_display *d3d = uterm_drm_display_get_data(disp);
+	struct uterm_drm3d_display *d3d = disp->data;
 	struct uterm_drm3d_video *v3d;
 
 	v3d = uterm_drm_video_get_data(disp->video);
@@ -270,7 +261,7 @@ static int display_swap(struct uterm_display *disp, bool immediate)
 	int ret;
 	struct gbm_bo *bo;
 	struct uterm_drm3d_rb *rb;
-	struct uterm_drm3d_display *d3d = uterm_drm_display_get_data(disp);
+	struct uterm_drm3d_display *d3d = disp->data;
 	struct uterm_video *video = disp->video;
 	struct uterm_drm3d_video *v3d = uterm_drm_video_get_data(video);
 
@@ -360,7 +351,7 @@ static void show_displays(struct uterm_video *video)
 
 static void page_flip_handler(struct uterm_display *disp)
 {
-	struct uterm_drm3d_display *d3d = uterm_drm_display_get_data(disp);
+	struct uterm_drm3d_display *d3d = disp->data;
 
 	if (d3d->next) {
 		if (d3d->current)

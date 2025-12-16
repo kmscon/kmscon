@@ -120,12 +120,11 @@ static void destroy_rb(int fd, struct uterm_drm2d_rb *rb)
 static int display_preparefb(struct uterm_display *disp, uint32_t *fb)
 {
 	struct uterm_drm_video *vdrm = disp->video->data;
-	struct uterm_drm_display *ddrm = disp->data;
-	struct uterm_drm2d_display *d2d = ddrm->data;
+	struct uterm_drm2d_display *d2d = disp->data;
 	int ret;
 
-	disp->width = ddrm->current_mode->hdisplay;
-	disp->height = ddrm->current_mode->vdisplay;
+	disp->width = d2d->ddrm.current_mode->hdisplay;
+	disp->height = d2d->ddrm.current_mode->vdisplay;
 
 	d2d->current_rb = 0;
 
@@ -148,8 +147,7 @@ free_rb0:
 static void display_freefb(struct uterm_display *disp)
 {
 	struct uterm_drm_video *vdrm = disp->video->data;
-	struct uterm_drm_display *ddrm = disp->data;
-	struct uterm_drm2d_display *d2d = ddrm->data;
+	struct uterm_drm2d_display *d2d = disp->data;
 
 	destroy_rb(vdrm->fd, &d2d->rb[0]);
 	destroy_rb(vdrm->fd, &d2d->rb[1]);
@@ -158,27 +156,21 @@ static void display_freefb(struct uterm_display *disp)
 static int display_init(struct uterm_display *disp)
 {
 	struct uterm_drm2d_display *d2d;
-	struct uterm_drm_display *d;
-	int ret;
 
 	d2d = malloc(sizeof(*d2d));
 	if (!d2d)
 		return -ENOMEM;
 	memset(d2d, 0, sizeof(*d2d));
 
-	ret = uterm_drm_display_init(disp, d2d);
-	if (ret) {
-		free(d2d);
-		return ret;
-	}
-	d = disp->data;
-	d->preparefb = display_preparefb;
-	d->freefb = display_freefb;
+	disp->data = d2d;
+	d2d->ddrm.preparefb = display_preparefb;
+	d2d->ddrm.freefb = display_freefb;
 	return 0;
 }
 
 static void display_destroy(struct uterm_display *disp)
 {
+	struct uterm_drm2d_display *d2d = disp->data;
 	struct uterm_drm_video *vdrm = disp->video->data;
 
 	if (disp->flags & DISPLAY_ONLINE)
@@ -186,14 +178,13 @@ static void display_destroy(struct uterm_display *disp)
 
 	display_freefb(disp);
 
-	free(uterm_drm_display_get_data(disp));
-	uterm_drm_display_destroy(disp);
+	free(d2d);
 }
 
 static int display_swap(struct uterm_display *disp, bool immediate)
 {
 	int ret, rb;
-	struct uterm_drm2d_display *d2d = uterm_drm_display_get_data(disp);
+	struct uterm_drm2d_display *d2d = disp->data;
 
 	rb = d2d->current_rb ^ 1;
 	if (immediate)
@@ -243,7 +234,7 @@ static void show_displays(struct uterm_video *video)
 		 * tearing but that's acceptable as this is only called during
 		 * wakeup/sleep. */
 
-		d2d = uterm_drm_display_get_data(iter);
+		d2d = iter->data;
 		rb = &d2d->rb[d2d->current_rb];
 		memset(rb->map, 0, rb->size);
 		uterm_drm_display_wait_pflip(iter);

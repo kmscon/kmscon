@@ -143,25 +143,6 @@ int uterm_drm_get_dpms(int fd, drmModeConnector *conn)
 	return UTERM_DPMS_UNKNOWN;
 }
 
-int uterm_drm_display_init(struct uterm_display *disp, void *data)
-{
-	struct uterm_drm_display *d;
-
-	d = malloc(sizeof(*d));
-	if (!d)
-		return -ENOMEM;
-	memset(d, 0, sizeof(*d));
-	disp->data = d;
-	d->data = data;
-
-	return 0;
-}
-
-void uterm_drm_display_destroy(struct uterm_display *disp)
-{
-	free(disp->data);
-}
-
 int uterm_drm_display_init_crtc(struct uterm_display *disp, int fd)
 {
 	struct uterm_video *video = disp->video;

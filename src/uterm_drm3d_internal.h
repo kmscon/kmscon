@@ -45,6 +45,7 @@
 #include <unistd.h>
 #include <xf86drm.h>
 #include <xf86drmMode.h>
+#include "uterm_drm_shared_internal.h"
 #include "uterm_video.h"
 
 /* thanks khronos for breaking backwards compatibility.. */
@@ -59,6 +60,7 @@ struct uterm_drm3d_rb {
 };
 
 struct uterm_drm3d_display {
+	struct uterm_drm_display ddrm;
 	struct gbm_surface *gbm;
 	EGLSurface surface;
 	struct uterm_drm3d_rb *current;

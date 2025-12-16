@@ -55,7 +55,7 @@ int uterm_drm2d_display_fake_blendv(struct uterm_display *disp,
 	unsigned int sw, sh;
 	uint_fast32_t r, g, b, out;
 	struct uterm_drm2d_rb *rb;
-	struct uterm_drm2d_display *d2d = uterm_drm_display_get_data(disp);
+	struct uterm_drm2d_display *d2d = disp->data;
 
 	if (!req)
 		return -EINVAL;
@@ -141,7 +141,7 @@ int uterm_drm2d_display_fill(struct uterm_display *disp, uint8_t r, uint8_t g, u
 	uint8_t *dst;
 	unsigned int sw, sh;
 	struct uterm_drm2d_rb *rb;
-	struct uterm_drm2d_display *d2d = uterm_drm_display_get_data(disp);
+	struct uterm_drm2d_display *d2d = disp->data;
 
 	rb = &d2d->rb[d2d->current_rb ^ 1];
 	sw = disp->width;

@@ -53,14 +53,10 @@ struct uterm_drm_display {
 	drmModeModeInfo desired_mode;
 	drmModeModeInfo original_mode;
 
-	void *data;
-
 	int (*preparefb)(struct uterm_display *disp, uint32_t *fb);
 	void (*freefb)(struct uterm_display *disp);
 };
 
-int uterm_drm_display_init(struct uterm_display *disp, void *data);
-void uterm_drm_display_destroy(struct uterm_display *disp);
 int uterm_drm_display_init_crtc(struct uterm_display *disp, int fd);
 void uterm_drm_display_clear_crtc(struct uterm_display *disp, int fd);
 int uterm_drm_display_set_dpms(struct uterm_display *disp, int state);
@@ -68,13 +64,6 @@ int uterm_drm_display_wait_pflip(struct uterm_display *disp);
 int uterm_drm_modeset(struct uterm_display *disp, uint32_t fb);
 int uterm_drm_display_swap(struct uterm_display *disp, uint32_t fb);
 bool uterm_drm_is_swapping(struct uterm_display *disp);
-
-static inline void *uterm_drm_display_get_data(struct uterm_display *disp)
-{
-	struct uterm_drm_display *d = disp->data;
-
-	return d->data;
-}
 
 /* drm video */
 
