@@ -55,32 +55,6 @@
 
 #define LOG_SUBSYSTEM "uterm_drm3d_video"
 
-static int display_init(struct uterm_display *disp)
-{
-	struct uterm_drm3d_display *d3d;
-	int ret;
-
-	d3d = malloc(sizeof(*d3d));
-	if (!d3d)
-		return -ENOMEM;
-	memset(d3d, 0, sizeof(*d3d));
-
-	ret = uterm_drm_display_init(disp, d3d);
-	if (ret) {
-		free(d3d);
-		return ret;
-	}
-	disp->flags |= DISPLAY_OPENGL;
-
-	return 0;
-}
-
-static void display_destroy(struct uterm_display *disp)
-{
-	free(uterm_drm_display_get_data(disp));
-	uterm_drm_display_destroy(disp);
-}
-
 static void bo_destroy_event(struct gbm_bo *bo, void *data)
 {
 	struct uterm_drm3d_rb *rb = data;
@@ -270,6 +244,32 @@ static void display_deactivate(struct uterm_display *disp)
 	gbm_surface_destroy(d3d->gbm);
 	disp->width = 0;
 	disp->height = 0;
+}
+
+static int display_init(struct uterm_display *disp)
+{
+	struct uterm_drm3d_display *d3d;
+	int ret;
+
+	d3d = malloc(sizeof(*d3d));
+	if (!d3d)
+		return -ENOMEM;
+	memset(d3d, 0, sizeof(*d3d));
+
+	ret = uterm_drm_display_init(disp, d3d);
+	if (ret) {
+		free(d3d);
+		return ret;
+	}
+	disp->flags |= DISPLAY_OPENGL;
+
+	return 0;
+}
+
+static void display_destroy(struct uterm_display *disp)
+{
+	free(uterm_drm_display_get_data(disp));
+	uterm_drm_display_destroy(disp);
 }
 
 int uterm_drm3d_display_use(struct uterm_display *disp)

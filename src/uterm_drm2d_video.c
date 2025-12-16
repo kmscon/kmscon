@@ -48,31 +48,6 @@
 
 #define LOG_SUBSYSTEM "video_drm2d"
 
-static int display_init(struct uterm_display *disp)
-{
-	struct uterm_drm2d_display *d2d;
-	int ret;
-
-	d2d = malloc(sizeof(*d2d));
-	if (!d2d)
-		return -ENOMEM;
-	memset(d2d, 0, sizeof(*d2d));
-
-	ret = uterm_drm_display_init(disp, d2d);
-	if (ret) {
-		free(d2d);
-		return ret;
-	}
-
-	return 0;
-}
-
-static void display_destroy(struct uterm_display *disp)
-{
-	free(uterm_drm_display_get_data(disp));
-	uterm_drm_display_destroy(disp);
-}
-
 static int drm_addfb2(int fd, uint32_t width, uint32_t height, struct uterm_drm2d_rb *rb)
 {
 	uint32_t handles[4] = {rb->handle, 0, 0, 0};
@@ -220,6 +195,31 @@ static void display_deactivate(struct uterm_display *disp)
 	destroy_rb(disp, &d2d->rb[0]);
 	disp->width = 0;
 	disp->height = 0;
+}
+
+static int display_init(struct uterm_display *disp)
+{
+	struct uterm_drm2d_display *d2d;
+	int ret;
+
+	d2d = malloc(sizeof(*d2d));
+	if (!d2d)
+		return -ENOMEM;
+	memset(d2d, 0, sizeof(*d2d));
+
+	ret = uterm_drm_display_init(disp, d2d);
+	if (ret) {
+		free(d2d);
+		return ret;
+	}
+
+	return 0;
+}
+
+static void display_destroy(struct uterm_display *disp)
+{
+	free(uterm_drm_display_get_data(disp));
+	uterm_drm_display_destroy(disp);
 }
 
 static int display_swap(struct uterm_display *disp, bool immediate)
