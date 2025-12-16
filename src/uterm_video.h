@@ -144,11 +144,6 @@ struct uterm_display *uterm_display_next(struct uterm_display *disp);
 int uterm_display_register_cb(struct uterm_display *disp, uterm_display_cb cb, void *data);
 void uterm_display_unregister_cb(struct uterm_display *disp, uterm_display_cb cb, void *data);
 
-struct uterm_mode *uterm_display_get_modes(struct uterm_display *disp);
-struct uterm_mode *uterm_display_get_current(struct uterm_display *disp);
-struct uterm_mode *uterm_display_get_default(struct uterm_display *disp);
-struct uterm_mode *uterm_display_get_original(struct uterm_display *disp);
-
 unsigned int uterm_display_get_width(struct uterm_display *disp);
 unsigned int uterm_display_get_height(struct uterm_display *disp);
 int uterm_display_get_state(struct uterm_display *disp);
