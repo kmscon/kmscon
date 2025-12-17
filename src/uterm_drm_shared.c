@@ -730,6 +730,12 @@ int uterm_drm_video_hotplug(struct uterm_video *video, bool read_dpms, bool mode
 			uterm_display_unbind(disp);
 	}
 
+	shl_dlist_for_each(iter, &video->displays)
+	{
+		disp = shl_dlist_entry(iter, struct uterm_display, list);
+		uterm_display_ready(disp);
+	}
+
 	video->flags &= ~VIDEO_HOTPLUG;
 	return 0;
 }

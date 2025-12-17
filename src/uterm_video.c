@@ -140,9 +140,18 @@ int uterm_display_bind(struct uterm_display *disp)
 
 	shl_dlist_link_tail(&disp->video->displays, &disp->list);
 	uterm_display_ref(disp);
-	VIDEO_CB(disp->video, disp, UTERM_NEW);
 
 	return 0;
+}
+
+SHL_EXPORT
+void uterm_display_ready(struct uterm_display *disp)
+{
+	if (!disp || !disp->video || disp->flags & DISPLAY_INUSE)
+		return;
+
+	disp->flags |= DISPLAY_INUSE;
+	VIDEO_CB(disp->video, disp, UTERM_NEW);
 }
 
 SHL_EXPORT
@@ -150,8 +159,8 @@ void uterm_display_unbind(struct uterm_display *disp)
 {
 	if (!disp || !disp->video)
 		return;
-
-	VIDEO_CB(disp->video, disp, UTERM_GONE);
+	if (disp->flags & DISPLAY_INUSE)
+		VIDEO_CB(disp->video, disp, UTERM_GONE);
 	shl_dlist_unlink(&disp->list);
 	uterm_display_unref(disp);
 }

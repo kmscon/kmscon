@@ -78,6 +78,7 @@ struct uterm_video_module {
 #define DISPLAY_DITHERING 0x20
 #define DISPLAY_PFLIP 0x40
 #define DISPLAY_OPENGL 0x80
+#define DISPLAY_INUSE 0x100
 
 struct uterm_display {
 	char *name;
@@ -100,6 +101,7 @@ int display_new(struct uterm_display **out, const struct display_ops *ops,
 		struct uterm_video *video, const char *name);
 int uterm_display_bind(struct uterm_display *disp);
 void uterm_display_unbind(struct uterm_display *disp);
+void uterm_display_ready(struct uterm_display *disp);
 
 #define DISPLAY_CB(disp, act)                                                                      \
 	shl_hook_call((disp)->hook, (disp),                                                        \
