@@ -36,6 +36,14 @@
 #include "uterm_video.h"
 #include "uterm_video_internal.h"
 
+/* drm object */
+
+struct drm_object {
+	drmModeObjectProperties *props;
+	drmModePropertyRes **props_info;
+	uint32_t id;
+};
+
 /* drm dpms */
 
 int uterm_drm_set_dpms(int fd, uint32_t conn_id, int state);
@@ -44,26 +52,30 @@ int uterm_drm_get_dpms(int fd, drmModeConnector *conn);
 /* drm display */
 
 struct uterm_drm_display {
-	uint32_t conn_id;
-	int crtc_id;
-	drmModeCrtc *saved_crtc;
+	struct drm_object connector;
+	struct drm_object crtc;
+	struct drm_object plane;
+
+	drmModeModeInfo mode;
+	uint32_t mode_blob_id;
+	uint32_t crtc_index;
 
 	drmModeModeInfoPtr current_mode;
 	drmModeModeInfo default_mode;
 	drmModeModeInfo desired_mode;
 	drmModeModeInfo original_mode;
 
-	int (*preparefb)(struct uterm_display *disp, uint32_t *fb);
-	void (*freefb)(struct uterm_display *disp);
+	int (*prepare_modeset)(struct uterm_display *disp, drmModeAtomicReqPtr rec);
+	void (*done_modeset)(struct uterm_display *disp, int status);
 };
 
-int uterm_drm_display_init_crtc(struct uterm_display *disp, int fd);
-void uterm_drm_display_clear_crtc(struct uterm_display *disp, int fd);
 int uterm_drm_display_set_dpms(struct uterm_display *disp, int state);
 int uterm_drm_display_wait_pflip(struct uterm_display *disp);
-int uterm_drm_modeset(struct uterm_display *disp, uint32_t fb);
+int uterm_drm_prepare_commit(int fd, struct uterm_drm_display *ddrm, drmModeAtomicReq *req,
+			     uint32_t fb, uint32_t width, uint32_t height);
 int uterm_drm_display_swap(struct uterm_display *disp, uint32_t fb);
 bool uterm_drm_is_swapping(struct uterm_display *disp);
+void uterm_drm_display_free_properties(struct uterm_display *disp);
 
 /* drm video */
 

@@ -32,9 +32,11 @@
 #include <inttypes.h>
 #include <libdrm/drm_fourcc.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <sys/types.h>
 #include <unistd.h>
 #include <xf86drm.h>
 #include <xf86drmMode.h>
@@ -115,9 +117,10 @@ static void destroy_rb(int fd, struct uterm_drm2d_rb *rb)
 	ret = drmModeDestroyDumbBuffer(fd, rb->handle);
 	if (ret)
 		log_warning("cannot destroy dumb buffer (%d/%d): %m", ret, errno);
+	rb->size = 0;
 }
 
-static int display_preparefb(struct uterm_display *disp, uint32_t *fb)
+static int display_allocfb(struct uterm_display *disp)
 {
 	struct uterm_drm_video *vdrm = disp->video->data;
 	struct uterm_drm2d_display *d2d = disp->data;
@@ -135,8 +138,6 @@ static int display_preparefb(struct uterm_display *disp, uint32_t *fb)
 	ret = init_rb(vdrm->fd, disp->width, disp->height, &d2d->rb[1]);
 	if (ret)
 		goto free_rb0;
-
-	*fb = d2d->rb[0].id;
 	return 0;
 
 free_rb0:
@@ -153,6 +154,36 @@ static void display_freefb(struct uterm_display *disp)
 	destroy_rb(vdrm->fd, &d2d->rb[1]);
 }
 
+static int display_prepare_modeset(struct uterm_display *disp, drmModeAtomicReqPtr req)
+{
+	struct uterm_drm_video *vdrm = disp->video->data;
+	struct uterm_drm2d_display *d2d = disp->data;
+	int rb, ret;
+
+	if (!d2d->rb[0].size) {
+		ret = display_allocfb(disp);
+		if (ret)
+			return ret;
+	}
+	rb = d2d->current_rb ^ 1;
+
+	ret = uterm_drm_prepare_commit(vdrm->fd, &d2d->ddrm, req, d2d->rb[rb].id, disp->width,
+				       disp->height);
+	if (ret)
+		return ret;
+	return 0;
+}
+
+static void display_done_modeset(struct uterm_display *disp, int status)
+{
+	struct uterm_drm2d_display *d2d = disp->data;
+	if (status) {
+		display_freefb(disp);
+	} else {
+		d2d->current_rb = d2d->current_rb ^ 1;
+	}
+}
+
 static int display_init(struct uterm_display *disp)
 {
 	struct uterm_drm2d_display *d2d;
@@ -163,34 +194,30 @@ static int display_init(struct uterm_display *disp)
 	memset(d2d, 0, sizeof(*d2d));
 
 	disp->data = d2d;
-	d2d->ddrm.preparefb = display_preparefb;
-	d2d->ddrm.freefb = display_freefb;
+
+	d2d->ddrm.prepare_modeset = display_prepare_modeset;
+	d2d->ddrm.done_modeset = display_done_modeset;
+
 	return 0;
 }
 
 static void display_destroy(struct uterm_display *disp)
 {
 	struct uterm_drm2d_display *d2d = disp->data;
-	struct uterm_drm_video *vdrm = disp->video->data;
-
-	if (disp->flags & DISPLAY_ONLINE)
-		uterm_drm_display_clear_crtc(disp, vdrm->fd);
 
 	display_freefb(disp);
-
+	uterm_drm_display_free_properties(disp);
 	free(d2d);
 }
 
 static int display_swap(struct uterm_display *disp, bool immediate)
 {
-	int ret, rb;
 	struct uterm_drm2d_display *d2d = disp->data;
+	int ret;
+	int rb;
 
 	rb = d2d->current_rb ^ 1;
-	if (immediate)
-		ret = uterm_drm_modeset(disp, d2d->rb[rb].id);
-	else
-		ret = uterm_drm_display_swap(disp, d2d->rb[rb].id);
+	ret = uterm_drm_display_swap(disp, d2d->rb[rb].id);
 	if (ret)
 		return ret;
 
