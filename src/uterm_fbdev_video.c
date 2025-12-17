@@ -386,23 +386,17 @@ static int display_set_dpms(struct uterm_display *disp, int state)
 	return 0;
 }
 
-static int display_swap(struct uterm_display *disp, bool immediate)
+static int display_swap(struct uterm_display *disp)
 {
 	struct fbdev_display *dfb = disp->data;
 	struct fb_var_screeninfo *vinfo;
 	int ret;
 
-	if (!(disp->flags & DISPLAY_DBUF)) {
-		if (immediate)
-			return 0;
+	if (!(disp->flags & DISPLAY_DBUF))
 		return display_schedule_vblank_timer(dfb);
-	}
 
 	vinfo = &dfb->vinfo;
-	if (immediate)
-		vinfo->activate = FB_ACTIVATE_NOW;
-	else
-		vinfo->activate = FB_ACTIVATE_VBL;
+	vinfo->activate = FB_ACTIVATE_VBL;
 
 	if (!dfb->bufid)
 		vinfo->yoffset = dfb->yres;
