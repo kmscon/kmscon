@@ -470,7 +470,7 @@ static void intro_idle_event(struct ev_eloop *eloop, void *unused, void *data)
 		ev_eloop_rm_timer(dfb->vblank_timer);
 		return;
 	}
-
+	uterm_display_ready(disp);
 	uterm_display_unref(disp);
 }
 
