@@ -563,19 +563,14 @@ static int display_try_mode(struct uterm_display *disp)
 	return ret;
 }
 
-static void bind_display(struct uterm_video *video, drmModeRes *res, drmModeConnector *conn)
+static void init_modes(struct uterm_display *disp, drmModeConnector *conn)
 {
-	struct uterm_drm_video *vdrm = video->data;
-	struct uterm_display *disp;
-	struct uterm_drm_display *ddrm;
-	drmModeModeInfoPtr mode;
+	struct uterm_video *video = disp->video;
+	struct uterm_drm_video *vdrm = disp->video->data;
+	struct uterm_drm_display *ddrm = disp->data;
 	drmModeCrtc *current_crtc;
-	int ret, i;
-
-	ret = display_new(&disp, vdrm->display_ops, video);
-	if (ret)
-		return;
-	ddrm = disp->data;
+	drmModeModeInfoPtr mode;
+	int i;
 
 	current_crtc = get_current_crtc(vdrm->fd, conn->encoder_id);
 
@@ -599,12 +594,6 @@ static void bind_display(struct uterm_video *video, drmModeRes *res, drmModeConn
 	if (current_crtc)
 		drmModeFreeCrtc(current_crtc);
 
-	ddrm->conn_id = conn->connector_id;
-	disp->flags |= DISPLAY_AVAILABLE;
-	disp->dpms = uterm_drm_get_dpms(vdrm->fd, conn);
-
-	log_info("display %p DPMS is %s", disp, uterm_dpms_to_name(disp->dpms));
-
 	if (video->use_original)
 		ddrm->current_mode = &ddrm->original_mode;
 	else if (!is_mode_null(&ddrm->desired_mode))
@@ -618,6 +607,26 @@ static void bind_display(struct uterm_video *video, drmModeRes *res, drmModeConn
 	log_debug("Desired mode %dx%d\n", ddrm->desired_mode.hdisplay, ddrm->desired_mode.vdisplay);
 	log_debug("Trying mode %dx%d\n", ddrm->current_mode->hdisplay,
 		  ddrm->current_mode->vdisplay);
+}
+
+static void bind_display(struct uterm_video *video, drmModeConnector *conn)
+{
+	struct uterm_drm_video *vdrm = video->data;
+	struct uterm_display *disp;
+	struct uterm_drm_display *ddrm;
+	int ret;
+
+	ret = display_new(&disp, vdrm->display_ops, video);
+	if (ret)
+		return;
+	ddrm = disp->data;
+	init_modes(disp, conn);
+
+	ddrm->conn_id = conn->connector_id;
+	disp->flags |= DISPLAY_AVAILABLE;
+	disp->dpms = uterm_drm_get_dpms(vdrm->fd, conn);
+
+	log_info("display %p DPMS is %s", disp, uterm_dpms_to_name(disp->dpms));
 
 	ret = display_try_mode(disp);
 	if (ret == -EAGAIN && ddrm->current_mode != &ddrm->default_mode) {
@@ -703,7 +712,7 @@ int uterm_drm_video_hotplug(struct uterm_video *video, bool read_dpms, bool mode
 		}
 
 		if (iter == &video->displays)
-			bind_display(video, res, conn);
+			bind_display(video, conn);
 
 		drmModeFreeConnector(conn);
 	}
