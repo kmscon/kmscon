@@ -624,7 +624,8 @@ static void bind_display(struct uterm_video *video, drmModeConnector *conn)
 
 	ddrm->conn_id = conn->connector_id;
 	disp->flags |= DISPLAY_AVAILABLE;
-	disp->dpms = uterm_drm_get_dpms(vdrm->fd, conn);
+	disp->dpms = UTERM_DPMS_ON;
+	uterm_drm_display_set_dpms(disp, disp->dpms);
 
 	log_info("display %p DPMS is %s", disp, uterm_dpms_to_name(disp->dpms));
 
