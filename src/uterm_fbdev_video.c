@@ -448,7 +448,7 @@ static void intro_idle_event(struct ev_eloop *eloop, void *unused, void *data)
 	vfb->pending_intro = false;
 	ev_eloop_unregister_idle_cb(eloop, intro_idle_event, data, EV_NORMAL);
 
-	ret = display_new(&disp, &fbdev_display_ops, video);
+	ret = display_new(&disp, &fbdev_display_ops, video, "fbdev");
 	if (ret) {
 		log_error("cannot create fbdev display: %d", ret);
 		return;

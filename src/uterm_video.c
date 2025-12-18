@@ -73,7 +73,7 @@ const char *uterm_dpms_to_name(int dpms)
 }
 
 int display_new(struct uterm_display **out, const struct display_ops *ops,
-		struct uterm_video *video)
+		struct uterm_video *video, const char *name)
 {
 	struct uterm_display *disp;
 	int ret;
@@ -85,9 +85,10 @@ int display_new(struct uterm_display **out, const struct display_ops *ops,
 	if (!disp)
 		return -ENOMEM;
 	memset(disp, 0, sizeof(*disp));
+	disp->name = strdup(name);
 	disp->ref = 1;
 	disp->ops = ops;
-	log_info("new display %p", disp);
+	log_info("new display %s %p", disp->name, disp);
 	disp->video = video;
 
 	ret = shl_hook_new(&disp->hook);
@@ -123,10 +124,11 @@ void uterm_display_unref(struct uterm_display *disp)
 	if (!disp || !disp->ref || --disp->ref)
 		return;
 
-	log_info("free display %p", disp);
+	log_info("free display %s %p", disp->name, disp);
 
 	VIDEO_CALL(disp->ops->destroy, 0, disp);
 	shl_hook_free(disp->hook);
+	free(disp->name);
 	free(disp);
 }
 

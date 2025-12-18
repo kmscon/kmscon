@@ -614,9 +614,12 @@ static void bind_display(struct uterm_video *video, drmModeConnector *conn)
 	struct uterm_drm_video *vdrm = video->data;
 	struct uterm_display *disp;
 	struct uterm_drm_display *ddrm;
+	const char *name;
 	int ret;
 
-	ret = display_new(&disp, vdrm->display_ops, video);
+	name = drmModeGetConnectorTypeName(conn->connector_type);
+
+	ret = display_new(&disp, vdrm->display_ops, video, name);
 	if (ret)
 		return;
 	ddrm = disp->data;
@@ -627,7 +630,7 @@ static void bind_display(struct uterm_video *video, drmModeConnector *conn)
 	disp->dpms = UTERM_DPMS_ON;
 	uterm_drm_display_set_dpms(disp, disp->dpms);
 
-	log_info("display %p DPMS is %s", disp, uterm_dpms_to_name(disp->dpms));
+	log_info("display %s DPMS is %s", disp->name, uterm_dpms_to_name(disp->dpms));
 
 	ret = display_try_mode(disp);
 	if (ret == -EAGAIN && ddrm->current_mode != &ddrm->default_mode) {

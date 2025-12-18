@@ -80,6 +80,7 @@ struct uterm_video_module {
 #define DISPLAY_OPENGL 0x80
 
 struct uterm_display {
+	char *name;
 	struct shl_dlist list;
 	unsigned long ref;
 	unsigned int flags;
@@ -96,7 +97,7 @@ struct uterm_display {
 };
 
 int display_new(struct uterm_display **out, const struct display_ops *ops,
-		struct uterm_video *video);
+		struct uterm_video *video, const char *name);
 int uterm_display_bind(struct uterm_display *disp);
 void uterm_display_unbind(struct uterm_display *disp);
 
