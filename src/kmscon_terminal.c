@@ -589,6 +589,9 @@ static void input_event(struct uterm_input *input, struct uterm_input_key_event 
 	    !kmscon_session_get_foreground(term->session))
 		return;
 
+	// reset mouse selection on keypress
+	tsm_screen_selection_reset(term->console);
+
 	if (conf_grab_matches(term->conf->grab_scroll_up, ev->mods, ev->num_syms, ev->keysyms)) {
 		tsm_screen_sb_up(term->console, 1);
 		redraw_all(term);
@@ -777,6 +780,7 @@ static void pointer_event(struct uterm_input *input, struct uterm_input_pointer_
 		handle_pointer_button(term, ev);
 		break;
 	case UTERM_WHEEL:
+		tsm_screen_selection_reset(term->console);
 		if (ev->wheel > 0)
 			tsm_screen_sb_up(term->console, 3);
 		else
@@ -786,6 +790,7 @@ static void pointer_event(struct uterm_input *input, struct uterm_input_pointer_
 		redraw_all(term);
 		break;
 	case UTERM_HIDE_TIMEOUT:
+		tsm_screen_selection_reset(term->console);
 		term->pointer.visible = false;
 		break;
 	}
