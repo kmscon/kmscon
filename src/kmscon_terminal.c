@@ -517,7 +517,7 @@ static int add_display(struct kmscon_terminal *term, struct uterm_display *disp)
 
 	shl_dlist_link(&term->screens, &scr->list);
 
-	log_notice("Using video backend [%s] with text renderer [%s] and font engine [%s]",
+	log_notice("Using video backend [%s] with text renderer [%s] and font engine [%s]\n",
 		   uterm_display_backend_name(disp), scr->txt->ops->name, term->font->ops->name);
 
 	log_debug("added display %p to terminal %p", disp, term);

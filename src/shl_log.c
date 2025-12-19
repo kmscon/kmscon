@@ -448,6 +448,6 @@ void log_print_init(const char *appname)
 {
 	if (!appname)
 		appname = "<unknown>";
-	log_format(LOG_DEFAULT_CONF, NULL, LOG_NOTICE, "%s Revision %s %s %s", appname,
+	log_format(LOG_DEFAULT_CONF, NULL, LOG_NOTICE, "%s Revision %s %s %s\n", appname,
 		   shl_git_head, __DATE__, __TIME__);
 }

@@ -277,7 +277,7 @@ static int open_tty(const char *dev, int *tty_fd, int *tty_num)
 	if (!dev || !tty_fd || !tty_num)
 		return -EINVAL;
 
-	log_notice("using tty %s", dev);
+	log_notice("using tty %s\n", dev);
 
 	fd = open(dev, O_RDWR | O_NOCTTY | O_CLOEXEC);
 	if (fd < 0) {

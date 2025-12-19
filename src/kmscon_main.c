@@ -609,7 +609,7 @@ int main(int argc, char **argv)
 		goto err_unload;
 
 	if (!app.conf->listen && !app.running_seats) {
-		log_notice("no running seats; exiting");
+		log_notice("no running seats; exiting\n");
 	} else {
 		log_debug("%u running seats after startup", app.running_seats);
 		ev_eloop_run(app.eloop, -1);
