@@ -113,11 +113,11 @@ static void do_clear_margins(struct screen *scr)
 	tsm_vte_get_def_attr(scr->term->vte, &attr);
 
 	if (scr->txt->orientation == OR_NORMAL || scr->txt->orientation == OR_UPSIDE_DOWN) {
-		w = FONT_WIDTH(scr->txt) * scr->txt->cols;
-		h = FONT_HEIGHT(scr->txt) * scr->txt->rows;
+		w = FONT_WIDTH(scr->txt) * scr->term->min_cols;
+		h = FONT_HEIGHT(scr->txt) * scr->term->min_rows;
 	} else {
-		w = FONT_HEIGHT(scr->txt) * scr->txt->rows;
-		h = FONT_WIDTH(scr->txt) * scr->txt->cols;
+		w = FONT_HEIGHT(scr->txt) * scr->term->min_rows;
+		h = FONT_WIDTH(scr->txt) * scr->term->min_cols;
 	}
 	dw = sw - w;
 	dh = sh - h;
@@ -334,40 +334,47 @@ static void mouse_event(struct tsm_vte *vte, enum tsm_mouse_track_mode track_mod
 /*
  * Resize terminal
  * We support multiple monitors per terminal. As some software-rendering
- * backends to not support scaling, we always use the smallest cols/rows that are
+ * backends do not support scaling, we always use the smallest cols/rows that are
  * provided so wider displays will have black margins.
- * This can be extended to support scaling but that would mean we need to check
- * whether the text-renderer backend supports that, first (TODO).
- *
- * If @force is true, then the console/pty are notified even though the size did
- * not changed. If @notify is false, then console/pty are not notified even
- * though the size might have changed. force = true and notify = false doesn't
- * make any sense, though.
  */
-static void terminal_resize(struct kmscon_terminal *term, unsigned int cols, unsigned int rows,
-			    bool force, bool notify)
+static bool terminal_update_size(struct kmscon_terminal *term)
 {
-	bool resize = false;
+	struct shl_dlist *iter;
+	struct screen *scr;
+	unsigned int min_cols = UINT_MAX;
+	unsigned int min_rows = UINT_MAX;
 
-	update_pointer_max_all(term);
+	shl_dlist_for_each(iter, &term->screens)
+	{
+		unsigned int cols, rows;
+		scr = shl_dlist_entry(iter, struct screen, list);
+		cols = kmscon_text_get_cols(scr->txt);
+		if (cols && cols < min_cols)
+			min_cols = cols;
 
-	if (!term->min_cols || (cols > 0 && cols < term->min_cols)) {
-		term->min_cols = cols;
-		resize = true;
+		rows = kmscon_text_get_rows(scr->txt);
+		if (rows && rows < min_rows)
+			min_rows = rows;
 	}
-	if (!term->min_rows || (rows > 0 && rows < term->min_rows)) {
-		term->min_rows = rows;
-		resize = true;
+	if (min_cols == UINT_MAX || min_rows == UINT_MAX) {
+		log_warn("Can't calculate terminal size");
+		return false;
 	}
+	if (min_cols == term->min_cols && min_rows == term->min_rows)
+		return false;
 
-	if (!notify || (!resize && !force))
-		return;
-	if (!term->min_cols || !term->min_rows)
-		return;
+	term->min_cols = min_cols;
+	term->min_rows = min_rows;
+	return true;
+}
 
-	tsm_screen_resize(term->console, term->min_cols, term->min_rows);
-	kmscon_pty_resize(term->pty, term->min_cols, term->min_rows);
-	redraw_all(term);
+static void terminal_update_size_notify(struct kmscon_terminal *term)
+{
+	if (terminal_update_size(term)) {
+		tsm_screen_resize(term->console, term->min_cols, term->min_rows);
+		kmscon_pty_resize(term->pty, term->min_cols, term->min_rows);
+		redraw_all(term);
+	}
 }
 
 static int font_set(struct kmscon_terminal *term)
@@ -404,12 +411,8 @@ static int font_set(struct kmscon_terminal *term)
 		ret = kmscon_text_set(ent->txt, font, bold_font, ent->disp);
 		if (ret)
 			log_warning("cannot change text-renderer font: %d", ret);
-
-		terminal_resize(term, kmscon_text_get_cols(ent->txt),
-				kmscon_text_get_rows(ent->txt), false, false);
 	}
-
-	terminal_resize(term, 0, 0, true, true);
+	terminal_update_size_notify(term);
 	return 0;
 }
 
@@ -429,11 +432,9 @@ static void rotate_cw_all(struct kmscon_terminal *term)
 	{
 		scr = shl_dlist_entry(iter, struct screen, list);
 		rotate_cw_screen(scr);
-		term->min_cols = 0;
-		term->min_rows = 0;
-		terminal_resize(term, kmscon_text_get_cols(scr->txt),
-				kmscon_text_get_rows(scr->txt), true, true);
 	}
+	terminal_update_size_notify(term);
+	update_pointer_max_all(term);
 }
 
 static void rotate_ccw_screen(struct screen *scr)
@@ -455,11 +456,9 @@ static void rotate_ccw_all(struct kmscon_terminal *term)
 	{
 		scr = shl_dlist_entry(iter, struct screen, list);
 		rotate_ccw_screen(scr);
-		term->min_cols = 0;
-		term->min_rows = 0;
-		terminal_resize(term, kmscon_text_get_cols(scr->txt),
-				kmscon_text_get_rows(scr->txt), true, true);
 	}
+	terminal_update_size_notify(term);
+	update_pointer_max_all(term);
 }
 
 static int add_display(struct kmscon_terminal *term, struct uterm_display *disp)
@@ -512,16 +511,15 @@ static int add_display(struct kmscon_terminal *term, struct uterm_display *disp)
 		goto err_text;
 	}
 
-	terminal_resize(term, kmscon_text_get_cols(scr->txt), kmscon_text_get_rows(scr->txt), false,
-			true);
-
 	shl_dlist_link(&term->screens, &scr->list);
 
 	log_notice("Using video backend [%s] with text renderer [%s] and font engine [%s]",
 		   uterm_display_backend_name(disp), scr->txt->ops->name, term->font->ops->name);
 
 	log_debug("added display %p to terminal %p", disp, term);
-	redraw_screen(scr);
+
+	terminal_update_size_notify(term);
+	update_pointer_max_all(term);
 	uterm_display_ref(scr->disp);
 	return 0;
 
@@ -536,8 +534,6 @@ err_free:
 
 static void free_screen(struct screen *scr, bool update)
 {
-	struct shl_dlist *iter;
-	struct screen *ent;
 	struct kmscon_terminal *term = scr->term;
 
 	log_debug("destroying terminal screen %p", scr);
@@ -550,16 +546,8 @@ static void free_screen(struct screen *scr, bool update)
 	if (!update)
 		return;
 
-	term->min_cols = 0;
-	term->min_rows = 0;
-	shl_dlist_for_each(iter, &term->screens)
-	{
-		ent = shl_dlist_entry(iter, struct screen, list);
-		terminal_resize(term, kmscon_text_get_cols(ent->txt),
-				kmscon_text_get_rows(ent->txt), false, false);
-	}
-
-	terminal_resize(term, 0, 0, true, true);
+	update_pointer_max_all(term);
+	terminal_update_size_notify(term);
 }
 
 static void rm_display(struct kmscon_terminal *term, struct uterm_display *disp)
