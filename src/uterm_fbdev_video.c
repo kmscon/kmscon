@@ -333,11 +333,6 @@ err_close:
 	return ret;
 }
 
-static int display_activate(struct uterm_display *disp)
-{
-	return display_activate_force(disp, false);
-}
-
 static void display_deactivate_force(struct uterm_display *disp, bool force)
 {
 	struct fbdev_display *dfb = disp->data;
@@ -355,11 +350,6 @@ static void display_deactivate_force(struct uterm_display *disp, bool force)
 		disp->height = 0;
 		disp->flags &= ~DISPLAY_ONLINE;
 	}
-}
-
-static void display_deactivate(struct uterm_display *disp)
-{
-	return display_deactivate_force(disp, false);
 }
 
 static int display_set_dpms(struct uterm_display *disp, int state)
@@ -396,36 +386,17 @@ static int display_set_dpms(struct uterm_display *disp, int state)
 	return 0;
 }
 
-static int display_use(struct uterm_display *disp, bool *opengl)
-{
-	struct fbdev_display *dfb = disp->data;
-
-	if (opengl)
-		*opengl = false;
-
-	if (!(disp->flags & DISPLAY_DBUF))
-		return 0;
-
-	return dfb->bufid ^ 1;
-}
-
-static int display_swap(struct uterm_display *disp, bool immediate)
+static int display_swap(struct uterm_display *disp)
 {
 	struct fbdev_display *dfb = disp->data;
 	struct fb_var_screeninfo *vinfo;
 	int ret;
 
-	if (!(disp->flags & DISPLAY_DBUF)) {
-		if (immediate)
-			return 0;
+	if (!(disp->flags & DISPLAY_DBUF))
 		return display_schedule_vblank_timer(dfb);
-	}
 
 	vinfo = &dfb->vinfo;
-	if (immediate)
-		vinfo->activate = FB_ACTIVATE_NOW;
-	else
-		vinfo->activate = FB_ACTIVATE_VBL;
+	vinfo->activate = FB_ACTIVATE_VBL;
 
 	if (!dfb->bufid)
 		vinfo->yoffset = dfb->yres;
@@ -452,10 +423,8 @@ static bool display_is_swapping(struct uterm_display *disp)
 static const struct display_ops fbdev_display_ops = {
 	.init = display_init,
 	.destroy = display_destroy,
-	.activate = display_activate,
-	.deactivate = display_deactivate,
 	.set_dpms = display_set_dpms,
-	.use = display_use,
+	.use = NULL,
 	.swap = display_swap,
 	.is_swapping = display_is_swapping,
 	.fake_blendv = uterm_fbdev_display_fake_blendv,
@@ -473,7 +442,7 @@ static void intro_idle_event(struct ev_eloop *eloop, void *unused, void *data)
 	vfb->pending_intro = false;
 	ev_eloop_unregister_idle_cb(eloop, intro_idle_event, data, EV_NORMAL);
 
-	ret = display_new(&disp, &fbdev_display_ops);
+	ret = display_new(&disp, &fbdev_display_ops, video, "fbdev");
 	if (ret) {
 		log_error("cannot create fbdev display: %d", ret);
 		return;
@@ -488,14 +457,14 @@ static void intro_idle_event(struct ev_eloop *eloop, void *unused, void *data)
 		return;
 	}
 
-	ret = uterm_display_bind(disp, video);
+	ret = uterm_display_bind(disp);
 	if (ret) {
 		log_error("cannot bind fbdev display: %d", ret);
 		uterm_display_unref(disp);
 		ev_eloop_rm_timer(dfb->vblank_timer);
 		return;
 	}
-
+	uterm_display_ready(disp);
 	uterm_display_unref(disp);
 }
 
@@ -574,8 +543,11 @@ static int video_wake_up(struct uterm_video *video)
 	{
 		iter = shl_dlist_entry(i, struct uterm_display, list);
 
-		if (!display_is_online(iter))
-			continue;
+		if (!display_is_online(iter)) {
+			ret = display_activate_force(iter, false);
+			if (ret)
+				return ret;
+		}
 
 		ret = display_activate_force(iter, true);
 		if (ret)

@@ -35,7 +35,6 @@
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
 #include <drm/drm_fourcc.h>
-#include <errno.h>
 #include <fcntl.h>
 #include <gbm.h>
 #include <inttypes.h>
@@ -54,31 +53,6 @@
 #include "uterm_video_internal.h"
 
 #define LOG_SUBSYSTEM "uterm_drm3d_video"
-
-static int display_init(struct uterm_display *disp)
-{
-	struct uterm_drm3d_display *d3d;
-	int ret;
-
-	d3d = malloc(sizeof(*d3d));
-	if (!d3d)
-		return -ENOMEM;
-	memset(d3d, 0, sizeof(*d3d));
-
-	ret = uterm_drm_display_init(disp, d3d);
-	if (ret) {
-		free(d3d);
-		return ret;
-	}
-
-	return 0;
-}
-
-static void display_destroy(struct uterm_display *disp)
-{
-	free(uterm_drm_display_get_data(disp));
-	uterm_drm_display_destroy(disp);
-}
 
 static void bo_destroy_event(struct gbm_bo *bo, void *data)
 {
@@ -115,7 +89,7 @@ static struct uterm_drm3d_rb *bo_to_rb(struct uterm_display *disp, struct gbm_bo
 
 	rb = malloc(sizeof(*rb));
 	if (!rb) {
-		log_error("cannot allocate memory for render buffer (%d): %m", errno);
+		log_err("cannot allocate memory for render buffer");
 		return NULL;
 	}
 	rb->disp = disp;
@@ -123,7 +97,7 @@ static struct uterm_drm3d_rb *bo_to_rb(struct uterm_display *disp, struct gbm_bo
 
 	ret = drm_addfb2(vdrm->fd, rb);
 	if (ret) {
-		log_err("cannot add drm-fb (%d): %m", errno);
+		log_err("cannot add drm-fb %d", ret);
 		free(rb);
 		return NULL;
 	}
@@ -132,34 +106,22 @@ static struct uterm_drm3d_rb *bo_to_rb(struct uterm_display *disp, struct gbm_bo
 	return rb;
 }
 
-static int display_activate(struct uterm_display *disp)
+static int display_allocfb(struct uterm_display *disp)
 {
 	struct uterm_video *video = disp->video;
-	struct uterm_drm_video *vdrm;
 	struct uterm_drm3d_video *v3d;
-	struct uterm_drm_display *ddrm = disp->data;
-	struct uterm_drm3d_display *d3d = uterm_drm_display_get_data(disp);
+	struct uterm_drm3d_display *d3d = disp->data;
 	int ret;
 	struct gbm_bo *bo;
 	drmModeModeInfo *minfo;
 
-	vdrm = video->data;
 	v3d = uterm_drm_video_get_data(video);
 
-	if (video->use_original)
-		ddrm->current_mode = ddrm->original_mode;
-	else
-		ddrm->current_mode = ddrm->desired_mode;
-
-	minfo = &ddrm->current_mode->info;
+	minfo = d3d->ddrm.current_mode;
 	disp->width = minfo->hdisplay;
 	disp->height = minfo->vdisplay;
 
-	log_info("activating display %p to %ux%u", disp, minfo->hdisplay, minfo->vdisplay);
-
-	ret = uterm_drm_display_activate(disp, vdrm->fd);
-	if (ret)
-		return ret;
+	log_debug("preparefb display %p to %ux%u", disp, minfo->hdisplay, minfo->vdisplay);
 
 	d3d->current = NULL;
 	d3d->next = NULL;
@@ -168,7 +130,7 @@ static int display_activate(struct uterm_display *disp)
 		gbm_surface_create(v3d->gbm, minfo->hdisplay, minfo->vdisplay, GBM_FORMAT_XRGB8888,
 				   GBM_BO_USE_SCANOUT | GBM_BO_USE_RENDERING);
 	if (!d3d->gbm) {
-		log_error("cannot create gbm surface (%d): %m", errno);
+		log_err("cannot create gbm surface");
 		ret = -EFAULT;
 		goto err_saved;
 	}
@@ -176,13 +138,13 @@ static int display_activate(struct uterm_display *disp)
 	d3d->surface =
 		eglCreateWindowSurface(v3d->disp, v3d->conf, (EGLNativeWindowType)d3d->gbm, NULL);
 	if (d3d->surface == EGL_NO_SURFACE) {
-		log_error("cannot create EGL window surface");
+		log_err("cannot create EGL window surface");
 		ret = -EFAULT;
 		goto err_gbm;
 	}
 
 	if (!eglMakeCurrent(v3d->disp, d3d->surface, d3d->surface, v3d->ctx)) {
-		log_error("cannot activate EGL context");
+		log_err("cannot activate EGL context");
 		ret = -EFAULT;
 		goto err_surface;
 	}
@@ -190,39 +152,24 @@ static int display_activate(struct uterm_display *disp)
 	glClearColor(0, 0, 0, 0);
 	glClear(GL_COLOR_BUFFER_BIT);
 	if (!eglSwapBuffers(v3d->disp, d3d->surface)) {
-		log_error("cannot swap buffers");
+		log_err("cannot swap buffers");
 		ret = -EFAULT;
 		goto err_noctx;
 	}
 
 	bo = gbm_surface_lock_front_buffer(d3d->gbm);
 	if (!bo) {
-		log_error("cannot lock front buffer during creation");
+		log_err("cannot lock front buffer during creation");
 		ret = -EFAULT;
 		goto err_noctx;
 	}
 
 	d3d->current = bo_to_rb(disp, bo);
 	if (!d3d->current) {
-		log_error("cannot lock front buffer");
+		log_err("cannot lock front buffer");
 		ret = -EFAULT;
 		goto err_bo;
 	}
-
-	ret = drmModeSetCrtc(vdrm->fd, ddrm->crtc_id, d3d->current->id, 0, 0, &ddrm->conn_id, 1,
-			     minfo);
-	if (ret && ddrm->current_mode == ddrm->desired_mode &&
-	    ddrm->current_mode != ddrm->default_mode) {
-		ddrm->current_mode = ddrm->desired_mode = ddrm->default_mode;
-		ret = -EAGAIN;
-		goto err_bo;
-	} else if (ret) {
-		log_err("cannot set drm-crtc");
-		ret = -EFAULT;
-		goto err_bo;
-	}
-
-	disp->flags |= DISPLAY_ONLINE;
 	return 0;
 
 err_bo:
@@ -236,26 +183,23 @@ err_gbm:
 err_saved:
 	disp->width = 0;
 	disp->height = 0;
-	ddrm->current_mode = NULL;
-	uterm_drm_display_deactivate(disp, vdrm->fd);
+	d3d->ddrm.current_mode = NULL;
 	return ret;
 }
 
-static void display_deactivate(struct uterm_display *disp)
+static void display_freefb(struct uterm_display *disp)
 {
-	struct uterm_drm3d_display *d3d = uterm_drm_display_get_data(disp);
+	struct uterm_drm3d_display *d3d = disp->data;
 	struct uterm_video *video = disp->video;
-	struct uterm_drm_video *vdrm;
 	struct uterm_drm3d_video *v3d;
 
-	log_info("deactivating display %p", disp);
-
-	vdrm = video->data;
 	v3d = uterm_drm_video_get_data(video);
-	uterm_drm_display_deactivate(disp, vdrm->fd);
 
-	eglMakeCurrent(v3d->disp, EGL_NO_SURFACE, EGL_NO_SURFACE, v3d->ctx);
-	eglDestroySurface(v3d->disp, d3d->surface);
+	if (v3d->ctx)
+		eglMakeCurrent(v3d->disp, EGL_NO_SURFACE, EGL_NO_SURFACE, v3d->ctx);
+
+	if (d3d->surface)
+		eglDestroySurface(v3d->disp, d3d->surface);
 
 	if (d3d->current) {
 		gbm_surface_release_buffer(d3d->gbm, d3d->current->bo);
@@ -265,36 +209,117 @@ static void display_deactivate(struct uterm_display *disp)
 		gbm_surface_release_buffer(d3d->gbm, d3d->next->bo);
 		d3d->next = NULL;
 	}
-
 	gbm_surface_destroy(d3d->gbm);
-	disp->width = 0;
-	disp->height = 0;
 }
 
-int uterm_drm3d_display_use(struct uterm_display *disp, bool *opengl)
+static int display_prepare_modeset(struct uterm_display *disp, drmModeAtomicReqPtr req)
 {
-	struct uterm_drm3d_display *d3d = uterm_drm_display_get_data(disp);
+	struct gbm_bo *bo;
+	struct uterm_drm3d_display *d3d = disp->data;
+	struct uterm_video *video = disp->video;
+	struct uterm_drm_video *vdrm = video->data;
+	struct uterm_drm3d_video *v3d = uterm_drm_video_get_data(video);
+	int ret;
+
+	if (!d3d->gbm) {
+		ret = display_allocfb(disp);
+		if (ret)
+			return ret;
+	} else {
+		if (!gbm_surface_has_free_buffers(d3d->gbm))
+			return -EBUSY;
+
+		if (!eglSwapBuffers(v3d->disp, d3d->surface)) {
+			log_err("cannot swap EGL buffers");
+			return -EFAULT;
+		}
+		if (d3d->current) {
+			gbm_surface_release_buffer(d3d->gbm, d3d->current->bo);
+			d3d->current = NULL;
+		}
+		bo = gbm_surface_lock_front_buffer(d3d->gbm);
+		if (!bo) {
+			log_err("cannot lock front buffer");
+			return -EFAULT;
+		}
+
+		d3d->current = bo_to_rb(disp, bo);
+		if (!d3d->current) {
+			log_err("cannot lock front gbm buffer");
+			gbm_surface_release_buffer(d3d->gbm, bo);
+			return -EFAULT;
+		}
+	}
+	ret = uterm_drm_prepare_commit(vdrm->fd, &d3d->ddrm, req, d3d->current->id, disp->width,
+				       disp->height);
+	if (ret) {
+		gbm_surface_release_buffer(d3d->gbm, d3d->current->bo);
+		return ret;
+	}
+	return 0;
+}
+
+static void display_done_modeset(struct uterm_display *disp, int status)
+{
+	struct uterm_drm3d_display *d3d = disp->data;
+
+	if (status) {
+		gbm_surface_release_buffer(d3d->gbm, d3d->current->bo);
+		d3d->current = NULL;
+		return;
+	}
+
+	if (d3d->next) {
+		gbm_surface_release_buffer(d3d->gbm, d3d->next->bo);
+		d3d->next = NULL;
+	}
+}
+
+static int display_init(struct uterm_display *disp)
+{
+	struct uterm_drm3d_display *d3d;
+
+	d3d = malloc(sizeof(*d3d));
+	if (!d3d)
+		return -ENOMEM;
+	memset(d3d, 0, sizeof(*d3d));
+
+	disp->flags |= DISPLAY_OPENGL;
+	disp->data = d3d;
+	d3d->ddrm.prepare_modeset = display_prepare_modeset;
+	d3d->ddrm.done_modeset = display_done_modeset;
+	return 0;
+}
+
+static void display_destroy(struct uterm_display *disp)
+{
+	display_freefb(disp);
+	uterm_drm_display_free_properties(disp);
+	free(disp->data);
+}
+
+/*
+ * Enable opengl context
+ */
+int uterm_drm3d_display_use(struct uterm_display *disp)
+{
+	struct uterm_drm3d_display *d3d = disp->data;
 	struct uterm_drm3d_video *v3d;
 
 	v3d = uterm_drm_video_get_data(disp->video);
 	if (!eglMakeCurrent(v3d->disp, d3d->surface, d3d->surface, v3d->ctx)) {
-		log_error("cannot activate EGL context");
+		log_err("cannot activate EGL context");
 		return -EFAULT;
 	}
-
-	if (opengl)
-		*opengl = true;
-
-	/* TODO: lets find a way how to retrieve the current front buffer */
 	return 0;
 }
 
-static int display_swap(struct uterm_display *disp, bool immediate)
+static int display_swap(struct uterm_display *disp)
 {
 	int ret;
 	struct gbm_bo *bo;
 	struct uterm_drm3d_rb *rb;
-	struct uterm_drm3d_display *d3d = uterm_drm_display_get_data(disp);
+	struct uterm_drm3d_display *d3d = disp->data;
 	struct uterm_video *video = disp->video;
 	struct uterm_drm3d_video *v3d = uterm_drm_video_get_data(video);
 
@@ -302,24 +327,23 @@ static int display_swap(struct uterm_display *disp, bool immediate)
 		return -EBUSY;
 
 	if (!eglSwapBuffers(v3d->disp, d3d->surface)) {
-		log_error("cannot swap EGL buffers (%d): %m", errno);
+		log_err("cannot swap EGL buffers");
 		return -EFAULT;
 	}
 
 	bo = gbm_surface_lock_front_buffer(d3d->gbm);
 	if (!bo) {
-		log_error("cannot lock front buffer");
+		log_err("cannot lock front buffer");
 		return -EFAULT;
 	}
 
 	rb = bo_to_rb(disp, bo);
 	if (!rb) {
-		log_error("cannot lock front gbm buffer (%d): %m", errno);
+		log_err("cannot lock front gbm buffer");
 		gbm_surface_release_buffer(d3d->gbm, bo);
 		return -EFAULT;
 	}
-
-	ret = uterm_drm_display_swap(disp, rb->id, immediate);
+	ret = uterm_drm_display_swap(disp, rb->id);
 	if (ret) {
 		gbm_surface_release_buffer(d3d->gbm, bo);
 		return ret;
@@ -330,22 +354,13 @@ static int display_swap(struct uterm_display *disp, bool immediate)
 		d3d->next = NULL;
 	}
 
-	if (immediate) {
-		if (d3d->current)
-			gbm_surface_release_buffer(d3d->gbm, d3d->current->bo);
-		d3d->current = rb;
-	} else {
-		d3d->next = rb;
-	}
-
+	d3d->next = rb;
 	return 0;
 }
 
 static const struct display_ops drm_display_ops = {
 	.init = display_init,
 	.destroy = display_destroy,
-	.activate = display_activate,
-	.deactivate = display_deactivate,
 	.set_dpms = uterm_drm_display_set_dpms,
 	.use = uterm_drm3d_display_use,
 	.swap = display_swap,
@@ -372,19 +387,19 @@ static void show_displays(struct uterm_video *video)
 		if (iter->dpms != UTERM_DPMS_ON)
 			continue;
 
-		ret = uterm_drm3d_display_use(iter, NULL);
+		ret = uterm_drm3d_display_use(iter);
 		if (ret)
 			continue;
 
 		glClearColor(0, 0, 0, 1);
 		glClear(GL_COLOR_BUFFER_BIT);
-		display_swap(iter, true);
+		display_swap(iter);
 	}
 }
 
 static void page_flip_handler(struct uterm_display *disp)
 {
-	struct uterm_drm3d_display *d3d = uterm_drm_display_get_data(disp);
+	struct uterm_drm3d_display *d3d = disp->data;
 
 	if (d3d->next) {
 		if (d3d->current)
@@ -478,21 +493,21 @@ static int video_init(struct uterm_video *video, const char *node)
 
 	b = eglChooseConfig(v3d->disp, conf_att, cfgs, n, &n);
 	if (!b || n == 0) {
-		log_error("no EGL configs found");
+		log_err("no EGL configs found");
 		ret = -EFAULT;
 		goto err_disp;
 	}
 
 	cfgs = malloc(sizeof(EGLConfig) * n);
 	if (cfgs == NULL) {
-		log_error("failed to allocate memory for %d configs", n);
+		log_err("failed to allocate memory for %d configs", n);
 		ret = -ENOMEM;
 		goto err_disp;
 	}
 
 	b = eglChooseConfig(v3d->disp, conf_att, cfgs, n, &n);
 	if (!b) {
-		log_error("failed to load EGL configs");
+		log_err("failed to load EGL configs");
 		ret = -EFAULT;
 		goto err_cfgs;
 	}
@@ -521,20 +536,20 @@ static int video_init(struct uterm_video *video, const char *node)
 	}
 
 	if (!b) {
-		log_error("no config had matching gbm format");
+		log_err("no config had matching gbm format");
 		ret = -EFAULT;
 		goto err_cfgs;
 	}
 
 	v3d->ctx = eglCreateContext(v3d->disp, v3d->conf, EGL_NO_CONTEXT, ctx_att);
 	if (v3d->ctx == EGL_NO_CONTEXT) {
-		log_error("cannot create egl context");
+		log_err("cannot create egl context");
 		ret = -EFAULT;
 		goto err_cfgs;
 	}
 
 	if (!eglMakeCurrent(v3d->disp, EGL_NO_SURFACE, EGL_NO_SURFACE, v3d->ctx)) {
-		log_error("cannot activate surfaceless EGL context");
+		log_err("cannot activate surfaceless EGL context");
 		ret = -EFAULT;
 		goto err_ctx;
 	}
@@ -570,7 +585,7 @@ static void video_destroy(struct uterm_video *video)
 	log_info("free drm video device %p", video);
 
 	if (!eglMakeCurrent(v3d->disp, EGL_NO_SURFACE, EGL_NO_SURFACE, v3d->ctx))
-		log_error("cannot activate GL context during destruction");
+		log_err("cannot activate GL context during destruction");
 	uterm_drm3d_deinit_shaders(video);
 
 	eglMakeCurrent(v3d->disp, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);

@@ -36,11 +36,12 @@
 #include "uterm_video.h"
 #include "uterm_video_internal.h"
 
-/* drm mode */
+/* drm object */
 
-struct uterm_mode {
-	struct shl_dlist list;
-	drmModeModeInfo info;
+struct drm_object {
+	drmModeObjectProperties *props;
+	drmModePropertyRes **props_info;
+	uint32_t id;
 };
 
 /* drm dpms */
@@ -51,33 +52,30 @@ int uterm_drm_get_dpms(int fd, drmModeConnector *conn);
 /* drm display */
 
 struct uterm_drm_display {
-	uint32_t conn_id;
-	int crtc_id;
-	drmModeCrtc *saved_crtc;
+	struct drm_object connector;
+	struct drm_object crtc;
+	struct drm_object plane;
 
-	struct shl_dlist modes;
-	struct uterm_mode *default_mode;
-	struct uterm_mode *desired_mode;
-	struct uterm_mode *current_mode;
-	struct uterm_mode *original_mode;
-	void *data;
+	drmModeModeInfo mode;
+	uint32_t mode_blob_id;
+	uint32_t crtc_index;
+
+	drmModeModeInfoPtr current_mode;
+	drmModeModeInfo default_mode;
+	drmModeModeInfo desired_mode;
+	drmModeModeInfo original_mode;
+
+	int (*prepare_modeset)(struct uterm_display *disp, drmModeAtomicReqPtr rec);
+	void (*done_modeset)(struct uterm_display *disp, int status);
 };
 
-int uterm_drm_display_init(struct uterm_display *disp, void *data);
-void uterm_drm_display_destroy(struct uterm_display *disp);
-int uterm_drm_display_activate(struct uterm_display *disp, int fd);
-void uterm_drm_display_deactivate(struct uterm_display *disp, int fd);
 int uterm_drm_display_set_dpms(struct uterm_display *disp, int state);
 int uterm_drm_display_wait_pflip(struct uterm_display *disp);
-int uterm_drm_display_swap(struct uterm_display *disp, uint32_t fb, bool immediate);
+int uterm_drm_prepare_commit(int fd, struct uterm_drm_display *ddrm, drmModeAtomicReq *req,
+			     uint32_t fb, uint32_t width, uint32_t height);
+int uterm_drm_display_swap(struct uterm_display *disp, uint32_t fb);
 bool uterm_drm_is_swapping(struct uterm_display *disp);
-
-static inline void *uterm_drm_display_get_data(struct uterm_display *disp)
-{
-	struct uterm_drm_display *d = disp->data;
-
-	return d->data;
-}
+void uterm_drm_display_free_properties(struct uterm_display *disp);
 
 /* drm video */
 

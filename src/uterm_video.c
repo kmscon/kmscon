@@ -72,7 +72,8 @@ const char *uterm_dpms_to_name(int dpms)
 	}
 }
 
-int display_new(struct uterm_display **out, const struct display_ops *ops)
+int display_new(struct uterm_display **out, const struct display_ops *ops,
+		struct uterm_video *video, const char *name)
 {
 	struct uterm_display *disp;
 	int ret;
@@ -84,9 +85,11 @@ int display_new(struct uterm_display **out, const struct display_ops *ops)
 	if (!disp)
 		return -ENOMEM;
 	memset(disp, 0, sizeof(*disp));
+	disp->name = strdup(name);
 	disp->ref = 1;
 	disp->ops = ops;
-	log_info("new display %p", disp);
+	log_info("new display %s %p", disp->name, disp);
+	disp->video = video;
 
 	ret = shl_hook_new(&disp->hook);
 	if (ret)
@@ -121,25 +124,34 @@ void uterm_display_unref(struct uterm_display *disp)
 	if (!disp || !disp->ref || --disp->ref)
 		return;
 
-	log_info("free display %p", disp);
+	log_info("free display %s %p", disp->name, disp);
 
 	VIDEO_CALL(disp->ops->destroy, 0, disp);
 	shl_hook_free(disp->hook);
+	free(disp->name);
 	free(disp);
 }
 
 SHL_EXPORT
-int uterm_display_bind(struct uterm_display *disp, struct uterm_video *video)
+int uterm_display_bind(struct uterm_display *disp)
 {
-	if (!disp || !video || disp->video)
+	if (!disp || !disp->video)
 		return -EINVAL;
 
-	shl_dlist_link_tail(&video->displays, &disp->list);
-	disp->video = video;
+	shl_dlist_link_tail(&disp->video->displays, &disp->list);
 	uterm_display_ref(disp);
-	VIDEO_CB(disp->video, disp, UTERM_NEW);
 
 	return 0;
+}
+
+SHL_EXPORT
+void uterm_display_ready(struct uterm_display *disp)
+{
+	if (!disp || !disp->video || disp->flags & DISPLAY_INUSE)
+		return;
+
+	disp->flags |= DISPLAY_INUSE;
+	VIDEO_CB(disp->video, disp, UTERM_NEW);
 }
 
 SHL_EXPORT
@@ -147,10 +159,8 @@ void uterm_display_unbind(struct uterm_display *disp)
 {
 	if (!disp || !disp->video)
 		return;
-
-	VIDEO_CB(disp->video, disp, UTERM_GONE);
-	uterm_display_deactivate(disp);
-	disp->video = NULL;
+	if (disp->flags & DISPLAY_INUSE)
+		VIDEO_CB(disp->video, disp, UTERM_GONE);
 	shl_dlist_unlink(&disp->list);
 	uterm_display_unref(disp);
 }
@@ -159,6 +169,12 @@ SHL_EXPORT
 bool uterm_display_is_drm(struct uterm_display *disp)
 {
 	return (disp->flags & DISPLAY_DITHERING) == 0;
+}
+
+SHL_EXPORT
+bool uterm_display_has_opengl(struct uterm_display *disp)
+{
+	return (disp->flags & DISPLAY_OPENGL) != 0;
 }
 
 SHL_EXPORT
@@ -217,39 +233,14 @@ unsigned int uterm_display_get_height(struct uterm_display *disp)
 SHL_EXPORT
 int uterm_display_get_state(struct uterm_display *disp)
 {
-	if (!disp)
+	if (!disp || !disp->video)
 		return UTERM_DISPLAY_GONE;
-
-	if (disp->video) {
-		if (disp->flags & DISPLAY_ONLINE) {
-			if (disp->video->flags & VIDEO_AWAKE)
-				return UTERM_DISPLAY_ACTIVE;
-			else
-				return UTERM_DISPLAY_ASLEEP;
-		} else {
-			return UTERM_DISPLAY_INACTIVE;
-		}
-	} else {
-		return UTERM_DISPLAY_GONE;
+	if (disp->flags & DISPLAY_ONLINE) {
+		if (disp->video->flags & VIDEO_AWAKE)
+			return UTERM_DISPLAY_ACTIVE;
+		return UTERM_DISPLAY_INACTIVE;
 	}
-}
-
-SHL_EXPORT
-int uterm_display_activate(struct uterm_display *disp)
-{
-	if (!disp || !disp->video || display_is_online(disp) || !video_is_awake(disp->video))
-		return -EINVAL;
-
-	return VIDEO_CALL(disp->ops->activate, 0, disp);
-}
-
-SHL_EXPORT
-void uterm_display_deactivate(struct uterm_display *disp)
-{
-	if (!disp || !display_is_online(disp))
-		return;
-
-	VIDEO_CALL(disp->ops->deactivate, 0, disp);
+	return UTERM_DISPLAY_ASLEEP;
 }
 
 SHL_EXPORT
@@ -271,21 +262,21 @@ int uterm_display_get_dpms(const struct uterm_display *disp)
 }
 
 SHL_EXPORT
-int uterm_display_use(struct uterm_display *disp, bool *opengl)
+int uterm_display_use(struct uterm_display *disp)
 {
 	if (!disp || !display_is_online(disp))
 		return -EINVAL;
 
-	return VIDEO_CALL(disp->ops->use, -EOPNOTSUPP, disp, opengl);
+	return VIDEO_CALL(disp->ops->use, -EOPNOTSUPP, disp);
 }
 
 SHL_EXPORT
-int uterm_display_swap(struct uterm_display *disp, bool immediate)
+int uterm_display_swap(struct uterm_display *disp)
 {
 	if (!disp || !display_is_online(disp) || !video_is_awake(disp->video))
 		return -EINVAL;
 
-	return VIDEO_CALL(disp->ops->swap, 0, disp, immediate);
+	return VIDEO_CALL(disp->ops->swap, 0, disp);
 }
 
 SHL_EXPORT
