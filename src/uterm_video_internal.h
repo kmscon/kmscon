@@ -42,10 +42,8 @@
 struct display_ops {
 	int (*init)(struct uterm_display *display);
 	void (*destroy)(struct uterm_display *display);
-	int (*activate)(struct uterm_display *disp);
-	void (*deactivate)(struct uterm_display *disp);
 	int (*set_dpms)(struct uterm_display *disp, int state);
-	int (*use)(struct uterm_display *disp, bool *opengl);
+	int (*use)(struct uterm_display *disp);
 	int (*swap)(struct uterm_display *disp, bool immediate);
 	bool (*is_swapping)(struct uterm_display *disp);
 	int (*fake_blendv)(struct uterm_display *disp, const struct uterm_video_blend_req *req,
@@ -79,8 +77,10 @@ struct uterm_video_module {
 #define DISPLAY_DBUF 0x10
 #define DISPLAY_DITHERING 0x20
 #define DISPLAY_PFLIP 0x40
+#define DISPLAY_OPENGL 0x80
 
 struct uterm_display {
+	char *name;
 	struct shl_dlist list;
 	unsigned long ref;
 	unsigned int flags;
@@ -96,8 +96,9 @@ struct uterm_display {
 	void *data;
 };
 
-int display_new(struct uterm_display **out, const struct display_ops *ops);
-int uterm_display_bind(struct uterm_display *disp, struct uterm_video *video);
+int display_new(struct uterm_display **out, const struct display_ops *ops,
+		struct uterm_video *video, const char *name);
+int uterm_display_bind(struct uterm_display *disp);
 void uterm_display_unbind(struct uterm_display *disp);
 
 #define DISPLAY_CB(disp, act)                                                                      \

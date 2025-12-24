@@ -156,13 +156,7 @@ static void activate_display(struct kmscon_display *d)
 	 * unless the user specifies not to, in which case we use the default mode,
 	 * but we should also allow the user to specify different modes in the
 	 * configuration files. */
-	if (uterm_display_get_state(d->disp) == UTERM_DISPLAY_INACTIVE) {
-		ret = uterm_display_activate(d->disp);
-		if (ret == -EAGAIN)
-			ret = uterm_display_activate(d->disp);
-		if (ret)
-			return;
-
+	if (uterm_display_get_state(d->disp) == UTERM_DISPLAY_ACTIVE) {
 		d->activated = true;
 
 		ret = uterm_display_set_dpms(d->disp, UTERM_DPMS_ON);

@@ -71,12 +71,6 @@ static int blit_outputs(struct uterm_video *video)
 	iter = uterm_video_get_displays(video);
 	for (; iter; iter = uterm_display_next(iter)) {
 		log_notice("Activating display %d %p...", j, iter);
-		ret = uterm_display_activate(iter);
-		if (ret)
-			log_err("Cannot activate display %d: %d", j, ret);
-		else
-			log_notice("Successfully activated display %d", j);
-
 		ret = uterm_display_set_dpms(iter, UTERM_DPMS_ON);
 		if (ret)
 			log_err("Cannot set DPMS to ON: %d", ret);

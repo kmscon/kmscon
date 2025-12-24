@@ -32,6 +32,7 @@
 #include <limits.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include "uterm_drm_shared_internal.h"
 #include "uterm_video.h"
 
 struct uterm_drm2d_rb {
@@ -43,13 +44,9 @@ struct uterm_drm2d_rb {
 };
 
 struct uterm_drm2d_display {
+	struct uterm_drm_display ddrm;
 	int current_rb;
 	struct uterm_drm2d_rb rb[2];
-};
-
-struct uterm_drm2d_video {
-	int fd;
-	struct ev_fd *efd;
 };
 
 int uterm_drm2d_display_fake_blendv(struct uterm_display *disp,

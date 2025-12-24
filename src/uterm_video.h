@@ -137,26 +137,20 @@ const char *uterm_dpms_to_name(int dpms);
 void uterm_display_ref(struct uterm_display *disp);
 void uterm_display_unref(struct uterm_display *disp);
 bool uterm_display_is_drm(struct uterm_display *disp);
+bool uterm_display_has_opengl(struct uterm_display *disp);
 const char *uterm_display_backend_name(struct uterm_display *disp);
 struct uterm_display *uterm_display_next(struct uterm_display *disp);
 
 int uterm_display_register_cb(struct uterm_display *disp, uterm_display_cb cb, void *data);
 void uterm_display_unregister_cb(struct uterm_display *disp, uterm_display_cb cb, void *data);
 
-struct uterm_mode *uterm_display_get_modes(struct uterm_display *disp);
-struct uterm_mode *uterm_display_get_current(struct uterm_display *disp);
-struct uterm_mode *uterm_display_get_default(struct uterm_display *disp);
-struct uterm_mode *uterm_display_get_original(struct uterm_display *disp);
-
 unsigned int uterm_display_get_width(struct uterm_display *disp);
 unsigned int uterm_display_get_height(struct uterm_display *disp);
 int uterm_display_get_state(struct uterm_display *disp);
-int uterm_display_activate(struct uterm_display *disp);
-void uterm_display_deactivate(struct uterm_display *disp);
 int uterm_display_set_dpms(struct uterm_display *disp, int state);
 int uterm_display_get_dpms(const struct uterm_display *disp);
 
-int uterm_display_use(struct uterm_display *disp, bool *opengl);
+int uterm_display_use(struct uterm_display *disp);
 int uterm_display_swap(struct uterm_display *disp, bool immediate);
 bool uterm_display_is_swapping(struct uterm_display *disp);
 
