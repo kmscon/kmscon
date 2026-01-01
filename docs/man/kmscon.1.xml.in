@@ -188,7 +188,7 @@
         <term><option>--session-control</option></term>
         <listitem>
           <para>Allow keyboard-shortcuts to control the session manager. This
-                allows the use to create new sessions, kill sessions and switch
+                allows the user to create new sessions, kill sessions and switch
                 sessions via keyboard input. (default: off)</para>
         </listitem>
       </varlistentry>
