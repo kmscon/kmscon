@@ -439,21 +439,3 @@ int kmscon_font_render_inval(struct kmscon_font *font, const struct kmscon_glyph
 
 	return font->ops->render_inval(font, out);
 }
-
-/**
- * kmscon_font_render:
- * @font: Valid font object
- * @ch: Symbol to find a glyph for
- * @len: Length of @ch
- *
- * Detects if the given character would overflow into the next cell.
- *
- * Returns: true when overflow needed, false when no overflow needed or on error
- */
-bool kmscon_font_get_overflow(struct kmscon_font *font, uint64_t id, const uint32_t *ch, size_t len)
-{
-	if (!font || !font->ops->get_overflow)
-		return false;
-
-	return font->ops->get_overflow(font, id, ch, len);
-}

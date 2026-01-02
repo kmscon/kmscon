@@ -261,5 +261,4 @@ struct kmscon_font_ops kmscon_font_unifont_ops = {
 	.render = kmscon_font_unifont_render,
 	.render_empty = kmscon_font_unifont_render_empty,
 	.render_inval = kmscon_font_unifont_render_inval,
-	.get_overflow = NULL,
 };
