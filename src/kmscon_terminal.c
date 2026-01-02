@@ -183,16 +183,6 @@ static void do_redraw_screen(struct screen *scr)
 	kmscon_text_render(scr->txt);
 
 	ret = uterm_display_swap(scr->disp, false);
-
-	if (ret == -EAGAIN) {
-		uterm_display_deactivate(scr->disp);
-		ret = uterm_display_activate(scr->disp);
-		if (!ret)
-			ret = font_set(scr->term);
-		if (!ret)
-			ret = uterm_display_swap(scr->disp, false);
-	}
-
 	if (ret) {
 		log_warning("cannot swap display %p", scr->disp);
 		return;
@@ -491,7 +481,7 @@ static int add_display(struct kmscon_terminal *term, struct uterm_display *disp)
 		goto err_free;
 	}
 
-	ret = uterm_display_use(scr->disp, &opengl);
+	opengl = uterm_display_has_opengl(scr->disp);
 	if (term->conf->render_engine)
 		be = term->conf->render_engine;
 	else if (ret >= 0 && opengl)
