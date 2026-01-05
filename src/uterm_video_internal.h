@@ -44,7 +44,7 @@ struct display_ops {
 	void (*destroy)(struct uterm_display *display);
 	int (*set_dpms)(struct uterm_display *disp, int state);
 	int (*use)(struct uterm_display *disp);
-	int (*swap)(struct uterm_display *disp, bool immediate);
+	int (*swap)(struct uterm_display *disp);
 	bool (*is_swapping)(struct uterm_display *disp);
 	int (*fake_blendv)(struct uterm_display *disp, const struct uterm_video_blend_req *req,
 			   size_t num);

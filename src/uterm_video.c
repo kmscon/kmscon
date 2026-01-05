@@ -271,12 +271,12 @@ int uterm_display_use(struct uterm_display *disp)
 }
 
 SHL_EXPORT
-int uterm_display_swap(struct uterm_display *disp, bool immediate)
+int uterm_display_swap(struct uterm_display *disp)
 {
 	if (!disp || !display_is_online(disp) || !video_is_awake(disp->video))
 		return -EINVAL;
 
-	return VIDEO_CALL(disp->ops->swap, 0, disp, immediate);
+	return VIDEO_CALL(disp->ops->swap, 0, disp);
 }
 
 SHL_EXPORT

@@ -210,7 +210,7 @@ static void display_destroy(struct uterm_display *disp)
 	free(d2d);
 }
 
-static int display_swap(struct uterm_display *disp, bool immediate)
+static int display_swap(struct uterm_display *disp)
 {
 	struct uterm_drm2d_display *d2d = disp->data;
 	int ret;

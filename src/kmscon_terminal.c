@@ -181,7 +181,7 @@ static void do_redraw_screen(struct screen *scr)
 	draw_pointer(scr);
 	kmscon_text_render(scr->txt);
 
-	ret = uterm_display_swap(scr->disp, false);
+	ret = uterm_display_swap(scr->disp);
 	if (ret) {
 		log_warning("cannot swap display %p", scr->disp);
 		return;

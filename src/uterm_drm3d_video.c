@@ -320,7 +320,7 @@ int uterm_drm3d_display_use(struct uterm_display *disp)
 	return 0;
 }
 
-static int display_swap(struct uterm_display *disp, bool immediate)
+static int display_swap(struct uterm_display *disp)
 {
 	int ret;
 	struct gbm_bo *bo;
@@ -399,7 +399,7 @@ static void show_displays(struct uterm_video *video)
 
 		glClearColor(0, 0, 0, 1);
 		glClear(GL_COLOR_BUFFER_BIT);
-		display_swap(iter, false);
+		display_swap(iter);
 	}
 }
 
