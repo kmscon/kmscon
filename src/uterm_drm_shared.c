@@ -298,7 +298,7 @@ int uterm_drm_display_swap(struct uterm_display *disp, uint32_t fb)
 
 	ret = drmModePageFlip(vdrm->fd, ddrm->crtc_id, fb, DRM_MODE_PAGE_FLIP_EVENT, disp);
 	if (ret) {
-		log_error("cannot page-flip on DRM-CRTC (%d): %m", errno);
+		log_warn("cannot page-flip on DRM-CRTC (%d): %m", ret);
 		return -EFAULT;
 	}
 
