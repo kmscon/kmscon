@@ -91,7 +91,7 @@ static int blit_outputs(struct uterm_video *video)
 			continue;
 		}
 
-		ret = uterm_display_swap(iter, true);
+		ret = uterm_display_swap(iter);
 		if (ret) {
 			log_err("Cannot swap screen: %d", ret);
 			continue;
