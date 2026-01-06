@@ -367,6 +367,12 @@ static void mark_damaged(struct kmscon_text *txt, struct bbulk *bb, unsigned int
 	if (y > fh)
 		posy = (y - fh) / FONT_HEIGHT(txt);
 
+	if (posx >= txt->cols)
+		posx = txt->cols - 1;
+
+	if (posy >= txt->rows)
+		posy = txt->rows - 1;
+
 	bb->damages[posx + txt->cols * posy] = true;
 	bb->prev[posx + txt->cols * posy].id = ID_DAMAGED;
 
