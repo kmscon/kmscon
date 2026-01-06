@@ -345,10 +345,9 @@ static bool terminal_update_size(struct kmscon_terminal *term)
 		if (rows && rows < min_rows)
 			min_rows = rows;
 	}
-	if (min_cols == UINT_MAX || min_rows == UINT_MAX) {
-		log_warn("Can't calculate terminal size");
+	if (min_cols == UINT_MAX || min_rows == UINT_MAX)
 		return false;
-	}
+
 	if (min_cols == term->min_cols && min_rows == term->min_rows)
 		return false;
 
