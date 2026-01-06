@@ -186,6 +186,14 @@ const char *uterm_display_backend_name(struct uterm_display *disp)
 }
 
 SHL_EXPORT
+const char *uterm_display_name(struct uterm_display *disp)
+{
+	if (disp && disp->name)
+		return disp->name;
+	return "Unknown";
+}
+
+SHL_EXPORT
 struct uterm_display *uterm_display_next(struct uterm_display *disp)
 {
 	if (!disp || !disp->video || disp->list.next == &disp->video->displays)
