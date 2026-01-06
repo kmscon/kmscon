@@ -382,7 +382,7 @@ int uterm_drm_set_dpms(int fd, uint32_t conn_id, int state)
 		if (!strcmp(prop->name, "DPMS")) {
 			ret = drmModeConnectorSetProperty(fd, conn_id, prop->prop_id, set);
 			if (ret) {
-				log_info("cannot set DPMS");
+				log_warn("cannot set DPMS %d", ret);
 				ret = -EFAULT;
 			}
 			drmModeFreeProperty(prop);
@@ -445,7 +445,7 @@ int uterm_drm_display_set_dpms(struct uterm_display *disp, int state)
 	struct uterm_drm_display *ddrm = disp->data;
 	struct uterm_drm_video *vdrm = disp->video->data;
 
-	log_info("setting DPMS of display %p to %s", disp, uterm_dpms_to_name(state));
+	log_info("setting DPMS of display %s to %s\n", disp->name, uterm_dpms_to_name(state));
 
 	ret = uterm_drm_set_dpms(vdrm->fd, ddrm->connector.id, state);
 	if (ret < 0)

@@ -183,7 +183,7 @@ static void do_redraw_screen(struct screen *scr)
 
 	ret = uterm_display_swap(scr->disp);
 	if (ret) {
-		log_warning("cannot swap display %p", scr->disp);
+		log_warning("cannot swap display [%s] %d", uterm_display_name(scr->disp), ret);
 		return;
 	}
 
@@ -502,8 +502,9 @@ static int add_display(struct kmscon_terminal *term, struct uterm_display *disp)
 
 	shl_dlist_link(&term->screens, &scr->list);
 
-	log_notice("Using video backend [%s] with text renderer [%s] and font engine [%s]\n",
-		   uterm_display_backend_name(disp), scr->txt->ops->name, term->font->ops->name);
+	log_notice("Display [%s] with backend [%s] text renderer [%s] font engine [%s]\n",
+		   uterm_display_name(disp), uterm_display_backend_name(disp), scr->txt->ops->name,
+		   term->font->ops->name);
 
 	log_debug("added display %p to terminal %p", disp, term);
 
