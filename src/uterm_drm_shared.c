@@ -46,6 +46,24 @@
 
 #define LOG_SUBSYSTEM "drm_shared"
 
+static uint32_t get_property_id(int fd, drmModeObjectPropertiesPtr props, const char *name)
+{
+	drmModePropertyPtr prop;
+	uint32_t id;
+	int j;
+
+	for (j = 0; j < props->count_props; j++) {
+		prop = drmModeGetProperty(fd, props->props[j]);
+		id = prop->prop_id;
+		if (!strcmp(prop->name, name)) {
+			drmModeFreeProperty(prop);
+			return id;
+		}
+	}
+	log_err("drm property %s not found", name);
+	return 0;
+}
+
 static uint64_t get_property_value(int fd, drmModeObjectPropertiesPtr props, const char *name)
 {
 	drmModePropertyPtr prop;
@@ -243,6 +261,47 @@ static int modeset_find_plane(int fd, struct uterm_drm_display *ddrm)
 	else
 		log_warn("couldn't find a primary plane\n");
 	return ret;
+}
+
+/*
+ * When switching from a GUI to kmscon VT, the mouse cursor can stay in the middle of the screen
+ * so force disable all cursor planes.
+ */
+static void modeset_clear_cursor(drmModeAtomicReq *req, int fd)
+{
+	drmModePlaneResPtr plane_res;
+	int i;
+
+	plane_res = drmModeGetPlaneResources(fd);
+	if (!plane_res)
+		return;
+
+	/* iterates through all planes of a certain device */
+	for (i = 0; (i < plane_res->count_planes); i++) {
+		int plane_id = plane_res->planes[i];
+
+		drmModePlanePtr plane = drmModeGetPlane(fd, plane_id);
+		if (!plane) {
+			log_err("drmModeGetPlane(%u) failed: %s\n", plane_id, strerror(errno));
+			continue;
+		}
+		drmModeObjectPropertiesPtr props =
+			drmModeObjectGetProperties(fd, plane_id, DRM_MODE_OBJECT_PLANE);
+		if (get_property_value(fd, props, "type") == DRM_PLANE_TYPE_CURSOR) {
+			uint32_t prop_id = get_property_id(fd, props, "CRTC_ID");
+
+			if (drmModeAtomicAddProperty(req, plane_id, prop_id, 0) < 0)
+				log_warn("Unable to set CRTC_ID to disable cursor");
+
+			prop_id = get_property_id(fd, props, "FB_ID");
+			if (drmModeAtomicAddProperty(req, plane_id, prop_id, 0) < 0)
+				log_warn("Unable to set FB_ID to disable cursor");
+		}
+
+		drmModeFreeObjectProperties(props);
+		drmModeFreePlane(plane);
+	}
+	drmModeFreePlaneResources(plane_res);
 }
 
 static void modeset_drm_object_fini(struct drm_object *obj)
@@ -496,6 +555,8 @@ static int perform_modeset(struct uterm_video *video)
 	req = drmModeAtomicAlloc();
 	if (!req)
 		return -ENOMEM;
+
+	modeset_clear_cursor(req, vdrm->fd);
 
 	shl_dlist_for_each(iter, &video->displays)
 	{
