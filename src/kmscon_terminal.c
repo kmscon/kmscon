@@ -150,10 +150,10 @@ static void coord_to_cell(struct kmscon_terminal *term, int32_t x, int32_t y, un
 	*posy = y / fh;
 
 	if (*posx >= w)
-		*posx = w;
+		*posx = w - 1;
 
 	if (*posy >= h)
-		*posy = h;
+		*posy = h - 1;
 }
 
 static void draw_pointer(struct screen *scr)
