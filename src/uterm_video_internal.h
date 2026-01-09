@@ -50,6 +50,8 @@ struct display_ops {
 			   size_t num);
 	int (*fill)(struct uterm_display *disp, uint8_t r, uint8_t g, uint8_t b, unsigned int x,
 		    unsigned int y, unsigned int width, unsigned int height);
+	void (*set_damage)(struct uterm_display *disp, size_t n_rect,
+			   struct uterm_video_rect *damages);
 };
 
 struct video_ops {
@@ -79,6 +81,7 @@ struct uterm_video_module {
 #define DISPLAY_PFLIP 0x40
 #define DISPLAY_OPENGL 0x80
 #define DISPLAY_INUSE 0x100
+#define DISPLAY_DAMAGE 0x200
 
 struct uterm_display {
 	char *name;

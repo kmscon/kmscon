@@ -123,6 +123,16 @@ struct uterm_video_blend_req {
 	uint8_t bb;
 };
 
+/*
+ * This matches struct drm_mode_rect, for damage tracking
+ */
+struct uterm_video_rect {
+	int32_t x1;
+	int32_t y1;
+	int32_t x2;
+	int32_t y2;
+};
+
 typedef void (*uterm_video_cb)(struct uterm_video *video, struct uterm_video_hotplug *arg,
 			       void *data);
 typedef void (*uterm_display_cb)(struct uterm_display *disp, struct uterm_display_event *arg,
@@ -138,6 +148,7 @@ void uterm_display_ref(struct uterm_display *disp);
 void uterm_display_unref(struct uterm_display *disp);
 bool uterm_display_is_drm(struct uterm_display *disp);
 bool uterm_display_has_opengl(struct uterm_display *disp);
+bool uterm_display_supports_damage(struct uterm_display *disp);
 const char *uterm_display_backend_name(struct uterm_display *disp);
 const char *uterm_display_name(struct uterm_display *disp);
 struct uterm_display *uterm_display_next(struct uterm_display *disp);
@@ -159,6 +170,8 @@ int uterm_display_fill(struct uterm_display *disp, uint8_t r, uint8_t g, uint8_t
 		       unsigned int y, unsigned int width, unsigned int height);
 int uterm_display_fake_blendv(struct uterm_display *disp, const struct uterm_video_blend_req *req,
 			      size_t num);
+void uterm_display_set_damage(struct uterm_display *disp, size_t n_rect,
+			      struct uterm_video_rect *damages);
 
 /* video interface */
 
