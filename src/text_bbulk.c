@@ -77,6 +77,7 @@ struct bbulk {
 	bool *damages;
 	struct uterm_video_rect *damage_rects;
 	unsigned int damage_rect_len;
+	uint8_t redraw_margin;
 };
 
 static int bbulk_init(struct kmscon_text *txt)
@@ -480,6 +481,9 @@ static int bblit_draw_pointer(struct kmscon_text *txt, unsigned int pointer_x,
 	if (bb->req_len >= bb->req_total_len)
 		return -ENOMEM;
 
+	pointer_x = min(pointer_x, txt->cols * FONT_WIDTH(txt) - (FONT_WIDTH(txt) / 2));
+	pointer_y = min(pointer_y, txt->rows * FONT_HEIGHT(txt) - (FONT_HEIGHT(txt) / 2));
+
 	req = &bb->reqs[bb->req_len++];
 	mark_damaged(txt, bb, pointer_x, pointer_y);
 
@@ -584,11 +588,16 @@ static int bbulk_prepare(struct kmscon_text *txt, struct tsm_screen_attr *attr)
 		bb->reqs[i].buf = NULL;
 
 	bb->req_len = 0;
-	bb->attr = *attr;
 	bb->damage_rect_len = 0;
 
-	if (uterm_display_need_redraw(txt->disp)) {
-		log_debug("Need to redraw, mark all cells as damaged");
+	// default colors have changed, so redraw the margins with background color
+	if (memcmp(&bb->attr, attr, sizeof(*attr))) {
+		bb->redraw_margin = 2;
+	}
+	bb->attr = *attr;
+
+	if (bb->redraw_margin || uterm_display_need_redraw(txt->disp)) {
+		uterm_display_fill(txt->disp, attr->br, attr->bg, attr->bb, 0, 0, bb->sw, bb->sh);
 		for (i = 0; i < bb->cells; i++) {
 			bb->prev[i].id = ID_DAMAGED;
 			bb->damages[i] = true;
@@ -600,6 +609,9 @@ static int bbulk_prepare(struct kmscon_text *txt, struct tsm_screen_attr *attr)
 				bb->prev[i].id = ID_DAMAGED;
 		}
 	}
+	if (bb->redraw_margin)
+		bb->redraw_margin--;
+
 	return 0;
 }
 

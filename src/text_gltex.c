@@ -578,6 +578,8 @@ static int gltex_prepare(struct kmscon_text *txt, struct tsm_screen_attr *attr)
 
 	gt->attr = *attr;
 
+	glClearColor(gt->attr.br / 255.0, gt->attr.bg / 255.0, gt->attr.bb / 255.0, 1);
+	glClear(GL_COLOR_BUFFER_BIT);
 	return 0;
 }
 

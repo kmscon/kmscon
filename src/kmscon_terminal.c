@@ -98,44 +98,6 @@ struct kmscon_terminal {
 	struct kmscon_pointer pointer;
 };
 
-static void do_clear_margins(struct screen *scr)
-{
-	unsigned int w, h, sw, sh;
-	struct tsm_screen_attr attr;
-	int dh, dw;
-
-	sw = uterm_display_get_width(scr->disp);
-	sh = uterm_display_get_height(scr->disp);
-
-	if (!sw || !sh)
-		return;
-
-	tsm_vte_get_def_attr(scr->term->vte, &attr);
-
-	if (scr->txt->orientation == OR_NORMAL || scr->txt->orientation == OR_UPSIDE_DOWN) {
-		w = FONT_WIDTH(scr->txt) * scr->term->min_cols;
-		h = FONT_HEIGHT(scr->txt) * scr->term->min_rows;
-	} else {
-		w = FONT_HEIGHT(scr->txt) * scr->term->min_rows;
-		h = FONT_WIDTH(scr->txt) * scr->term->min_cols;
-	}
-	dw = sw - w;
-	dh = sh - h;
-
-	if (dw) {
-		if (scr->txt->orientation == OR_NORMAL || scr->txt->orientation == OR_LEFT)
-			uterm_display_fill(scr->disp, attr.br, attr.bg, attr.bb, w, 0, dw, sh);
-		else
-			uterm_display_fill(scr->disp, attr.br, attr.bg, attr.bb, 0, 0, dw, sh);
-	}
-	if (dh) {
-		if (scr->txt->orientation == OR_NORMAL || scr->txt->orientation == OR_RIGHT)
-			uterm_display_fill(scr->disp, attr.br, attr.bg, attr.bb, 0, h, sw, dh);
-		else
-			uterm_display_fill(scr->disp, attr.br, attr.bg, attr.bb, 0, 0, sw, dh);
-	}
-}
-
 static int font_set(struct kmscon_terminal *term);
 
 static void coord_to_cell(struct kmscon_terminal *term, int32_t x, int32_t y, unsigned int *posx,
@@ -173,7 +135,6 @@ static void do_redraw_screen(struct screen *scr)
 		return;
 
 	scr->pending = false;
-	do_clear_margins(scr);
 
 	tsm_vte_get_def_attr(scr->term->vte, &attr);
 	kmscon_text_prepare(scr->txt, &attr);
