@@ -60,7 +60,7 @@ static uint32_t get_property_id(int fd, drmModeObjectPropertiesPtr props, const 
 			return id;
 		}
 	}
-	log_err("drm property %s not found", name);
+	log_debug("drm property %s not found", name);
 	return 0;
 }
 
@@ -218,8 +218,9 @@ static int modeset_find_crtc(struct uterm_video *video, int fd, drmModeRes *res,
 	return -ENOENT;
 }
 
-static int modeset_find_plane(int fd, struct uterm_drm_display *ddrm)
+static int modeset_find_plane(int fd, struct uterm_display *disp)
 {
+	struct uterm_drm_display *ddrm = disp->data;
 	drmModePlaneResPtr plane_res;
 	bool found_primary = false;
 	int i, ret = -EINVAL;
@@ -249,6 +250,8 @@ static int modeset_find_plane(int fd, struct uterm_drm_display *ddrm)
 				found_primary = true;
 				ddrm->plane.id = plane_id;
 				ret = 0;
+				if (get_property_id(fd, props, "FB_DAMAGE_CLIPS") > 0)
+					disp->flags |= DISPLAY_DAMAGE;
 			}
 			drmModeFreeObjectProperties(props);
 		}
@@ -257,7 +260,8 @@ static int modeset_find_plane(int fd, struct uterm_drm_display *ddrm)
 	drmModeFreePlaneResources(plane_res);
 
 	if (found_primary)
-		log_debug("found primary plane, id: %d\n", ddrm->plane.id);
+		log_debug("found primary plane, id: %d damage support: %s\n", ddrm->plane.id,
+			  disp->flags & DISPLAY_DAMAGE ? "yes" : "no");
 	else
 		log_warn("couldn't find a primary plane\n");
 	return ret;
@@ -398,7 +402,23 @@ int uterm_drm_prepare_commit(int fd, struct uterm_drm_display *ddrm, drmModeAtom
 	if (set_drm_object_property(req, plane, "CRTC_H", height) < 0)
 		return -1;
 
+	if (ddrm->damage_blob_id) {
+		if (set_drm_object_property(req, plane, "FB_DAMAGE_CLIPS", ddrm->damage_blob_id) <
+		    0) {
+			log_warn("Cannot set FB_DAMAGE_CLIPS");
+			return -1;
+		}
+	}
 	return 0;
+}
+
+static void free_damage_blob(int fd, struct uterm_drm_display *ddrm)
+{
+	if (!ddrm->damage_blob_id)
+		return;
+	if (drmModeDestroyPropertyBlob(fd, ddrm->damage_blob_id))
+		log_warn("Failed to destroy damage property blob");
+	ddrm->damage_blob_id = 0;
 }
 
 int uterm_drm_set_dpms(int fd, uint32_t conn_id, int state)
@@ -512,6 +532,24 @@ int uterm_drm_display_set_dpms(struct uterm_display *disp, int state)
 
 	disp->dpms = ret;
 	return 0;
+}
+
+void uterm_drm_display_set_damage(struct uterm_display *disp, size_t n_rect,
+				  struct uterm_video_rect *damages)
+{
+	struct uterm_drm_video *vdrm = disp->video->data;
+	struct uterm_drm_display *ddrm = disp->data;
+	int ret;
+
+	if (ddrm->damage_blob_id)
+		free_damage_blob(vdrm->fd, ddrm);
+
+	if (!n_rect || !(disp->flags & DISPLAY_DAMAGE))
+		return;
+	ret = drmModeCreatePropertyBlob(vdrm->fd, damages, n_rect * sizeof(*damages),
+					&ddrm->damage_blob_id);
+	if (ret)
+		log_warn("Cannot create damage property %d, [%ld]", ret, n_rect);
 }
 
 int uterm_drm_display_wait_pflip(struct uterm_display *disp)
@@ -664,6 +702,7 @@ static int pageflip(int fd, struct uterm_display *disp, uint32_t fb)
 		log_warn("atomic pageflip failed for [%s], %d\n", disp->name, ret);
 		return ret;
 	}
+	free_damage_blob(fd, ddrm);
 	return 0;
 }
 
@@ -1001,7 +1040,7 @@ static void bind_display(struct uterm_video *video, drmModeRes *res, drmModeConn
 	}
 
 	/* with a connector and crtc, find a primary plane */
-	ret = modeset_find_plane(vdrm->fd, ddrm);
+	ret = modeset_find_plane(vdrm->fd, disp);
 	if (ret) {
 		log_err("no valid plane for crtc %u\n", ddrm->crtc.id);
 		goto out_blob;

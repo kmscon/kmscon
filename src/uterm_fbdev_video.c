@@ -429,6 +429,7 @@ static const struct display_ops fbdev_display_ops = {
 	.is_swapping = display_is_swapping,
 	.fake_blendv = uterm_fbdev_display_fake_blendv,
 	.fill = uterm_fbdev_display_fill,
+	.set_damage = NULL,
 };
 
 static void intro_idle_event(struct ev_eloop *eloop, void *unused, void *data)
