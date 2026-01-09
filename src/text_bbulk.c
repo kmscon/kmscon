@@ -54,6 +54,9 @@
 #define ID_DAMAGED 0xd41146edd41146ed
 #define ID_OVERFLOW 0x0c34f10110c34f10
 
+// Max horizontal distance of two damaged cells to be merged in a damage rectangle
+#define DAMAGE_MERGE_LEN 3
+
 struct bbcell {
 	uint64_t id;
 	struct tsm_screen_attr attr;
@@ -72,6 +75,8 @@ struct bbulk {
 	unsigned int sw;
 	unsigned int sh;
 	bool *damages;
+	struct uterm_video_rect *damage_rects;
+	unsigned int damage_rect_len;
 };
 
 static int bbulk_init(struct kmscon_text *txt)
@@ -104,6 +109,7 @@ static void free_glyph(void *data)
 static int bbulk_set(struct kmscon_text *txt)
 {
 	struct bbulk *bb = txt->data;
+	int max_damage_rects;
 	int i;
 
 	memset(bb, 0, sizeof(*bb));
@@ -137,6 +143,11 @@ static int bbulk_set(struct kmscon_text *txt)
 	if (!bb->damages)
 		goto free_prev;
 
+	max_damage_rects = SHL_DIV_ROUND_UP(txt->cols, DAMAGE_MERGE_LEN + 1) * txt->rows;
+	bb->damage_rects = malloc(sizeof(*bb->damage_rects) * max_damage_rects);
+	if (!bb->damage_rects)
+		goto free_damages;
+
 	for (i = 0; i < bb->cells; i++) {
 		// start with all cells damaged
 		bb->prev[i].id = ID_DAMAGED;
@@ -144,9 +155,11 @@ static int bbulk_set(struct kmscon_text *txt)
 	}
 
 	if (kmscon_rotate_create_tables(&bb->glyphs, &bb->bold_glyphs, free_glyph))
-		goto free_damages;
+		goto free_r_damages;
 	return 0;
 
+free_r_damages:
+	free(bb->damage_rects);
 free_damages:
 	free(bb->damages);
 free_prev:
@@ -161,6 +174,7 @@ static void bbulk_unset(struct kmscon_text *txt)
 	struct bbulk *bb = txt->data;
 
 	kmscon_rotate_free_tables(bb->glyphs, bb->bold_glyphs);
+	free(bb->damage_rects);
 	free(bb->reqs);
 	free(bb->damages);
 	free(bb->prev);
@@ -245,6 +259,9 @@ err_free:
 	return ret;
 }
 
+/*
+ * Returns the top left corner of a Cell
+ */
 static void set_coordinate(struct kmscon_text *txt, unsigned int *x, unsigned int *y,
 			   unsigned int posx, unsigned int posy)
 {
@@ -482,13 +499,78 @@ static int bblit_draw_pointer(struct kmscon_text *txt, unsigned int pointer_x,
 	return 0;
 }
 
+static void add_damage(struct bbulk *bb, struct uterm_video_rect *r)
+{
+	struct uterm_video_rect *out = &bb->damage_rects[bb->damage_rect_len];
+
+	*out = *r;
+	bb->damage_rect_len++;
+}
+
+static void merge_damage(struct bbulk *bb, struct uterm_video_rect *r)
+{
+	struct uterm_video_rect *out = &bb->damage_rects[bb->damage_rect_len - 1];
+
+	out->x1 = min(out->x1, r->x1);
+	out->x2 = max(out->x2, r->x2);
+	out->y1 = min(out->y1, r->y1);
+	out->y2 = max(out->y2, r->y2);
+}
+
+/*
+ * Simple merge algorithm, on each line, if two damaged cells are less than
+ * DAMAGE_MERGE_LEN away, include the two cells in one damage rectangle.
+ */
+static void bbulk_compute_damage(struct kmscon_text *txt)
+{
+	struct bbulk *bb = txt->data;
+	int posx, posy, off;
+	struct uterm_video_rect r;
+	unsigned int x1, y1;
+	unsigned int fw, fh;
+	int prev;
+
+	if (txt->orientation == OR_NORMAL || txt->orientation == OR_UPSIDE_DOWN) {
+		fw = FONT_WIDTH(txt);
+		fh = FONT_HEIGHT(txt);
+	} else {
+		fw = FONT_HEIGHT(txt);
+		fh = FONT_WIDTH(txt);
+	}
+
+	for (posy = 0; posy < txt->rows; posy++) {
+		prev = 0;
+		for (posx = 0; posx < txt->cols; posx++) {
+			off = posx + posy * txt->cols;
+			if (!bb->damages[off]) {
+				if (prev)
+					prev--;
+				continue;
+			}
+			set_coordinate(txt, &x1, &y1, posx, posy);
+			r.x1 = x1;
+			r.y1 = y1;
+			r.x2 = x1 + fw;
+			r.y2 = y1 + fh;
+			if (prev)
+				merge_damage(bb, &r);
+			else
+				add_damage(bb, &r);
+			prev = DAMAGE_MERGE_LEN;
+		}
+	}
+}
 static int bbulk_render(struct kmscon_text *txt)
 {
 	struct bbulk *bb = txt->data;
 	int ret;
 
 	ret = uterm_display_fake_blendv(txt->disp, bb->reqs, bb->req_len);
-	log_debug("bbulk, redraw %d cells", bb->req_len);
+	// log_debug("bbulk, redraw %d cells", bb->req_len);
+	if (uterm_display_supports_damage(txt->disp)) {
+		bbulk_compute_damage(txt);
+		uterm_display_set_damage(txt->disp, bb->damage_rect_len, bb->damage_rects);
+	}
 	return ret;
 }
 
@@ -503,7 +585,21 @@ static int bbulk_prepare(struct kmscon_text *txt, struct tsm_screen_attr *attr)
 
 	bb->req_len = 0;
 	bb->attr = *attr;
+	bb->damage_rect_len = 0;
 
+	if (uterm_display_need_redraw(txt->disp)) {
+		log_debug("Need to redraw, mark all cells as damaged");
+		for (i = 0; i < bb->cells; i++) {
+			bb->prev[i].id = ID_DAMAGED;
+			bb->damages[i] = true;
+		}
+	} else if (uterm_display_has_damage(txt->disp)) {
+		log_debug("Carry over damage from previous frame");
+		for (i = 0; i < bb->cells; i++) {
+			if (bb->damages[i])
+				bb->prev[i].id = ID_DAMAGED;
+		}
+	}
 	return 0;
 }
 

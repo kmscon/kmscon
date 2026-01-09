@@ -48,6 +48,20 @@
 #define SHL_DIV_ROUND_UP(n, d) (((n) + (d) - 1) / (d))
 #define SHL_ULONG_BITS (sizeof(unsigned long) * 8)
 
+#define max(a, b)                                                                                  \
+	({                                                                                         \
+		__typeof__(a) _a = (a);                                                            \
+		__typeof__(b) _b = (b);                                                            \
+		_a > _b ? _a : _b;                                                                 \
+	})
+
+#define min(a, b)                                                                                  \
+	({                                                                                         \
+		__typeof__(a) _a = (a);                                                            \
+		__typeof__(b) _b = (b);                                                            \
+		_a < _b ? _a : _b;                                                                 \
+	})
+
 static inline int shl_dirent(const char *path, struct dirent **ent)
 {
 	size_t len;

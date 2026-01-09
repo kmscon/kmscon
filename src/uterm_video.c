@@ -178,6 +178,12 @@ bool uterm_display_has_opengl(struct uterm_display *disp)
 }
 
 SHL_EXPORT
+bool uterm_display_supports_damage(struct uterm_display *disp)
+{
+	return (disp->flags & DISPLAY_DAMAGE) != 0;
+}
+
+SHL_EXPORT
 const char *uterm_display_backend_name(struct uterm_display *disp)
 {
 	if (disp && disp->video && disp->video->mod)
