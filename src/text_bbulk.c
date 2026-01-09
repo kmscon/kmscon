@@ -245,25 +245,27 @@ err_free:
 	return ret;
 }
 
-static void set_coordinate(struct kmscon_text *txt, struct uterm_video_blend_req *req,
-			   unsigned int sw, unsigned int sh, unsigned int posx, unsigned int posy)
+static void set_coordinate(struct kmscon_text *txt, unsigned int *x, unsigned int *y,
+			   unsigned int posx, unsigned int posy)
 {
+	struct bbulk *bb = txt->data;
+
 	switch (txt->orientation) {
 	case OR_NORMAL:
-		req->x = posx * FONT_WIDTH(txt);
-		req->y = posy * FONT_HEIGHT(txt);
+		*x = posx * FONT_WIDTH(txt);
+		*y = posy * FONT_HEIGHT(txt);
 		break;
 	case OR_UPSIDE_DOWN:
-		req->x = sw - (posx + 1) * FONT_WIDTH(txt);
-		req->y = sh - (posy + 1) * FONT_HEIGHT(txt);
+		*x = bb->sw - (posx + 1) * FONT_WIDTH(txt);
+		*y = bb->sh - (posy + 1) * FONT_HEIGHT(txt);
 		break;
 	case OR_RIGHT:
-		req->x = sw - (posy + 1) * FONT_HEIGHT(txt);
-		req->y = posx * FONT_WIDTH(txt);
+		*x = bb->sw - (posy + 1) * FONT_HEIGHT(txt);
+		*y = posx * FONT_WIDTH(txt);
 		break;
 	case OR_LEFT:
-		req->x = posy * FONT_HEIGHT(txt);
-		req->y = sh - (posx + 1) * FONT_WIDTH(txt);
+		*x = posy * FONT_HEIGHT(txt);
+		*y = bb->sh - (posx + 1) * FONT_WIDTH(txt);
 		break;
 	}
 }
@@ -329,9 +331,9 @@ static int bbulk_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, 
 		 * next cell, as the glyph is already rotated, so start on the next cell
 		 * and end on this cell
 		 */
-		set_coordinate(txt, req, bb->sw, bb->sh, posx + 1, posy);
+		set_coordinate(txt, &req->x, &req->y, posx + 1, posy);
 	else
-		set_coordinate(txt, req, bb->sw, bb->sh, posx, posy);
+		set_coordinate(txt, &req->x, &req->y, posx, posy);
 
 	req->buf = &bb_glyph->buf;
 	if (attr->inverse) {
