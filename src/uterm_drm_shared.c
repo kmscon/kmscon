@@ -534,6 +534,13 @@ int uterm_drm_display_set_dpms(struct uterm_display *disp, int state)
 	return 0;
 }
 
+bool uterm_drm_display_need_redraw(struct uterm_display *disp)
+{
+	struct uterm_drm_display *ddrm = disp->data;
+
+	return ddrm->need_redraw;
+}
+
 void uterm_drm_display_set_damage(struct uterm_display *disp, size_t n_rect,
 				  struct uterm_video_rect *damages)
 {
@@ -543,6 +550,10 @@ void uterm_drm_display_set_damage(struct uterm_display *disp, size_t n_rect,
 
 	if (ddrm->damage_blob_id)
 		free_damage_blob(vdrm->fd, ddrm);
+
+	// Don't pass damage clip after a modeset.
+	if (ddrm->need_redraw)
+		return;
 
 	if (!n_rect || !(disp->flags & DISPLAY_DAMAGE))
 		return;
@@ -644,6 +655,7 @@ err_commit:
 		disp = shl_dlist_entry(iter, struct uterm_display, list);
 		ddrm = disp->data;
 		ddrm->done_modeset(disp, ret);
+		ddrm->need_redraw = true;
 		if (ret) {
 			disp->flags &= ~DISPLAY_ONLINE;
 			uterm_display_unref(disp);
@@ -702,6 +714,7 @@ static int pageflip(int fd, struct uterm_display *disp, uint32_t fb)
 		log_warn("atomic pageflip failed for [%s], %d\n", disp->name, ret);
 		return ret;
 	}
+	ddrm->need_redraw = false;
 	free_damage_blob(fd, ddrm);
 	return 0;
 }

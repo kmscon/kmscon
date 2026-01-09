@@ -317,6 +317,15 @@ int uterm_display_fake_blendv(struct uterm_display *disp, const struct uterm_vid
 }
 
 SHL_EXPORT
+bool uterm_display_need_redraw(struct uterm_display *disp)
+{
+	if (!disp || !display_is_online(disp) || !video_is_awake(disp->video))
+		return false;
+
+	return VIDEO_CALL(disp->ops->need_redraw, 0, disp);
+}
+
+SHL_EXPORT
 void uterm_display_set_damage(struct uterm_display *disp, size_t n_rect,
 			      struct uterm_video_rect *damages)
 {

@@ -60,6 +60,7 @@ struct uterm_drm_display {
 	uint32_t mode_blob_id;
 	uint32_t crtc_index;
 	uint32_t damage_blob_id;
+	bool need_redraw;
 
 	drmModeModeInfoPtr current_mode;
 	drmModeModeInfo default_mode;
@@ -76,6 +77,7 @@ int uterm_drm_prepare_commit(int fd, struct uterm_drm_display *ddrm, drmModeAtom
 			     uint32_t fb, uint32_t width, uint32_t height);
 int uterm_drm_display_swap(struct uterm_display *disp, uint32_t fb);
 bool uterm_drm_is_swapping(struct uterm_display *disp);
+bool uterm_drm_display_need_redraw(struct uterm_display *disp);
 void uterm_drm_display_free_properties(struct uterm_display *disp);
 void uterm_drm_display_set_damage(struct uterm_display *disp, size_t n_rect,
 				  struct uterm_video_rect *damages);

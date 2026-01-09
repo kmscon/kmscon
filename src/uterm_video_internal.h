@@ -46,6 +46,7 @@ struct display_ops {
 	int (*use)(struct uterm_display *disp);
 	int (*swap)(struct uterm_display *disp);
 	bool (*is_swapping)(struct uterm_display *disp);
+	bool (*need_redraw)(struct uterm_display *disp);
 	int (*fake_blendv)(struct uterm_display *disp, const struct uterm_video_blend_req *req,
 			   size_t num);
 	int (*fill)(struct uterm_display *disp, uint8_t r, uint8_t g, uint8_t b, unsigned int x,

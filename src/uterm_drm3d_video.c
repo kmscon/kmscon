@@ -371,6 +371,7 @@ static const struct display_ops drm_display_ops = {
 	.use = uterm_drm3d_display_use,
 	.swap = display_swap,
 	.is_swapping = uterm_drm_is_swapping,
+	.need_redraw = NULL,
 	.fake_blendv = uterm_drm3d_display_fake_blendv,
 	.fill = uterm_drm3d_display_fill,
 	.set_damage = NULL,

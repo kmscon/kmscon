@@ -427,6 +427,7 @@ static const struct display_ops fbdev_display_ops = {
 	.use = NULL,
 	.swap = display_swap,
 	.is_swapping = display_is_swapping,
+	.need_redraw = NULL,
 	.fake_blendv = uterm_fbdev_display_fake_blendv,
 	.fill = uterm_fbdev_display_fill,
 	.set_damage = NULL,

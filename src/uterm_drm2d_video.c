@@ -232,6 +232,7 @@ static const struct display_ops drm2d_display_ops = {
 	.use = NULL,
 	.swap = display_swap,
 	.is_swapping = uterm_drm_is_swapping,
+	.need_redraw = uterm_drm_display_need_redraw,
 	.fake_blendv = uterm_drm2d_display_fake_blendv,
 	.fill = uterm_drm2d_display_fill,
 	.set_damage = uterm_drm_display_set_damage,
