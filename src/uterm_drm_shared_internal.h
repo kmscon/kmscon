@@ -81,6 +81,7 @@ bool uterm_drm_display_need_redraw(struct uterm_display *disp);
 void uterm_drm_display_free_properties(struct uterm_display *disp);
 void uterm_drm_display_set_damage(struct uterm_display *disp, size_t n_rect,
 				  struct uterm_video_rect *damages);
+bool uterm_drm_display_has_damage(struct uterm_display *disp);
 
 /* drm video */
 

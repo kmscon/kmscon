@@ -335,6 +335,16 @@ void uterm_display_set_damage(struct uterm_display *disp, size_t n_rect,
 	VIDEO_CALL(disp->ops->set_damage, 0, disp, n_rect, damages);
 }
 
+SHL_EXPORT
+bool uterm_display_has_damage(struct uterm_display *disp)
+{
+	if (!disp || !display_is_online(disp) || !video_is_awake(disp->video))
+		return false;
+
+	return VIDEO_CALL(disp->ops->has_damage, 0, disp);
+}
+
+SHL_EXPORT
 int uterm_video_new(struct uterm_video **out, struct ev_eloop *eloop, const char *node,
 		    const char *backend, unsigned int desired_width, unsigned int desired_height,
 		    bool use_original)

@@ -236,6 +236,7 @@ static const struct display_ops drm2d_display_ops = {
 	.fake_blendv = uterm_drm2d_display_fake_blendv,
 	.fill = uterm_drm2d_display_fill,
 	.set_damage = uterm_drm_display_set_damage,
+	.has_damage = uterm_drm_display_has_damage,
 };
 
 static void show_displays(struct uterm_video *video)

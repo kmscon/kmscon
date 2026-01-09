@@ -53,6 +53,7 @@ struct display_ops {
 		    unsigned int y, unsigned int width, unsigned int height);
 	void (*set_damage)(struct uterm_display *disp, size_t n_rect,
 			   struct uterm_video_rect *damages);
+	bool (*has_damage)(struct uterm_display *disp);
 };
 
 struct video_ops {
