@@ -118,6 +118,8 @@ struct gltex {
 
 	GLfloat cos;
 	GLfloat sin;
+
+	struct tsm_screen_attr attr;
 };
 
 static int gltex_init(struct kmscon_text *txt)
@@ -546,7 +548,7 @@ static int gltex_rotate(struct kmscon_text *txt, enum Orientation orientation)
 	return 0;
 }
 
-static int gltex_prepare(struct kmscon_text *txt)
+static int gltex_prepare(struct kmscon_text *txt, struct tsm_screen_attr *attr)
 {
 	struct gltex *gt = txt->data;
 	struct atlas *atlas;
@@ -573,6 +575,8 @@ static int gltex_prepare(struct kmscon_text *txt)
 		gt->advance_y = 2.0 / gt->sh * FONT_HEIGHT(txt) * (1. / aspect);
 	}
 	gltex_set_rotate(gt, txt->orientation);
+
+	gt->attr = *attr;
 
 	return 0;
 }
@@ -667,8 +671,7 @@ static int gltex_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, 
 	return 0;
 }
 
-static int gltex_draw_pointer(struct kmscon_text *txt, unsigned int x, unsigned int y,
-			      const struct tsm_screen_attr *attr)
+static int gltex_draw_pointer(struct kmscon_text *txt, unsigned int x, unsigned int y)
 {
 	struct gltex *gt = txt->data;
 	struct atlas *atlas;
@@ -679,7 +682,7 @@ static int gltex_draw_pointer(struct kmscon_text *txt, unsigned int x, unsigned 
 	uint32_t ch = 'I';
 	uint64_t id = ch;
 
-	ret = find_glyph(txt, &glyph, id, &ch, 1, attr);
+	ret = find_glyph(txt, &glyph, id, &ch, 1, &gt->attr);
 	if (ret)
 		return ret;
 
@@ -739,12 +742,12 @@ static int gltex_draw_pointer(struct kmscon_text *txt, unsigned int x, unsigned 
 
 	for (i = 0; i < 6; ++i) {
 		idx = atlas->cache_num * 3 * 6 + i * 3;
-		atlas->cache_fgcol[idx + 0] = attr->fr / 255.0;
-		atlas->cache_fgcol[idx + 1] = attr->fg / 255.0;
-		atlas->cache_fgcol[idx + 2] = attr->fb / 255.0;
-		atlas->cache_bgcol[idx + 0] = attr->br / 255.0;
-		atlas->cache_bgcol[idx + 1] = attr->bg / 255.0;
-		atlas->cache_bgcol[idx + 2] = attr->bb / 255.0;
+		atlas->cache_fgcol[idx + 0] = gt->attr.fr / 255.0;
+		atlas->cache_fgcol[idx + 1] = gt->attr.fg / 255.0;
+		atlas->cache_fgcol[idx + 2] = gt->attr.fb / 255.0;
+		atlas->cache_bgcol[idx + 0] = gt->attr.br / 255.0;
+		atlas->cache_bgcol[idx + 1] = gt->attr.bg / 255.0;
+		atlas->cache_bgcol[idx + 2] = gt->attr.bb / 255.0;
 	}
 
 	++atlas->cache_num;

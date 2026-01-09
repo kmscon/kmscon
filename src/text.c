@@ -394,6 +394,7 @@ int kmscon_text_rotate(struct kmscon_text *txt, enum Orientation orientation)
 /**
  * kmscon_text_prepare:
  * @txt: valid text renderer
+ * @attr: glyph attributes
  *
  * This starts a rendering-round. When rendering a console via a text renderer,
  * you have to call this first, then render all your glyphs via
@@ -404,7 +405,7 @@ int kmscon_text_rotate(struct kmscon_text *txt, enum Orientation orientation)
  *
  * Returns: 0 on success, negative error code on failure.
  */
-int kmscon_text_prepare(struct kmscon_text *txt)
+int kmscon_text_prepare(struct kmscon_text *txt, struct tsm_screen_attr *attr)
 {
 	int ret = 0;
 
@@ -413,7 +414,7 @@ int kmscon_text_prepare(struct kmscon_text *txt)
 
 	txt->rendering = true;
 	if (txt->ops->prepare)
-		ret = txt->ops->prepare(txt);
+		ret = txt->ops->prepare(txt, attr);
 	if (ret)
 		txt->rendering = false;
 
@@ -455,7 +456,6 @@ int kmscon_text_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, s
  * @txt: valid text renderer
  * @x: X-position of the center of the pointer in pixel
  * @y: Y-position of the center of the pointer in pixel
- * @attr: glyph attributes
  *
  * This draws a single I glyph at the requested position. The position is a
  * a pixel position! You must precede this call with kmscon_text_prepare().
@@ -464,13 +464,12 @@ int kmscon_text_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, s
  *
  * Returns: 0 on success or negative error code if it couldn't be drawn.
  */
-int kmscon_text_draw_pointer(struct kmscon_text *txt, unsigned int x, unsigned int y,
-			     const struct tsm_screen_attr *attr)
+int kmscon_text_draw_pointer(struct kmscon_text *txt, unsigned int x, unsigned int y)
 {
 	if (!txt || !txt->rendering || !txt->ops->draw_pointer)
 		return -EINVAL;
 
-	return txt->ops->draw_pointer(txt, x, y, attr);
+	return txt->ops->draw_pointer(txt, x, y);
 }
 
 /**

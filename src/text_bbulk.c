@@ -64,6 +64,7 @@ struct bbulk {
 	struct uterm_video_blend_req *reqs;
 	unsigned int req_len;
 	unsigned int req_total_len;
+	struct tsm_screen_attr attr;
 	struct shl_hashtable *glyphs;
 	struct shl_hashtable *bold_glyphs;
 	struct bbcell *prev;
@@ -447,7 +448,7 @@ static void set_pointer_coordinate(struct bbulk *bb, struct kmscon_text *txt,
 }
 
 static int bblit_draw_pointer(struct kmscon_text *txt, unsigned int pointer_x,
-			      unsigned int pointer_y, const struct tsm_screen_attr *attr)
+			      unsigned int pointer_y)
 {
 	struct bbulk *bb = txt->data;
 	struct uterm_video_blend_req *req;
@@ -463,19 +464,19 @@ static int bblit_draw_pointer(struct kmscon_text *txt, unsigned int pointer_x,
 	req = &bb->reqs[bb->req_len++];
 	mark_damaged(txt, bb, pointer_x, pointer_y);
 
-	ret = find_glyph(txt, &bb_glyph, id, &ch, 1, attr);
+	ret = find_glyph(txt, &bb_glyph, id, &ch, 1, &bb->attr);
 	if (ret)
 		return ret;
 
 	req->buf = &bb_glyph->buf;
 	set_pointer_coordinate(bb, txt, req, pointer_x, pointer_y);
 
-	req->fr = attr->fr;
-	req->fg = attr->fg;
-	req->fb = attr->fb;
-	req->br = attr->br;
-	req->bg = attr->bg;
-	req->bb = attr->bb;
+	req->fr = bb->attr.fr;
+	req->fg = bb->attr.fg;
+	req->fb = bb->attr.fb;
+	req->br = bb->attr.br;
+	req->bg = bb->attr.bg;
+	req->bb = bb->attr.bb;
 	return 0;
 }
 
@@ -489,7 +490,7 @@ static int bbulk_render(struct kmscon_text *txt)
 	return ret;
 }
 
-static int bbulk_prepare(struct kmscon_text *txt)
+static int bbulk_prepare(struct kmscon_text *txt, struct tsm_screen_attr *attr)
 {
 	struct bbulk *bb = txt->data;
 	int i;
@@ -499,6 +500,8 @@ static int bbulk_prepare(struct kmscon_text *txt)
 		bb->reqs[i].buf = NULL;
 
 	bb->req_len = 0;
+	bb->attr = *attr;
+
 	return 0;
 }
 
