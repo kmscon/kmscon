@@ -140,9 +140,18 @@ int uterm_display_bind(struct uterm_display *disp)
 
 	shl_dlist_link_tail(&disp->video->displays, &disp->list);
 	uterm_display_ref(disp);
-	VIDEO_CB(disp->video, disp, UTERM_NEW);
 
 	return 0;
+}
+
+SHL_EXPORT
+void uterm_display_ready(struct uterm_display *disp)
+{
+	if (!disp || !disp->video || disp->flags & DISPLAY_INUSE)
+		return;
+
+	disp->flags |= DISPLAY_INUSE;
+	VIDEO_CB(disp->video, disp, UTERM_NEW);
 }
 
 SHL_EXPORT
@@ -150,8 +159,8 @@ void uterm_display_unbind(struct uterm_display *disp)
 {
 	if (!disp || !disp->video)
 		return;
-
-	VIDEO_CB(disp->video, disp, UTERM_GONE);
+	if (disp->flags & DISPLAY_INUSE)
+		VIDEO_CB(disp->video, disp, UTERM_GONE);
 	shl_dlist_unlink(&disp->list);
 	uterm_display_unref(disp);
 }
@@ -173,6 +182,14 @@ const char *uterm_display_backend_name(struct uterm_display *disp)
 {
 	if (disp && disp->video && disp->video->mod)
 		return disp->video->mod->name;
+	return "Unknown";
+}
+
+SHL_EXPORT
+const char *uterm_display_name(struct uterm_display *disp)
+{
+	if (disp && disp->name)
+		return disp->name;
 	return "Unknown";
 }
 
@@ -262,12 +279,12 @@ int uterm_display_use(struct uterm_display *disp)
 }
 
 SHL_EXPORT
-int uterm_display_swap(struct uterm_display *disp, bool immediate)
+int uterm_display_swap(struct uterm_display *disp)
 {
 	if (!disp || !display_is_online(disp) || !video_is_awake(disp->video))
 		return -EINVAL;
 
-	return VIDEO_CALL(disp->ops->swap, 0, disp, immediate);
+	return VIDEO_CALL(disp->ops->swap, 0, disp);
 }
 
 SHL_EXPORT

@@ -57,7 +57,7 @@ static void dummy_redraw(struct kmscon_dummy *dummy, struct display *d)
 	h = uterm_display_get_height(d->disp);
 
 	uterm_display_fill(d->disp, 0, 0, 0, 0, 0, w, h);
-	uterm_display_swap(d->disp, false);
+	uterm_display_swap(d->disp);
 }
 
 static int dummy_session_event(struct kmscon_session *session, struct kmscon_session_event *ev,
