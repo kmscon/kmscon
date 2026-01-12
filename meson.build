@@ -206,6 +206,6 @@ endforeach
 
 # kmscon.conf
 install_data(
-  'scripts/etc/kmscon.conf',
+  'scripts/etc/kmscon.conf.example',
   install_dir: join_paths(get_option('sysconfdir'), 'kmscon')
 )
