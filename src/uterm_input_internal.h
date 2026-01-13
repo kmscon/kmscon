@@ -56,6 +56,9 @@ enum pointer_kind {
 	POINTER_VMOUSE,
 };
 
+/* Button state for pressed_button field */
+#define BUTTON_NONE 255
+
 struct uterm_input_pointer {
 	/* For pointers (mouse/trackpad/trackpoint/touchscreen) */
 	enum pointer_kind kind;
@@ -72,6 +75,9 @@ struct uterm_input_pointer {
 	int32_t max_x;
 	int32_t min_y;
 	int32_t max_y;
+
+	/* Track which button is currently pressed (BUTTON_NONE=none, 0=left, 1=right, 2=middle) */
+	uint8_t pressed_button;
 };
 
 struct uterm_input_dev {

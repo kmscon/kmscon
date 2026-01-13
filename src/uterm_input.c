@@ -233,6 +233,7 @@ static void input_new_dev(struct uterm_input *input, const char *node, unsigned 
 	dev->rfd = -1;
 	dev->capabilities = capabilities;
 	dev->pointer.kind = POINTER_NONE;
+	dev->pointer.pressed_button = BUTTON_NONE; /* No button pressed initially */
 
 	dev->node = strdup(node);
 	if (!dev->node)

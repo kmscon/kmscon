@@ -26,6 +26,15 @@ static void pointer_dev_send_move(struct uterm_input_dev *dev)
 	pev.pointer_x = dev->pointer.x;
 	pev.pointer_y = dev->pointer.y;
 
+	/* Include button state if a button is pressed during motion (drag) */
+	if (dev->pointer.pressed_button != BUTTON_NONE) {
+		pev.button = dev->pointer.pressed_button;
+		pev.pressed = true;
+	} else {
+		pev.button = 0;
+		pev.pressed = false;
+	}
+
 	shl_hook_call(dev->input->pointer_hook, dev->input, &pev);
 }
 
@@ -158,15 +167,20 @@ void pointer_dev_button(struct uterm_input_dev *dev, uint16_t code, int32_t valu
 				  (tp.tv_nsec - dev->pointer.last_click.tv_nsec) / 1000000;
 			dbl_click = (elapsed < 500);
 			dev->pointer.last_click = tp;
+			dev->pointer.pressed_button = 0; /* Button 0 = left */
+		} else {
+			dev->pointer.pressed_button = BUTTON_NONE; /* No button */
 		}
 		pointer_dev_send_button(dev, 0, pressed, dbl_click);
 		break;
 	case BTN_RIGHT:
+		dev->pointer.pressed_button = pressed ? 1 : BUTTON_NONE; /* Button 1 = right */
 		pointer_dev_send_button(dev, 1, pressed, false);
 		break;
 	case BTN_TOOL_DOUBLETAP:
 	case BTN_TOOL_TRIPLETAP:
 	case BTN_MIDDLE:
+		dev->pointer.pressed_button = pressed ? 2 : BUTTON_NONE; /* Button 2 = middle */
 		pointer_dev_send_button(dev, 2, pressed, false);
 		break;
 	case BTN_TOUCH:
