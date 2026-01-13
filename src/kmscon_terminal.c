@@ -670,6 +670,10 @@ static void forward_pointer_event(struct kmscon_terminal *term,
 	switch (ev->event) {
 	case UTERM_MOVED:
 		event = TSM_MOUSE_EVENT_MOVED;
+		/* In mouse tracking protocol, motion with button pressed uses button+32 */
+		if (ev->pressed && button <= 2) {
+			button += 32;
+		}
 		break;
 	case UTERM_BUTTON:
 		if (ev->pressed)
