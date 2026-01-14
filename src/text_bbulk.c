@@ -330,6 +330,8 @@ static int bbulk_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, 
 		}
 	} else {
 		bb->damages[offset] = true;
+		if (prev->overflow)
+			damage_cell(bb, offset + 1);
 	}
 
 	prev->id = id;
@@ -339,9 +341,10 @@ static int bbulk_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, 
 	if (ret)
 		return ret;
 
-	if (bb_glyph->width == 2 && posx + 1 < txt->cols)
+	if (bb_glyph->width == 2 && posx + 1 < txt->cols) {
 		prev->overflow = true;
-	else
+		bb->prev[offset + 1].overflow = false;
+	} else
 		prev->overflow = false;
 
 	req = &bb->reqs[bb->req_len++];
