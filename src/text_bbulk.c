@@ -107,6 +107,12 @@ static void free_glyph(void *data)
 	free(bb_glyph);
 }
 
+static void damage_cell(struct bbulk *bb, unsigned int off)
+{
+	bb->prev[off].id = ID_DAMAGED;
+	bb->damages[off] = true;
+}
+
 static int bbulk_set(struct kmscon_text *txt)
 {
 	struct bbulk *bb = txt->data;
@@ -149,11 +155,8 @@ static int bbulk_set(struct kmscon_text *txt)
 	if (!bb->damage_rects)
 		goto free_damages;
 
-	for (i = 0; i < bb->cells; i++) {
-		// start with all cells damaged
-		bb->prev[i].id = ID_DAMAGED;
-		bb->damages[i] = true;
-	}
+	for (i = 0; i < bb->cells; i++)
+		damage_cell(bb, i);
 
 	if (kmscon_rotate_create_tables(&bb->glyphs, &bb->bold_glyphs, free_glyph))
 		goto free_r_damages;
@@ -379,7 +382,7 @@ static void mark_damaged(struct kmscon_text *txt, struct bbulk *bb, unsigned int
 {
 	unsigned int posx = 0;
 	unsigned int posy = 0;
-	unsigned int fw, fh;
+	unsigned int fw, fh, off;
 	fw = SHL_DIV_ROUND_UP(FONT_WIDTH(txt), 2);
 	fh = SHL_DIV_ROUND_UP(FONT_HEIGHT(txt), 2);
 
@@ -394,21 +397,18 @@ static void mark_damaged(struct kmscon_text *txt, struct bbulk *bb, unsigned int
 	if (posy >= txt->rows)
 		posy = txt->rows - 1;
 
-	bb->damages[posx + txt->cols * posy] = true;
-	bb->prev[posx + txt->cols * posy].id = ID_DAMAGED;
+	off = posx + posy * txt->cols;
 
-	if (posx + 1 < txt->cols) {
-		bb->damages[posx + 1 + txt->cols * posy] = true;
-		bb->prev[posx + 1 + txt->cols * posy].id = ID_DAMAGED;
-	}
-	if (posy + 1 < txt->rows) {
-		bb->damages[posx + txt->cols * (posy + 1)] = true;
-		bb->prev[posx + txt->cols * (posy + 1)].id = ID_DAMAGED;
-	}
-	if (posx + 1 < txt->cols && posy + 1 < txt->rows) {
-		bb->damages[posx + 1 + txt->cols * (posy + 1)] = true;
-		bb->prev[posx + 1 + txt->cols * (posy + 1)].id = ID_DAMAGED;
-	}
+	damage_cell(bb, posx + posy * txt->cols);
+
+	if (posx + 1 < txt->cols)
+		damage_cell(bb, off + 1);
+
+	if (posy + 1 < txt->rows)
+		damage_cell(bb, off + txt->cols);
+
+	if (posx + 1 < txt->cols && posy + 1 < txt->rows)
+		damage_cell(bb, off + 1 + txt->cols);
 }
 
 static unsigned int clamp(unsigned int val, unsigned int min, unsigned int max)
@@ -598,10 +598,9 @@ static int bbulk_prepare(struct kmscon_text *txt, struct tsm_screen_attr *attr)
 
 	if (bb->redraw_margin || uterm_display_need_redraw(txt->disp)) {
 		uterm_display_fill(txt->disp, attr->br, attr->bg, attr->bb, 0, 0, bb->sw, bb->sh);
-		for (i = 0; i < bb->cells; i++) {
-			bb->prev[i].id = ID_DAMAGED;
-			bb->damages[i] = true;
-		}
+		for (i = 0; i < bb->cells; i++)
+			damage_cell(bb, i);
+
 	} else if (uterm_display_has_damage(txt->disp)) {
 		log_debug("Carry over damage from previous frame");
 		for (i = 0; i < bb->cells; i++) {
