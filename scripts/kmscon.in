@@ -26,7 +26,7 @@ helperdir=@libexecdir@
 
 # Get a property from org.freedesktop.locale1
 queryLocale1() {
-    dbus-send --system --print-reply=literal --dest=org.freedesktop.locale1 /org/freedesktop/locale1 org.freedesktop.DBus.Properties.Get "string:org.freedesktop.locale1" "string:$1" | awk '{print $2}'
+    dbus-send --system --print-reply=literal --dest=org.freedesktop.locale1 /org/freedesktop/locale1 org.freedesktop.DBus.Properties.Get "string:org.freedesktop.locale1" "string:$1" 2>/dev/null | awk '{print $2}'
 }
 
 # Query and setup system locale settings before start kmscon
