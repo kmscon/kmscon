@@ -183,7 +183,9 @@ static void do_redraw_screen(struct screen *scr)
 
 	ret = uterm_display_swap(scr->disp);
 	if (ret) {
-		log_warning("cannot swap display [%s] %d", uterm_display_name(scr->disp), ret);
+		if (ret != -EBUSY)
+			log_warning("cannot swap display [%s] %d", uterm_display_name(scr->disp),
+				    ret);
 		return;
 	}
 

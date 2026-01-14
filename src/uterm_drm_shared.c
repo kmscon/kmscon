@@ -661,7 +661,9 @@ static int pageflip(int fd, struct uterm_display *disp, uint32_t fb)
 	drmModeAtomicFree(req);
 
 	if (ret < 0) {
-		log_warn("atomic pageflip failed for [%s], %d\n", disp->name, ret);
+		/* don't print error for EBUSY, as next pageflip will succeed */
+		if (ret != -EBUSY)
+			log_warn("atomic pageflip failed for [%s], %d\n", disp->name, ret);
 		return ret;
 	}
 	return 0;
@@ -683,6 +685,8 @@ int uterm_drm_display_swap(struct uterm_display *disp, uint32_t fb)
 	if (ret)
 		return ret;
 
+	/* take a ref on display, so that it won't get free before the pageflip
+	 * callback occurs */
 	uterm_display_ref(disp);
 	disp->flags |= DISPLAY_VSYNC;
 
