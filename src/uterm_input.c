@@ -214,6 +214,7 @@ static int input_init_abs(struct uterm_input_dev *dev)
 
 	llog_debug(dev->input, "ABSX min %d max %d ABSY min %d max %d\n", dev->pointer.min_x,
 		   dev->pointer.max_x, dev->pointer.min_y, dev->pointer.max_y);
+	close(fd);
 	return 0;
 
 err_closefd:
