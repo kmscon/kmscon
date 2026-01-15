@@ -155,8 +155,6 @@ struct kmscon_conf_t {
 	bool hwaccel;
 	/* gpu selection mode */
 	unsigned int gpus;
-	/* render engine */
-	char *render_engine;
 	/* use current KMS video mode to avoid modesetting */
 	bool use_original_mode;
 	/* screen resolution */

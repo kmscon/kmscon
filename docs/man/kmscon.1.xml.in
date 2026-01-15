@@ -539,15 +539,6 @@
       </varlistentry>
 
       <varlistentry>
-        <term><option>--render-engine {engine}</option></term>
-        <listitem>
-          <para>Specify console the rendering engine. Available engines are
-                `bbulk', and `gltex'.
-                (default: detect by GPU type)</para>
-        </listitem>
-      </varlistentry>
-
-      <varlistentry>
         <term><option>--use-original-mode</option></term>
         <listitem>
           <para>Use original KMS mode to prevent modesetting. (default: on)</para>

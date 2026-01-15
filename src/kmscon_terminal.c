@@ -443,9 +443,7 @@ static int add_display(struct kmscon_terminal *term, struct uterm_display *disp)
 	}
 
 	opengl = uterm_display_has_opengl(scr->disp);
-	if (term->conf->render_engine)
-		be = term->conf->render_engine;
-	else if (ret >= 0 && opengl)
+	if (opengl)
 		be = "gltex";
 	else
 		be = "bbulk";

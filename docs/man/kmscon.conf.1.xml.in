@@ -421,13 +421,6 @@ font-name=Ubuntu Mono
       </varlistentry>
 
       <varlistentry>
-        <term><option>render-engine</option></term>
-        <listitem>
-          <para>Console renderer. (default: not set)</para>
-        </listitem>
-      </varlistentry>
-
-      <varlistentry>
         <term><option>use-original-mode</option></term>
         <listitem>
           <para>Use the original KMS video mode. (default: on)</para>

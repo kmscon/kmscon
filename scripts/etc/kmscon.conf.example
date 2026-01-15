@@ -23,12 +23,8 @@
 ## GPU to use, [all, primary, aux]
 #gpus=all
 
-## Enable 3d rendering (only useful with gltex)
+## Enable 3d rendering, using gltex with drm3d instead of bbulk with drm2d
 #hwaccel
-
-## Text renderer, can be [gltex, bbulk]
-## gltex only works with hwaccel enabled, and others work with hwaccel disabled
-#render-engine=gltex
 
 ## Use original mode (enabled by default)
 #use-original-mode
