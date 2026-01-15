@@ -47,7 +47,7 @@ systemdsystemunitdir = systemd_deps.get_variable('systemdsystemunitdir', default
 fs = import('fs')
 
 xkbcommon_deps = dependency('xkbcommon', version: '>=0.5.0')
-libtsm_deps = dependency('libtsm', version: '>=4.3.0')
+libtsm_deps = dependency('libtsm', version: '>=4.4.0')
 libudev_deps = dependency('libudev', version: '>=172')
 dl_deps = dependency('dl')
 threads_deps = dependency('threads')
