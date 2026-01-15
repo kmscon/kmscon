@@ -31,6 +31,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <linux/input-event-codes.h>
 #include <linux/input.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -247,10 +248,13 @@ static void input_new_dev(struct uterm_input *input, const char *node, unsigned 
 	if (dev->capabilities & UTERM_DEVICE_HAS_ABS) {
 		ret = input_init_abs(dev);
 		if (ret)
-			goto err_node;
-		if (dev->capabilities & UTERM_DEVICE_HAS_TOUCH)
-			dev->pointer.kind = POINTER_TOUCHPAD;
-		else
+			goto err_kbd;
+		if (dev->capabilities & UTERM_DEVICE_HAS_TOUCH) {
+			if (dev->capabilities & UTERM_DEVICE_HAS_DIRECT)
+				dev->pointer.kind = POINTER_TOUCHSCREEN;
+			else
+				dev->pointer.kind = POINTER_TOUCHPAD;
+		} else
 			dev->pointer.kind = POINTER_VMOUSE;
 	}
 	if (dev->capabilities & UTERM_DEVICE_HAS_REL)
@@ -422,6 +426,7 @@ static unsigned int probe_device_capabilities(struct uterm_input *input, const c
 	unsigned long keybits[NLONGS(KEY_CNT)] = {0};
 	unsigned long relbits[NLONGS(REL_CNT)] = {0};
 	unsigned long absbits[NLONGS(ABS_CNT)] = {0};
+	unsigned long props[NLONGS(INPUT_PROP_CNT)] = {0};
 
 	fd = open(node, O_NONBLOCK | O_CLOEXEC | O_RDONLY);
 	if (fd < 0)
@@ -471,6 +476,12 @@ static unsigned int probe_device_capabilities(struct uterm_input *input, const c
 			goto err_ioctl;
 		if (input_bit_is_set(absbits, ABS_X) && input_bit_is_set(absbits, ABS_Y))
 			capabilities |= UTERM_DEVICE_HAS_ABS;
+
+		ret = ioctl(fd, EVIOCGPROP(sizeof(props)), props);
+		if (ret < 0)
+			goto err_ioctl;
+		if (input_bit_is_set(props, INPUT_PROP_DIRECT))
+			capabilities |= UTERM_DEVICE_HAS_DIRECT;
 	}
 
 	if (input_bit_is_set(evbits, EV_LED))

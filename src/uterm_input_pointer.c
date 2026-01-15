@@ -99,57 +99,72 @@ void pointer_dev_rel(struct uterm_input_dev *dev, uint16_t code, int32_t value)
 	}
 }
 
-void pointer_dev_abs(struct uterm_input_dev *dev, uint16_t code, int32_t value)
+static void pointer_dev_abs_x(struct uterm_input_dev *dev, int32_t value)
 {
-	switch (code) {
-	case ABS_X:
-		if (dev->pointer.kind == POINTER_TOUCHPAD) {
-			if (dev->pointer.touchpaddown == true)
-				dev->pointer.off_x = dev->pointer.x - value;
+	switch (dev->pointer.kind) {
+	case POINTER_TOUCHPAD:
+		if (dev->pointer.touchpaddown == true)
+			dev->pointer.off_x = dev->pointer.x - value;
 
-			dev->pointer.x = dev->pointer.off_x + value;
-			if (dev->pointer.x < 0) {
-				dev->pointer.x = 0;
-				dev->pointer.off_x = -value;
-			}
-			if (dev->pointer.x > dev->input->pointer_max_x) {
-				dev->pointer.x = dev->input->pointer_max_x;
-				dev->pointer.off_x = dev->input->pointer_max_x - value;
-			}
-		} else if (dev->pointer.kind == POINTER_VMOUSE) {
-			dev->pointer.x =
-				((value - dev->pointer.min_x) * dev->input->pointer_max_x) /
-				(dev->pointer.max_x - dev->pointer.min_x);
-		} else {
-			return;
+		dev->pointer.x = dev->pointer.off_x + value;
+		if (dev->pointer.x < 0) {
+			dev->pointer.x = 0;
+			dev->pointer.off_x = -value;
+		}
+		if (dev->pointer.x > dev->input->pointer_max_x) {
+			dev->pointer.x = dev->input->pointer_max_x;
+			dev->pointer.off_x = dev->input->pointer_max_x - value;
 		}
 		break;
-	case ABS_Y:
-		if (dev->pointer.kind == POINTER_TOUCHPAD) {
-			if (dev->pointer.touchpaddown == true)
-				dev->pointer.off_y = dev->pointer.y - value;
-
-			dev->pointer.y = dev->pointer.off_y + value;
-			if (dev->pointer.y < 0) {
-				dev->pointer.y = 0;
-				dev->pointer.off_y = -value;
-			}
-			if (dev->pointer.y > dev->input->pointer_max_y) {
-				dev->pointer.y = dev->input->pointer_max_y;
-				dev->pointer.off_y = dev->input->pointer_max_y - value;
-			}
-		} else if (dev->pointer.kind == POINTER_VMOUSE) {
-			dev->pointer.y =
-				((value - dev->pointer.min_y) * dev->input->pointer_max_y) /
-				(dev->pointer.max_y - dev->pointer.min_y);
-		} else {
-			return;
-		}
+	case POINTER_TOUCHSCREEN:
+	case POINTER_VMOUSE:
+		dev->pointer.x = ((value - dev->pointer.min_x) * dev->input->pointer_max_x) /
+				 (dev->pointer.max_x - dev->pointer.min_x);
 		break;
 	default:
 		return;
 	}
 	pointer_dev_send_move(dev);
+}
+
+static void pointer_dev_abs_y(struct uterm_input_dev *dev, int32_t value)
+{
+	switch (dev->pointer.kind) {
+	case POINTER_TOUCHPAD:
+		if (dev->pointer.touchpaddown == true)
+			dev->pointer.off_y = dev->pointer.y - value;
+
+		dev->pointer.y = dev->pointer.off_y + value;
+		if (dev->pointer.y < 0) {
+			dev->pointer.y = 0;
+			dev->pointer.off_y = -value;
+		}
+		if (dev->pointer.y > dev->input->pointer_max_y) {
+			dev->pointer.y = dev->input->pointer_max_y;
+			dev->pointer.off_y = dev->input->pointer_max_y - value;
+		}
+		break;
+	case POINTER_TOUCHSCREEN:
+	case POINTER_VMOUSE:
+		dev->pointer.y = ((value - dev->pointer.min_y) * dev->input->pointer_max_y) /
+				 (dev->pointer.max_y - dev->pointer.min_y);
+		break;
+	default:
+		return;
+	}
+	pointer_dev_send_move(dev);
+}
+
+void pointer_dev_abs(struct uterm_input_dev *dev, uint16_t code, int32_t value)
+{
+	switch (code) {
+	case ABS_X:
+		pointer_dev_abs_x(dev, value);
+		break;
+	case ABS_Y:
+		pointer_dev_abs_y(dev, value);
+		break;
+	}
 }
 
 void pointer_dev_button(struct uterm_input_dev *dev, uint16_t code, int32_t value)
