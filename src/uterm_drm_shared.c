@@ -1165,6 +1165,9 @@ int uterm_drm_video_hotplug(struct uterm_video *video, bool read_dpms, bool mode
 		if (!(disp->flags & DISPLAY_AVAILABLE))
 			uterm_display_unbind(disp);
 	}
+	if (shl_dlist_empty(&video->displays))
+		goto finish_hotplug;
+
 	if (modeset || new_display) {
 		ret = try_modeset(video);
 		if (ret)
@@ -1176,6 +1179,7 @@ int uterm_drm_video_hotplug(struct uterm_video *video, bool read_dpms, bool mode
 		uterm_display_ready(disp);
 	}
 
+finish_hotplug:
 	video->flags &= ~VIDEO_HOTPLUG;
 	return 0;
 }
