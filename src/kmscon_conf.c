@@ -757,7 +757,7 @@ int kmscon_conf_new(struct conf_ctx **out)
 		CONF_OPTION_BOOL_FULL(0, "drm", aftercheck_drm, NULL, NULL, &conf->drm, true),
 		CONF_OPTION_BOOL(0, "hwaccel", &conf->hwaccel, false),
 		CONF_OPTION(0, 0, "gpus", &conf_gpus, NULL, NULL, NULL, &conf->gpus,
-			    KMSCON_GPU_ALL),
+			    (void *)KMSCON_GPU_ALL),
 		CONF_OPTION_STRING(0, "render-engine", &conf->render_engine, NULL),
 		CONF_OPTION_BOOL(0, "use-original-mode", &conf->use_original_mode, true),
 		CONF_OPTION_STRING(0, "mode", &conf->mode, NULL),
