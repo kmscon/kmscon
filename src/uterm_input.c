@@ -222,7 +222,25 @@ err_closefd:
 	return ret;
 }
 
-static void input_new_dev(struct uterm_input *input, const char *node, unsigned int capabilities)
+static const char *pointer_kind_name(enum pointer_kind kind)
+{
+	switch (kind) {
+	default:
+	case POINTER_NONE:
+		return "";
+	case POINTER_TOUCHPAD:
+		return "Touchpad";
+	case POINTER_MOUSE:
+		return "Mouse";
+	case POINTER_TOUCHSCREEN:
+		return "Touchscreen";
+	case POINTER_VMOUSE:
+		return "Virtual mouse";
+	}
+}
+
+static void input_new_dev(struct uterm_input *input, const char *node, const char *name,
+			  unsigned int capabilities)
 {
 	struct uterm_input_dev *dev;
 	int ret;
@@ -267,7 +285,9 @@ static void input_new_dev(struct uterm_input *input, const char *node, unsigned 
 			goto err_kbd;
 	}
 
-	llog_debug(input, "new device %s", node);
+	llog_info(input, "Using device %s [%s] as %s%s\n", node, name,
+		  (dev->capabilities & UTERM_DEVICE_HAS_KEYS) ? "keyboard" : "",
+		  pointer_kind_name(dev->pointer.kind));
 	shl_dlist_link(&input->devices, &dev->list);
 	return;
 
@@ -419,19 +439,15 @@ void uterm_input_unref(struct uterm_input *input)
  * We go over the possible capabilities and return a mask of enum
  * uterm_input_device_capability's.
  */
-static unsigned int probe_device_capabilities(struct uterm_input *input, const char *node)
+static unsigned int probe_device_capabilities(int fd, struct uterm_input *input, const char *name)
 {
-	int i, fd, ret;
+	int i, ret;
 	unsigned int capabilities = 0;
 	unsigned long evbits[NLONGS(EV_CNT)] = {0};
 	unsigned long keybits[NLONGS(KEY_CNT)] = {0};
 	unsigned long relbits[NLONGS(REL_CNT)] = {0};
 	unsigned long absbits[NLONGS(ABS_CNT)] = {0};
 	unsigned long props[NLONGS(INPUT_PROP_CNT)] = {0};
-
-	fd = open(node, O_NONBLOCK | O_CLOEXEC | O_RDONLY);
-	if (fd < 0)
-		return 0;
 
 	/* Which types of input events the device supports. */
 	ret = ioctl(fd, EVIOCGBIT(0, sizeof(evbits)), evbits);
@@ -488,12 +504,10 @@ static unsigned int probe_device_capabilities(struct uterm_input *input, const c
 	if (input_bit_is_set(evbits, EV_LED))
 		capabilities |= UTERM_DEVICE_HAS_LEDS;
 
-	close(fd);
 	return capabilities;
 
 err_ioctl:
-	llog_warn(input, "cannot probe capabilities of device %s (%d): %m", node, errno);
-	close(fd);
+	llog_warn(input, "cannot probe capabilities of device %s (%d): %m", name, errno);
 	return 0;
 }
 
@@ -503,24 +517,36 @@ SHL_EXPORT
 void uterm_input_add_dev(struct uterm_input *input, const char *node, bool mouse)
 {
 	unsigned int capabilities;
+	int fd;
+	char name[64];
 
 	if (!input || !node)
 		return;
 
-	capabilities = probe_device_capabilities(input, node);
+	fd = open(node, O_NONBLOCK | O_CLOEXEC | O_RDONLY);
+	if (fd < 0)
+		return;
+
+	/* ignore error, the name is just for debugging */
+	ioctl(fd, EVIOCGNAME(sizeof(name) - 1), name);
+
+	capabilities = probe_device_capabilities(fd, input, name);
+
+	close(fd);
+
 	if (HAS_ALL(capabilities, UTERM_DEVICE_HAS_KEYS)) {
-		input_new_dev(input, node, capabilities);
+		input_new_dev(input, node, name, capabilities);
 		return;
 	}
 	if (HAS_ALL(capabilities, UTERM_DEVICE_HAS_REL | UTERM_DEVICE_HAS_MOUSE_BTN) ||
 	    HAS_ALL(capabilities, UTERM_DEVICE_HAS_ABS | UTERM_DEVICE_HAS_TOUCH) ||
 	    HAS_ALL(capabilities, UTERM_DEVICE_HAS_ABS | UTERM_DEVICE_HAS_MOUSE_BTN)) {
 		if (mouse)
-			input_new_dev(input, node, capabilities);
+			input_new_dev(input, node, name, capabilities);
 		else
-			llog_debug(input, "ignoring pointer device %s", node);
+			llog_debug(input, "ignoring pointer device %s [%s]", node, name);
 	} else {
-		llog_debug(input, "ignoring non-useful device %s", node);
+		llog_debug(input, "ignoring non-useful device %s [%s]", node, name);
 	}
 }
 
