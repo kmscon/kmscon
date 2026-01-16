@@ -687,7 +687,8 @@ static void handle_pointer_button(struct kmscon_terminal *term,
 		break;
 	case 2:
 		if (ev->pressed) {
-			tsm_vte_paste(term->vte, term->pointer.copy);
+			if (term->pointer.copy && term->pointer.copy_len)
+				tsm_vte_paste(term->vte, term->pointer.copy);
 			tsm_screen_selection_reset(term->console);
 		}
 	}
