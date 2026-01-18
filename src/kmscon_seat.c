@@ -146,6 +146,9 @@ static void session_call_display_refresh(struct kmscon_session *sess, struct ute
 	session_call(sess, KMSCON_SESSION_DISPLAY_REFRESH, disp);
 }
 
+/* Forward declaration */
+static void seat_dpms_reset_timer(struct kmscon_seat *seat);
+
 static void activate_display(struct kmscon_display *d)
 {
 	int ret;
@@ -166,6 +169,9 @@ static void activate_display(struct kmscon_display *d)
 		ret = uterm_display_set_dpms(d->disp, UTERM_DPMS_ON);
 		if (ret)
 			log_warning("cannot set DPMS state to on for display: %d", ret);
+
+		/* Reset DPMS timer when display becomes active */
+		seat_dpms_reset_timer(seat);
 
 		shl_dlist_for_each_safe(iter, tmp, &seat->sessions)
 		{
