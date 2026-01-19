@@ -67,6 +67,9 @@ struct uterm_drm_display {
 	drmModeModeInfo desired_mode;
 	drmModeModeInfo original_mode;
 
+	/* For legacy modesetting */
+	uint32_t fb_id;
+
 	int (*prepare_modeset)(struct uterm_display *disp, drmModeAtomicReqPtr rec);
 	void (*done_modeset)(struct uterm_display *disp, int status);
 };
@@ -94,6 +97,7 @@ struct uterm_drm_video {
 	void *data;
 	struct shl_timer *timer;
 	struct ev_timer *vt_timer;
+	bool legacy;
 	const struct display_ops *display_ops;
 };
 
@@ -101,7 +105,6 @@ int uterm_drm_video_init(struct uterm_video *video, const char *node,
 			 const struct display_ops *display_ops, uterm_drm_page_flip_t pflip,
 			 void *data);
 void uterm_drm_video_destroy(struct uterm_video *video);
-int uterm_drm_video_find_crtc(struct uterm_video *video, drmModeRes *res, drmModeEncoder *enc);
 int uterm_drm_video_hotplug(struct uterm_video *video, bool read_dpms, bool modeset);
 int uterm_drm_video_wake_up(struct uterm_video *video);
 void uterm_drm_video_sleep(struct uterm_video *video);

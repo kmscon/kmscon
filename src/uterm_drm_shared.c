@@ -367,6 +367,12 @@ int uterm_drm_prepare_commit(int fd, struct uterm_drm_display *ddrm, drmModeAtom
 {
 	struct drm_object *plane = &ddrm->plane;
 
+	if (req == NULL) {
+		/* Legacy modeset */
+		ddrm->fb_id = fb;
+		return 0;
+	}
+
 	/* set id of the CRTC id that the connector is using */
 	if (set_drm_object_property(req, &ddrm->connector, "CRTC_ID", ddrm->crtc.id) < 0)
 		return -1;
@@ -672,14 +678,58 @@ err_commit:
 	return ret;
 }
 
-static int try_modeset(struct uterm_video *video)
+static int legacy_modeset(struct uterm_video *video)
 {
+	struct uterm_drm_video *vdrm = video->data;
 	struct shl_dlist *iter;
 	struct uterm_display *disp;
 	struct uterm_drm_display *ddrm;
 	int ret;
 
-	ret = perform_modeset(video);
+	shl_dlist_for_each(iter, &video->displays)
+	{
+		disp = shl_dlist_entry(iter, struct uterm_display, list);
+		ddrm = disp->data;
+
+		uterm_drm_display_wait_pflip(disp);
+
+		log_info("Preparing modeset for %s at %dx%d\n", disp->name,
+			 ddrm->current_mode->hdisplay, ddrm->current_mode->vdisplay);
+
+		ret = ddrm->prepare_modeset(disp, NULL);
+		if (ret < 0)
+			continue;
+		// Clean up kms hardware cursor from display sessions that don't properly
+		// clean themselves up`
+		if (drmModeSetCursor(vdrm->fd, ddrm->crtc.id, 0, 0, 0))
+			log_warn("cannot hide hardware cursor");
+
+		ret = drmModeSetCrtc(vdrm->fd, ddrm->crtc.id, ddrm->fb_id, 0, 0,
+				     &ddrm->connector.id, 1, ddrm->current_mode);
+
+		ddrm->done_modeset(disp, ret);
+		ddrm->need_redraw = true;
+		if (ret) {
+			log_error("cannot set DRM-CRTC (%d): %m", errno);
+			continue;
+		}
+		disp->flags |= DISPLAY_ONLINE;
+	}
+	return 0;
+}
+
+static int try_modeset(struct uterm_video *video)
+{
+	struct shl_dlist *iter;
+	struct uterm_display *disp;
+	struct uterm_drm_display *ddrm;
+	struct uterm_drm_video *vdrm = video->data;
+	int ret;
+
+	if (vdrm->legacy)
+		ret = legacy_modeset(video);
+	else
+		ret = perform_modeset(video);
 
 	if (ret != -EAGAIN)
 		return ret;
@@ -691,7 +741,27 @@ static int try_modeset(struct uterm_video *video)
 		ddrm = disp->data;
 		ddrm->current_mode = &ddrm->default_mode;
 	}
-	return perform_modeset(video);
+	if (vdrm->legacy)
+		return legacy_modeset(video);
+	else
+		return perform_modeset(video);
+}
+
+static int legacy_pageflip(int fd, struct uterm_display *disp, uint32_t fb)
+{
+	struct uterm_drm_display *ddrm = disp->data;
+	int ret;
+
+	ret = drmModePageFlip(fd, ddrm->crtc.id, fb, DRM_MODE_PAGE_FLIP_EVENT, disp->video);
+	if (ret) {
+		log_warn("cannot page-flip on DRM-CRTC (%d): %m", ret);
+		return -EFAULT;
+	}
+
+	uterm_display_ref(disp);
+	disp->flags |= DISPLAY_VSYNC;
+
+	return 0;
 }
 
 static int pageflip(int fd, struct uterm_display *disp, uint32_t fb)
@@ -730,8 +800,7 @@ static int pageflip(int fd, struct uterm_display *disp, uint32_t fb)
 
 int uterm_drm_display_swap(struct uterm_display *disp, uint32_t fb)
 {
-	struct uterm_video *video = disp->video;
-	struct uterm_drm_video *vdrm = video->data;
+	struct uterm_drm_video *vdrm = disp->video->data;
 	int ret;
 
 	if (disp->dpms != UTERM_DPMS_ON)
@@ -740,7 +809,10 @@ int uterm_drm_display_swap(struct uterm_display *disp, uint32_t fb)
 	if ((disp->flags & DISPLAY_VSYNC))
 		return -EBUSY;
 
-	ret = pageflip(vdrm->fd, disp, fb);
+	if (vdrm->legacy)
+		ret = legacy_pageflip(vdrm->fd, disp, fb);
+	else
+		ret = pageflip(vdrm->fd, disp, fb);
 	if (ret)
 		return ret;
 
@@ -918,14 +990,14 @@ int uterm_drm_video_init(struct uterm_video *video, const char *node,
 
 	ret = drmSetClientCap(vdrm->fd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1);
 	if (ret) {
-		log_err("Device %s doesn't support universal planes", node);
-		goto err_close;
+		log_err("Device %s doesn't support universal planes, using legacy", node);
+		vdrm->legacy = true;
 	}
 
 	ret = drmSetClientCap(vdrm->fd, DRM_CLIENT_CAP_ATOMIC, 1);
 	if (ret) {
-		log_err("Device %s doesn't support atomic modesetting", node);
-		goto err_close;
+		log_warn("Device %s doesn't support atomic modesetting, using legacy", node);
+		vdrm->legacy = true;
 	}
 
 	ret = ev_eloop_new_fd(video->eloop, &vdrm->efd, vdrm->fd, EV_READABLE, io_event, video);
@@ -1050,31 +1122,33 @@ static void bind_display(struct uterm_video *video, drmModeRes *res, drmModeConn
 
 	log_info("display %s DPMS is %s", disp->name, uterm_dpms_to_name(disp->dpms));
 
-	if (drmModeCreatePropertyBlob(vdrm->fd, ddrm->current_mode, sizeof(ddrm->mode),
-				      &ddrm->mode_blob_id) != 0) {
-		log_err("couldn't create a blob property\n");
-		goto err_unref;
-	}
-
 	/* find a crtc for this connector */
 	ret = modeset_find_crtc(video, vdrm->fd, res, conn, ddrm);
 	if (ret) {
 		log_err("no valid crtc for connector %u\n", conn->connector_id);
-		goto out_blob;
+		goto err_unref;
 	}
 
-	/* with a connector and crtc, find a primary plane */
-	ret = modeset_find_plane(vdrm->fd, disp);
-	if (ret) {
-		log_err("no valid plane for crtc %u\n", ddrm->crtc.id);
-		goto out_blob;
-	}
+	if (!vdrm->legacy) {
+		if (drmModeCreatePropertyBlob(vdrm->fd, ddrm->current_mode, sizeof(ddrm->mode),
+					      &ddrm->mode_blob_id) != 0) {
+			log_err("couldn't create a blob property\n");
+			goto err_unref;
+		}
 
-	/* gather properties of our connector, CRTC and planes */
-	ret = modeset_setup_objects(vdrm->fd, ddrm);
-	if (ret) {
-		log_err("cannot get plane properties\n");
-		goto out_blob;
+		/* with a connector and crtc, find a primary plane */
+		ret = modeset_find_plane(vdrm->fd, disp);
+		if (ret) {
+			log_err("no valid plane for crtc %u\n", ddrm->crtc.id);
+			goto out_blob;
+		}
+
+		/* gather properties of our connector, CRTC and planes */
+		ret = modeset_setup_objects(vdrm->fd, ddrm);
+		if (ret) {
+			log_err("cannot get plane properties\n");
+			goto out_blob;
+		}
 	}
 	disp->flags |= DISPLAY_AVAILABLE;
 	uterm_display_bind(disp);
