@@ -45,6 +45,18 @@ struct unifont_glyph {
 	char data[MAX_DATA_SIZE];
 };
 
+/*
+ * We regroup all glyphs into blocks, of contiguous codepoints, and same width.
+ * This allows to better pack the data, and handle some codepoints that are
+ * not in the 0xffff range
+ */
+struct unifont_glyph_block {
+	uint32_t codepoint; // First codepoint of the block
+	uint32_t offset;    // offset of the data
+	uint16_t len;	    // number of glyph in this block
+	uint8_t width;	    // glyph width (1 or 2 for double-width glyph)
+} __attribute__((__packed__));
+
 static uint8_t hex_val(char c)
 {
 	if (c >= '0' && c <= '9')
@@ -63,23 +75,11 @@ static void print_unifont_glyph(FILE *out, const struct unifont_glyph *g)
 	size_t i;
 	uint8_t val;
 
-	switch (g->len) {
-	case 32:
-	case 64:
-		break;
-	default:
-		fprintf(stderr, "genunifont: invalid data size %d for %x", g->len, g->codepoint);
-		return;
-	}
-
-	fprintf(out, "%c", g->len / 2);
 	for (i = 0; i < g->len; i += 2) {
 		val = hex_val(g->data[i]) << 4;
 		val |= hex_val(g->data[i + 1]);
 		fprintf(out, "%c", val);
 	}
-	for (; i < 64; i += 2)
-		fprintf(out, "%c", 0);
 }
 
 static int build_unifont_glyph(struct unifont_glyph *g, const char *buf)
@@ -108,13 +108,74 @@ static int build_unifont_glyph(struct unifont_glyph *g, const char *buf)
 	return 0;
 }
 
+static uint8_t get_width(int len)
+{
+	if (len == 64)
+		return 2;
+	if (len == 32)
+		return 1;
+	fprintf(stderr, "genuifont: invalid length %d\n", len);
+	return 0;
+}
+
+static void pack_glyph(struct unifont_glyph *list, FILE *out)
+{
+	struct unifont_glyph *g = list;
+	struct unifont_glyph_block *blocks;
+	uint32_t i = 0;
+	int table_size = 256;
+	uint32_t offset = 0;
+
+	blocks = malloc(table_size * sizeof(*blocks));
+	if (!blocks) {
+		fprintf(stderr, "genunifont: out of memory\n");
+		return;
+	}
+
+	blocks[i].len = 0;
+	blocks[i].offset = 0;
+	blocks[i].codepoint = g->codepoint;
+	blocks[i].width = get_width(g->len);
+	while (g) {
+		if (blocks[i].width == get_width(g->len) &&
+		    g->codepoint == blocks[i].codepoint + blocks[i].len) {
+			/* This glyph can fit in current block */
+			blocks[i].len++;
+		} else {
+			/* Start a new block with this glyph as first glyph */
+			offset += blocks[i].len * 16 * blocks[i].width;
+			i++;
+			if (i >= table_size) {
+				table_size *= 2;
+				blocks = realloc(blocks, table_size * sizeof(*blocks));
+				if (!blocks)
+					return;
+			}
+			blocks[i].len = 1;
+			blocks[i].codepoint = g->codepoint;
+			blocks[i].width = get_width(g->len);
+			blocks[i].offset = offset;
+		}
+		g = g->next;
+	}
+	i++;
+
+	// first the length of the blocks table
+	fwrite(&i, sizeof(i), 1, out);
+
+	// Write the block table
+	fwrite(blocks, sizeof(*blocks), i, out);
+
+	// Write the glyph data
+	for (g = list; g; g = g->next)
+		print_unifont_glyph(out, g);
+}
+
 static int parse_single_file(FILE *out, FILE *in)
 {
-	static const struct unifont_glyph replacement = {
-		.codepoint = 0, .len = 32, .data = "0000007E665A5A7A76767E76767E0000"};
 	char buf[MAX_DATA_SIZE];
 	struct unifont_glyph *g, **iter, *list, *last;
-	int ret, num;
+	int ret;
 	long status_max, status_cur;
 	unsigned long perc_prev, perc_now;
 
@@ -196,19 +257,8 @@ static int parse_single_file(FILE *out, FILE *in)
 
 	fprintf(stderr, "\b\b\b\b%3d%%\n", 100);
 
-	/* print all glyph-data to output file */
-	num = 0;
-	while (list) {
-		g = list;
-		list = g->next;
-
-		/* print replacements if glyphs are missing */
-		while (num++ < g->codepoint)
-			print_unifont_glyph(out, &replacement);
-
-		print_unifont_glyph(out, g);
-		free(g);
-	}
+	/* pack into table */
+	pack_glyph(list, out);
 
 	return 0;
 }

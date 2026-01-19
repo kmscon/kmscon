@@ -52,15 +52,15 @@
 #define LOG_SUBSYSTEM "font_unifont"
 
 /*
- * Glyph data is linked to the binary externally as binary data. The data layout
- * is a size-byte followed by 32 data bytes. The data bytes are padded with 0 if
- * the size is smaller than 32.
- * Sizes bigger than 32 are not used.
+ * We regroup all glyphs into blocks, of contiguous codepoints, and same width.
+ * This allows to better pack the data, and handle some codepoints that are
+ * not in the 0xffff range
  */
-
-struct unifont_data {
-	uint8_t len;
-	uint8_t data[32];
+struct unifont_glyph_block {
+	uint32_t codepoint; // First codepoint of the block
+	uint32_t offset;    // offset of the data
+	uint16_t len;	    // number of glyph in this block
+	uint8_t width;	    // glyph width (1 or 2 for double-width glyph)
 } __attribute__((__packed__));
 
 /*
@@ -104,13 +104,51 @@ static void unfold(uint8_t *dst, uint8_t val)
 	*dst = 0xff * !!val;
 }
 
+static bool is_in_block(const struct unifont_glyph_block *idx, uint32_t ch)
+{
+	return (ch >= idx->codepoint && ch < idx->codepoint + idx->len);
+}
+
+static int lookup_block(const struct unifont_glyph_block *blocks, uint32_t len, uint32_t ch)
+{
+	int look = 1 + ((ch * len) / 0xffff); /* opportunist first look*/
+	int min = 0;
+	int max = len - 1;
+
+	if (look > max)
+		look = max;
+
+	while (min != max) {
+		log_debug("lookup %d codep %d, look %d min %d max %d", ch, blocks[look].codepoint,
+			  look, min, max);
+
+		if (is_in_block(&blocks[look], ch))
+			return look;
+		if (ch < blocks[look].codepoint) {
+			max = look;
+			look -= look - min > 2 ? (look - min) / 2 : 1;
+
+		} else {
+			min = look;
+			look += max - look > 2 ? (max - look) / 2 : 1;
+		}
+	}
+	if (is_in_block(&blocks[look], ch))
+		return look;
+	return -1;
+}
+
 static int find_glyph(uint32_t ch, const struct kmscon_glyph **out)
 {
 	struct kmscon_glyph *g;
+	const void *start = _binary_font_unifont_data_start;
+	const uint8_t *end = (uint8_t *)_binary_font_unifont_data_end;
+	const uint8_t *data;
+	uint32_t len;
+	const struct unifont_glyph_block *blocks;
+	unsigned int i;
 	int ret;
 	bool res;
-	const struct unifont_data *start, *end, *d;
-	unsigned int i, w;
 
 	pthread_mutex_lock(&cache_mutex);
 
@@ -127,30 +165,29 @@ static int find_glyph(uint32_t ch, const struct kmscon_glyph **out)
 			goto out_unlock;
 		}
 	}
+	/* First the length of the block index */
+	len = *((uint32_t *)start);
+	/* Then the block index */
+	blocks = (struct unifont_glyph_block *)(start + 4);
+	/* Then the glyph data */
+	data = (uint8_t *)start + 4 + len * sizeof(struct unifont_glyph_block);
 
-	if (ch > 0xffff) {
-		ret = -ERANGE;
-		goto out_unlock;
+	int idx = lookup_block(blocks, len, ch);
+	if (idx < 0) {
+		log_debug("codepoint %08x not found, using replacement glyph", ch);
+		ch = 0xfffd;
+		idx = lookup_block(blocks, len, ch);
+		if (idx < 0) {
+			log_warning("Replacement glyph not found");
+			ret = -1;
+			goto out_unlock;
+		}
 	}
 
-	start = (const struct unifont_data *)_binary_font_unifont_data_start;
-	end = (const struct unifont_data *)_binary_font_unifont_data_end;
-	d = &start[ch];
-
-	if (d >= end) {
+	data += blocks[idx].offset + (ch - blocks[idx].codepoint) * blocks[idx].width * 16;
+	if (data + 16 * blocks[idx].width > end) {
+		log_warning("glyph out of range %p %p", data, end);
 		ret = -ERANGE;
-		goto out_unlock;
-	}
-
-	switch (d->len) {
-	case 16:
-		w = 1;
-		break;
-	case 32:
-		w = 2;
-		break;
-	default:
-		ret = -EFAULT;
 		goto out_unlock;
 	}
 
@@ -160,10 +197,10 @@ static int find_glyph(uint32_t ch, const struct kmscon_glyph **out)
 		goto out_unlock;
 	}
 	memset(g, 0, sizeof(*g));
-	g->width = w;
-	g->buf.width = w * 8;
+	g->width = blocks[idx].width;
+	g->buf.width = g->width * 8;
 	g->buf.height = 16;
-	g->buf.stride = w * 8;
+	g->buf.stride = g->width * 8;
 	g->buf.format = UTERM_FORMAT_GREY;
 
 	g->buf.data = malloc(g->buf.stride * g->buf.height);
@@ -172,15 +209,15 @@ static int find_glyph(uint32_t ch, const struct kmscon_glyph **out)
 		goto err_free;
 	}
 
-	for (i = 0; i < d->len; ++i) {
-		unfold(&g->buf.data[i * 8 + 0], d->data[i] & 0x80);
-		unfold(&g->buf.data[i * 8 + 1], d->data[i] & 0x40);
-		unfold(&g->buf.data[i * 8 + 2], d->data[i] & 0x20);
-		unfold(&g->buf.data[i * 8 + 3], d->data[i] & 0x10);
-		unfold(&g->buf.data[i * 8 + 4], d->data[i] & 0x08);
-		unfold(&g->buf.data[i * 8 + 5], d->data[i] & 0x04);
-		unfold(&g->buf.data[i * 8 + 6], d->data[i] & 0x02);
-		unfold(&g->buf.data[i * 8 + 7], d->data[i] & 0x01);
+	for (i = 0; i < g->width * 16; ++i) {
+		unfold(&g->buf.data[i * 8 + 0], data[i] & 0x80);
+		unfold(&g->buf.data[i * 8 + 1], data[i] & 0x40);
+		unfold(&g->buf.data[i * 8 + 2], data[i] & 0x20);
+		unfold(&g->buf.data[i * 8 + 3], data[i] & 0x10);
+		unfold(&g->buf.data[i * 8 + 4], data[i] & 0x08);
+		unfold(&g->buf.data[i * 8 + 5], data[i] & 0x04);
+		unfold(&g->buf.data[i * 8 + 6], data[i] & 0x02);
+		unfold(&g->buf.data[i * 8 + 7], data[i] & 0x01);
 	}
 
 	ret = shl_hashtable_insert(cache, ch, g);
