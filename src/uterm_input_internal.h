@@ -47,12 +47,14 @@ enum uterm_input_device_capability {
 	UTERM_DEVICE_HAS_MOUSE_BTN = (1 << 4),
 	UTERM_DEVICE_HAS_TOUCH = (1 << 5),
 	UTERM_DEVICE_HAS_WHEEL = (1 << 6),
+	UTERM_DEVICE_HAS_DIRECT = (1 << 7),
 };
 
 enum pointer_kind {
 	POINTER_NONE,
 	POINTER_MOUSE,
 	POINTER_TOUCHPAD,
+	POINTER_TOUCHSCREEN,
 	POINTER_VMOUSE,
 };
 
