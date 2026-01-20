@@ -916,7 +916,7 @@ int kmscon_terminal_register(struct kmscon_session **out, struct kmscon_seat *se
 		goto err_font;
 
 	ret = kmscon_pty_set_conf(term->pty, term->conf->term, "kmscon", term->conf->argv,
-				  kmscon_seat_get_name(seat), term->conf->reset_env,
+				  kmscon_seat_get_name(seat), vtnr, term->conf->reset_env,
 				  term->conf->backspace_delete);
 	if (ret)
 		goto err_pty;

@@ -53,7 +53,8 @@ int kmscon_pty_new(struct kmscon_pty **out, kmscon_pty_input_cb input_cb, void *
 void kmscon_pty_ref(struct kmscon_pty *pty);
 void kmscon_pty_unref(struct kmscon_pty *pty);
 int kmscon_pty_set_conf(struct kmscon_pty *pty, const char *term, const char *colorterm,
-			char **argv, const char *seat, bool do_reset, bool backspace);
+			char **argv, const char *seat, unsigned int vtnr, bool do_reset,
+			bool backspace);
 
 int kmscon_pty_get_fd(struct kmscon_pty *pty);
 void kmscon_pty_dispatch(struct kmscon_pty *pty);
