@@ -140,8 +140,11 @@ void kmscon_pty_unref(struct kmscon_pty *pty)
 }
 
 int kmscon_pty_set_conf(struct kmscon_pty *pty, const char *term, const char *colorterm,
-			char **argv, const char *seat, bool do_reset, bool backspace)
+			char **argv, const char *seat, unsigned int vtnr, bool do_reset,
+			bool backspace)
 {
+	char *vt;
+
 	if (!pty)
 		return -EINVAL;
 
@@ -163,7 +166,11 @@ int kmscon_pty_set_conf(struct kmscon_pty *pty, const char *term, const char *co
 		if (!pty->seat)
 			return -ENOMEM;
 	}
-
+	if (vtnr) {
+		if (asprintf(&vt, "%u", vtnr) < 0)
+			return -ENOMEM;
+		pty->vtnr = vt;
+	}
 	if (argv && *argv && **argv)
 		return shl_dup_array(&pty->argv, argv);
 	return 0;
