@@ -145,8 +145,12 @@ struct kmscon_conf_t {
 	struct conf_grab *grab_rotate_cw;
 	/* rotate output counter-clock-wise grab */
 	struct conf_grab *grab_rotate_ccw;
+	/* suspend system grab */
+	struct conf_grab *grab_suspend;
 	/* reboot system grab */
 	struct conf_grab *grab_reboot;
+	/* power-off system grab */
+	struct conf_grab *grab_power_off;
 
 	/* Video Options */
 	/* use DRM if available */
