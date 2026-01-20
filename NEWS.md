@@ -1,5 +1,64 @@
 = KMSCON Release News =
 
+## CHANGES WITH 9.3.0
+* New features:
+  - Enable mouse support by default by @kdj0c in https://github.com/kmscon/kmscon/pull/175
+  - Add --grab-reboot option to trigger system reboot via keyboard shortcut by @jtollet in https://github.com/kmscon/kmscon/pull/176
+  - Add drm atomic modeset support by @kdj0c in https://github.com/kmscon/kmscon/pull/184
+  - Bbulk damage by @kdj0c in https://github.com/kmscon/kmscon/pull/185
+  - Add DPMS screen timeout feature by @jtollet in https://github.com/kmscon/kmscon/pull/212
+  - Add FB_DAMAGE_CLIPS support to bbulk renderer by @kdj0c in https://github.com/kmscon/kmscon/pull/210
+  - bracketed paste by @kdj0c in https://github.com/kmscon/kmscon/pull/218
+
+* Bug fixes:
+  - Fix TERM when launched with agetty by @kdj0c in https://github.com/kmscon/kmscon/pull/160
+  - Remove bashism in kmscon-launch-gui.sh by @aruhier in https://github.com/kmscon/kmscon/pull/161
+  - Format the code with clang-format by @kdj0c in https://github.com/kmscon/kmscon/pull/159
+  - More extensive kmscon-launch-gui.sh tweaks, inotifywait by @Vladimir-csp in https://github.com/kmscon/kmscon/pull/163
+  - Rework display and video by @kdj0c in https://github.com/kmscon/kmscon/pull/165
+  - Convert backspace delete to a runtime option, and enable it. by @kdj0c in https://github.com/kmscon/kmscon/pull/172
+  - Update drm api by @kdj0c in https://github.com/kmscon/kmscon/pull/173
+  - Forward mouse wheel events to applications in mouse tracking mode by @jtollet in https://github.com/kmscon/kmscon/pull/178
+  - Don't print function/file for log_notice by @kdj0c in https://github.com/kmscon/kmscon/pull/182
+  - Reset selection on key press, or wheel up/down by @kdj0c in https://github.com/kmscon/kmscon/pull/183
+  - Fix mouse when using multiple monitor. by @kdj0c in https://github.com/kmscon/kmscon/pull/181
+  - logind: doesn't monitor seats if started with VT by @kdj0c in https://github.com/kmscon/kmscon/pull/171
+  - Fix typo in kmscon.conf by @howl in https://github.com/kmscon/kmscon/pull/196
+  - Fix typo in kmscon.1 by @hosiet in https://github.com/kmscon/kmscon/pull/199
+  - Prepare atomic modesetting by @kdj0c in https://github.com/kmscon/kmscon/pull/179
+  - Add grab-reboot option to example config file by @jtollet in https://github.com/kmscon/kmscon/pull/202
+  - bbulk: Fix cell under the cursor. by @kdj0c in https://github.com/kmscon/kmscon/pull/203
+  - Fix mouse selection can crash kmscon by @kdj0c in https://github.com/kmscon/kmscon/pull/204
+  - text: add default attribute to prepare() by @kdj0c in https://github.com/kmscon/kmscon/pull/207
+  - Avoid overwriting `kmscon.conf` (#209) by @ruby-R53 in https://github.com/kmscon/kmscon/pull/211
+  - Fix mouse drag tracking in terminal applications by @jtollet in https://github.com/kmscon/kmscon/pull/214
+  - Don't warn on pageflip failed on -EBUSY by @kdj0c in https://github.com/kmscon/kmscon/pull/216
+  - kmscon launcher script: redirect dbus-send errors to /dev/null by @kdj0c in https://github.com/kmscon/kmscon/pull/217
+  - terminal: fix paste with empty copy by @kdj0c in https://github.com/kmscon/kmscon/pull/224
+  - kmscon_conf.c: Fix llvm compilation failure by @aduskett in https://github.com/kmscon/kmscon/pull/225
+  - Remove render-engine configuration by @kdj0c in https://github.com/kmscon/kmscon/pull/220
+  - drm: Fix when no display is connected at startup by @kdj0c in https://github.com/kmscon/kmscon/pull/222
+  - Fix DPMS timer not resetting when display activates by @jtollet in https://github.com/kmscon/kmscon/pull/233
+  - README.md: fix the kms.conf link by @schdie in https://github.com/kmscon/kmscon/pull/231
+  - Unifont font_unifont_data.hex => 17.0.3 hex. by @satmandu in https://github.com/kmscon/kmscon/pull/228
+  - Better touchscreen support by @kdj0c in https://github.com/kmscon/kmscon/pull/223
+  - drm: Add legacy modesetting fallback support. by @kdj0c in https://github.com/kmscon/kmscon/pull/234
+  - Fix XDG_VTNR not set: by @kdj0c in https://github.com/kmscon/kmscon/pull/237
+  - conf: ignore unknown options by @kdj0c in https://github.com/kmscon/kmscon/pull/240
+
+## New Contributors
+* @aruhier made their first contribution in https://github.com/kmscon/kmscon/pull/161
+* @Vladimir-csp made their first contribution in https://github.com/kmscon/kmscon/pull/163
+* @jtollet made their first contribution in https://github.com/kmscon/kmscon/pull/176
+* @howl made their first contribution in https://github.com/kmscon/kmscon/pull/196
+* @hosiet made their first contribution in https://github.com/kmscon/kmscon/pull/199
+* @ruby-R53 made their first contribution in https://github.com/kmscon/kmscon/pull/211
+* @aduskett made their first contribution in https://github.com/kmscon/kmscon/pull/225
+* @schdie made their first contribution in https://github.com/kmscon/kmscon/pull/231
+* @satmandu made their first contribution in https://github.com/kmscon/kmscon/pull/228
+
+**Full Changelog**: https://github.com/kmscon/kmscon/compare/v9.2.1...v9.3.0
+
 ## CHANGES WITH 9.2.1
 	* Bug fixes:
 		- Remove release github workflow @kdj0c in https://github.com/kmscon/kmscon/pull/155
