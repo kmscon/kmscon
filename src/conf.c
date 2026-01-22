@@ -346,10 +346,10 @@ static int parse_kv_pair(struct conf_option *opts, size_t len, const char *key, 
 
 		if (opt->type->flags & CONF_HAS_ARG && !value) {
 			log_error("config option '%s' requires an argument", key);
-			return -EFAULT;
+			return -EAGAIN;
 		} else if (!(opt->type->flags & CONF_HAS_ARG) && value) {
 			log_error("config option '%s' does not take arguments", key);
-			return -EFAULT;
+			return -EAGAIN;
 		}
 
 		if (opt->type->parse) {
@@ -362,7 +362,7 @@ static int parse_kv_pair(struct conf_option *opts, size_t len, const char *key, 
 	}
 
 	log_error("unknown config option '%s'", key);
-	return -EFAULT;
+	return -EAGAIN;
 }
 
 static void strip_spaces(char **buf)
@@ -464,7 +464,7 @@ done:
 			strip_spaces(&value);
 
 		ret = parse_kv_pair(opts, olen, key, value);
-		if (ret)
+		if (ret && ret != -EAGAIN)
 			return ret;
 	}
 
