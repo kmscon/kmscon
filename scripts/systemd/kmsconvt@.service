@@ -5,12 +5,12 @@
 # seat0. You cannot spawn KMSCON on other seats with this unit.
 #
 # You can replace the default getty@.service that is shipped with systemd by
-# linking it with:
-#   ln -s /usr/lib/systemd/system/kmsconvt@.service /etc/systemd/system/autovt@.service
+# enabling this unit:
+#   systemctl enable kmsconvt@
 # This will make systemd start KMSCON instead of agetty on each VT. Or more
 # precisely, this will make systemd-logind use kmsconvt@.service instead of
-# getty@.service for new VTs. In fact, all other units/scripts/... that use
-# getty@.service will not be affected by this change.
+# getty@.service for new VTs. Other units that use getty@.service will not
+# be affected by this change.
 #
 # Note that by default getty@.service installs itself as getty@tty1.service.
 # This unit does the same and overrules getty@tty1.service via the "Conflict"
@@ -46,4 +46,7 @@ TTYVHangup=yes
 TTYVTDisallocate=yes
 
 [Install]
+Alias=autovt@.service
+
 WantedBy=getty.target
+DefaultInstance=tty1
