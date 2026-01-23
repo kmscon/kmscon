@@ -34,6 +34,7 @@
 #include <xkbcommon/xkbcommon-keysyms.h>
 #include "conf.h"
 #include "kmscon_conf.h"
+#include "shl_githead.h"
 #include "shl_log.h"
 #include "shl_misc.h"
 #include "uterm_video.h"
@@ -62,6 +63,7 @@ static void print_help()
 		"\n"
 		"General Options:\n"
 		"\t-h, --help                          Print this help and exit\n"
+		"\t-V, --version                       Print version information and exit\n"
 		"\t-v, --verbose               [off]   Print verbose messages\n"
 		"\t    --debug                 [off]   Enable debug mode\n"
 		"\t    --silent                [off]   Suppress notices and warnings\n"
@@ -561,6 +563,44 @@ static int aftercheck_help(struct conf_option *opt, int argc, char **argv, int i
 		print_help();
 		conf->exit = true;
 	}
+	return 0;
+}
+static int aftercheck_version(struct conf_option *opt, int argc, char **argv, int idx)
+{
+	struct kmscon_conf_t *conf = KMSCON_CONF_FROM_FIELD(opt->mem, version);
+
+	/* exit after printing --version information */
+	if (conf->version) {
+		fprintf(stdout, "kmscon version %s\n", shl_git_head);
+
+		/* print detailed info if verbose mode is enabled */
+		if (conf->verbose) {
+			fprintf(stdout, "Compiled: %s %s\n", __DATE__, __TIME__);
+			fprintf(stdout, "Build options:\n");
+#ifdef BUILD_ENABLE_VIDEO_DRM2D
+			fprintf(stdout, "  - DRM 2D support: enabled\n");
+#else
+			fprintf(stdout, "  - DRM 2D support: disabled\n");
+#endif
+#ifdef BUILD_ENABLE_VIDEO_DRM3D
+			fprintf(stdout, "  - DRM 3D support: enabled\n");
+#else
+			fprintf(stdout, "  - DRM 3D support: disabled\n");
+#endif
+#ifdef BUILD_ENABLE_VIDEO_FBDEV
+			fprintf(stdout, "  - FBDEV support: enabled\n");
+#else
+			fprintf(stdout, "  - FBDEV support: disabled\n");
+#endif
+#ifdef BUILD_ENABLE_FONT_PANGO
+			fprintf(stdout, "  - Pango font support: enabled\n");
+#else
+			fprintf(stdout, "  - Pango font support: disabled\n");
+#endif
+		}
+
+		conf->exit = true;
+	}
 
 	return 0;
 }
@@ -691,6 +731,8 @@ int kmscon_conf_new(struct conf_ctx **out)
 	struct conf_option options[] = {
 		/* Global Options */
 		CONF_OPTION_BOOL_FULL('h', "help", aftercheck_help, NULL, NULL, &conf->help, false),
+		CONF_OPTION_BOOL_FULL('V', "version", aftercheck_version, NULL, NULL,
+				      &conf->version, false),
 		CONF_OPTION_BOOL('v', "verbose", &conf->verbose, false),
 		CONF_OPTION_BOOL_FULL(0, "debug", aftercheck_debug, NULL, NULL, &conf->debug,
 				      false),

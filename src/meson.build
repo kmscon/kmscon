@@ -8,7 +8,7 @@
 githead = vcs_tag(
   input: 'shl_githead.c.in',
   output: 'shl_githead.c',
-  command: ['git', 'describe'],
+  command: ['git', 'describe', '--tags'],
   fallback: 'v' + meson.project_version(),
 )
 

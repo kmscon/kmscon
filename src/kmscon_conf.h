@@ -53,6 +53,8 @@ struct kmscon_conf_t {
 	/* General Options */
 	/* show help/usage information */
 	bool help;
+	/* show version information */
+	bool version;
 	/* exit application after parsing options */
 	bool exit;
 	/* enable verbose info messages */
