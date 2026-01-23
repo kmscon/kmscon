@@ -190,14 +190,6 @@ foreach filename, kwargs : {
     'install_dir': bindir,
     'install_mode': 'rwxr-xr-x',
   },
-  'scripts/systemd/kmscon.service.in': {
-    'install_dir': systemdsystemunitdir,
-    'install_mode': 'rw-r--r--',
-  },
-  'scripts/systemd/kmsconvt@.service.in': {
-    'install_dir': systemdsystemunitdir,
-    'install_mode': 'rw-r--r--',
-  },
 }
   install_data(configure_file(input: filename, output: '@BASENAME@', configuration: dirs_info),
     kwargs: kwargs,
@@ -208,4 +200,12 @@ endforeach
 install_data(
   'scripts/etc/kmscon.conf.example',
   install_dir: join_paths(get_option('sysconfdir'), 'kmscon')
+)
+install_data(
+  'scripts/systemd/kmscon.service',
+  install_dir: systemdsystemunitdir,
+)
+install_data(
+  'scripts/systemd/kmsconvt@.service',
+  install_dir: systemdsystemunitdir,
 )
