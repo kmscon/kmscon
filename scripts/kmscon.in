@@ -25,27 +25,34 @@
 helperdir=@libexecdir@
 
 # Get a property from org.freedesktop.locale1
-queryLocale1() {
-    dbus-send --system --print-reply=literal --dest=org.freedesktop.locale1 /org/freedesktop/locale1 org.freedesktop.DBus.Properties.Get "string:org.freedesktop.locale1" "string:$1" 2>/dev/null | awk '{print $2}'
+queryLocaledbus() {
+    dbus-send --system --print-reply=literal --dest=org.freedesktop.locale1 /org/freedesktop/locale1 org.freedesktop.DBus.Properties.Get "string:org.freedesktop.locale1" "string:X11$1" 2>/dev/null | awk '{print $2}'
+}
+
+queryLocalectl() {
+    localectl status | awk "/X11 $1/ {print \$3}"
 }
 
 # Query and setup system locale settings before start kmscon
 setupLocale() {
-    # Fallback to do nothing if we don't have the command
-    if ! command -v dbus-send >/dev/null 2>/dev/null; then
-        return
-    fi
-
     # Don't override existing values. Also there is no point in setting only some of them
     # as then they would not match anymore.
     if test -n "${XKB_DEFAULT_MODEL}" -o -n "${XKB_DEFAULT_LAYOUT}" -o -n "${XKB_DEFAULT_VARIANT}" -o -n "${XKB_DEFAULT_OPTIONS}"; then
         return
     fi
 
-    X11MODEL="$(queryLocale1 X11Model)"
-    X11LAYOUT="$(queryLocale1 X11Layout)"
-    X11VARIANT="$(queryLocale1 X11Variant)"
-    X11OPTIONS="$(queryLocale1 X11Options)"
+    if command -v dbus-send >/dev/null 2>/dev/null; then
+        querycmd="queryLocaledbus"
+    elif command -v localectl >/dev/null 2>/dev/null; then
+        querycmd="queryLocalectl"
+    else
+        return
+    fi
+
+    X11MODEL="$(${querycmd} Model)"
+    X11LAYOUT="$(${querycmd} Layout)"
+    X11VARIANT="$(${querycmd} Variant)"
+    X11OPTIONS="$(${querycmd} Options)"
     [ -n "${X11MODEL}" ] && export XKB_DEFAULT_MODEL="${X11MODEL}"
     [ -n "${X11LAYOUT}" ] && export XKB_DEFAULT_LAYOUT="${X11LAYOUT}"
     [ -n "${X11VARIANT}" ] && export XKB_DEFAULT_VARIANT="${X11VARIANT}"
