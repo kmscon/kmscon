@@ -44,6 +44,11 @@ enum kmscon_conf_gpu_selection {
 	KMSCON_GPU_PRIMARY,
 };
 
+enum kmscon_conf_reboot_mode {
+	KMSCON_REBOOT_SOFT,
+	KMSCON_REBOOT_HARD,
+};
+
 typedef uint8_t palette_t[TSM_COLOR_NUM][3];
 
 struct kmscon_conf_t {
@@ -149,6 +154,8 @@ struct kmscon_conf_t {
 	struct conf_grab *grab_rotate_ccw;
 	/* reboot system grab */
 	struct conf_grab *grab_reboot;
+	/* reboot mode for grab_reboot */
+	unsigned int grab_reboot_mode;
 
 	/* Video Options */
 	/* use DRM if available */

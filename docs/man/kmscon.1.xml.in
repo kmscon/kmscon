@@ -504,9 +504,24 @@
         <listitem>
           <para>Reboot the system when this keyboard shortcut is pressed.
                 This option is disabled by default (no default key binding).
-                Use with caution as the reboot is immediate without confirmation.
+                The reboot behavior is controlled by --grab-reboot-mode.
                 Example: --grab-reboot=&lt;Ctrl&gt;&lt;Alt&gt;Delete
                 (default: disabled)</para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term><option>--grab-reboot-mode {soft,hard}</option></term>
+        <listitem>
+          <para>Reboot mode used for --grab-reboot. "soft" (default) sends SIGINT
+                to PID 1 (system init) for a clean reboot, matching the standard
+                Linux console Ctrl-Alt-Del behavior. "hard" calls reboot(RB_AUTOBOOT)
+                for an immediate reboot without proper shutdown.</para>
+          <para><emphasis role="strong">WARNING:</emphasis> "hard" mode does not
+                perform a clean shutdown and may result in <emphasis role="strong">
+                data loss</emphasis> and <emphasis role="strong">filesystem
+                corruption</emphasis>. Use "soft" mode unless you have a specific
+                reason to bypass the normal shutdown process.
+                (default: soft)</para>
         </listitem>
       </varlistentry>
     </variablelist>

@@ -149,6 +149,9 @@ static void print_help()
 		"\t                                  Rotate output counter-clock-wise\n"
 		"\t    --grab-reboot <grab>        []\n"
 		"\t                                  Reboot the system (disabled by default)\n"
+		"\t    --grab-reboot-mode <mode>   [soft]\n"
+		"\t                                  Reboot mode: soft (SIGINT to PID 1) or hard\n"
+		"\t                                  (RB_AUTOBOOT)\n"
 		"\n"
 		"Video Options:\n"
 		"\t    --drm                     [on]    Use DRM if available\n"
@@ -463,6 +466,53 @@ static const struct conf_type conf_gpus = {
 	.free = conf_free_gpus,
 	.parse = conf_parse_gpus,
 	.copy = conf_copy_gpus,
+};
+
+/*
+ * Reboot mode type
+ * The reboot mode is a simple string to enum parser.
+ */
+
+static void conf_default_reboot_mode(struct conf_option *opt)
+{
+	conf_uint.set_default(opt);
+}
+
+static void conf_free_reboot_mode(struct conf_option *opt)
+{
+	conf_uint.free(opt);
+}
+
+static int conf_parse_reboot_mode(struct conf_option *opt, bool on, const char *arg)
+{
+	struct kmscon_conf_t *conf = KMSCON_CONF_FROM_FIELD(opt->mem, grab_reboot_mode);
+	unsigned int mode;
+
+	if (!strcmp(arg, "soft")) {
+		mode = KMSCON_REBOOT_SOFT;
+	} else if (!strcmp(arg, "hard")) {
+		mode = KMSCON_REBOOT_HARD;
+	} else {
+		log_error("invalid reboot mode --grab-reboot-mode='%s'", arg);
+		return -EFAULT;
+	}
+
+	opt->type->free(opt);
+	conf->grab_reboot_mode = mode;
+	return 0;
+}
+
+static int conf_copy_reboot_mode(struct conf_option *opt, const struct conf_option *src)
+{
+	return conf_uint.copy(opt, src);
+}
+
+static const struct conf_type conf_reboot_mode = {
+	.flags = CONF_HAS_ARG,
+	.set_default = conf_default_reboot_mode,
+	.free = conf_free_reboot_mode,
+	.parse = conf_parse_reboot_mode,
+	.copy = conf_copy_reboot_mode,
 };
 
 /*
@@ -793,6 +843,8 @@ int kmscon_conf_new(struct conf_ctx **out)
 		CONF_OPTION_GRAB(0, "grab-rotate-ccw", &conf->grab_rotate_ccw,
 				 &def_grab_rotate_ccw),
 		CONF_OPTION_GRAB(0, "grab-reboot", &conf->grab_reboot, NULL),
+		CONF_OPTION(0, 0, "grab-reboot-mode", &conf_reboot_mode, NULL, NULL, NULL,
+			    &conf->grab_reboot_mode, (void *)KMSCON_REBOOT_SOFT),
 
 		/* Video Options */
 		CONF_OPTION_BOOL_FULL(0, "drm", aftercheck_drm, NULL, NULL, &conf->drm, true),

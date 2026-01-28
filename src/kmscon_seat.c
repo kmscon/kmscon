@@ -30,6 +30,7 @@
  */
 
 #include <errno.h>
+#include <signal.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/reboot.h>
@@ -567,7 +568,16 @@ static int seat_vt_event(struct uterm_vt *vt, struct uterm_vt_event *ev, void *d
 
 static void seat_trigger_reboot(struct kmscon_seat *seat)
 {
-	log_warning("reboot triggered by keyboard shortcut on seat %s", seat->name);
+	if (seat->conf->grab_reboot_mode == KMSCON_REBOOT_SOFT) {
+		log_warning("soft reboot triggered by keyboard shortcut on seat %s",
+			    seat->name);
+
+		if (kill(1, SIGINT) < 0)
+			log_error("failed to signal PID 1 for reboot: %m");
+		return;
+	}
+
+	log_warning("hard reboot triggered by keyboard shortcut on seat %s", seat->name);
 
 	sync(); /* Synchronize disk buffers */
 

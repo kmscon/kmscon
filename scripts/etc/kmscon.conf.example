@@ -67,7 +67,13 @@
 #grab-terminal-new=<Ctrl><Logo>Return
 #grab-rotate-cw=<Logo>Plus
 #grab-rotate-ccw=<Logo>Minus
-## Reboot system (disabled by default, use with caution - immediate reboot without confirmation)
+## Reboot system (disabled by default, behavior depends on grab-reboot-mode)
+## WARNING: "hard" mode performs an immediate reboot without proper shutdown,
+## which can result in DATA LOSS and FILESYSTEM CORRUPTION. Use "soft" mode
+## (default) which sends SIGINT to PID 1 for a clean reboot, just like the
+## standard Linux console Ctrl-Alt-Del behavior.
+#grab-reboot-mode=soft
+#grab-reboot-mode=hard
 #grab-reboot=<Ctrl><Alt>Delete
 
 ## Enable mouse
