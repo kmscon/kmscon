@@ -577,7 +577,8 @@ static void seat_trigger_reboot(struct kmscon_seat *seat)
 		return;
 	}
 
-	log_warning("hard reboot triggered by keyboard shortcut on seat %s", seat->name);
+	log_warning("hard reboot triggered by keyboard shortcut on seat %s",
+		    seat->name);
 
 	sync(); /* Synchronize disk buffers */
 
