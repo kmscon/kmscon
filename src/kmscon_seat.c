@@ -565,6 +565,17 @@ static int seat_vt_event(struct uterm_vt *vt, struct uterm_vt_event *ev, void *d
 	return 0;
 }
 
+static void seat_trigger_suspend(struct kmscon_seat *seat)
+{
+	log_warning("suspend triggered by keyboard shortcut on seat %s", seat->name);
+
+	sync(); /* Synchronize disk buffers */
+
+	if (reboot(RB_SW_SUSPEND) < 0) {
+		log_error("failed to suspend system: %m");
+	}
+}
+
 static void seat_trigger_reboot(struct kmscon_seat *seat)
 {
 	log_warning("reboot triggered by keyboard shortcut on seat %s", seat->name);
@@ -575,6 +586,18 @@ static void seat_trigger_reboot(struct kmscon_seat *seat)
 		log_error("failed to reboot system: %m");
 	}
 }
+
+static void seat_trigger_power_off(struct kmscon_seat *seat)
+{
+	log_warning("power off triggered by keyboard shortcut on seat %s", seat->name);
+
+	sync(); /* Synchronize disk buffers */
+
+	if (reboot(RB_POWER_OFF) < 0) {
+		log_error("failed to power off system: %m");
+	}
+}
+
 static void seat_dpms_timeout(struct ev_timer *timer, uint64_t num, void *data)
 {
 	struct kmscon_seat *seat = data;
@@ -726,10 +749,22 @@ static void seat_input_event(struct uterm_input *input, struct uterm_input_key_e
 		}
 		return;
 	}
+	if (seat->conf->grab_suspend &&
+	    conf_grab_matches(seat->conf->grab_suspend, ev->mods, ev->num_syms, ev->keysyms)) {
+		ev->handled = true;
+		seat_trigger_suspend(seat);
+		return;
+	}
 	if (seat->conf->grab_reboot &&
 	    conf_grab_matches(seat->conf->grab_reboot, ev->mods, ev->num_syms, ev->keysyms)) {
 		ev->handled = true;
 		seat_trigger_reboot(seat);
+		return;
+	}
+	if (seat->conf->grab_power_off &&
+	    conf_grab_matches(seat->conf->grab_power_off, ev->mods, ev->num_syms, ev->keysyms)) {
+		ev->handled = true;
+		seat_trigger_power_off(seat);
 		return;
 	}
 }

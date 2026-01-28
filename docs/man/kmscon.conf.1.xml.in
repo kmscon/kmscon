@@ -388,12 +388,34 @@ font-name=Ubuntu Mono
       </varlistentry>
 
       <varlistentry>
+        <term><option>grab-suspend</option></term>
+        <listitem>
+          <para>Suspend the system when this keyboard shortcut is pressed.
+                This option is disabled by default.
+                Use with caution as the suspend is immediate.
+                Example: grab-suspend=&lt;Ctrl&gt;&lt;Alt&gt;Delete
+                (default: disabled)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
         <term><option>grab-reboot</option></term>
         <listitem>
           <para>Reboot the system when this keyboard shortcut is pressed.
                 This option is disabled by default.
                 Use with caution as the reboot is immediate.
                 Example: grab-reboot=&lt;Ctrl&gt;&lt;Alt&gt;Delete
+                (default: disabled)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>grab-power-off</option></term>
+        <listitem>
+          <para>Power off the system when this keyboard shortcut is pressed.
+                This option is disabled by default.
+                Use with caution as the power off is immediate.
+                Example: grab-power-off=&lt;Ctrl&gt;&lt;Alt&gt;Delete
                 (default: disabled)</para>
         </listitem>
       </varlistentry>
