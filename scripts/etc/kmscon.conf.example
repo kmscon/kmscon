@@ -67,8 +67,11 @@
 #grab-terminal-new=<Ctrl><Logo>Return
 #grab-rotate-cw=<Logo>Plus
 #grab-rotate-ccw=<Logo>Minus
-## Reboot system (disabled by default, use with caution - immediate reboot without confirmation)
+## Suspend, Reboot and Power off system
+## (disabled by default, use with caution - immediate action without confirmation)
+#grab-suspend=<Ctrl><Alt>Delete
 #grab-reboot=<Ctrl><Alt>Delete
+#grab-power-off=<Ctrl><Alt>Delete
 
 ## Enable mouse
 #mouse
