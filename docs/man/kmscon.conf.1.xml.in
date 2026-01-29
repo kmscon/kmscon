@@ -392,7 +392,11 @@ font-name=Ubuntu Mono
         <listitem>
           <para>Reboot the system when this keyboard shortcut is pressed.
                 This option is disabled by default.
-                Use with caution as the reboot is immediate.
+                The reboot behavior follows the system-wide setting in
+                /proc/sys/kernel/ctrl-alt-del: when set to 0 (default),
+                a graceful reboot is performed by sending SIGINT to init (PID 1);
+                when set to a value greater than 0, an immediate hard reboot
+                is performed after syncing disk buffers.
                 Example: grab-reboot=&lt;Ctrl&gt;&lt;Alt&gt;Delete
                 (default: disabled)</para>
         </listitem>

@@ -67,7 +67,10 @@
 #grab-terminal-new=<Ctrl><Logo>Return
 #grab-rotate-cw=<Logo>Plus
 #grab-rotate-ccw=<Logo>Minus
-## Reboot system (disabled by default, use with caution - immediate reboot without confirmation)
+## Reboot system (disabled by default)
+## Reboot behavior follows /proc/sys/kernel/ctrl-alt-del:
+##   0 (default): graceful reboot (sends SIGINT to init)
+##   >0: immediate hard reboot after syncing disk buffers
 #grab-reboot=<Ctrl><Alt>Delete
 
 ## Enable mouse

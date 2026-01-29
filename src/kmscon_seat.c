@@ -30,6 +30,8 @@
  */
 
 #include <errno.h>
+#include <signal.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/reboot.h>
@@ -567,10 +569,35 @@ static int seat_vt_event(struct uterm_vt *vt, struct uterm_vt_event *ev, void *d
 
 static void seat_trigger_reboot(struct kmscon_seat *seat)
 {
-	log_warning("reboot triggered by keyboard shortcut on seat %s", seat->name);
+	FILE *fp;
+	int ctrl_alt_del = 0; /* Default to soft reboot */
 
+	/* Read system's ctrl-alt-del behavior setting */
+	fp = fopen("/proc/sys/kernel/ctrl-alt-del", "r");
+	if (fp) {
+		if (fscanf(fp, "%d", &ctrl_alt_del) != 1) {
+			log_warning(
+				"failed to read ctrl-alt-del setting, defaulting to soft reboot");
+			ctrl_alt_del = 0;
+		}
+		fclose(fp);
+	} else {
+		log_warning("failed to open /proc/sys/kernel/ctrl-alt-del: %m, defaulting to soft "
+			    "reboot");
+	}
+
+	/* Soft reboot: signal init to handle graceful restart */
+	if (ctrl_alt_del == 0) {
+		log_warning("soft reboot triggered by keyboard shortcut on seat %s", seat->name);
+		if (kill(1, SIGINT) < 0) {
+			log_error("failed to signal PID 1 for reboot: %m");
+		}
+		return;
+	}
+
+	/* Hard reboot: immediate reboot */
+	log_warning("hard reboot triggered by keyboard shortcut on seat %s", seat->name);
 	sync(); /* Synchronize disk buffers */
-
 	if (reboot(RB_AUTOBOOT) < 0) {
 		log_error("failed to reboot system: %m");
 	}
