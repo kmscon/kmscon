@@ -673,7 +673,7 @@ err_commit:
 			disp->flags &= ~DISPLAY_ONLINE;
 			uterm_display_unref(disp);
 		} else
-			disp->flags |= DISPLAY_ONLINE;
+			disp->flags |= DISPLAY_ONLINE | DISPLAY_VSYNC;
 	}
 	return ret;
 }
