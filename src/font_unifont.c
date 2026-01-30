@@ -99,9 +99,17 @@ static void free_glyph(void *data)
 	free(g);
 }
 
-static void unfold(uint8_t *dst, uint8_t val)
+static uint8_t apply_attr(uint8_t c, const struct kmscon_font_attr *attr, bool last_line) {
+	if (attr->bold)
+		c |= c >> 1;
+	if (attr->underline && last_line)
+		c = 0xff;
+	return c;
+}
+
+static uint8_t unfold(uint8_t val)
 {
-	*dst = 0xff * !!val;
+	return 0xff * !!val;
 }
 
 static bool is_in_block(const struct unifont_glyph_block *idx, uint32_t ch)
@@ -138,15 +146,17 @@ static int lookup_block(const struct unifont_glyph_block *blocks, uint32_t len, 
 	return -1;
 }
 
-static int find_glyph(uint32_t ch, const struct kmscon_glyph **out)
+static int find_glyph(uint64_t id, const struct kmscon_glyph **out, const struct kmscon_font_attr *attr)
 {
 	struct kmscon_glyph *g;
+	uint32_t ch = id & TSM_UCS4_MAX;
 	const void *start = _binary_font_unifont_data_start;
 	const uint8_t *end = (uint8_t *)_binary_font_unifont_data_end;
 	const uint8_t *data;
+	uint8_t c;
 	uint32_t len;
 	const struct unifont_glyph_block *blocks;
-	unsigned int i;
+	unsigned int i, k;
 	int ret;
 	bool res;
 
@@ -159,7 +169,7 @@ static int find_glyph(uint32_t ch, const struct kmscon_glyph **out)
 			goto out_unlock;
 		}
 	} else {
-		res = shl_hashtable_find(cache, (void **)out, ch);
+		res = shl_hashtable_find(cache, (void **)out, id);
 		if (res) {
 			ret = 0;
 			goto out_unlock;
@@ -210,17 +220,12 @@ static int find_glyph(uint32_t ch, const struct kmscon_glyph **out)
 	}
 
 	for (i = 0; i < g->width * 16; ++i) {
-		unfold(&g->buf.data[i * 8 + 0], data[i] & 0x80);
-		unfold(&g->buf.data[i * 8 + 1], data[i] & 0x40);
-		unfold(&g->buf.data[i * 8 + 2], data[i] & 0x20);
-		unfold(&g->buf.data[i * 8 + 3], data[i] & 0x10);
-		unfold(&g->buf.data[i * 8 + 4], data[i] & 0x08);
-		unfold(&g->buf.data[i * 8 + 5], data[i] & 0x04);
-		unfold(&g->buf.data[i * 8 + 6], data[i] & 0x02);
-		unfold(&g->buf.data[i * 8 + 7], data[i] & 0x01);
+		c = apply_attr(data[i], attr, i >= g->width * 15);
+		for (k = 0; k < 8; k++)
+			g->buf.data[i * 8 + k] = unfold(c & (1 << (7 - k)));
 	}
 
-	ret = shl_hashtable_insert(cache, ch, g);
+	ret = shl_hashtable_insert(cache, id, g);
 	if (ret) {
 		log_error("cannot insert glyph into glyph-cache: %d", ret);
 		goto err_data;
@@ -252,7 +257,7 @@ static int kmscon_font_unifont_init(struct kmscon_font *out, const struct kmscon
 
 	memset(&out->attr, 0, sizeof(out->attr));
 	memcpy(out->attr.name, name, sizeof(name));
-	out->attr.bold = false;
+	out->attr.bold = attr->bold;
 	out->attr.italic = false;
 	out->attr.width = 8;
 	out->attr.height = 16;
@@ -275,19 +280,19 @@ static int kmscon_font_unifont_render(struct kmscon_font *font, uint64_t id, con
 	if (len > 1)
 		return -ERANGE;
 
-	return find_glyph(id & TSM_UCS4_MAX, out);
+	return find_glyph(id, out, &font->attr);
 }
 
 static int kmscon_font_unifont_render_inval(struct kmscon_font *font,
 					    const struct kmscon_glyph **out)
 {
-	return find_glyph(0xfffd, out);
+	return find_glyph(0xfffd, out, &font->attr);
 }
 
 static int kmscon_font_unifont_render_empty(struct kmscon_font *font,
 					    const struct kmscon_glyph **out)
 {
-	return find_glyph(' ', out);
+	return find_glyph(' ', out, &font->attr);
 }
 
 struct kmscon_font_ops kmscon_font_unifont_ops = {
