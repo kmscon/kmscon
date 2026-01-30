@@ -99,7 +99,8 @@ static void free_glyph(void *data)
 	free(g);
 }
 
-static uint8_t apply_attr(uint8_t c, const struct kmscon_font_attr *attr, bool last_line) {
+static uint8_t apply_attr(uint8_t c, const struct kmscon_font_attr *attr, bool last_line)
+{
 	if (attr->bold)
 		c |= c >> 1;
 	if (attr->underline && last_line)
@@ -146,7 +147,8 @@ static int lookup_block(const struct unifont_glyph_block *blocks, uint32_t len, 
 	return -1;
 }
 
-static int find_glyph(uint64_t id, const struct kmscon_glyph **out, const struct kmscon_font_attr *attr)
+static int find_glyph(uint64_t id, const struct kmscon_glyph **out,
+		      const struct kmscon_font_attr *attr)
 {
 	struct kmscon_glyph *g;
 	uint32_t ch = id & TSM_UCS4_MAX;
@@ -262,7 +264,6 @@ static int kmscon_font_unifont_init(struct kmscon_font *out, const struct kmscon
 	out->attr.width = 8;
 	out->attr.height = 16;
 	kmscon_font_attr_normalize(&out->attr);
-	out->baseline = 4;
 
 	cache_ref();
 	return 0;
