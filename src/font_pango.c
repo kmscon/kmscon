@@ -418,7 +418,6 @@ static int kmscon_font_pango_init(struct kmscon_font *out, const struct kmscon_f
 	if (ret)
 		return ret;
 	memcpy(&out->attr, &face->real_attr, sizeof(out->attr));
-	out->baseline = face->baseline;
 
 	out->data = face;
 	return 0;
