@@ -979,11 +979,16 @@ int uterm_drm_video_init(struct uterm_video *video, const char *node,
 	vdrm->page_flip = pflip;
 	vdrm->display_ops = display_ops;
 
+	vdrm->name = strdup(node);
+	if (!vdrm->name) {
+		ret = -ENOMEM;
+		goto err_free;
+	}
 	vdrm->fd = open(node, O_RDWR | O_CLOEXEC | O_NONBLOCK);
 	if (vdrm->fd < 0) {
 		log_err("cannot open drm device %s (%d): %m", node, errno);
 		ret = -EFAULT;
-		goto err_free;
+		goto err_free_name;
 	}
 	/* TODO: fix the race-condition with DRM-Master-on-open */
 	drmDropMaster(vdrm->fd);
@@ -1021,6 +1026,8 @@ err_fd:
 	ev_eloop_rm_fd(vdrm->efd);
 err_close:
 	close(vdrm->fd);
+err_free_name:
+	free(vdrm->name);
 err_free:
 	free(vdrm);
 	return ret;
@@ -1035,6 +1042,7 @@ void uterm_drm_video_destroy(struct uterm_video *video)
 	shl_timer_free(vdrm->timer);
 	ev_eloop_rm_fd(vdrm->efd);
 	close(vdrm->fd);
+	free(vdrm->name);
 	free(video->data);
 }
 
@@ -1178,7 +1186,7 @@ int uterm_drm_video_hotplug(struct uterm_video *video, bool read_dpms, bool mode
 	if (!video_is_awake(video) || !video_need_hotplug(video))
 		return 0;
 
-	log_debug("testing DRM hotplug status");
+	log_debug("DRM hotplug for device %s", vdrm->name);
 
 	res = drmModeGetResources(vdrm->fd);
 	if (!res) {
@@ -1265,7 +1273,7 @@ int uterm_drm_video_wake_up(struct uterm_video *video)
 
 	ret = drmSetMaster(vdrm->fd);
 	if (ret) {
-		log_err("cannot set DRM-master");
+		log_err("cannot set DRM-master for %s", vdrm->name);
 		return -EACCES;
 	}
 
@@ -1310,17 +1318,17 @@ int uterm_drm_video_wait_pflip(struct uterm_video *video, unsigned int *mtimeout
 	pfd.fd = vdrm->fd;
 	pfd.events = POLLIN;
 
-	log_debug("waiting for pageflip on %p", video);
+	log_debug("waiting for pageflip on %s", vdrm->name);
 	ret = poll(&pfd, 1, *mtimeout);
 
 	elapsed = shl_timer_stop(vdrm->timer);
 	*mtimeout = *mtimeout - (elapsed / 1000 + 1);
 
 	if (ret < 0) {
-		log_error("poll() failed on DRM fd (%d): %m", errno);
+		log_error("poll() failed on DRM %s fd (%d): %m", vdrm->name, errno);
 		return -EFAULT;
 	} else if (!ret) {
-		log_warning("timeout waiting for page-flip on %p", video);
+		log_warning("timeout waiting for page-flip on %s", vdrm->name);
 		return 0;
 	} else if ((pfd.revents & POLLIN)) {
 		ret = uterm_drm_video_read_events(video);

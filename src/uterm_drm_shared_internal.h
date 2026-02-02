@@ -91,6 +91,7 @@ bool uterm_drm_display_has_damage(struct uterm_display *disp);
 typedef void (*uterm_drm_page_flip_t)(struct uterm_display *disp);
 
 struct uterm_drm_video {
+	char *name;
 	int fd;
 	struct ev_fd *efd;
 	uterm_drm_page_flip_t page_flip;
