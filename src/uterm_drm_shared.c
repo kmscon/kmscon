@@ -427,28 +427,47 @@ static void free_damage_blob(int fd, struct uterm_drm_display *ddrm)
 	ddrm->damage_blob_id = 0;
 }
 
-int uterm_drm_set_dpms(int fd, uint32_t conn_id, int state)
+static int uterm_to_drm_dpms(int state)
+{
+	switch (state) {
+	case UTERM_DPMS_ON:
+		return DRM_MODE_DPMS_ON;
+	case UTERM_DPMS_STANDBY:
+		return DRM_MODE_DPMS_STANDBY;
+	case UTERM_DPMS_SUSPEND:
+		return DRM_MODE_DPMS_SUSPEND;
+	case UTERM_DPMS_OFF:
+		return DRM_MODE_DPMS_OFF;
+	default:
+		log_err("Wrong UTERM DPMS value %d", state);
+		return -EINVAL;
+	}
+}
+
+static int drm_to_uterm_dpms(int state)
+{
+	switch (state) {
+	case DRM_MODE_DPMS_ON:
+		return UTERM_DPMS_ON;
+	case DRM_MODE_DPMS_STANDBY:
+		return UTERM_DPMS_STANDBY;
+	case DRM_MODE_DPMS_SUSPEND:
+		return UTERM_DPMS_SUSPEND;
+	case DRM_MODE_DPMS_OFF:
+	default:
+		return UTERM_DPMS_OFF;
+	}
+}
+
+static int uterm_drm_set_dpms(int fd, uint32_t conn_id, int state)
 {
 	int i, ret, set;
 	drmModeConnector *conn;
 	drmModePropertyRes *prop;
 
-	switch (state) {
-	case UTERM_DPMS_ON:
-		set = DRM_MODE_DPMS_ON;
-		break;
-	case UTERM_DPMS_STANDBY:
-		set = DRM_MODE_DPMS_STANDBY;
-		break;
-	case UTERM_DPMS_SUSPEND:
-		set = DRM_MODE_DPMS_SUSPEND;
-		break;
-	case UTERM_DPMS_OFF:
-		set = DRM_MODE_DPMS_OFF;
-		break;
-	default:
-		return -EINVAL;
-	}
+	set = uterm_to_drm_dpms(state);
+	if (set < 0)
+		return set;
 
 	conn = drmModeGetConnector(fd, conn_id);
 	if (!conn) {
@@ -485,7 +504,7 @@ int uterm_drm_set_dpms(int fd, uint32_t conn_id, int state)
 	return ret;
 }
 
-int uterm_drm_get_dpms(int fd, drmModeConnector *conn)
+static int uterm_drm_get_dpms(int fd, drmModeConnector *conn)
 {
 	int i, ret;
 	drmModePropertyRes *prop;
@@ -498,45 +517,34 @@ int uterm_drm_get_dpms(int fd, drmModeConnector *conn)
 		}
 
 		if (!strcmp(prop->name, "DPMS")) {
-			switch (conn->prop_values[i]) {
-			case DRM_MODE_DPMS_ON:
-				ret = UTERM_DPMS_ON;
-				break;
-			case DRM_MODE_DPMS_STANDBY:
-				ret = UTERM_DPMS_STANDBY;
-				break;
-			case DRM_MODE_DPMS_SUSPEND:
-				ret = UTERM_DPMS_SUSPEND;
-				break;
-			case DRM_MODE_DPMS_OFF:
-			default:
-				ret = UTERM_DPMS_OFF;
-			}
-
+			ret = drm_to_uterm_dpms(conn->prop_values[i]);
 			drmModeFreeProperty(prop);
 			return ret;
 		}
 		drmModeFreeProperty(prop);
 	}
-
-	if (i == conn->count_props)
-		log_warn("display does not support DPMS");
+	log_warn("display does not support DPMS");
+	/* For drm, UTERM_DPMS_UNKNOWN means unsupported */
 	return UTERM_DPMS_UNKNOWN;
 }
 
 int uterm_drm_display_set_dpms(struct uterm_display *disp, int state)
 {
-	int ret;
+	int set;
 	struct uterm_drm_display *ddrm = disp->data;
 	struct uterm_drm_video *vdrm = disp->video->data;
 
+	set = uterm_to_drm_dpms(state);
+
+	if (disp->dpms == set || disp->dpms == UTERM_DPMS_UNKNOWN)
+		return 0;
+
 	log_info("setting DPMS of display %s to %s\n", disp->name, uterm_dpms_to_name(state));
 
-	ret = uterm_drm_set_dpms(vdrm->fd, ddrm->connector.id, state);
-	if (ret < 0)
-		return ret;
+	if (uterm_drm_set_dpms(vdrm->fd, ddrm->connector.id, state))
+		return -EFAULT;
 
-	disp->dpms = ret;
+	disp->dpms = set;
 	return 0;
 }
 
@@ -1125,9 +1133,7 @@ static void bind_display(struct uterm_video *video, drmModeRes *res, drmModeConn
 	init_modes(disp, conn);
 
 	ddrm->connector.id = conn->connector_id;
-	disp->dpms = UTERM_DPMS_ON;
-	uterm_drm_display_set_dpms(disp, disp->dpms);
-
+	disp->dpms = uterm_drm_get_dpms(vdrm->fd, conn);
 	log_info("display %s DPMS is %s", disp->name, uterm_dpms_to_name(disp->dpms));
 
 	/* find a crtc for this connector */

@@ -44,11 +44,6 @@ struct drm_object {
 	uint32_t id;
 };
 
-/* drm dpms */
-
-int uterm_drm_set_dpms(int fd, uint32_t conn_id, int state);
-int uterm_drm_get_dpms(int fd, drmModeConnector *conn);
-
 /* drm display */
 
 struct uterm_drm_display {
