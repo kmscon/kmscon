@@ -1,5 +1,26 @@
 = KMSCON Release News =
 
+## CHANGES WITH 9.3.1
+* Bug fixes:
+  - Fix build on i686 by @kdj0c in https://github.com/kmscon/kmscon/pull/242
+  - conf: Fix help text formatting and typos by @jtollet in https://github.com/kmscon/kmscon/pull/247
+  - conf: Add --version/-V command-line option by @jtollet in https://github.com/kmscon/kmscon/pull/243
+  - units: drop unnecessary templating of units by @keszybz in https://github.com/kmscon/kmscon/pull/246
+  - units: fill out [Install] section by @keszybz in https://github.com/kmscon/kmscon/pull/245
+  - start script: get local from localectl too by @kdj0c in https://github.com/kmscon/kmscon/pull/252
+  - agetty: Add -8 arguments to accept full 8-bits characters by @kdj0c in https://github.com/kmscon/kmscon/pull/261
+  - Read /proc/sys/kernel/ctrl-alt-del for reboot behavior by @jtollet in https://github.com/kmscon/kmscon/pull/264
+  - drm: Fix black screen when switching back to kmscon by @kdj0c in https://github.com/kmscon/kmscon/pull/266
+  - unifont: use sparse table, to be able to use codepoints after 0xFFFF by @kdj0c in https://github.com/kmscon/kmscon/pull/265
+  - unifont: Add bold and underline support by @kdj0c in https://github.com/kmscon/kmscon/pull/267
+  - Only take drm master if needed by @kdj0c in https://github.com/kmscon/kmscon/pull/269
+
+## New Contributors
+* @keszybz made their first contribution in https://github.com/kmscon/kmscon/pull/246
+
+**Full Changelog**: https://github.com/kmscon/kmscon/compare/v9.3.0...v9.3.1
+
+
 ## CHANGES WITH 9.3.0
 * New features:
   - Enable mouse support by default by @kdj0c in https://github.com/kmscon/kmscon/pull/175
