@@ -94,6 +94,7 @@ struct uterm_drm_video {
 	struct shl_timer *timer;
 	struct ev_timer *vt_timer;
 	bool legacy;
+	bool master;
 	const struct display_ops *display_ops;
 };
 

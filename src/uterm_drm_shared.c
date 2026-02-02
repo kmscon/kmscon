@@ -969,6 +969,27 @@ void uterm_drm_video_arm_vt_timer(struct uterm_video *video)
 	ev_timer_update(vdrm->vt_timer, &spec);
 }
 
+static int set_drm_master(struct uterm_drm_video *vdrm)
+{
+	int ret;
+
+	if (vdrm->master)
+		return 0;
+
+	ret = drmSetMaster(vdrm->fd);
+	if (ret)
+		log_err("Cannot set drm master for %s", vdrm->name);
+	else
+		vdrm->master = true;
+	return ret;
+}
+
+static void drop_drm_master(struct uterm_drm_video *vdrm)
+{
+	drmDropMaster(vdrm->fd);
+	vdrm->master = false;
+}
+
 int uterm_drm_video_init(struct uterm_video *video, const char *node,
 			 const struct display_ops *display_ops, uterm_drm_page_flip_t pflip,
 			 void *data)
@@ -999,7 +1020,7 @@ int uterm_drm_video_init(struct uterm_video *video, const char *node,
 		goto err_free_name;
 	}
 	/* TODO: fix the race-condition with DRM-Master-on-open */
-	drmDropMaster(vdrm->fd);
+	drop_drm_master(vdrm);
 
 	ret = drmSetClientCap(vdrm->fd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1);
 	if (ret) {
@@ -1256,6 +1277,10 @@ int uterm_drm_video_hotplug(struct uterm_video *video, bool read_dpms, bool mode
 	if (shl_dlist_empty(&video->displays))
 		goto finish_hotplug;
 
+	ret = set_drm_master(vdrm);
+	if (ret)
+		return ret;
+
 	if (modeset || new_display) {
 		ret = try_modeset(video);
 		if (ret)
@@ -1277,27 +1302,19 @@ int uterm_drm_video_wake_up(struct uterm_video *video)
 	int ret;
 	struct uterm_drm_video *vdrm = video->data;
 
-	ret = drmSetMaster(vdrm->fd);
-	if (ret) {
-		log_err("cannot set DRM-master for %s", vdrm->name);
-		return -EACCES;
-	}
-
 	video->flags |= VIDEO_AWAKE | VIDEO_HOTPLUG;
 	ret = uterm_drm_video_hotplug(video, true, true);
-	if (ret) {
-		drmDropMaster(vdrm->fd);
-		return ret;
-	}
+	if (ret)
+		drop_drm_master(vdrm);
 
-	return 0;
+	return ret;
 }
 
 void uterm_drm_video_sleep(struct uterm_video *video)
 {
 	struct uterm_drm_video *vdrm = video->data;
 
-	drmDropMaster(vdrm->fd);
+	drop_drm_master(vdrm);
 	ev_timer_drain(vdrm->vt_timer, NULL);
 	ev_timer_update(vdrm->vt_timer, NULL);
 }
