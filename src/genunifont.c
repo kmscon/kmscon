@@ -169,6 +169,7 @@ static void pack_glyph(struct unifont_glyph *list, FILE *out)
 	// Write the glyph data
 	for (g = list; g; g = g->next)
 		print_unifont_glyph(out, g);
+	free(blocks);
 }
 
 static int parse_single_file(FILE *out, FILE *in)
@@ -259,6 +260,12 @@ static int parse_single_file(FILE *out, FILE *in)
 
 	/* pack into table */
 	pack_glyph(list, out);
+
+	for (g = list; g;) {
+		last = g->next;
+		free(g);
+		g = last;
+	}
 
 	return 0;
 }
