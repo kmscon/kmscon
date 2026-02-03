@@ -145,6 +145,7 @@ static int bbulk_set(struct kmscon_text *txt)
 	bb->prev = malloc(sizeof(*bb->prev) * bb->cells);
 	if (!bb->prev)
 		goto free_reqs;
+	memset(bb->prev, 0, sizeof(*bb->prev) * bb->cells);
 
 	bb->damages = malloc(sizeof(*bb->damages) * bb->cells);
 	if (!bb->damages)
@@ -300,6 +301,7 @@ static int bbulk_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, 
 	struct uterm_video_blend_req *req;
 	struct bbcell *prev;
 	unsigned int offset = posx + posy * txt->cols;
+	bool last_col = (posx == txt->cols - 1);
 	int ret;
 
 	if (!width)
@@ -311,7 +313,7 @@ static int bbulk_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, 
 	prev = &bb->prev[offset];
 
 	if (prev->id == id && !memcmp(&prev->attr, attr, sizeof(*attr))) {
-		if (prev->overflow) {
+		if (prev->overflow && !last_col) {
 			if (bb->damages[offset] || bb->damages[offset + 1] ||
 			    bb->prev[offset + 1].id == ID_DAMAGED) {
 				bb->damages[offset] = false;
@@ -330,7 +332,7 @@ static int bbulk_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, 
 		}
 	} else {
 		bb->damages[offset] = true;
-		if (prev->overflow)
+		if (prev->overflow && !last_col)
 			damage_cell(bb, offset + 1);
 	}
 
@@ -341,7 +343,7 @@ static int bbulk_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, 
 	if (ret)
 		return ret;
 
-	if (bb_glyph->width == 2 && posx + 1 < txt->cols) {
+	if (bb_glyph->width == 2 && !last_col) {
 		prev->overflow = true;
 		bb->prev[offset + 1].overflow = false;
 	} else
