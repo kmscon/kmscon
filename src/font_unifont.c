@@ -147,6 +147,37 @@ static int lookup_block(const struct unifont_glyph_block *blocks, uint32_t len, 
 	return -1;
 }
 
+static struct kmscon_glyph *new_glyph(const struct kmscon_font_attr *attr, const uint8_t *data,
+				      int width)
+{
+	struct kmscon_glyph *g;
+	uint8_t c;
+	int i, k;
+
+	g = malloc(sizeof(*g));
+	if (!g)
+		return NULL;
+	memset(g, 0, sizeof(*g));
+	g->width = width;
+	g->buf.width = g->width * attr->width;
+	g->buf.height = attr->height;
+	g->buf.stride = g->width * attr->width;
+	g->buf.format = UTERM_FORMAT_GREY;
+
+	g->buf.data = malloc(g->buf.stride * g->buf.height);
+	if (!g->buf.data) {
+		free(g);
+		return NULL;
+	}
+
+	for (i = 0; i < g->width * 16; ++i) {
+		c = apply_attr(data[i], attr, i >= g->width * 15);
+		for (k = 0; k < 8; k++)
+			g->buf.data[i * 8 + k] = unfold(c & (1 << (7 - k)));
+	}
+	return g;
+}
+
 static int find_glyph(uint64_t id, const struct kmscon_glyph **out,
 		      const struct kmscon_font_attr *attr)
 {
@@ -155,10 +186,8 @@ static int find_glyph(uint64_t id, const struct kmscon_glyph **out,
 	const void *start = _binary_font_unifont_data_start;
 	const uint8_t *end = (uint8_t *)_binary_font_unifont_data_end;
 	const uint8_t *data;
-	uint8_t c;
 	uint32_t len;
 	const struct unifont_glyph_block *blocks;
-	unsigned int i, k;
 	int ret;
 	bool res;
 
@@ -203,28 +232,10 @@ static int find_glyph(uint64_t id, const struct kmscon_glyph **out,
 		goto out_unlock;
 	}
 
-	g = malloc(sizeof(*g));
+	g = new_glyph(attr, data, blocks[idx].width);
 	if (!g) {
 		ret = -ENOMEM;
 		goto out_unlock;
-	}
-	memset(g, 0, sizeof(*g));
-	g->width = blocks[idx].width;
-	g->buf.width = g->width * 8;
-	g->buf.height = 16;
-	g->buf.stride = g->width * 8;
-	g->buf.format = UTERM_FORMAT_GREY;
-
-	g->buf.data = malloc(g->buf.stride * g->buf.height);
-	if (!g->buf.data) {
-		ret = -ENOMEM;
-		goto err_free;
-	}
-
-	for (i = 0; i < g->width * 16; ++i) {
-		c = apply_attr(data[i], attr, i >= g->width * 15);
-		for (k = 0; k < 8; k++)
-			g->buf.data[i * 8 + k] = unfold(c & (1 << (7 - k)));
 	}
 
 	ret = shl_hashtable_insert(cache, id, g);
@@ -239,7 +250,6 @@ static int find_glyph(uint64_t id, const struct kmscon_glyph **out,
 
 err_data:
 	free(g->buf.data);
-err_free:
 	free(g);
 out_unlock:
 	pthread_mutex_unlock(&cache_mutex);
