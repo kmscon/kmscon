@@ -70,6 +70,7 @@ struct kmscon_font {
 	struct shl_register_record *record;
 	const struct kmscon_font_ops *ops;
 	struct kmscon_font_attr attr;
+	unsigned increase_step;
 	void *data;
 };
 

@@ -420,6 +420,7 @@ static int kmscon_font_pango_init(struct kmscon_font *out, const struct kmscon_f
 	memcpy(&out->attr, &face->real_attr, sizeof(out->attr));
 
 	out->data = face;
+	out->increase_step = 1;
 	return 0;
 }
 

@@ -556,22 +556,22 @@ static void input_event(struct uterm_input *input, struct uterm_input_key_event 
 	}
 	if (conf_grab_matches(term->conf->grab_zoom_in, ev->mods, ev->num_syms, ev->keysyms)) {
 		ev->handled = true;
-		if (term->font_attr.points + 1 < term->font_attr.points)
+		if (term->font_attr.points + term->font->increase_step < term->font_attr.points)
 			return;
 
-		++term->font_attr.points;
+		term->font_attr.points += term->font->increase_step;
 		if (font_set(term))
-			--term->font_attr.points;
+			term->font_attr.points -= term->font->increase_step;
 		return;
 	}
 	if (conf_grab_matches(term->conf->grab_zoom_out, ev->mods, ev->num_syms, ev->keysyms)) {
 		ev->handled = true;
-		if (term->font_attr.points <= 1)
+		if (term->font_attr.points <= term->font->increase_step)
 			return;
 
-		--term->font_attr.points;
+		term->font_attr.points -= term->font->increase_step;
 		if (font_set(term))
-			++term->font_attr.points;
+			term->font_attr.points += term->font->increase_step;
 		return;
 	}
 	if (conf_grab_matches(term->conf->grab_rotate_cw, ev->mods, ev->num_syms, ev->keysyms)) {

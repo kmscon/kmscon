@@ -265,7 +265,7 @@ static int kmscon_font_unifont_init(struct kmscon_font *out, const struct kmscon
 	out->attr.width = 8 * scale;
 	out->attr.height = 16 * scale;
 	kmscon_font_attr_normalize(&out->attr);
-
+	out->increase_step = 16;
 	out->data = cache;
 
 	return 0;
