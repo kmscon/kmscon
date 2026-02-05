@@ -70,27 +70,6 @@ struct unifont_glyph_block {
  * new ones as soon as they are used.
  */
 
-static pthread_mutex_t cache_mutex = PTHREAD_MUTEX_INITIALIZER;
-static struct shl_hashtable *cache;
-static unsigned long cache_refnum;
-
-static void cache_ref(void)
-{
-	pthread_mutex_lock(&cache_mutex);
-	++cache_refnum;
-	pthread_mutex_unlock(&cache_mutex);
-}
-
-static void cache_unref(void)
-{
-	pthread_mutex_lock(&cache_mutex);
-	if (!--cache_refnum) {
-		shl_hashtable_free(cache);
-		cache = NULL;
-	}
-	pthread_mutex_unlock(&cache_mutex);
-}
-
 static void free_glyph(void *data)
 {
 	struct kmscon_glyph *g = data;
@@ -179,8 +158,9 @@ static struct kmscon_glyph *new_glyph(const struct kmscon_font_attr *attr, const
 }
 
 static int find_glyph(uint64_t id, const struct kmscon_glyph **out,
-		      const struct kmscon_font_attr *attr)
+		      const struct kmscon_font *font)
 {
+	struct shl_hashtable *cache = font->data;
 	struct kmscon_glyph *g;
 	uint32_t ch = id & TSM_UCS4_MAX;
 	const void *start = _binary_font_unifont_data_start;
@@ -191,21 +171,10 @@ static int find_glyph(uint64_t id, const struct kmscon_glyph **out,
 	int ret;
 	bool res;
 
-	pthread_mutex_lock(&cache_mutex);
+	res = shl_hashtable_find(cache, (void **)out, id);
+	if (res)
+		return 0;
 
-	if (!cache) {
-		ret = shl_hashtable_new(&cache, shl_direct_hash, shl_direct_equal, free_glyph);
-		if (ret) {
-			log_error("cannot create unifont hashtable: %d", ret);
-			goto out_unlock;
-		}
-	} else {
-		res = shl_hashtable_find(cache, (void **)out, id);
-		if (res) {
-			ret = 0;
-			goto out_unlock;
-		}
-	}
 	/* First the length of the block index */
 	len = *((uint32_t *)start);
 	/* Then the block index */
@@ -220,23 +189,19 @@ static int find_glyph(uint64_t id, const struct kmscon_glyph **out,
 		idx = lookup_block(blocks, len, ch);
 		if (idx < 0) {
 			log_warning("Replacement glyph not found");
-			ret = -1;
-			goto out_unlock;
+			return -EINVAL;
 		}
 	}
 
 	data += blocks[idx].offset + (ch - blocks[idx].codepoint) * blocks[idx].width * 16;
 	if (data + 16 * blocks[idx].width > end) {
 		log_warning("glyph out of range %p %p", data, end);
-		ret = -ERANGE;
-		goto out_unlock;
+		return -ERANGE;
 	}
 
-	g = new_glyph(attr, data, blocks[idx].width);
-	if (!g) {
-		ret = -ENOMEM;
-		goto out_unlock;
-	}
+	g = new_glyph(&font->attr, data, blocks[idx].width);
+	if (!g)
+		return -ENOMEM;
 
 	ret = shl_hashtable_insert(cache, id, g);
 	if (ret) {
@@ -245,26 +210,29 @@ static int find_glyph(uint64_t id, const struct kmscon_glyph **out,
 	}
 
 	*out = g;
-	ret = 0;
-	goto out_unlock;
+	return 0;
 
 err_data:
 	free(g->buf.data);
 	free(g);
-out_unlock:
-	pthread_mutex_unlock(&cache_mutex);
 	return ret;
 }
 
 static int kmscon_font_unifont_init(struct kmscon_font *out, const struct kmscon_font_attr *attr)
 {
 	static const char name[] = "static-unifont";
+	struct shl_hashtable *cache;
+	int ret;
 
 	log_debug("loading static unifont font");
 
+	ret = shl_hashtable_new(&cache, shl_direct_hash, shl_direct_equal, free_glyph);
+	if (ret)
+		return ret;
+
 	if (_binary_font_unifont_data_size == 0) {
 		log_error("unifont glyph information not found in binary");
-		return -EFAULT;
+		goto err_free;
 	}
 
 	memset(&out->attr, 0, sizeof(out->attr));
@@ -275,14 +243,22 @@ static int kmscon_font_unifont_init(struct kmscon_font *out, const struct kmscon
 	out->attr.height = 16;
 	kmscon_font_attr_normalize(&out->attr);
 
-	cache_ref();
+	out->data = cache;
+
 	return 0;
+
+err_free:
+	shl_hashtable_free(cache);
+	return -EFAULT;
 }
 
 static void kmscon_font_unifont_destroy(struct kmscon_font *font)
 {
+	struct shl_hashtable *cache = font->data;
+
 	log_debug("unloading static unifont font");
-	cache_unref();
+
+	shl_hashtable_free(cache);
 }
 
 static int kmscon_font_unifont_render(struct kmscon_font *font, uint64_t id, const uint32_t *ch,
@@ -291,19 +267,19 @@ static int kmscon_font_unifont_render(struct kmscon_font *font, uint64_t id, con
 	if (len > 1)
 		return -ERANGE;
 
-	return find_glyph(id, out, &font->attr);
+	return find_glyph(id, out, font);
 }
 
 static int kmscon_font_unifont_render_inval(struct kmscon_font *font,
 					    const struct kmscon_glyph **out)
 {
-	return find_glyph(0xfffd, out, &font->attr);
+	return find_glyph(0xfffd, out, font);
 }
 
 static int kmscon_font_unifont_render_empty(struct kmscon_font *font,
 					    const struct kmscon_glyph **out)
 {
-	return find_glyph(' ', out, &font->attr);
+	return find_glyph(' ', out, font);
 }
 
 struct kmscon_font_ops kmscon_font_unifont_ops = {
