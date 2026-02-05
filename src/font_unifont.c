@@ -112,10 +112,10 @@ static int lookup_block(const struct unifont_glyph_block *blocks, uint32_t len, 
 
 		if (is_in_block(&blocks[look], ch))
 			return look;
+
 		if (ch < blocks[look].codepoint) {
 			max = look;
 			look -= look - min > 2 ? (look - min) / 2 : 1;
-
 		} else {
 			min = look;
 			look += max - look > 2 ? (max - look) / 2 : 1;
@@ -131,8 +131,11 @@ static struct kmscon_glyph *new_glyph(const struct kmscon_font_attr *attr, const
 {
 	struct kmscon_glyph *g;
 	uint8_t c;
-	int i, k;
+	int scale;
+	int i, j, k;
+	int off = 0;
 
+	scale = attr->height / 16;
 	g = malloc(sizeof(*g));
 	if (!g)
 		return NULL;
@@ -149,16 +152,30 @@ static struct kmscon_glyph *new_glyph(const struct kmscon_font_attr *attr, const
 		return NULL;
 	}
 
-	for (i = 0; i < g->width * 16; ++i) {
-		c = apply_attr(data[i], attr, i >= g->width * 15);
-		for (k = 0; k < 8; k++)
-			g->buf.data[i * 8 + k] = unfold(c & (1 << (7 - k)));
+	/* Unpack the glyph and apply scaling */
+	for (i = 0; i < 16; i++) {
+		c = apply_attr(data[g->width * i], attr, i == 15);
+		for (j = 0; j < g->buf.width / g->width; j++) {
+			k = j / scale;
+			g->buf.data[off++] = unfold(c & (1 << (7 - k)));
+		}
+		if (g->width == 2) {
+			c = apply_attr(data[g->width * i + 1], attr, i == 15);
+			for (j = 0; j < g->buf.width / g->width; j++) {
+				k = j / scale;
+				g->buf.data[off++] = unfold(c & (1 << (7 - k)));
+			}
+		}
+		for (k = 1; k < scale; k++) {
+			memcpy(&g->buf.data[off], &g->buf.data[i * scale * g->buf.stride],
+			       g->buf.stride);
+			off += g->buf.stride;
+		}
 	}
 	return g;
 }
 
-static int find_glyph(uint64_t id, const struct kmscon_glyph **out,
-		      const struct kmscon_font *font)
+static int find_glyph(uint64_t id, const struct kmscon_glyph **out, const struct kmscon_font *font)
 {
 	struct shl_hashtable *cache = font->data;
 	struct kmscon_glyph *g;
@@ -222,6 +239,7 @@ static int kmscon_font_unifont_init(struct kmscon_font *out, const struct kmscon
 {
 	static const char name[] = "static-unifont";
 	struct shl_hashtable *cache;
+	unsigned int scale;
 	int ret;
 
 	log_debug("loading static unifont font");
@@ -239,8 +257,13 @@ static int kmscon_font_unifont_init(struct kmscon_font *out, const struct kmscon
 	memcpy(out->attr.name, name, sizeof(name));
 	out->attr.bold = attr->bold;
 	out->attr.italic = false;
-	out->attr.width = 8;
-	out->attr.height = 16;
+
+	scale = (attr->points + 8) / 16;
+	if (!scale)
+		scale = 1;
+
+	out->attr.width = 8 * scale;
+	out->attr.height = 16 * scale;
 	kmscon_font_attr_normalize(&out->attr);
 
 	out->data = cache;
