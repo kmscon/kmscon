@@ -26,6 +26,8 @@ option('renderer_gltex', type: 'feature', value: 'auto',
 # font backends
 option('font_unifont', type: 'feature', value: 'auto',
   description: 'unifont font backend')
+option('font_freetype', type: 'feature', value: 'auto',
+  description: 'freetype font backend')
 option('font_pango', type: 'feature', value: 'auto',
   description: 'pango font backend')
 

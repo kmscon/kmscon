@@ -76,6 +76,8 @@ gbm_deps = dependency('gbm', disabler: true, required: get_option('video_drm3d')
 egl_deps = dependency('egl', disabler: true, required: get_option('video_drm3d'))
 glesv2_deps = dependency('glesv2', disabler: true, required: require_glesv2)
 pango_deps = dependency('pangoft2', disabler: true, required: get_option('font_pango'))
+freetype_deps = dependency('freetype2', disabler: true, required: get_option('font_freetype'))
+fontconfig_deps = dependency('fontconfig', disabler: true, required: get_option('font_freetype'))
 xsltproc = find_program('xsltproc', native: true, disabler: true, required: get_option('docs'))
 check_deps = dependency('check', disabler: true, required: get_option('tests'))
 
@@ -100,6 +102,7 @@ foreach name, reqs : {
   'video_drm3d': [libdrm_deps, gbm_deps, egl_deps, glesv2_deps],
   'renderer_gltex': [glesv2_deps],
   'font_unifont': [],
+  'font_freetype': [freetype_deps, fontconfig_deps],
   'font_pango': [pango_deps],
   'session_dummy': [],
   'session_terminal': [],

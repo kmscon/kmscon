@@ -186,6 +186,18 @@ if enable_font_unifont
   )
 endif
 
+if enable_font_freetype
+  mod_freetype = shared_module('mod-freetype', [
+      'font_freetype.c',
+      'kmscon_mod_freetype.c',
+    ],
+    name_prefix: '',
+    dependencies: [libtsm_deps, freetype_deps, fontconfig_deps, threads_deps, shl_deps],
+    install: true,
+    install_dir: moduledir,
+  )
+endif
+
 if enable_font_pango
   mod_pango = shared_module('mod-pango', [
       'font_pango.c',
