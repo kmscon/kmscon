@@ -254,6 +254,36 @@ static void free_glyph(void *data)
 	free(glyph);
 }
 
+/*
+ * Print the font that is selected by Pango. You need to take the first glyph
+ * of the first line, to have the font that is really used.
+ */
+static void print_font(PangoLayout *layout)
+{
+	PangoLayoutLine *lines;
+	PangoGlyphItem *pgi;
+	PangoFontDescription *desc;
+	char *font_name;
+
+	lines = pango_layout_get_line_readonly(layout, 0);
+	if (!lines || !lines->runs)
+		return;
+
+	pgi = lines->runs->data;
+	if (!pgi || !pgi->item || !pgi->item->analysis.font)
+		return;
+
+	desc = pango_font_describe(pgi->item->analysis.font);
+	if (!desc)
+		return;
+	font_name = pango_font_description_to_string(desc);
+	if (font_name) {
+		log_notice("Using font %s\n", font_name);
+		free(font_name);
+	}
+	pango_font_description_free(desc);
+}
+
 static int manager_get_face(struct face **out, struct kmscon_font_attr *attr)
 {
 	struct shl_dlist *iter;
@@ -328,6 +358,7 @@ static int manager_get_face(struct face **out, struct kmscon_font_attr *attr)
 	      "@!\"$%&/()=?\\}][{°^~+*#'<>|-_.:,;`´";
 	num = strlen(str);
 	pango_layout_set_text(layout, str, num);
+	print_font(layout);
 	pango_layout_get_pixel_extents(layout, NULL, &rec);
 
 	memcpy(&face->real_attr, &face->attr, sizeof(face->attr));
