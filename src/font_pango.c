@@ -284,6 +284,25 @@ static void print_font(PangoLayout *layout)
 	pango_font_description_free(desc);
 }
 
+/*
+ * This appends ",monospace," to the font provided in kmscon.conf, so that if the
+ * specified font is not found, pango will still look for a monospace font.
+ */
+static PangoFontDescription *new_pango_description(const char *name)
+{
+	char *font_name;
+	PangoFontDescription *desc;
+	int ret;
+
+	ret = asprintf(&font_name, "%s%s", name, ",monospace,");
+	if (ret < 0)
+		return NULL;
+
+	desc = pango_font_description_from_string(font_name);
+	free(font_name);
+	return desc;
+}
+
 static int manager_get_face(struct face **out, struct kmscon_font_attr *attr)
 {
 	struct shl_dlist *iter;
@@ -337,7 +356,8 @@ static int manager_get_face(struct face **out, struct kmscon_font_attr *attr)
 	pango_context_set_base_dir(face->ctx, PANGO_DIRECTION_LTR);
 	pango_context_set_language(face->ctx, pango_language_get_default());
 
-	desc = pango_font_description_from_string(attr->name);
+	desc = new_pango_description(attr->name);
+
 	pango_font_description_set_absolute_size(desc, PANGO_SCALE * face->attr.height);
 	pango_font_description_set_weight(desc,
 					  attr->bold ? PANGO_WEIGHT_BOLD : PANGO_WEIGHT_NORMAL);
