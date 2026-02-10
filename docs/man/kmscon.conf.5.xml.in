@@ -189,7 +189,7 @@ font-name=Ubuntu Mono
       <varlistentry>
         <term><option>term</option></term>
         <listitem>
-          <para>Value of the TERM environment variable for the child process. (default: xterm-256color)</para>
+          <para>Value of the TERM environment variable for the child process. (default: linux)</para>
         </listitem>
       </varlistentry>
 
