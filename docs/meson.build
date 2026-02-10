@@ -3,7 +3,8 @@
 # SPDX-License-Identifier: MIT
 
 manpages = {
-  '1': ['kmscon.1.xml.in' 'kmscon.conf.5.xml.in'],
+  '1': ['kmscon.1.xml.in'],
+  '5': ['kmscon.conf.5.xml.in'],
 }
 
 data = configuration_data()
