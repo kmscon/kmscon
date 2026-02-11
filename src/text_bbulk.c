@@ -292,6 +292,25 @@ static void set_coordinate(struct kmscon_text *txt, unsigned int *x, unsigned in
 	}
 }
 
+static void set_color(struct uterm_video_blend_req *req, const struct tsm_screen_attr *attr)
+{
+	if (attr->inverse) {
+		req->fr = attr->br;
+		req->fg = attr->bg;
+		req->fb = attr->bb;
+		req->br = attr->fr;
+		req->bg = attr->fg;
+		req->bb = attr->fb;
+	} else {
+		req->fr = attr->fr;
+		req->fg = attr->fg;
+		req->fb = attr->fb;
+		req->br = attr->br;
+		req->bg = attr->bg;
+		req->bb = attr->bb;
+	}
+}
+
 static int bbulk_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, size_t len,
 		      unsigned int width, unsigned int posx, unsigned int posy,
 		      const struct tsm_screen_attr *attr)
@@ -313,7 +332,7 @@ static int bbulk_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, 
 	prev = &bb->prev[offset];
 
 	if (prev->id == id && !memcmp(&prev->attr, attr, sizeof(*attr))) {
-		if (prev->overflow && !last_col) {
+		if ((prev->overflow || width == 2) && !last_col) {
 			if (bb->damages[offset] || bb->damages[offset + 1] ||
 			    bb->prev[offset + 1].id == ID_DAMAGED) {
 				bb->damages[offset] = false;
@@ -324,15 +343,13 @@ static int bbulk_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, 
 				return 0;
 			}
 		} else {
-			if (!bb->damages[offset]) {
+			if (!bb->damages[offset])
 				return 0;
-			} else {
-				bb->damages[offset] = false;
-			}
+			bb->damages[offset] = false;
 		}
 	} else {
 		bb->damages[offset] = true;
-		if (prev->overflow && !last_col)
+		if ((prev->overflow || width == 2) && !last_col)
 			damage_cell(bb, offset + 1);
 	}
 
@@ -362,20 +379,21 @@ static int bbulk_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, 
 		set_coordinate(txt, &req->x, &req->y, posx, posy);
 
 	req->buf = &bb_glyph->buf;
-	if (attr->inverse) {
-		req->fr = attr->br;
-		req->fg = attr->bg;
-		req->fb = attr->bb;
-		req->br = attr->fr;
-		req->bg = attr->fg;
-		req->bb = attr->fb;
-	} else {
-		req->fr = attr->fr;
-		req->fg = attr->fg;
-		req->fb = attr->fb;
-		req->br = attr->br;
-		req->bg = attr->bg;
-		req->bb = attr->bb;
+	set_color(req, attr);
+
+	if (width == 2 && bb_glyph->width == 1 && !last_col) {
+		/* libtsm thinks this glyph is wide, but the font uses a single
+		 * width character. So draw a space on next cell to avoid a
+		 * graphical glitch
+		 */
+		ret = find_glyph(txt, &bb_glyph, ' ', NULL, 0, attr);
+		if (ret)
+			return ret;
+
+		req = &bb->reqs[bb->req_len++];
+		set_coordinate(txt, &req->x, &req->y, posx + 1, posy);
+		req->buf = &bb_glyph->buf;
+		set_color(req, attr);
 	}
 	return 0;
 }
