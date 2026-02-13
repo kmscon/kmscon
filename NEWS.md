@@ -1,5 +1,24 @@
 = KMSCON Release News =
 
+## CHANGES WITH 9.3.2
+* New features:
+  - Unifont scale by @kdj0c in https://github.com/kmscon/kmscon/pull/275
+
+* Bug fixes:
+  - bbulk: fix using unitialized memory. by @kdj0c in https://github.com/kmscon/kmscon/pull/272
+  - genunifont: Fix memory leak by @kdj0c in https://github.com/kmscon/kmscon/pull/274
+  - docs: move kmscon.conf to section 5 of the man pages by @1ace in https://github.com/kmscon/kmscon/pull/281
+  - meson: add subproject fallback for libtsm by @1ace in https://github.com/kmscon/kmscon/pull/244
+  - Pango: Add default monospace font fallback by @kdj0c in https://github.com/kmscon/kmscon/pull/278
+  - Change default TERM to linux by @kdj0c in https://github.com/kmscon/kmscon/pull/280
+  - bbulk: Fix if a font has a single-width glyph for a double-width char by @kdj0c in https://github.com/kmscon/kmscon/pull/283
+
+## New Contributors
+* @1ace made their first contribution in https://github.com/kmscon/kmscon/pull/281
+
+**Full Changelog**: https://github.com/kmscon/kmscon/compare/v9.3.1...v9.3.2
+
+
 ## CHANGES WITH 9.3.1
 * Bug fixes:
   - Fix build on i686 by @kdj0c in https://github.com/kmscon/kmscon/pull/242
