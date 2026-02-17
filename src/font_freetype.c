@@ -66,6 +66,10 @@ static FcPattern *lookup_font(const FcChar8 *name, bool bold, int size)
 	FcPatternAddInteger(pattern, FC_WEIGHT, bold ? FC_WEIGHT_BOLD : FC_WEIGHT_NORMAL);
 	FcPatternAddDouble(pattern, FC_SIZE, (double)size);
 
+	FcPatternAddInteger(pattern, FC_SPACING, FC_CHARCELL);
+	FcPatternAddInteger(pattern, FC_SPACING, FC_MONO);
+	FcPatternAddInteger(pattern, FC_SPACING, FC_DUAL);
+
 	if (!FcConfigSubstitute(NULL, pattern, FcMatchPattern)) {
 		log_err("%s: failed to do config substitution", name);
 		goto err_pattern;
