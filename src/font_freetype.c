@@ -219,7 +219,7 @@ static bool glyph_is_wide(FT_GlyphSlot glyph, int width)
 	return real_width > (width * 6) / 5;
 }
 
-static void copy_mono(struct uterm_video_buffer *buf, FT_Bitmap *map)
+static void copy_mono(struct uterm_video_buffer *buf, FT_Bitmap *map, bool underline)
 {
 	uint8_t *src = map->buffer;
 	uint8_t *dst = buf->data;
@@ -232,9 +232,32 @@ static void copy_mono(struct uterm_video_buffer *buf, FT_Bitmap *map)
 		dst += buf->stride;
 		src += map->pitch;
 	}
+	if (underline)
+		for (j = 0; j < buf->width; j++)
+			buf->data[(buf->height - 1) * buf->stride + j] = 0xff;
 }
 
-static void copy_glyph(struct uterm_video_buffer *buf, FT_Face face, FT_Bitmap *map)
+static void draw_underline(struct uterm_video_buffer *buf, FT_Face face)
+{
+	int i, j;
+	int thickness = FT_MulFix(face->underline_thickness, face->size->metrics.y_scale);
+	int position = FT_MulFix(face->underline_position, face->size->metrics.y_scale);
+
+	thickness = (thickness + (thickness >> 1)) >> 6;
+	position = (face->size->metrics.ascender - position) >> 6;
+
+	if (thickness < 1 || thickness > buf->height / 4)
+		thickness = 1;
+
+	if (position + thickness > buf->height)
+		position = buf->height - thickness;
+
+	for (i = position; i < position + thickness; i++)
+		for (j = 0; j < buf->width; j++)
+			buf->data[i * buf->stride + j] = 0xff;
+}
+
+static void copy_glyph(struct uterm_video_buffer *buf, FT_Face face, FT_Bitmap *map, bool underline)
 {
 	int top = (face->size->metrics.ascender >> 6) - face->glyph->bitmap_top;
 	int left = face->glyph->bitmap_left;
@@ -266,6 +289,9 @@ static void copy_glyph(struct uterm_video_buffer *buf, FT_Face face, FT_Bitmap *
 		memcpy(dst, &map->buffer[(i + top_src) * map->pitch + left_src], width);
 		dst += buf->stride;
 	}
+
+	if (underline)
+		draw_underline(buf, face);
 }
 
 static int kmscon_font_freetype_render(struct kmscon_font *font, uint64_t id, const uint32_t *ch,
@@ -315,9 +341,9 @@ static int kmscon_font_freetype_render(struct kmscon_font *font, uint64_t id, co
 	memset(glyph->buf.data, 0, glyph->buf.height * glyph->buf.stride);
 
 	if (face->glyph->bitmap.pixel_mode == FT_PIXEL_MODE_MONO)
-		copy_mono(&glyph->buf, &face->glyph->bitmap);
+		copy_mono(&glyph->buf, &face->glyph->bitmap, font->attr.underline);
 	else
-		copy_glyph(&glyph->buf, face, &face->glyph->bitmap);
+		copy_glyph(&glyph->buf, face, &face->glyph->bitmap, font->attr.underline);
 
 	*out = glyph;
 	return 0;
