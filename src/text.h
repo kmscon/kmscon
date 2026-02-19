@@ -59,7 +59,6 @@ struct kmscon_text {
 	void *data;
 
 	struct kmscon_font *font;
-	struct kmscon_font *bold_font;
 	struct uterm_display *disp;
 	unsigned int cols;
 	unsigned int rows;
@@ -95,8 +94,7 @@ int kmscon_text_new(struct kmscon_text **out, const char *backend, const char *r
 void kmscon_text_ref(struct kmscon_text *txt);
 void kmscon_text_unref(struct kmscon_text *txt);
 
-int kmscon_text_set(struct kmscon_text *txt, struct kmscon_font *font,
-		    struct kmscon_font *bold_font, struct uterm_display *disp);
+int kmscon_text_set(struct kmscon_text *txt, struct kmscon_font *font, struct uterm_display *disp);
 void kmscon_text_unset(struct kmscon_text *txt);
 unsigned int kmscon_text_get_cols(struct kmscon_text *txt);
 unsigned int kmscon_text_get_rows(struct kmscon_text *txt);

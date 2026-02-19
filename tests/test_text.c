@@ -48,7 +48,7 @@ int main(void)
 	txt.ops = &dummy_ops;
 
 	/* set calls backend set */
-	ret = kmscon_text_set(&txt, &fake_font, &fake_font, fake_disp);
+	ret = kmscon_text_set(&txt, &fake_font, fake_disp);
 	assert(ret == 0);
 	assert(dummy_set_calls == 1);
 	assert(txt.font == &fake_font);
@@ -61,7 +61,7 @@ int main(void)
 	assert(txt.disp == NULL);
 
 	/* NULL font must return -EINVAL */
-	ret = kmscon_text_set(&txt, NULL, NULL, fake_disp);
+	ret = kmscon_text_set(&txt, NULL, fake_disp);
 	assert(ret == -EINVAL);
 	assert(dummy_set_calls == 1); /* not called again */
 

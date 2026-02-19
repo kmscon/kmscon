@@ -41,6 +41,7 @@
 struct ft_font {
 	FT_Library ft;
 	FT_Face face;
+	FT_Face bold_face;
 };
 
 static void print_font_name(FcPattern *pattern)
@@ -89,30 +90,34 @@ err_pattern:
 	return ret;
 }
 
-static FT_Error setup_font(struct ft_font *ftf, const struct kmscon_font_attr *attr)
+static FT_Face setup_font(FT_Library ft, const struct kmscon_font_attr *attr)
 {
 	FcPattern *pattern = lookup_font((const FcChar8 *)attr->name, attr->bold, attr->height);
+	FT_Face face;
 	FcChar8 *path;
 	FT_Error err;
 	int index = 0;
 
 	if (!pattern)
-		return -1;
+		return NULL;
 
 	print_font_name(pattern);
 
 	if (FcPatternGetString(pattern, FC_FILE, 0, &path) != FcResultMatch)
-		return -1;
+		return NULL;
 
 	if (FcPatternGetInteger(pattern, FC_INDEX, 0, &index) != FcResultMatch)
 		log_warn("%s: failed to get face index", path);
 
 	log_debug("Loading font %s", (char *)path);
 
-	err = FT_New_Face(ftf->ft, (char *)path, index, &ftf->face);
+	err = FT_New_Face(ft, (char *)path, index, &face);
 
 	FcPatternDestroy(pattern);
-	return err;
+
+	if (err)
+		return NULL;
+	return face;
 }
 
 static int font_get_width(FT_Face face)
@@ -145,17 +150,50 @@ static int bitmap_font_select_size(FT_Face face, int height)
 	return best;
 }
 
+static FT_Face new_face(FT_Library ft, struct kmscon_font_attr *attr)
+{
+	FT_Face face;
+
+	face = setup_font(ft, attr);
+	if (!face) {
+		log_err("Failed to find face FreeType\n");
+		return NULL;
+	}
+
+	/* Special case for bitmap fonts, which can't be scaled */
+	if (face->num_fixed_sizes) {
+		int bitmap_index = bitmap_font_select_size(face, attr->height);
+
+		FT_Select_Size(face, bitmap_index);
+		attr->width = face->available_sizes[bitmap_index].width;
+		attr->height = face->available_sizes[bitmap_index].height;
+	} else {
+		if (FT_Set_Pixel_Sizes(face, 0, attr->height))
+			log_warn("Freetype failed to set size to %d", attr->height);
+		attr->width = font_get_width(face);
+		attr->height = (face->size->metrics.height >> 6);
+	}
+	if (!attr->width || !attr->height) {
+		log_err("Invalid font %dx%d", attr->width, attr->height);
+		FT_Done_Face(face);
+		return NULL;
+	}
+	return face;
+}
+
 static int kmscon_font_freetype_init(struct kmscon_font *out, const struct kmscon_font_attr *attr)
 {
 	struct ft_font *ftf;
+	struct kmscon_font_attr bold_attr;
 	FT_Error err;
 
 	ftf = malloc(sizeof(*ftf));
 	if (!ftf)
 		return -ENOMEM;
 	memset(ftf, 0, sizeof(*ftf));
-	memcpy(&out->attr, attr, sizeof(*attr));
-	kmscon_font_attr_normalize(&out->attr);
+	kmscon_copy_attr(&bold_attr, attr);
+	kmscon_font_attr_normalize(&bold_attr);
+	kmscon_copy_attr(&out->attr, &bold_attr);
 
 	err = FT_Init_FreeType(&ftf->ft);
 	if (err != 0) {
@@ -163,30 +201,22 @@ static int kmscon_font_freetype_init(struct kmscon_font *out, const struct kmsco
 		goto err_free;
 	}
 
-	err = setup_font(ftf, &out->attr);
-	if (err != 0) {
-		log_err("Failed to find face FreeType\n");
+	out->attr.bold = false;
+	ftf->face = new_face(ftf->ft, &out->attr);
+	if (!ftf->face)
 		goto err_done;
-	}
 
-	/* Special case for bitmap fonts, which can't be scaled */
-	if (ftf->face->num_fixed_sizes) {
-		int bitmap_index = bitmap_font_select_size(ftf->face, out->attr.height);
-
-		FT_Select_Size(ftf->face, bitmap_index);
-		out->attr.width = ftf->face->available_sizes[bitmap_index].width;
-		out->attr.height = ftf->face->available_sizes[bitmap_index].height;
-	} else {
-		err = FT_Set_Pixel_Sizes(ftf->face, 0, out->attr.height);
-		if (err)
-			log_warn("Freetype failed to set size to %d", out->attr.height);
-		out->attr.width = font_get_width(ftf->face);
-		out->attr.height = (ftf->face->size->metrics.height / 64);
-	}
-	if (!out->attr.width || !out->attr.height) {
-		log_err("Invalid font %dx%d", out->attr.width, out->attr.height);
+	bold_attr.bold = true;
+	ftf->bold_face = new_face(ftf->ft, &bold_attr);
+	if (!ftf->bold_face)
 		goto err_face;
-	}
+
+	if (out->attr.width != bold_attr.width || out->attr.height != bold_attr.height)
+		log_warn("Bold and regular font don't have the same dimension");
+
+	out->attr.width = max(out->attr.width, bold_attr.width);
+	out->attr.height = max(out->attr.height, bold_attr.height);
+
 	out->increase_step = 1;
 	out->data = ftf;
 
@@ -207,6 +237,7 @@ static void kmscon_font_freetype_destroy(struct kmscon_font *font)
 	struct ft_font *ftf = font->data;
 
 	log_debug("unloading freetype font");
+	FT_Done_Face(ftf->bold_face);
 	FT_Done_Face(ftf->face);
 	FT_Done_FreeType(ftf->ft);
 	free(ftf);
@@ -302,7 +333,7 @@ static int kmscon_font_freetype_render(struct kmscon_font *font, uint64_t id, co
 				       size_t len, const struct kmscon_glyph **out)
 {
 	struct ft_font *ftf = font->data;
-	FT_Face face = ftf->face;
+	FT_Face face = font->attr.bold ? ftf->bold_face : ftf->face;
 	struct kmscon_glyph *glyph;
 	unsigned int cwidth;
 	FT_UInt glyph_index = FT_Get_Char_Index(face, *ch);

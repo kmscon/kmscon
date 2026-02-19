@@ -27,26 +27,15 @@
 #include "shl_misc.h"
 
 SHL_EXPORT
-int kmscon_rotate_create_tables(struct shl_hashtable **normal, struct shl_hashtable **bold,
-				shl_free_cb free_glyph)
+int kmscon_rotate_create_tables(struct shl_hashtable **normal, shl_free_cb free_glyph)
 {
-	int ret;
-
-	ret = shl_hashtable_new(normal, shl_direct_hash, shl_direct_equal, free_glyph);
-	if (ret)
-		return ret;
-
-	ret = shl_hashtable_new(bold, shl_direct_hash, shl_direct_equal, free_glyph);
-	if (ret)
-		shl_hashtable_free(*normal);
-	return ret;
+	return shl_hashtable_new(normal, shl_direct_hash, shl_direct_equal, free_glyph);
 }
 
 SHL_EXPORT
-void kmscon_rotate_free_tables(struct shl_hashtable *normal, struct shl_hashtable *bold)
+void kmscon_rotate_free_tables(struct shl_hashtable *normal)
 {
 	shl_hashtable_free(normal);
-	shl_hashtable_free(bold);
 }
 
 SHL_EXPORT

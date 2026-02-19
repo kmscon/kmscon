@@ -69,7 +69,6 @@ struct bbulk {
 	unsigned int req_total_len;
 	struct tsm_screen_attr attr;
 	struct shl_hashtable *glyphs;
-	struct shl_hashtable *bold_glyphs;
 	struct bbcell *prev;
 	unsigned int cells;
 	unsigned int sw;
@@ -161,7 +160,7 @@ static int bbulk_set(struct kmscon_text *txt)
 	for (i = 0; i < (int)bb->cells; i++)
 		damage_cell(bb, i);
 
-	if (kmscon_rotate_create_tables(&bb->glyphs, &bb->bold_glyphs, free_glyph))
+	if (kmscon_rotate_create_tables(&bb->glyphs, free_glyph))
 		goto free_r_damages;
 	return 0;
 
@@ -180,7 +179,7 @@ static void bbulk_unset(struct kmscon_text *txt)
 {
 	struct bbulk *bb = txt->data;
 
-	kmscon_rotate_free_tables(bb->glyphs, bb->bold_glyphs);
+	kmscon_rotate_free_tables(bb->glyphs);
 	free(bb->damage_rects);
 	free(bb->reqs);
 	free(bb->damages);
@@ -204,30 +203,15 @@ static int find_glyph(struct kmscon_text *txt, struct kmscon_glyph **out, uint64
 	struct bbulk *bb = txt->data;
 	struct kmscon_glyph *bb_glyph;
 	const struct kmscon_glyph *glyph;
-	struct shl_hashtable *gtable;
-	struct kmscon_font *font;
+	struct kmscon_font *font = txt->font;
 	int ret;
 	bool res;
 
-	if (attr->bold) {
-		gtable = bb->bold_glyphs;
-		font = txt->bold_font;
-	} else {
-		gtable = bb->glyphs;
-		font = txt->font;
-	}
+	font->attr.underline = !!attr->underline;
+	font->attr.italic = !!attr->italic;
+	font->attr.bold = !!attr->bold;
 
-	if (attr->underline)
-		font->attr.underline = true;
-	else
-		font->attr.underline = false;
-
-	if (attr->italic)
-		font->attr.italic = true;
-	else
-		font->attr.italic = false;
-
-	res = shl_hashtable_find(gtable, (void **)&bb_glyph, id);
+	res = shl_hashtable_find(bb->glyphs, (void **)&bb_glyph, id);
 	if (res) {
 		*out = bb_glyph;
 		return 0;
@@ -253,7 +237,7 @@ static int find_glyph(struct kmscon_text *txt, struct kmscon_glyph **out, uint64
 	if (ret)
 		goto err_free;
 
-	ret = shl_hashtable_insert(gtable, id, bb_glyph);
+	ret = shl_hashtable_insert(bb->glyphs, id, bb_glyph);
 	if (ret)
 		goto err_free_vb;
 

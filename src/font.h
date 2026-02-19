@@ -32,6 +32,7 @@
 
 #include <errno.h>
 #include <stdlib.h>
+#include <string.h>
 #include "shl_module.h"
 #include "uterm_video.h"
 
@@ -56,6 +57,12 @@ struct kmscon_font_attr {
 	unsigned int height;
 	unsigned int width;
 };
+
+static inline void kmscon_copy_attr(struct kmscon_font_attr *to,
+				    const struct kmscon_font_attr *from)
+{
+	memcpy(to, from, sizeof(*to));
+}
 
 void kmscon_font_attr_normalize(struct kmscon_font_attr *attr);
 bool kmscon_font_attr_match(const struct kmscon_font_attr *a1, const struct kmscon_font_attr *a2);

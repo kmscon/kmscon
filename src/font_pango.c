@@ -61,9 +61,6 @@
 #define LOG_SUBSYSTEM "font_pango"
 
 struct face {
-	unsigned long ref;
-	struct shl_dlist list;
-
 	struct kmscon_font_attr attr;
 	struct kmscon_font_attr real_attr;
 	unsigned int baseline;
@@ -75,7 +72,6 @@ struct face {
 static pthread_mutex_t manager_mutex = PTHREAD_MUTEX_INITIALIZER;
 static unsigned long manager__refcnt;
 static PangoFontMap *manager__lib;
-static struct shl_dlist manager__list = SHL_DLIST_INIT(manager__list);
 
 static void manager_lock()
 {
@@ -163,18 +159,22 @@ static int get_glyph(struct face *face, struct kmscon_glyph **out, uint64_t id, 
 	pango_layout_set_spacing(layout, 0);
 
 	/* underline if requested */
-	if (attr->underline) {
+	if (attr->underline)
 		pango_attr_list_change(attrlist, pango_attr_underline_new(PANGO_UNDERLINE_SINGLE));
-	} else {
+	else
 		pango_attr_list_change(attrlist, pango_attr_underline_new(PANGO_UNDERLINE_NONE));
-	}
 
 	/* italic if requested */
-	if (attr->italic) {
+	if (attr->italic)
 		pango_attr_list_change(attrlist, pango_attr_style_new(PANGO_STYLE_ITALIC));
-	} else {
+	else
 		pango_attr_list_change(attrlist, pango_attr_style_new(PANGO_STYLE_NORMAL));
-	}
+
+	/* bold if requested */
+	if (attr->bold)
+		pango_attr_list_change(attrlist, pango_attr_weight_new(PANGO_WEIGHT_BOLD));
+	else
+		pango_attr_list_change(attrlist, pango_attr_weight_new(PANGO_WEIGHT_NORMAL));
 
 	val = tsm_ucs4_to_utf8_alloc(ch, len, &ulen);
 	if (!val) {
@@ -305,8 +305,7 @@ static PangoFontDescription *new_pango_description(const char *name)
 
 static int manager_get_face(struct face **out, struct kmscon_font_attr *attr)
 {
-	struct shl_dlist *iter;
-	struct face *face, *f;
+	struct face *face;
 	PangoFontDescription *desc;
 	PangoLayout *layout;
 	PangoRectangle rec;
@@ -314,17 +313,6 @@ static int manager_get_face(struct face **out, struct kmscon_font_attr *attr)
 	const char *str;
 
 	manager_lock();
-
-	shl_dlist_for_each(iter, &manager__list)
-	{
-		face = shl_dlist_entry(iter, struct face, list);
-		if (kmscon_font_attr_match(&face->attr, attr)) {
-			++face->ref;
-			*out = face;
-			ret = 0;
-			goto out_unlock;
-		}
-	}
 
 	ret = manager__ref();
 	if (ret)
@@ -337,7 +325,6 @@ static int manager_get_face(struct face **out, struct kmscon_font_attr *attr)
 		goto err_manager;
 	}
 	memset(face, 0, sizeof(*face));
-	face->ref = 1;
 	memcpy(&face->attr, attr, sizeof(*attr));
 
 	ret = pthread_mutex_init(&face->glyph_lock, NULL);
@@ -393,21 +380,6 @@ static int manager_get_face(struct face **out, struct kmscon_font_attr *attr)
 		ret = -EFAULT;
 		goto err_face;
 	}
-
-	/* The real metrics probably differ from the requested metrics so try
-	 * again to find a suitable cached font. */
-	shl_dlist_for_each(iter, &manager__list)
-	{
-		f = shl_dlist_entry(iter, struct face, list);
-		if (kmscon_font_attr_match(&f->real_attr, &face->real_attr)) {
-			++f->ref;
-			*out = f;
-			ret = 0;
-			goto err_face;
-		}
-	}
-
-	shl_dlist_link(&manager__list, &face->list);
 	*out = face;
 	ret = 0;
 	goto out_unlock;
@@ -424,22 +396,6 @@ err_manager:
 out_unlock:
 	manager_unlock();
 	return ret;
-}
-
-static void manager_put_face(struct face *face)
-{
-	manager_lock();
-
-	if (!--face->ref) {
-		shl_dlist_unlink(&face->list);
-		shl_hashtable_free(face->glyphs);
-		pthread_mutex_destroy(&face->glyph_lock);
-		g_object_unref(face->ctx);
-		free(face);
-		manager__unref();
-	}
-
-	manager_unlock();
 }
 
 static void block_sigchild(void)
@@ -481,7 +437,16 @@ static void kmscon_font_pango_destroy(struct kmscon_font *font)
 
 	log_debug("unloading pango font");
 	face = font->data;
-	manager_put_face(face);
+
+	manager_lock();
+
+	shl_hashtable_free(face->glyphs);
+	pthread_mutex_destroy(&face->glyph_lock);
+	g_object_unref(face->ctx);
+	free(face);
+	manager__unref();
+
+	manager_unlock();
 }
 
 static int kmscon_font_pango_render(struct kmscon_font *font, uint64_t id, const uint32_t *ch,

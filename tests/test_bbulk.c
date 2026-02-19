@@ -156,7 +156,6 @@ void uterm_display_set_damage(struct uterm_display *disp, size_t n_rect,
 
 /* Fake font objects with valid width/height for FONT_WIDTH/FONT_HEIGHT macros */
 static struct kmscon_font fake_font = {.attr = {.width = FAKE_CELL_W, .height = FAKE_CELL_H}};
-static struct kmscon_font fake_bold = {.attr = {.width = FAKE_CELL_W, .height = FAKE_CELL_H}};
 
 static void init_fake_txt(struct kmscon_text *txt)
 {
@@ -164,7 +163,6 @@ static void init_fake_txt(struct kmscon_text *txt)
 	txt->ops = &kmscon_text_bbulk_ops;
 	txt->disp = (struct uterm_display *)0x1; /* non-null stub */
 	txt->font = &fake_font;
-	txt->bold_font = &fake_bold;
 	txt->orientation = OR_NORMAL;
 	txt->ref = 1;
 }
