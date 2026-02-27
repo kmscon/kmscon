@@ -26,3 +26,17 @@ test('test_shl', test_shl,
   protocol: 'tap',
   env: {'CK_TAP_LOG_FILE_NAME': '-', 'CK_VERBOSITY': 'silent'},
 )
+
+src_inc = include_directories('../src')
+
+test_text = executable('test_text', 'test_text.c',
+  include_directories: [src_inc],
+  dependencies: [libtsm_deps, shl_deps],
+)
+test('test_text', test_text)
+
+test_bbulk = executable('test_bbulk', 'test_bbulk.c',
+  include_directories: [src_inc],
+  dependencies: [libtsm_deps, htable_deps],
+)
+test('test_bbulk', test_bbulk)
