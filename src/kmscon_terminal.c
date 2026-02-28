@@ -232,7 +232,7 @@ static void update_pointer_max_all(struct kmscon_terminal *term)
 		uterm_input_set_pointer_max(term->input, max_x, max_y);
 }
 
-static void redraw_all_test(struct kmscon_terminal *term)
+static void redraw_all_text(struct kmscon_terminal *term)
 {
 	struct shl_dlist *iter;
 	struct screen *scr;
@@ -804,6 +804,8 @@ static int session_event(struct kmscon_session *session, struct kmscon_session_e
 			 void *data)
 {
 	struct kmscon_terminal *term = data;
+	struct shl_dlist *iter;
+	struct screen *scr;
 
 	switch (ev->type) {
 	case KMSCON_SESSION_DISPLAY_NEW:
@@ -813,13 +815,18 @@ static int session_event(struct kmscon_session *session, struct kmscon_session_e
 		rm_display(term, ev->disp);
 		break;
 	case KMSCON_SESSION_DISPLAY_REFRESH:
-		redraw_all_test(term);
+		redraw_all_text(term);
 		break;
 	case KMSCON_SESSION_ACTIVATE:
 		term->awake = true;
 		if (!term->opened)
 			terminal_open(term);
-		redraw_all_test(term);
+		shl_dlist_for_each(iter, &term->screens)
+		{
+			scr = shl_dlist_entry(iter, struct screen, list);
+			uterm_display_set_need_redraw(scr->disp);
+		}
+		redraw_all_text(term);
 		break;
 	case KMSCON_SESSION_DEACTIVATE:
 		term->awake = false;

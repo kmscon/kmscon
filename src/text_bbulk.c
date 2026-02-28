@@ -87,6 +87,7 @@ static int bbulk_init(struct kmscon_text *txt)
 	bb = malloc(sizeof(*bb));
 	if (!bb)
 		return -ENOMEM;
+	memset(bb, 0, sizeof(*bb));
 
 	txt->data = bb;
 	return 0;
@@ -113,11 +114,16 @@ static void damage_cell(struct bbulk *bb, unsigned int off)
 	bb->damages[off] = true;
 }
 
+static void bbulk_unset(struct kmscon_text *txt);
+
 static int bbulk_set(struct kmscon_text *txt)
 {
 	struct bbulk *bb = txt->data;
 	int max_damage_rects;
 	int i;
+
+	/* If set() is called twice without unset(), avoid leaking prior allocations. */
+	bbulk_unset(txt);
 
 	memset(bb, 0, sizeof(*bb));
 
@@ -134,9 +140,11 @@ static int bbulk_set(struct kmscon_text *txt)
 		txt->rows = bb->sw / FONT_HEIGHT(txt);
 		txt->cols = bb->sh / FONT_WIDTH(txt);
 	}
-	bb->cells = txt->cols * txt->rows;
 
-	bb->req_total_len = bb->cells + 1; // + 1 for the mouse pointer
+	bb->cells = txt->cols * txt->rows;
+	bb->req_total_len = bb->cells + 1; /* + 1 for the mouse pointer */
+	max_damage_rects = SHL_DIV_ROUND_UP(txt->cols, DAMAGE_MERGE_LEN + 1) * txt->rows;
+
 	bb->reqs = malloc(sizeof(*bb->reqs) * bb->req_total_len);
 	if (!bb->reqs)
 		return -ENOMEM;
@@ -151,12 +159,11 @@ static int bbulk_set(struct kmscon_text *txt)
 	if (!bb->damages)
 		goto free_prev;
 
-	max_damage_rects = SHL_DIV_ROUND_UP(txt->cols, DAMAGE_MERGE_LEN + 1) * txt->rows;
 	bb->damage_rects = malloc(sizeof(*bb->damage_rects) * max_damage_rects);
 	if (!bb->damage_rects)
 		goto free_damages;
 
-	for (i = 0; i < bb->cells; i++)
+	for (i = 0; i < (int)bb->cells; i++)
 		damage_cell(bb, i);
 
 	if (kmscon_rotate_create_tables(&bb->glyphs, &bb->bold_glyphs, free_glyph))
@@ -183,6 +190,7 @@ static void bbulk_unset(struct kmscon_text *txt)
 	free(bb->reqs);
 	free(bb->damages);
 	free(bb->prev);
+	bb->damage_rects = NULL;
 	bb->reqs = NULL;
 	bb->damages = NULL;
 	bb->prev = NULL;

@@ -84,6 +84,7 @@ struct uterm_video_module {
 #define DISPLAY_OPENGL 0x80
 #define DISPLAY_INUSE 0x100
 #define DISPLAY_DAMAGE 0x200
+#define DISPLAY_NEED_REDRAW 0x400
 
 struct uterm_display {
 	char *name;
