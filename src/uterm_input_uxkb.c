@@ -520,10 +520,10 @@ void uxkb_dev_sleep(struct uterm_input_dev *dev)
 void uxkb_dev_wake_up(struct uterm_input_dev *dev)
 {
 	uint32_t code;
-	char *old_bits, cur_bits[sizeof(dev->key_state_bits)];
-	char old_bit, cur_bit;
-
-	old_bits = dev->key_state_bits;
+	char cur_bits[sizeof(dev->key_state_bits)];
+	char cur_bit;
+	xkb_mod_mask_t locked_mods;
+	xkb_layout_index_t group;
 
 	memset(cur_bits, 0, sizeof(cur_bits));
 	errno = 0;
@@ -533,15 +533,26 @@ void uxkb_dev_wake_up(struct uterm_input_dev *dev)
 		return;
 	}
 
+	/*
+	 * On VT re-entry we may have missed key-release events for modifier
+	 * keys released while the VT was inactive. The previous delta-based
+	 * approach (comparing against the sleep-time snapshot) is racey when
+	 * a Wayland compositor on another VT holds EVIOCGRAB: EVIOCGKEY can
+	 * still report a modifier as pressed at the exact moment we read it,
+	 * so the delta sees no change and no key-up is synthesized.
+	 *
+	 * Instead: clear all depressed and latched modifiers from xkb state
+	 * (preserving locked mods like CapsLock/NumLock) and rebuild purely
+	 * from the current kernel key state reported by EVIOCGKEY.
+	 */
+	locked_mods = xkb_state_serialize_mods(dev->state, XKB_STATE_MODS_LOCKED);
+	group = xkb_state_serialize_layout(dev->state, XKB_STATE_LAYOUT_EFFECTIVE);
+	xkb_state_update_mask(dev->state, 0, 0, locked_mods, 0, 0, group);
+
 	for (code = 0; code < KEY_CNT; code++) {
-		old_bit = (old_bits[code / 8] & (1 << (code % 8)));
 		cur_bit = (cur_bits[code / 8] & (1 << (code % 8)));
-
-		if (old_bit == cur_bit)
-			continue;
-
-		xkb_state_update_key(dev->state, code + EVDEV_KEYCODE_OFFSET,
-				     cur_bit ? XKB_KEY_DOWN : XKB_KEY_UP);
+		if (cur_bit)
+			xkb_state_update_key(dev->state, code + EVDEV_KEYCODE_OFFSET, XKB_KEY_DOWN);
 	}
 
 	uxkb_dev_update_keyboard_leds(dev);
