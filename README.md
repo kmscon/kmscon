@@ -35,6 +35,10 @@ On Debian-based system, to install the systemd service files in the right locati
 sudo apt install systemd-dev
 ```
 
+To build with manpages and documentation, the following is required:
+ - xsltproc (packaged as `libxslt` in Fedora, or `xsltproc` in Ubuntu/Debian)
+ - docbook stylesheets (packaged as `docbook-style-xsl` in Fedora, or `docbook-xsl` in Ubuntu/Debian)
+
 ## Download
 
 Released tarballs can be found at: https://github.com/kmscon/kmscon/releases
@@ -72,6 +76,8 @@ explicitly enable it via command line:
 |`renderer_gltex`| `auto` | OpenGLESv2 accelerated renderer |
 |`session_dummy`| `auto` | Dummy fallback session |
 |`session_terminal`| `auto` | Terminal-emulator sessions |
+|`docs`|`auto`| Build manpages and documentation |
+
 
 ## Running
 
