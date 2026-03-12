@@ -122,6 +122,13 @@ static inline bool conf_grab_matches(const struct conf_grab *grab, unsigned int 
 		.keysyms = (uint32_t *[]){(uint32_t[]){(_sym)}},                                   \
 	}
 
+#define CONF_DUAL_GRAB(_mods, _sym1, _sym2)                                                        \
+	{                                                                                          \
+		.num = 2,                                                                          \
+		.mods = (unsigned int[]){(_mods), (_mods)},                                        \
+		.num_syms = (unsigned int[]){1, 1},                                                \
+		.keysyms = (uint32_t *[]){(uint32_t[]){(_sym1)}, (uint32_t[]){(_sym2)}},           \
+	}
 /*
  * Configuration Context
  * A configuration context is initialized with an array of config-options and

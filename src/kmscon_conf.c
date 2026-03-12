@@ -669,7 +669,8 @@ static struct conf_grab def_grab_page_up = CONF_SINGLE_GRAB(SHL_SHIFT_MASK, XKB_
 
 static struct conf_grab def_grab_page_down = CONF_SINGLE_GRAB(SHL_SHIFT_MASK, XKB_KEY_Next);
 
-static struct conf_grab def_grab_zoom_in = CONF_SINGLE_GRAB(SHL_CONTROL_MASK, XKB_KEY_plus);
+static struct conf_grab def_grab_zoom_in =
+	CONF_DUAL_GRAB(SHL_CONTROL_MASK, XKB_KEY_plus, XKB_KEY_equal);
 
 static struct conf_grab def_grab_zoom_out = CONF_SINGLE_GRAB(SHL_CONTROL_MASK, XKB_KEY_minus);
 
