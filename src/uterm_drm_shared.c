@@ -1274,12 +1274,11 @@ int uterm_drm_video_hotplug(struct uterm_video *video, bool read_dpms, bool mode
 		if (!(disp->flags & DISPLAY_AVAILABLE))
 			uterm_display_unbind(disp);
 	}
-	if (shl_dlist_empty(&video->displays))
+	if (shl_dlist_empty(&video->displays)) {
+		// If there are no display available, drop drm master
+		drop_drm_master(vdrm);
 		goto finish_hotplug;
-
-	ret = set_drm_master(vdrm);
-	if (ret)
-		return ret;
+	}
 
 	if (modeset || new_display) {
 		ret = try_modeset(video);
@@ -1301,6 +1300,10 @@ int uterm_drm_video_wake_up(struct uterm_video *video)
 {
 	int ret;
 	struct uterm_drm_video *vdrm = video->data;
+
+	ret = set_drm_master(vdrm);
+	if (ret)
+		return ret;
 
 	video->flags |= VIDEO_AWAKE | VIDEO_HOTPLUG;
 	ret = uterm_drm_video_hotplug(video, true, true);
