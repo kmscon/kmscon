@@ -114,16 +114,11 @@ static void damage_cell(struct bbulk *bb, unsigned int off)
 	bb->damages[off] = true;
 }
 
-static void bbulk_unset(struct kmscon_text *txt);
-
 static int bbulk_set(struct kmscon_text *txt)
 {
 	struct bbulk *bb = txt->data;
 	int max_damage_rects;
 	int i;
-
-	/* If set() is called twice without unset(), avoid leaking prior allocations. */
-	bbulk_unset(txt);
 
 	memset(bb, 0, sizeof(*bb));
 
