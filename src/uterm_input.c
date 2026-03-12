@@ -137,9 +137,6 @@ static void input_sleep_dev(struct uterm_input_dev *dev)
 	if (dev->rfd < 0)
 		return;
 
-	if (dev->capabilities & UTERM_DEVICE_HAS_KEYS)
-		uxkb_dev_sleep(dev);
-
 	dev->repeating = false;
 	ev_timer_update(dev->repeat_timer, NULL);
 	ev_eloop_rm_fd(dev->fd);

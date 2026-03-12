@@ -94,8 +94,6 @@ struct uterm_input_dev {
 	/* For keyboards */
 	struct xkb_state *state;
 	struct xkb_compose_state *compose_state;
-	/* Used in sleep/wake up to store the key's pressed/released state. */
-	char key_state_bits[SHL_DIV_ROUND_UP(KEY_CNT, CHAR_BIT)];
 
 	unsigned int num_syms;
 	struct uterm_input_key_event event;
@@ -142,7 +140,6 @@ void uxkb_desc_destroy(struct uterm_input *input);
 int uxkb_dev_init(struct uterm_input_dev *dev);
 void uxkb_dev_destroy(struct uterm_input_dev *dev);
 int uxkb_dev_process(struct uterm_input_dev *dev, uint16_t key_state, uint16_t code);
-void uxkb_dev_sleep(struct uterm_input_dev *dev);
 void uxkb_dev_wake_up(struct uterm_input_dev *dev);
 
 void pointer_dev_rel(struct uterm_input_dev *dev, uint16_t code, int32_t value);

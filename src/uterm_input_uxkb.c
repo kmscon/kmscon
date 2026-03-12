@@ -493,34 +493,10 @@ int uxkb_dev_process(struct uterm_input_dev *dev, uint16_t key_state, uint16_t c
 	return 0;
 }
 
-void uxkb_dev_sleep(struct uterm_input_dev *dev)
-{
-	/*
-	 * While the device is asleep, we don't receive key events. This
-	 * means that when we wake up, the keyboard state may be different
-	 * (e.g. some key is pressed but we don't know about it). This can
-	 * cause various problems, like stuck modifiers: consider if we
-	 * miss a release of the left Shift key. When the user presses it
-	 * again, xkb_state_update_key() will think there is *another* left
-	 * Shift key that was pressed. When the key is released, it's as if
-	 * this "second" key was released, but the "first" is still left
-	 * pressed.
-	 * To handle this, when the device goes to sleep, we save our
-	 * current knowledge of the keyboard's press/release state. On wake
-	 * up, we compare the states before and after, and just feed
-	 * xkb_state_update_key() the deltas.
-	 */
-	memset(dev->key_state_bits, 0, sizeof(dev->key_state_bits));
-	errno = 0;
-	ioctl(dev->rfd, EVIOCGKEY(sizeof(dev->key_state_bits)), dev->key_state_bits);
-	if (errno)
-		llog_warn(dev->input, "failed to save keyboard state (%d): %m", errno);
-}
-
 void uxkb_dev_wake_up(struct uterm_input_dev *dev)
 {
 	uint32_t code;
-	char cur_bits[sizeof(dev->key_state_bits)];
+	char cur_bits[sizeof(SHL_DIV_ROUND_UP(KEY_CNT, CHAR_BIT))];
 	char cur_bit;
 	xkb_mod_mask_t locked_mods;
 	xkb_layout_index_t group;
