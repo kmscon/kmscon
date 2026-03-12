@@ -75,17 +75,16 @@ static void log__time(long long *sec, long long *usec)
  * LOG_SUBSYSTEM: By default no subsystem is specified
  */
 
-SHL_EXPORT
-const struct log_config LOG_CONFIG = {.sev = {
-					      [LOG_DEBUG] = 2,
-					      [LOG_INFO] = 2,
-					      [LOG_NOTICE] = 2,
-					      [LOG_WARNING] = 2,
-					      [LOG_ERROR] = 2,
-					      [LOG_CRITICAL] = 2,
-					      [LOG_ALERT] = 2,
-					      [LOG_FATAL] = 2,
-				      }};
+static const struct log_config default_config = {.sev = {
+							 [LOG_DEBUG] = 2,
+							 [LOG_INFO] = 2,
+							 [LOG_NOTICE] = 2,
+							 [LOG_WARNING] = 2,
+							 [LOG_ERROR] = 2,
+							 [LOG_CRITICAL] = 2,
+							 [LOG_ALERT] = 2,
+							 [LOG_FATAL] = 2,
+						 }};
 
 const char *LOG_SUBSYSTEM = NULL;
 
@@ -236,6 +235,9 @@ static bool log__omit(const char *file, int line, const char *func, const struct
 
 	if (sev >= LOG_SEV_NUM)
 		return false;
+
+	if (!config)
+		config = &default_config;
 
 	if (config) {
 		val = config->sev[sev];
