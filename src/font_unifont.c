@@ -114,11 +114,11 @@ static int lookup_block(const struct unifont_glyph_block *blocks, uint32_t len, 
 			return look;
 
 		if (ch < blocks[look].codepoint) {
-			max = look;
-			look -= look - min > 2 ? (look - min) / 2 : 1;
+			max = look - 1;
+			look = min + (max - min) / 2;
 		} else {
-			min = look;
-			look += max - look > 2 ? (max - look) / 2 : 1;
+			min = look + 1;
+			look = max - (max - min) / 2;
 		}
 	}
 	if (is_in_block(&blocks[look], ch))
