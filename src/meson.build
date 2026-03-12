@@ -241,7 +241,6 @@ conf_deps = declare_dependency(
 kmscon_srcs = [
   'pty.c',
   'font.c',
-  'font_rotate.c',
   'font_8x16.c',
   'text.c',
   'text_bbulk.c',

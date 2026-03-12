@@ -11,7 +11,6 @@
 
 /* ---- Stubs for external dependencies used by text_bbulk.c ---- */
 #include "../src/font.h"	/* for kmscon_font_* */
-#include "../src/font_rotate.h" /* for prototypes and shl_hashtable */
 #include "../src/uterm_video.h" /* for uterm_display_* prototypes */
 unsigned int uterm_display_get_width(struct uterm_display *disp)
 {
@@ -22,21 +21,6 @@ unsigned int uterm_display_get_height(struct uterm_display *disp)
 {
 	(void)disp;
 	return 480;
-}
-
-/* Provide stub implementations matching the prototypes from font_rotate.h */
-int kmscon_rotate_create_tables(struct shl_hashtable **normal, struct shl_hashtable **bold,
-				void (*free_func)(void *data))
-{
-	(void)normal;
-	(void)bold;
-	(void)free_func;
-	return 0;
-}
-void kmscon_rotate_free_tables(struct shl_hashtable *normal, struct shl_hashtable *bold)
-{
-	(void)normal;
-	(void)bold;
 }
 
 /* Keep geometry tiny to minimize allocations */

@@ -42,7 +42,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "font.h"
-#include "font_rotate.h"
 #include "shl_hashtable.h"
 #include "shl_log.h"
 #include "shl_misc.h"
@@ -160,7 +159,7 @@ static int bbulk_set(struct kmscon_text *txt)
 	for (i = 0; i < (int)bb->cells; i++)
 		damage_cell(bb, i);
 
-	if (kmscon_rotate_create_tables(&bb->glyphs, free_glyph))
+	if (shl_hashtable_new(&bb->glyphs, shl_direct_hash, shl_direct_equal, free_glyph))
 		goto free_r_damages;
 	return 0;
 
@@ -179,11 +178,12 @@ static void bbulk_unset(struct kmscon_text *txt)
 {
 	struct bbulk *bb = txt->data;
 
-	kmscon_rotate_free_tables(bb->glyphs);
+	shl_hashtable_free(bb->glyphs);
 	free(bb->damage_rects);
 	free(bb->reqs);
 	free(bb->damages);
 	free(bb->prev);
+	bb->glyphs = NULL;
 	bb->damage_rects = NULL;
 	bb->reqs = NULL;
 	bb->damages = NULL;
@@ -195,6 +195,75 @@ static int bbulk_rotate(struct kmscon_text *txt, enum Orientation orientation)
 	bbulk_unset(txt);
 	txt->orientation = orientation;
 	return bbulk_set(txt);
+}
+
+static int bbulk_rotate_glyph(struct kmscon_glyph *vb, const struct kmscon_glyph *glyph,
+			      enum Orientation orientation, uint8_t align)
+{
+	int width;
+	int height;
+	int stride;
+	int i, j;
+	uint8_t *dst, *src;
+	const struct uterm_video_buffer *buf = &glyph->buf;
+
+	if (orientation == OR_NORMAL || orientation == OR_UPSIDE_DOWN) {
+		width = buf->width;
+		height = buf->height;
+	} else {
+		width = buf->height;
+		height = buf->width;
+	}
+
+	stride = align * ((width + (align - 1)) / align);
+	vb->buf.data = malloc(stride * height);
+
+	if (!vb->buf.data)
+		return -ENOMEM;
+
+	src = buf->data;
+	dst = vb->buf.data;
+
+	switch (orientation) {
+	default:
+	case OR_NORMAL:
+		for (i = 0; i < buf->height; i++) {
+			memcpy(dst, src, buf->width);
+			dst += stride;
+			src += buf->stride;
+		}
+		break;
+	case OR_RIGHT:
+		for (i = 0; i < buf->height; i++) {
+			for (j = 0; j < buf->width; j++) {
+				dst[j * stride + (width - i - 1)] = src[j];
+			}
+			src += buf->stride;
+		}
+		break;
+	case OR_UPSIDE_DOWN:
+		src += (buf->height - 1) * buf->stride;
+		for (i = 0; i < buf->height; i++) {
+			for (j = 0; j < buf->width; j++)
+				dst[j] = src[buf->width - j - 1];
+			dst += stride;
+			src -= buf->stride;
+		}
+		break;
+	case OR_LEFT:
+		for (i = 0; i < buf->height; i++) {
+			for (j = 0; j < buf->width; j++) {
+				dst[(height - j - 1) * stride + i] = src[j];
+			}
+			src += buf->stride;
+		}
+	}
+	vb->buf.width = width;
+	vb->buf.height = height;
+	vb->buf.stride = stride;
+	vb->buf.format = buf->format;
+	vb->width = glyph->width;
+	return 0;
 }
 
 static int find_glyph(struct kmscon_text *txt, struct kmscon_glyph **out, uint64_t id,
@@ -233,7 +302,7 @@ static int find_glyph(struct kmscon_text *txt, struct kmscon_glyph **out, uint64
 			goto err_free;
 	}
 
-	ret = kmscon_rotate_glyph(bb_glyph, glyph, txt->orientation, 1);
+	ret = bbulk_rotate_glyph(bb_glyph, glyph, txt->orientation, 1);
 	if (ret)
 		goto err_free;
 
