@@ -229,7 +229,7 @@ static inline __attribute__((format(printf, 2, 3))) void log_dummyf(unsigned int
  */
 
 #ifndef LOG_CONFIG
-extern const struct log_config LOG_CONFIG;
+#define LOG_CONFIG NULL
 #endif
 
 #ifndef LOG_SUBSYSTEM
@@ -237,7 +237,7 @@ extern const char *LOG_SUBSYSTEM;
 #endif
 
 #define LOG_DEFAULT_BASE __FILE__, __LINE__, __func__
-#define LOG_DEFAULT_CONF LOG_DEFAULT_BASE, &LOG_CONFIG
+#define LOG_DEFAULT_CONF LOG_DEFAULT_BASE, LOG_CONFIG
 #define LOG_DEFAULT LOG_DEFAULT_CONF, LOG_SUBSYSTEM
 
 #define log_printf(sev, format, ...) log_format(LOG_DEFAULT, (sev), (format), ##__VA_ARGS__)
