@@ -75,7 +75,7 @@ struct bbulk {
 	bool *damages;
 	struct uterm_video_rect *damage_rects;
 	unsigned int damage_rect_len;
-	uint8_t redraw_margin;
+	uint8_t redraw;
 };
 
 static int bbulk_init(struct kmscon_text *txt)
@@ -669,17 +669,19 @@ static int bbulk_prepare(struct kmscon_text *txt, struct tsm_screen_attr *attr)
 	bb->req_len = 0;
 	bb->damage_rect_len = 0;
 
-	// default colors have changed, so redraw the margins with background color
-	if (memcmp(&bb->attr, attr, sizeof(*attr))) {
-		bb->redraw_margin = 2;
-	}
+	/*
+	 * if default colors have changed, or we switch from a dirty screen,
+	 * redraw completely the next 2 frames.
+	 */
+	if (memcmp(&bb->attr, attr, sizeof(*attr)) || uterm_display_need_redraw(txt->disp))
+		bb->redraw = 2;
+
 	bb->attr = *attr;
 
-	if (bb->redraw_margin || uterm_display_need_redraw(txt->disp)) {
+	if (bb->redraw) {
 		uterm_display_fill(txt->disp, attr->br, attr->bg, attr->bb, 0, 0, bb->sw, bb->sh);
 		for (i = 0; i < bb->cells; i++)
 			damage_cell(bb, i);
-
 	} else if (uterm_display_has_damage(txt->disp)) {
 		log_debug("Carry over damage from previous frame");
 		for (i = 0; i < bb->cells; i++) {
@@ -687,8 +689,8 @@ static int bbulk_prepare(struct kmscon_text *txt, struct tsm_screen_attr *attr)
 				bb->prev[i].id = ID_DAMAGED;
 		}
 	}
-	if (bb->redraw_margin)
-		bb->redraw_margin--;
+	if (bb->redraw)
+		bb->redraw--;
 
 	return 0;
 }

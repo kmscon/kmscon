@@ -337,12 +337,7 @@ bool uterm_display_need_redraw(struct uterm_display *disp)
 	if (!disp || !display_is_online(disp) || !video_is_awake(disp->video))
 		return false;
 
-	if (disp->flags & DISPLAY_NEED_REDRAW) {
-		disp->flags &= ~DISPLAY_NEED_REDRAW;
-		return true;
-	}
-
-	return VIDEO_CALL(disp->ops->need_redraw, 0, disp);
+	return (disp->flags & DISPLAY_NEED_REDRAW) != 0;
 }
 
 SHL_EXPORT
