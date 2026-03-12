@@ -106,15 +106,6 @@ enum log_severity {
 	LOG_SEV_NUM,
 };
 
-#define LOG_STRMAX 128
-
-struct log_filter {
-	char file[LOG_STRMAX];
-	int line;
-	char func[LOG_STRMAX];
-	char subs[LOG_STRMAX];
-};
-
 struct log_config {
 	int sev[LOG_SEV_NUM];
 };
@@ -139,9 +130,6 @@ struct log_config {
 	LOG_CONFIG_ALL((debug), (info), (notice), (warning), 2, 2, 2, 2)
 
 void log_set_config(const struct log_config *config);
-int log_add_filter(const struct log_filter *filter, const struct log_config *config);
-void log_rm_filter(int handle);
-void log_clean_filter();
 
 /*
  * Log-Functions
@@ -175,13 +163,11 @@ void log_clean_filter();
  * some log-message at application start. This is a handy-helper to do this.
  */
 
-__attribute__((format(printf, 7, 0))) void log_submit(const char *file, int line, const char *func,
-						      const struct log_config *config,
+__attribute__((format(printf, 6, 0))) void log_submit(const char *file, int line, const char *func,
 						      const char *subs, unsigned int sev,
 						      const char *format, va_list args);
 
-__attribute__((format(printf, 7, 8))) void log_format(const char *file, int line, const char *func,
-						      const struct log_config *config,
+__attribute__((format(printf, 6, 7))) void log_format(const char *file, int line, const char *func,
 						      const char *subs, unsigned int sev,
 						      const char *format, ...);
 
@@ -190,7 +176,6 @@ __attribute__((format(printf, 7, 0))) void log_llog(void *data, const char *file
 						    unsigned int sev, const char *format,
 						    va_list args);
 
-int log_set_file(const char *file);
 void log_print_init(const char *appname);
 
 static inline __attribute__((format(printf, 2, 3))) void log_dummyf(unsigned int sev,
@@ -237,8 +222,7 @@ extern const char *LOG_SUBSYSTEM;
 #endif
 
 #define LOG_DEFAULT_BASE __FILE__, __LINE__, __func__
-#define LOG_DEFAULT_CONF LOG_DEFAULT_BASE, LOG_CONFIG
-#define LOG_DEFAULT LOG_DEFAULT_CONF, LOG_SUBSYSTEM
+#define LOG_DEFAULT LOG_DEFAULT_BASE, LOG_SUBSYSTEM
 
 #define log_printf(sev, format, ...) log_format(LOG_DEFAULT, (sev), (format), ##__VA_ARGS__)
 
