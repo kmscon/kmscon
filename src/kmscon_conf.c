@@ -689,7 +689,8 @@ static struct conf_grab def_grab_session_close =
 static struct conf_grab def_grab_terminal_new =
 	CONF_SINGLE_GRAB(SHL_CONTROL_MASK | SHL_LOGO_MASK, XKB_KEY_Return);
 
-static struct conf_grab def_grab_rotate_cw = CONF_SINGLE_GRAB(SHL_LOGO_MASK, XKB_KEY_plus);
+static struct conf_grab def_grab_rotate_cw =
+	CONF_DUAL_GRAB(SHL_LOGO_MASK, XKB_KEY_plus, XKB_KEY_equal);
 
 static struct conf_grab def_grab_rotate_ccw = CONF_SINGLE_GRAB(SHL_LOGO_MASK, XKB_KEY_minus);
 
