@@ -39,9 +39,16 @@
 #define LOG_SUBSYSTEM "font_freetype"
 
 struct ft_font {
-	FT_Library ft;
 	FT_Face face;
-	FT_Face bold_face;
+	/* FontSet and Pattern are used for fallback glyphs */
+	FcFontSet *fc;
+	FcPattern *pattern;
+};
+
+struct ft_data {
+	FT_Library ft;
+	struct ft_font regular;
+	struct ft_font bold;
 };
 
 static void print_font_name(FcPattern *pattern)
@@ -54,70 +61,47 @@ static void print_font_name(FcPattern *pattern)
 		log_notice("Using font %s\n", full_name);
 }
 
-static FcPattern *lookup_font(const FcChar8 *name, bool bold, int size)
+static void free_ft_font(struct ft_font *ftfont)
 {
-	FcPattern *pattern = FcNameParse(name);
-	FcPattern *ret = NULL;
-	FcFontSet *set;
-	FcResult result;
-
-	if (!pattern)
-		return NULL;
-
-	FcPatternAddInteger(pattern, FC_WEIGHT, bold ? FC_WEIGHT_BOLD : FC_WEIGHT_NORMAL);
-	FcPatternAddDouble(pattern, FC_SIZE, (double)size);
-
-	FcPatternAddInteger(pattern, FC_SPACING, FC_CHARCELL);
-	FcPatternAddInteger(pattern, FC_SPACING, FC_MONO);
-	FcPatternAddInteger(pattern, FC_SPACING, FC_DUAL);
-
-	if (!FcConfigSubstitute(NULL, pattern, FcMatchPattern)) {
-		log_err("%s: failed to do config substitution", name);
-		goto err_pattern;
-	}
-
-	FcDefaultSubstitute(pattern);
-
-	set = FcFontSort(NULL, pattern, FcTrue, NULL, &result);
-	if (result != FcResultMatch) {
-		log_err("%s: failed to match font", name);
-		goto err_pattern;
-	}
-	ret = FcFontRenderPrepare(NULL, pattern, set->fonts[0]);
-
-err_pattern:
-	FcPatternDestroy(pattern);
-	return ret;
+	if (ftfont->face)
+		FT_Done_Face(ftfont->face);
+	ftfont->face = NULL;
+	if (ftfont->fc)
+		FcFontSetDestroy(ftfont->fc);
+	ftfont->fc = NULL;
+	if (ftfont->pattern)
+		FcPatternDestroy(ftfont->pattern);
+	ftfont->pattern = NULL;
 }
 
-static FT_Face setup_font(FT_Library ft, const struct kmscon_font_attr *attr)
+static int prepare_face(FT_Library ft, struct ft_font *ftfont)
 {
-	FcPattern *pattern = lookup_font((const FcChar8 *)attr->name, attr->bold, attr->height);
-	FT_Face face;
 	FcChar8 *path;
 	FT_Error err;
 	int index = 0;
+	FcPattern *pattern;
+	int ret = -EINVAL;
 
+	pattern = FcFontRenderPrepare(NULL, ftfont->pattern, ftfont->fc->fonts[0]);
 	if (!pattern)
-		return NULL;
+		return -EINVAL;
 
 	print_font_name(pattern);
 
 	if (FcPatternGetString(pattern, FC_FILE, 0, &path) != FcResultMatch)
-		return NULL;
+		goto err_pattern;
 
 	if (FcPatternGetInteger(pattern, FC_INDEX, 0, &index) != FcResultMatch)
 		log_warn("%s: failed to get face index", path);
 
 	log_debug("Loading font %s", (char *)path);
 
-	err = FT_New_Face(ft, (char *)path, index, &face);
+	err = FT_New_Face(ft, (char *)path, index, &ftfont->face);
+	ret = err ? -EINVAL : 0;
 
+err_pattern:
 	FcPatternDestroy(pattern);
-
-	if (err)
-		return NULL;
-	return face;
+	return ret;
 }
 
 static int font_get_width(FT_Face face)
@@ -150,15 +134,9 @@ static int bitmap_font_select_size(FT_Face face, int height)
 	return best;
 }
 
-static FT_Face new_face(FT_Library ft, struct kmscon_font_attr *attr)
+static int compute_font_size(struct ft_font *ftfont, struct kmscon_font_attr *attr)
 {
-	FT_Face face;
-
-	face = setup_font(ft, attr);
-	if (!face) {
-		log_err("Failed to find face FreeType\n");
-		return NULL;
-	}
+	FT_Face face = ftfont->face;
 
 	/* Special case for bitmap fonts, which can't be scaled */
 	if (face->num_fixed_sizes) {
@@ -175,15 +153,55 @@ static FT_Face new_face(FT_Library ft, struct kmscon_font_attr *attr)
 	}
 	if (!attr->width || !attr->height) {
 		log_err("Invalid font %dx%d", attr->width, attr->height);
-		FT_Done_Face(face);
-		return NULL;
+		free_ft_font(ftfont);
+		return -EINVAL;
 	}
-	return face;
+	return 0;
+}
+
+static int prepare_font(FT_Library ft, struct ft_font *ftfont, struct kmscon_font_attr *attr)
+{
+	FcResult result;
+
+	ftfont->pattern = FcNameParse((const FcChar8 *)attr->name);
+	if (!ftfont->pattern)
+		return -EINVAL;
+
+	FcPatternAddInteger(ftfont->pattern, FC_WEIGHT,
+			    attr->bold ? FC_WEIGHT_BOLD : FC_WEIGHT_NORMAL);
+	FcPatternAddDouble(ftfont->pattern, FC_SIZE, (double)attr->height);
+
+	FcPatternAddInteger(ftfont->pattern, FC_SPACING, FC_CHARCELL);
+	FcPatternAddInteger(ftfont->pattern, FC_SPACING, FC_MONO);
+	FcPatternAddInteger(ftfont->pattern, FC_SPACING, FC_DUAL);
+
+	if (!FcConfigSubstitute(NULL, ftfont->pattern, FcMatchPattern)) {
+		log_err("%s: failed to do config substitution", attr->name);
+		goto err;
+	}
+
+	FcDefaultSubstitute(ftfont->pattern);
+
+	ftfont->fc = FcFontSort(NULL, ftfont->pattern, FcTrue, NULL, &result);
+	if (result != FcResultMatch) {
+		log_err("%s: failed to match font", attr->name);
+		goto err;
+	}
+
+	if (prepare_face(ft, ftfont))
+		goto err;
+
+	if (compute_font_size(ftfont, attr))
+		goto err;
+	return 0;
+err:
+	free_ft_font(ftfont);
+	return -EINVAL;
 }
 
 static int kmscon_font_freetype_init(struct kmscon_font *out, const struct kmscon_font_attr *attr)
 {
-	struct ft_font *ftf;
+	struct ft_data *ftf;
 	struct kmscon_font_attr bold_attr;
 	FT_Error err;
 
@@ -191,25 +209,21 @@ static int kmscon_font_freetype_init(struct kmscon_font *out, const struct kmsco
 	if (!ftf)
 		return -ENOMEM;
 	memset(ftf, 0, sizeof(*ftf));
-	kmscon_copy_attr(&bold_attr, attr);
-	kmscon_font_attr_normalize(&bold_attr);
-	kmscon_copy_attr(&out->attr, &bold_attr);
+	kmscon_copy_attr(&out->attr, attr);
+	kmscon_font_attr_normalize(&out->attr);
+	kmscon_copy_attr(&bold_attr, &out->attr);
+	bold_attr.bold = true;
 
 	err = FT_Init_FreeType(&ftf->ft);
 	if (err != 0) {
 		log_err("Failed to initialize FreeType\n");
 		goto err_free;
 	}
-
-	out->attr.bold = false;
-	ftf->face = new_face(ftf->ft, &out->attr);
-	if (!ftf->face)
+	if (prepare_font(ftf->ft, &ftf->regular, &out->attr))
 		goto err_done;
 
-	bold_attr.bold = true;
-	ftf->bold_face = new_face(ftf->ft, &bold_attr);
-	if (!ftf->bold_face)
-		goto err_face;
+	if (prepare_font(ftf->ft, &ftf->bold, &bold_attr))
+		goto err_free_reg;
 
 	if (out->attr.width != bold_attr.width || out->attr.height != bold_attr.height)
 		log_warn("Bold and regular font don't have the same dimension");
@@ -223,8 +237,8 @@ static int kmscon_font_freetype_init(struct kmscon_font *out, const struct kmsco
 	log_debug("Font attr %dx%d", out->attr.width, out->attr.height);
 	return 0;
 
-err_face:
-	FT_Done_Face(ftf->face);
+err_free_reg:
+	free_ft_font(&ftf->regular);
 err_done:
 	FT_Done_FreeType(ftf->ft);
 err_free:
@@ -234,11 +248,11 @@ err_free:
 
 static void kmscon_font_freetype_destroy(struct kmscon_font *font)
 {
-	struct ft_font *ftf = font->data;
+	struct ft_data *ftf = font->data;
 
 	log_debug("unloading freetype font");
-	FT_Done_Face(ftf->bold_face);
-	FT_Done_Face(ftf->face);
+	free_ft_font(&ftf->regular);
+	free_ft_font(&ftf->bold);
 	FT_Done_FreeType(ftf->ft);
 	free(ftf);
 	font->data = NULL;
@@ -278,6 +292,7 @@ static void draw_underline(struct uterm_video_buffer *buf, FT_Face face)
 	int thickness = FT_MulFix(face->underline_thickness, face->size->metrics.y_scale);
 	int position = FT_MulFix(face->underline_position, face->size->metrics.y_scale);
 
+	// Round thinkness to nearest integer
 	thickness = (thickness + (thickness >> 1)) >> 6;
 	position = (face->size->metrics.ascender - position) >> 6;
 
@@ -329,23 +344,17 @@ static void copy_glyph(struct uterm_video_buffer *buf, FT_Face face, FT_Bitmap *
 		draw_underline(buf, face);
 }
 
-static int kmscon_font_freetype_render(struct kmscon_font *font, uint64_t id, const uint32_t *ch,
-				       size_t len, const struct kmscon_glyph **out)
+static int render_glyph(FT_Face face, FT_UInt index, const uint32_t *ch,
+			const struct kmscon_font_attr *attr, const struct kmscon_glyph **out)
 {
-	struct ft_font *ftf = font->data;
-	FT_Face face = font->attr.bold ? ftf->bold_face : ftf->face;
-	struct kmscon_glyph *glyph;
 	unsigned int cwidth;
-	FT_UInt glyph_index = FT_Get_Char_Index(face, *ch);
-
-	if (!len)
-		return -ERANGE;
+	struct kmscon_glyph *glyph;
 
 	cwidth = tsm_ucs4_get_width(*ch);
 	if (!cwidth)
 		return -ERANGE;
 
-	if (FT_Load_Glyph(face, glyph_index, FT_LOAD_NO_HINTING)) {
+	if (FT_Load_Glyph(face, index, FT_LOAD_NO_HINTING)) {
 		log_err("Failed to load glyph\n");
 		return -EINVAL;
 	}
@@ -362,9 +371,9 @@ static int kmscon_font_freetype_render(struct kmscon_font *font, uint64_t id, co
 	}
 	memset(glyph, 0, sizeof(*glyph));
 
-	glyph->width = glyph_is_wide(face->glyph, font->attr.width) ? 2 : cwidth;
-	glyph->buf.width = font->attr.width * glyph->width;
-	glyph->buf.height = font->attr.height;
+	glyph->width = glyph_is_wide(face->glyph, attr->width) ? 2 : cwidth;
+	glyph->buf.width = attr->width * glyph->width;
+	glyph->buf.height = attr->height;
 	glyph->buf.stride = glyph->buf.width;
 	glyph->buf.format = UTERM_FORMAT_GREY;
 
@@ -376,12 +385,106 @@ static int kmscon_font_freetype_render(struct kmscon_font *font, uint64_t id, co
 	memset(glyph->buf.data, 0, glyph->buf.height * glyph->buf.stride);
 
 	if (face->glyph->bitmap.pixel_mode == FT_PIXEL_MODE_MONO)
-		copy_mono(&glyph->buf, &face->glyph->bitmap, font->attr.underline);
+		copy_mono(&glyph->buf, &face->glyph->bitmap, attr->underline);
 	else
-		copy_glyph(&glyph->buf, face, &face->glyph->bitmap, font->attr.underline);
+		copy_glyph(&glyph->buf, face, &face->glyph->bitmap, attr->underline);
 
 	*out = glyph;
 	return 0;
+}
+
+static void select_font_size(FT_Face face, struct kmscon_font_attr *attr)
+{
+	int height = attr->height;
+
+	/* Special case for bitmap fonts, which can't be scaled */
+	if (face->num_fixed_sizes) {
+		int bitmap_index = bitmap_font_select_size(face, attr->height);
+
+		FT_Select_Size(face, bitmap_index);
+		return;
+	}
+	if (FT_Set_Pixel_Sizes(face, 0, height))
+		log_warn("Freetype failed to set size to %d", height);
+
+	// Make sure the fallback glyph will fit in our glyph size
+	while (face->size->metrics.height >> 6 > attr->height && height > 2) {
+		height--;
+		FT_Set_Pixel_Sizes(face, 0, height);
+	}
+}
+
+static FT_Face prepare_tmp_face(FT_Library ft, struct ft_font *font, int fallback)
+{
+	FcChar8 *path;
+	FT_Error err;
+	int index = 0;
+	FcPattern *pattern;
+	FT_Face face = NULL;
+
+	pattern = FcFontRenderPrepare(NULL, font->pattern, font->fc->fonts[fallback]);
+	if (!pattern)
+		return NULL;
+
+	print_font_name(pattern);
+
+	if (FcPatternGetString(pattern, FC_FILE, 0, &path) != FcResultMatch)
+		goto err_pattern;
+
+	if (FcPatternGetInteger(pattern, FC_INDEX, 0, &index) != FcResultMatch)
+		log_warn("%s: failed to get face index", path);
+
+	log_debug("Loading fallback font %s", (char *)path);
+
+	err = FT_New_Face(ft, (char *)path, index, &face);
+	if (err)
+		face = NULL;
+
+err_pattern:
+	FcPatternDestroy(pattern);
+	return face;
+}
+
+static int get_fallback(uint32_t ch, struct ft_font *ftf)
+{
+	int i;
+
+	for (i = 0; i < ftf->fc->nfont; i++) {
+		FcCharSet *cs;
+		FcPatternGetCharSet(ftf->fc->fonts[i], FC_CHARSET, 0, &cs);
+		if (FcCharSetHasChar(cs, ch))
+			return i;
+	}
+	return -EINVAL;
+}
+
+static int kmscon_font_freetype_render(struct kmscon_font *font, uint64_t id, const uint32_t *ch,
+				       size_t len, const struct kmscon_glyph **out)
+{
+	struct ft_data *ftd = font->data;
+	struct ft_font *ftfont = font->attr.bold ? &ftd->bold : &ftd->regular;
+	FT_UInt glyph_index = FT_Get_Char_Index(ftfont->face, *ch);
+	int fallback_index;
+	FT_Face fallback;
+	int ret;
+
+	if (!len)
+		return -ERANGE;
+
+	if (glyph_index)
+		return render_glyph(ftfont->face, glyph_index, ch, &font->attr, out);
+
+	fallback_index = get_fallback(*ch, ftfont);
+	fallback = prepare_tmp_face(ftd->ft, ftfont, fallback_index);
+
+	if (fallback) {
+		select_font_size(fallback, &font->attr);
+		glyph_index = FT_Get_Char_Index(fallback, *ch);
+		ret = render_glyph(fallback, glyph_index, ch, &font->attr, out);
+		FT_Done_Face(fallback);
+		return ret;
+	}
+	return -EINVAL;
 }
 
 static int kmscon_font_freetype_render_empty(struct kmscon_font *font,
