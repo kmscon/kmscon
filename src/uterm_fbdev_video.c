@@ -91,8 +91,7 @@ static int display_init(struct uterm_display *disp)
 	disp->dpms = UTERM_DPMS_UNKNOWN;
 
 	fbdev->vblank_spec.it_value.tv_nsec = 15 * 1000 * 1000;
-	ret = ev_timer_new(&fbdev->vblank_timer, NULL, display_vblank_timer_event, disp, NULL,
-			   NULL);
+	ret = ev_timer_new(&fbdev->vblank_timer, NULL, display_vblank_timer_event, disp);
 	if (ret)
 		goto err_free;
 
