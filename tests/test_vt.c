@@ -111,7 +111,7 @@ int main(int argc, char **argv)
 	if (ret)
 		goto err_exit;
 
-	ret = uterm_input_new(&input, eloop, "", "", "", "", "C", "", "", 0, 0, 0, log_llog, NULL);
+	ret = uterm_input_new(&input, eloop, "", "", "", "", "C", "", "", 0, 0, 0);
 	if (ret)
 		goto err_vtm;
 

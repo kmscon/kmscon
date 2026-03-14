@@ -846,11 +846,10 @@ int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf, struct
 				  ret);
 	}
 
-	ret = uterm_input_new(&seat->input, seat->eloop, seat->conf->xkb_model,
-			      seat->conf->xkb_layout, seat->conf->xkb_variant,
-			      seat->conf->xkb_options, locale, keymap, compose_file,
-			      compose_file_len, seat->conf->xkb_repeat_delay,
-			      seat->conf->xkb_repeat_rate, log_llog, NULL);
+	ret = uterm_input_new(
+		&seat->input, seat->eloop, seat->conf->xkb_model, seat->conf->xkb_layout,
+		seat->conf->xkb_variant, seat->conf->xkb_options, locale, keymap, compose_file,
+		compose_file_len, seat->conf->xkb_repeat_delay, seat->conf->xkb_repeat_rate);
 	free(keymap);
 
 	if (ret)
