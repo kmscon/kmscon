@@ -139,8 +139,16 @@ manpages_stylesheet = 'http://docbook.sourceforge.net/release/xsl/current/manpag
 have_manpages_stylesheet = false
 if xsltproc.found()
   have_manpages_stylesheet = run_command(xsltproc, '--nonet', manpages_stylesheet, check: false).returncode() == 0
+  if not have_manpages_stylesheet
+    docs_error_string = 'docbook.xsl stylesheet was not found.'
+  else
+    docs_error_string = ''
+  endif
+else
+  docs_error_string = 'executable xsltproc was not found.'
 endif
-enable_docs = get_option('docs').require(xsltproc.found() and have_manpages_stylesheet).allowed()
+enable_docs = get_option('docs').require(xsltproc.found() and have_manpages_stylesheet, 
+  error_message: docs_error_string).allowed()
 
 # Additionally check if glesv2 is needed
 enable_glesv2 = enable_video_drm3d or enable_renderer_gltex
