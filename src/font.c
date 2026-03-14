@@ -100,42 +100,6 @@ void kmscon_font_attr_normalize(struct kmscon_font_attr *attr)
 		attr->points = attr->height * 72 / attr->ppi;
 }
 
-/**
- * kmscon_font_attr_match:
- * @a1: First attribute to match
- * @a2: Second attribute to match
- *
- * Compares @a1 and @a2 and returns true if they match. Both must be normalized
- * before comparing them, otherwise the comparison may return inexact results.
- * If width, height or *name is 0, then the fields are _not_ compared so you can
- * have wildmask matches.
- * points and dpi are never compared as the normalization already computes the
- * height correctly. So there is no need to use these.
- *
- * Returns: true if they match, otherwise false
- */
-SHL_EXPORT
-bool kmscon_font_attr_match(const struct kmscon_font_attr *a1, const struct kmscon_font_attr *a2)
-{
-	if (!a1 || !a2)
-		return false;
-
-	if (a1->width && a2->width && a1->width != a2->width)
-		return false;
-	if (a1->height && a2->height && a1->height != a2->height)
-		return false;
-	if (a1->bold != a2->bold)
-		return false;
-	if (a1->italic != a2->italic)
-		return false;
-	if (a1->underline != a2->underline)
-		return false;
-	if (*a1->name && *a2->name && strcmp(a1->name, a2->name))
-		return false;
-
-	return true;
-}
-
 static inline void kmscon_font_destroy(void *data)
 {
 	const struct kmscon_font_ops *ops = data;
