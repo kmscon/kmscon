@@ -294,6 +294,10 @@ static int open_tty(const char *dev, int *tty_fd, int *tty_num)
 	id = minor(st.st_rdev);
 	log_debug("new tty ID is %d", id);
 
+	/* open the tty as stdin */
+	if (freopen(dev, "r", stdin) == NULL)
+		log_warning("cannot open %s as stdin", dev);
+
 	*tty_fd = fd;
 	*tty_num = id;
 	return 0;
