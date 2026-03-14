@@ -65,7 +65,6 @@ shl_deps = declare_dependency(
 if enable_glesv2
   shl_gl_srcs = [
     'shl_gl_shader.c',
-    'shl_gl_math.c',
   ]
   shl_gl_dep = [
     shl_deps,

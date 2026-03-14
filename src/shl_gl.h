@@ -39,28 +39,31 @@
 #include <stddef.h>
 #include <stdlib.h>
 
-/*
- * Math Helpers
- * The gl_m4 type is a 4x4 matrix of floats. The gl_m4_stack is a stack of m4
- * matrices where you can only access the top-most member.
- */
+static inline void gl_m4_identity(float *m)
+{
+	if (!m)
+		return;
 
-struct gl_m4_stack;
+	m[0] = 1;
+	m[1] = 0;
+	m[2] = 0;
+	m[3] = 0;
 
-void gl_m4_identity(float *m);
-void gl_m4_copy(float *dest, const float *src);
-void gl_m4_mult_dest(float *dest, const float *n, const float *m);
-void gl_m4_mult(float *n, const float *m);
-void gl_m4_translate(float *m, float x, float y, float z);
-void gl_m4_scale(float *m, float x, float y, float z);
-void gl_m4_transpose_dest(float *dest, const float *src);
-void gl_m4_transpose(float *m);
+	m[4] = 0;
+	m[5] = 1;
+	m[6] = 0;
+	m[7] = 0;
 
-int gl_m4_stack_new(struct gl_m4_stack **out);
-void gl_m4_stack_free(struct gl_m4_stack *stack);
-float *gl_m4_stack_push(struct gl_m4_stack *stack);
-float *gl_m4_stack_pop(struct gl_m4_stack *stack);
-float *gl_m4_stack_tip(struct gl_m4_stack *stack);
+	m[8] = 0;
+	m[9] = 0;
+	m[10] = 1;
+	m[11] = 0;
+
+	m[12] = 0;
+	m[13] = 0;
+	m[14] = 0;
+	m[15] = 1;
+}
 
 /*
  * Shader Helpers
