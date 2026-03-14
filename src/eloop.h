@@ -48,23 +48,6 @@ struct ev_timer;
 struct ev_counter;
 
 /**
- * ev_log_t:
- * @data: User provided data field
- * @file: Source code file where the log message originated or NULL
- * @line: Line number in source code or 0
- * @func: C function name or NULL
- * @subs: Subsystem where the message came from or NULL
- * @sev: Kernel-style severity between 0=FATAL and 7=DEBUG
- * @format: printf-formatted message
- * @args: arguments for printf-style @format
- *
- * This is the type of a logging callback function. You can always pass NULL
- * instead of such a function to disable logging.
- */
-typedef void (*ev_log_t)(void *data, const char *file, int line, const char *func, const char *subs,
-			 unsigned int sev, const char *format, va_list args);
-
-/**
  * ev_fd_cb:
  * @fd: File descriptor event source
  * @mask: Mask of @EV_READABLE, @EV_WRITEABLE, etc.
@@ -163,7 +146,7 @@ enum ev_eloop_flags {
 	EV_ET = 0x10,
 };
 
-int ev_eloop_new(struct ev_eloop **out, ev_log_t log, void *log_data);
+int ev_eloop_new(struct ev_eloop **out);
 void ev_eloop_ref(struct ev_eloop *loop);
 void ev_eloop_unref(struct ev_eloop *loop);
 
@@ -181,8 +164,7 @@ void ev_eloop_rm_eloop(struct ev_eloop *rm);
 
 /* fd sources */
 
-int ev_fd_new(struct ev_fd **out, int fd, int mask, ev_fd_cb cb, void *data, ev_log_t log,
-	      void *log_data);
+int ev_fd_new(struct ev_fd **out, int fd, int mask, ev_fd_cb cb, void *data);
 void ev_fd_ref(struct ev_fd *fd);
 void ev_fd_unref(struct ev_fd *fd);
 
@@ -200,8 +182,7 @@ void ev_eloop_rm_fd(struct ev_fd *fd);
 
 /* timer sources */
 
-int ev_timer_new(struct ev_timer **out, const struct itimerspec *spec, ev_timer_cb cb, void *data,
-		 ev_log_t log, void *log_data);
+int ev_timer_new(struct ev_timer **out, const struct itimerspec *spec, ev_timer_cb cb, void *data);
 void ev_timer_ref(struct ev_timer *timer);
 void ev_timer_unref(struct ev_timer *timer);
 
@@ -220,8 +201,7 @@ void ev_eloop_rm_timer(struct ev_timer *timer);
 
 /* counter sources */
 
-int ev_counter_new(struct ev_counter **out, ev_counter_cb, void *data, ev_log_t log,
-		   void *log_data);
+int ev_counter_new(struct ev_counter **out, ev_counter_cb, void *data);
 void ev_counter_ref(struct ev_counter *cnt);
 void ev_counter_unref(struct ev_counter *cnt);
 

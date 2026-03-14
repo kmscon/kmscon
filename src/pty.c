@@ -95,7 +95,7 @@ int kmscon_pty_new(struct kmscon_pty **out, kmscon_pty_input_cb input_cb, void *
 	pty->retry_count = 0;
 	pty->data = data;
 
-	ret = ev_eloop_new(&pty->eloop, log_llog, NULL);
+	ret = ev_eloop_new(&pty->eloop);
 	if (ret)
 		goto err_free;
 
