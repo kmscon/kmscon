@@ -35,7 +35,6 @@
 #include <xkbcommon/xkbcommon-keysyms.h>
 #include "eloop.h"
 #include "shl_dlist.h"
-#include "shl_llog.h"
 #include "shl_misc.h"
 #include "uterm_input.h"
 
@@ -107,8 +106,6 @@ struct uterm_input_dev {
 
 struct uterm_input {
 	unsigned long ref;
-	llog_submit_t llog;
-	void *llog_data;
 	struct ev_eloop *eloop;
 	int awake;
 	unsigned int repeat_rate;

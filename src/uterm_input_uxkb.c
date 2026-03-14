@@ -34,45 +34,39 @@
 #include <xkbcommon/xkbcommon-compose.h>
 #include <xkbcommon/xkbcommon.h>
 #include "shl_hook.h"
-#include "shl_llog.h"
+#include "shl_log.h"
 #include "shl_misc.h"
 #include "uterm_input.h"
 #include "uterm_input_fallback.xkb.bin.h"
 #include "uterm_input_internal.h"
 
-#define LLOG_SUBSYSTEM "uterm_uxkb"
+#define LOG_SUBSYSTEM "uterm_uxkb"
 
 static void uxkb_log(struct xkb_context *context, enum xkb_log_level level, const char *format,
 		     va_list args)
 {
-	struct uterm_input *input;
 	unsigned int sev;
-
-	input = xkb_context_get_user_data(context);
-	if (!input->llog)
-		return;
 
 	switch (level) {
 	case XKB_LOG_LEVEL_CRITICAL:
-		sev = LLOG_CRITICAL;
+		sev = LOG_CRITICAL;
 		break;
 	case XKB_LOG_LEVEL_ERROR:
-		sev = LLOG_ERROR;
+		sev = LOG_ERROR;
 		break;
 	case XKB_LOG_LEVEL_WARNING:
-		sev = LLOG_WARNING;
+		sev = LOG_WARNING;
 		break;
 	case XKB_LOG_LEVEL_INFO:
-		sev = LLOG_INFO;
+		sev = LOG_INFO;
 		break;
 	case XKB_LOG_LEVEL_DEBUG:
 		/* fallthrough */
 	default:
-		sev = LLOG_DEBUG;
+		sev = LOG_DEBUG;
 		break;
 	}
-
-	input->llog(input->llog_data, LLOG_DEFAULT, sev, format, args);
+	log_printf(sev, format, args);
 }
 
 int uxkb_desc_init(struct uterm_input *input, const char *model, const char *layout,
@@ -93,14 +87,13 @@ int uxkb_desc_init(struct uterm_input *input, const char *model, const char *lay
 
 	input->ctx = xkb_context_new(0);
 	if (!input->ctx) {
-		llog_error(input, "cannot create XKB context");
+		log_error("cannot create XKB context");
 		return -ENOMEM;
 	}
 
 	/* Set logging function. You can use XKB_LOG_VERBOSITY and XKB_LOG_LEVEL
 	 * to change the xkbcommon logger. That's why we don't touch the
 	 * verbosity and level here. */
-	xkb_context_set_user_data(input->ctx, input);
 	xkb_context_set_log_fn(input->ctx, uxkb_log);
 
 	/* If a complete keymap file was given, first try that. */
@@ -108,9 +101,9 @@ int uxkb_desc_init(struct uterm_input *input, const char *model, const char *lay
 		input->keymap = xkb_keymap_new_from_string(input->ctx, keymap,
 							   XKB_KEYMAP_FORMAT_TEXT_V1, 0);
 		if (input->keymap) {
-			llog_debug(input, "new keyboard description from memory");
+			log_debug("new keyboard description from memory");
 		} else {
-			llog_warn(input, "cannot parse keymap, reverting to rmlvo");
+			log_warn("cannot parse keymap, reverting to rmlvo");
 		}
 	}
 
@@ -119,10 +112,9 @@ int uxkb_desc_init(struct uterm_input *input, const char *model, const char *lay
 	}
 
 	if (!input->keymap) {
-		llog_warn(input,
-			  "failed to create keymap (%s, %s, %s, %s), "
-			  "reverting to default system keymap",
-			  model, layout, variant, options);
+		log_warn("failed to create keymap (%s, %s, %s, %s), "
+			 "reverting to default system keymap",
+			 model, layout, variant, options);
 
 		rmlvo.model = "";
 		rmlvo.layout = "";
@@ -131,22 +123,22 @@ int uxkb_desc_init(struct uterm_input *input, const char *model, const char *lay
 
 		input->keymap = xkb_keymap_new_from_names(input->ctx, &rmlvo, 0);
 		if (!input->keymap) {
-			llog_warn(input, "failed to create XKB default keymap, "
-					 "reverting to built-in fallback");
+			log_warn("failed to create XKB default keymap, "
+				 "reverting to built-in fallback");
 
 			input->keymap = xkb_keymap_new_from_string(input->ctx, fallback,
 								   XKB_KEYMAP_FORMAT_TEXT_V1, 0);
 			if (!input->keymap) {
-				llog_error(input, "cannot create fallback keymap");
+				log_error("cannot create fallback keymap");
 				ret = -EFAULT;
 				goto err_ctx;
 			}
 		}
 
-		llog_debug(input, "new fallback keyboard description");
+		log_debug("new fallback keyboard description");
 	} else {
-		llog_debug(input, "new keyboard description (%s, %s, %s, %s)", model, layout,
-			   variant, options);
+		log_debug("new keyboard description (%s, %s, %s, %s)", model, layout, variant,
+			  options);
 	}
 
 	if (compose_file && *compose_file) {
@@ -155,18 +147,18 @@ int uxkb_desc_init(struct uterm_input *input, const char *model, const char *lay
 			XKB_COMPOSE_FORMAT_TEXT_V1, 0);
 
 		if (input->compose_table) {
-			llog_debug(input, "new compose table from memory");
+			log_debug("new compose table from memory");
 		} else {
-			llog_warn(input, "cannot parse compose table, "
-					 "reverting to default");
+			log_warn("cannot parse compose table, "
+				 "reverting to default");
 		}
 	}
 
 	if (!input->compose_table) {
 		input->compose_table = xkb_compose_table_new_from_locale(input->ctx, locale, 0);
 		if (!input->compose_table) {
-			llog_warn(input, "failed to create XKB default compose "
-					 "table, disabling compose support");
+			log_warn("failed to create XKB default compose "
+				 "table, disabling compose support");
 		}
 	}
 
@@ -202,7 +194,7 @@ int uxkb_dev_init(struct uterm_input_dev *dev)
 
 	dev->state = xkb_state_new(dev->input->keymap);
 	if (!dev->state) {
-		llog_error(dev->input, "cannot create XKB state");
+		log_error("cannot create XKB state");
 		ret = -ENOMEM;
 		goto err_timer;
 	}
@@ -210,8 +202,8 @@ int uxkb_dev_init(struct uterm_input_dev *dev)
 	if (dev->input->compose_table) {
 		dev->compose_state = xkb_compose_state_new(dev->input->compose_table, 0);
 		if (!dev->compose_state)
-			llog_warn(dev->input, "cannot create compose state, "
-					      "disabling compose support");
+			log_warn("cannot create compose state, "
+				 "disabling compose support");
 	}
 
 	return 0;
@@ -262,7 +254,7 @@ static void uxkb_dev_update_keyboard_leds(struct uterm_input_dev *dev)
 
 	ret = write(dev->rfd, events, sizeof(events));
 	if (ret != sizeof(events))
-		llog_warning(dev->input, "cannot update LED state (%d): %m", errno);
+		log_warning("cannot update LED state (%d): %m", errno);
 }
 
 static inline int uxkb_dev_resize_event(struct uterm_input_dev *dev, size_t s)
@@ -272,28 +264,28 @@ static inline int uxkb_dev_resize_event(struct uterm_input_dev *dev, size_t s)
 	if (s > dev->num_syms) {
 		tmp = realloc(dev->event.keysyms, sizeof(uint32_t) * s);
 		if (!tmp) {
-			llog_warning(dev->input, "cannot reallocate keysym buffer");
+			log_warning("cannot reallocate keysym buffer");
 			return -ENOKEY;
 		}
 		dev->event.keysyms = tmp;
 
 		tmp = realloc(dev->event.codepoints, sizeof(uint32_t) * s);
 		if (!tmp) {
-			llog_warning(dev->input, "cannot reallocate codepoints buffer");
+			log_warning("cannot reallocate codepoints buffer");
 			return -ENOKEY;
 		}
 		dev->event.codepoints = tmp;
 
 		tmp = realloc(dev->repeat_event.keysyms, sizeof(uint32_t) * s);
 		if (!tmp) {
-			llog_warning(dev->input, "cannot reallocate keysym buffer");
+			log_warning("cannot reallocate keysym buffer");
 			return -ENOKEY;
 		}
 		dev->repeat_event.keysyms = tmp;
 
 		tmp = realloc(dev->repeat_event.codepoints, sizeof(uint32_t) * s);
 		if (!tmp) {
-			llog_warning(dev->input, "cannot reallocate codepoints buffer");
+			log_warning("cannot reallocate codepoints buffer");
 			return -ENOKEY;
 		}
 		dev->repeat_event.codepoints = tmp;
@@ -505,7 +497,7 @@ void uxkb_dev_wake_up(struct uterm_input_dev *dev)
 	errno = 0;
 	ioctl(dev->rfd, EVIOCGKEY(sizeof(cur_bits)), cur_bits);
 	if (errno) {
-		llog_warn(dev->input, "failed to get current keyboard state (%d): %m", errno);
+		log_warn("failed to get current keyboard state (%d): %m", errno);
 		return;
 	}
 

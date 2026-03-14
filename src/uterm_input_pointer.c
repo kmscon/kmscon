@@ -3,7 +3,6 @@
 #include <time.h>
 #include "eloop.h"
 #include "shl_hook.h"
-#include "shl_llog.h"
 #include "uterm_input.h"
 #include "uterm_input_internal.h"
 
