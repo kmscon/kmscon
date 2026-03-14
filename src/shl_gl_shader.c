@@ -38,14 +38,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include "shl_gl.h"
-#include "shl_llog.h"
+#include "shl_log.h"
 
-#define LLOG_SUBSYSTEM "gl_shader"
+#define LOG_SUBSYSTEM "gl_shader"
 
 struct gl_shader {
 	unsigned long ref;
-	llog_submit_t llog;
-	void *llog_data;
 
 	GLuint program;
 	GLuint vshader;
@@ -98,7 +96,7 @@ bool gl_has_error(struct gl_shader *shader)
 
 	err = glGetError();
 	if (err != GL_NO_ERROR) {
-		llog_error(shader, "GL error %d: %s", err, gl_err_to_str(err));
+		log_error("GL error %d: %s", err, gl_err_to_str(err));
 		return true;
 	}
 
@@ -113,7 +111,7 @@ static int compile_shader(struct gl_shader *shader, GLenum type, const char *sou
 
 	s = glCreateShader(type);
 	if (s == GL_NONE) {
-		llog_warning(shader, "cannot allocate GL shader");
+		log_warning("cannot allocate GL shader");
 		return GL_NONE;
 	}
 
@@ -125,7 +123,7 @@ static int compile_shader(struct gl_shader *shader, GLenum type, const char *sou
 	if (status == GL_FALSE) {
 		msg[0] = 0;
 		glGetShaderInfoLog(s, sizeof(msg), NULL, msg);
-		llog_warning(shader, "cannot compile shader: %s", msg);
+		log_warning("cannot compile shader: %s", msg);
 		return GL_NONE;
 	}
 
@@ -133,7 +131,7 @@ static int compile_shader(struct gl_shader *shader, GLenum type, const char *sou
 }
 
 int gl_shader_new(struct gl_shader **out, const char *vert, int vert_len, const char *frag,
-		  int frag_len, char **attr, size_t attr_count, llog_submit_t llog, void *llog_data)
+		  int frag_len, char **attr, size_t attr_count)
 {
 	struct gl_shader *shader;
 	int ret, i;
@@ -148,10 +146,8 @@ int gl_shader_new(struct gl_shader **out, const char *vert, int vert_len, const 
 		return -ENOMEM;
 	memset(shader, 0, sizeof(*shader));
 	shader->ref = 1;
-	shader->llog = llog;
-	shader->llog_data = llog_data;
 
-	llog_debug(shader, "new shader");
+	log_debug("new shader");
 
 	shader->vshader = compile_shader(shader, GL_VERTEX_SHADER, vert, vert_len);
 	if (shader->vshader == GL_NONE) {
@@ -177,13 +173,13 @@ int gl_shader_new(struct gl_shader **out, const char *vert, int vert_len, const 
 	if (status == GL_FALSE) {
 		msg[0] = 0;
 		glGetProgramInfoLog(shader->program, sizeof(msg), NULL, msg);
-		llog_warning(shader, "cannot link shader: %s", msg);
+		log_warning("cannot link shader: %s", msg);
 		ret = -EFAULT;
 		goto err_link;
 	}
 
 	if (gl_has_error(shader)) {
-		llog_warning(shader, "shader creation failed");
+		log_warning("shader creation failed");
 		ret = -EFAULT;
 		goto err_link;
 	}
@@ -214,7 +210,7 @@ void gl_shader_unref(struct gl_shader *shader)
 	if (!shader || !shader->ref || --shader->ref)
 		return;
 
-	llog_debug(shader, "free shader");
+	log_debug("free shader");
 
 	glDeleteProgram(shader->program);
 	glDeleteShader(shader->fshader);

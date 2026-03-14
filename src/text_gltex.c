@@ -176,7 +176,7 @@ static int gltex_set(struct kmscon_text *txt)
 	flen = _binary_text_gltex_atlas_frag_size;
 	gl_clear_error();
 
-	ret = gl_shader_new(&gt->shader, vert, vlen, frag, flen, attr, 4, log_llog, NULL);
+	ret = gl_shader_new(&gt->shader, vert, vlen, frag, flen, attr, 4);
 	if (ret)
 		goto err_htable;
 

@@ -85,14 +85,14 @@ static int init_shaders(struct uterm_video *video)
 	fill_flen = _binary_uterm_drm3d_fill_frag_size;
 
 	ret = gl_shader_new(&v3d->fill_shader, fill_vert, fill_vlen, fill_frag, fill_flen,
-			    fill_attr, 2, log_llog, NULL);
+			    fill_attr, 2);
 	if (ret)
 		return ret;
 
 	v3d->uni_fill_proj = gl_shader_get_uniform(v3d->fill_shader, "projection");
 
 	ret = gl_shader_new(&v3d->blend_shader, blend_vert, blend_vlen, blend_frag, blend_flen,
-			    blend_attr, 2, log_llog, NULL);
+			    blend_attr, 2);
 	if (ret)
 		return ret;
 
