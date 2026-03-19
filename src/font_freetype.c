@@ -32,6 +32,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "font.h"
+#include "shl_hashtable.h"
 #include "shl_log.h"
 #include "shl_misc.h"
 #include "uterm_video.h"
@@ -49,7 +50,16 @@ struct ft_data {
 	FT_Library ft;
 	struct ft_font regular;
 	struct ft_font bold;
+	struct shl_hashtable *cache;
 };
+
+static void free_glyph(void *data)
+{
+	struct kmscon_glyph *g = data;
+
+	free(g->buf.data);
+	free(g);
+}
 
 static void print_font_name(FcPattern *pattern)
 {
@@ -214,10 +224,13 @@ static int kmscon_font_freetype_init(struct kmscon_font *out, const struct kmsco
 	kmscon_copy_attr(&bold_attr, &out->attr);
 	bold_attr.bold = true;
 
+	if (shl_hashtable_new(&ftf->cache, shl_direct_hash, shl_direct_equal, free_glyph))
+		goto err_free;
+
 	err = FT_Init_FreeType(&ftf->ft);
 	if (err != 0) {
 		log_err("Failed to initialize FreeType\n");
-		goto err_free;
+		goto err_freecache;
 	}
 	if (prepare_font(ftf->ft, &ftf->regular, &out->attr))
 		goto err_done;
@@ -241,6 +254,8 @@ err_free_reg:
 	free_ft_font(&ftf->regular);
 err_done:
 	FT_Done_FreeType(ftf->ft);
+err_freecache:
+	shl_hashtable_free(ftf->cache);
 err_free:
 	free(ftf);
 	return -EINVAL;
@@ -254,6 +269,7 @@ static void kmscon_font_freetype_destroy(struct kmscon_font *font)
 	free_ft_font(&ftf->regular);
 	free_ft_font(&ftf->bold);
 	FT_Done_FreeType(ftf->ft);
+	shl_hashtable_free(ftf->cache);
 	free(ftf);
 	font->data = NULL;
 }
@@ -344,8 +360,9 @@ static void copy_glyph(struct uterm_video_buffer *buf, FT_Face face, FT_Bitmap *
 		draw_underline(buf, face);
 }
 
-static int render_glyph(FT_Face face, FT_UInt index, const uint32_t *ch,
-			const struct kmscon_font_attr *attr, const struct kmscon_glyph **out)
+static int render_glyph(struct shl_hashtable *cache, FT_Face face, FT_UInt index, uint64_t id,
+			const uint32_t *ch, const struct kmscon_font_attr *attr,
+			const struct kmscon_glyph **out)
 {
 	unsigned int cwidth;
 	struct kmscon_glyph *glyph;
@@ -389,6 +406,8 @@ static int render_glyph(FT_Face face, FT_UInt index, const uint32_t *ch,
 		copy_mono(&glyph->buf, &face->glyph->bitmap, attr->underline);
 	else
 		copy_glyph(&glyph->buf, face, &face->glyph->bitmap, attr->underline);
+
+	shl_hashtable_insert(cache, id, glyph);
 
 	*out = glyph;
 	return 0;
@@ -472,8 +491,12 @@ static int kmscon_font_freetype_render(struct kmscon_font *font, uint64_t id, co
 	if (!len)
 		return -ERANGE;
 
+	if (shl_hashtable_find(ftd->cache, (void **)out, id))
+		return 0;
+
 	if (glyph_index)
-		return render_glyph(ftfont->face, glyph_index, ch, &font->attr, out);
+		return render_glyph(ftd->cache, ftfont->face, glyph_index, id, ch, &font->attr,
+				    out);
 
 	fallback_index = get_fallback(*ch, ftfont);
 	fallback = prepare_tmp_face(ftd->ft, ftfont, fallback_index);
@@ -481,7 +504,7 @@ static int kmscon_font_freetype_render(struct kmscon_font *font, uint64_t id, co
 	if (fallback) {
 		select_font_size(fallback, &font->attr);
 		glyph_index = FT_Get_Char_Index(fallback, *ch);
-		ret = render_glyph(fallback, glyph_index, ch, &font->attr, out);
+		ret = render_glyph(ftd->cache, fallback, glyph_index, id, ch, &font->attr, out);
 		FT_Done_Face(fallback);
 		return ret;
 	}
