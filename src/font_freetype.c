@@ -380,6 +380,7 @@ static int render_glyph(FT_Face face, FT_UInt index, const uint32_t *ch,
 	glyph->buf.data = malloc(glyph->buf.height * glyph->buf.stride);
 	if (!glyph->buf.data) {
 		log_error("cannot allocate bitmap memory");
+		free(glyph);
 		return -ENOMEM;
 	}
 	memset(glyph->buf.data, 0, glyph->buf.height * glyph->buf.stride);
