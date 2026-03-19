@@ -496,7 +496,7 @@ int uxkb_dev_process(struct uterm_input_dev *dev, uint16_t key_state, uint16_t c
 void uxkb_dev_wake_up(struct uterm_input_dev *dev)
 {
 	uint32_t code;
-	char cur_bits[sizeof(SHL_DIV_ROUND_UP(KEY_CNT, CHAR_BIT))];
+	char cur_bits[SHL_DIV_ROUND_UP(KEY_CNT, CHAR_BIT)];
 	char cur_bit;
 	xkb_mod_mask_t locked_mods;
 	xkb_layout_index_t group;
