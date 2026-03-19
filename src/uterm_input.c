@@ -427,6 +427,7 @@ void uterm_input_unref(struct uterm_input *input)
 
 	uxkb_desc_destroy(input);
 	shl_hook_free(input->key_hook);
+	shl_hook_free(input->pointer_hook);
 	ev_eloop_unref(input->eloop);
 	free(input);
 }
