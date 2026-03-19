@@ -59,6 +59,7 @@ static uint32_t get_property_id(int fd, drmModeObjectPropertiesPtr props, const 
 			drmModeFreeProperty(prop);
 			return id;
 		}
+		drmModeFreeProperty(prop);
 	}
 	log_debug("drm property %s not found", name);
 	return 0;
@@ -77,6 +78,7 @@ static uint64_t get_property_value(int fd, drmModeObjectPropertiesPtr props, con
 			drmModeFreeProperty(prop);
 			return value;
 		}
+		drmModeFreeProperty(prop);
 	}
 	log_err("drm property %s not found", name);
 	return 0;
