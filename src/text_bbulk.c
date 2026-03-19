@@ -609,7 +609,7 @@ static void bbulk_compute_damage(struct kmscon_text *txt)
 	struct bbulk *bb = txt->data;
 	int posx, posy, off;
 	struct uterm_video_rect r;
-	unsigned int x1, y1;
+	unsigned int x1 = 0, y1 = 0;
 	unsigned int fw, fh;
 	int prev;
 
