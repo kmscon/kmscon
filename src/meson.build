@@ -161,7 +161,7 @@ endif
 # Unifont Generator
 # This generates the unifont sources from raw hex-encoded font data.
 #
-genunifont = executable('genunifont', 'genunifont.c', native: true)
+genunifont = executable('genunifont', 'genunifont.c', dependencies: [zlib_deps], native: true)
 
 unifont_bin = custom_target('unifont-bin',
   input: ['font_unifont_data.hex'],
@@ -179,7 +179,7 @@ if enable_font_unifont
       embed_gen.process(unifont_bin),
     ],
     name_prefix: '',
-    dependencies: [libtsm_deps, shl_deps],
+    dependencies: [libtsm_deps, shl_deps, zlib_deps],
     install: true,
     install_dir: moduledir,
   )

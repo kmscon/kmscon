@@ -51,6 +51,7 @@ libtsm_deps = dependency('libtsm', version: '>=4.4.0', allow_fallback: true)
 libudev_deps = dependency('libudev', version: '>=172')
 dl_deps = dependency('dl')
 threads_deps = dependency('threads')
+zlib_deps = dependency('zlib')
 
 python = find_program('python3')
 

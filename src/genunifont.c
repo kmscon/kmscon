@@ -35,6 +35,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <zlib.h>
 
 #define MAX_DATA_SIZE 255
 
@@ -68,18 +69,6 @@ static uint8_t hex_val(char c)
 
 	fprintf(stderr, "genunifont: invalid hex-code %c\n", c);
 	return 0;
-}
-
-static void print_unifont_glyph(FILE *out, const struct unifont_glyph *g)
-{
-	size_t i;
-	uint8_t val;
-
-	for (i = 0; i < g->len; i += 2) {
-		val = hex_val(g->data[i]) << 4;
-		val |= hex_val(g->data[i + 1]);
-		fprintf(out, "%c", val);
-	}
 }
 
 static int build_unifont_glyph(struct unifont_glyph *g, const char *buf)
@@ -118,7 +107,26 @@ static uint8_t get_width(int len)
 	return 0;
 }
 
-static void pack_glyph(struct unifont_glyph *list, FILE *out)
+static void compress_and_write(unsigned char *buf, unsigned long size, FILE *out)
+{
+	unsigned char *zbuf;
+	unsigned long zlen = size;
+	uint32_t uncompressed_size;
+
+	zbuf = malloc(zlen);
+	if (!zbuf)
+		return;
+
+	compress(zbuf, &zlen, buf, size);
+	fprintf(stderr, "genuifont: compressed %ld to %ld\n", size, zlen);
+
+	uncompressed_size = size;
+	fwrite(&uncompressed_size, sizeof(uncompressed_size), 1, out);
+	fwrite(zbuf, zlen, 1, out);
+	free(zbuf);
+}
+
+static struct unifont_glyph_block *gen_blocks(struct unifont_glyph *list, uint32_t *n_blocks)
 {
 	struct unifont_glyph *g = list;
 	struct unifont_glyph_block *blocks;
@@ -129,7 +137,7 @@ static void pack_glyph(struct unifont_glyph *list, FILE *out)
 	blocks = malloc(table_size * sizeof(*blocks));
 	if (!blocks) {
 		fprintf(stderr, "genunifont: out of memory\n");
-		return;
+		return NULL;
 	}
 
 	blocks[i].len = 0;
@@ -149,7 +157,7 @@ static void pack_glyph(struct unifont_glyph *list, FILE *out)
 				table_size *= 2;
 				blocks = realloc(blocks, table_size * sizeof(*blocks));
 				if (!blocks)
-					return;
+					return NULL;
 			}
 			blocks[i].len = 1;
 			blocks[i].codepoint = g->codepoint;
@@ -158,18 +166,51 @@ static void pack_glyph(struct unifont_glyph *list, FILE *out)
 		}
 		g = g->next;
 	}
-	i++;
+	*n_blocks = i + 1;
+	return blocks;
+}
 
-	// first the length of the blocks table
-	fwrite(&i, sizeof(i), 1, out);
+static void pack_glyph(struct unifont_glyph *list, FILE *out)
+{
+	struct unifont_glyph *g;
+	struct unifont_glyph_block *blocks;
+	uint32_t n_blocks = 0;
+	uint32_t offset = 0;
+	unsigned char *buf;
+	uint32_t size;
 
-	// Write the block table
-	fwrite(blocks, sizeof(*blocks), i, out);
+	blocks = gen_blocks(list, &n_blocks);
+	if (!blocks || !n_blocks)
+		return;
 
-	// Write the glyph data
+	size = 4 + n_blocks * sizeof(*blocks);
 	for (g = list; g; g = g->next)
-		print_unifont_glyph(out, g);
+		size += g->len / 2;
+
+	buf = malloc(size);
+
+	*(uint32_t *)buf = n_blocks;
+	offset += 4;
+	memcpy(buf + offset, blocks, sizeof(*blocks) * n_blocks);
+	offset += sizeof(*blocks) * n_blocks;
+	for (g = list; g; g = g->next) {
+		uint8_t val;
+		int i;
+
+		for (i = 0; i < g->len; i += 2) {
+			val = hex_val(g->data[i]) << 4;
+			val |= hex_val(g->data[i + 1]);
+			buf[offset++] = val;
+		}
+	}
+	if (offset != size)
+		fprintf(stderr, "genunifont: wrong size\n");
+
 	free(blocks);
+
+	compress_and_write(buf, size, out);
+
+	free(buf);
 }
 
 static int parse_single_file(FILE *out, FILE *in)
