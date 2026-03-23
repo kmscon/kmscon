@@ -487,41 +487,29 @@ int uxkb_dev_process(struct uterm_input_dev *dev, uint16_t key_state, uint16_t c
 
 void uxkb_dev_wake_up(struct uterm_input_dev *dev)
 {
-	uint32_t code;
-	char cur_bits[SHL_DIV_ROUND_UP(KEY_CNT, CHAR_BIT)];
-	char cur_bit;
 	xkb_mod_mask_t locked_mods;
-	xkb_layout_index_t group;
+	xkb_layout_index_t locked_layout;
 
-	memset(cur_bits, 0, sizeof(cur_bits));
-	errno = 0;
-	ioctl(dev->rfd, EVIOCGKEY(sizeof(cur_bits)), cur_bits);
-	if (errno) {
-		log_warn("failed to get current keyboard state (%d): %m", errno);
+	/*
+	 * On VT re-entry, there are some race conditions about the state of the key
+	 * So to avoid sticky modifiers, save only the "locked mods" (like Ver Num)
+	 * and recreate a new clear state.
+	 * The drawback is that the keys that are held when you switch to this VT
+	 * will need to be pressed again.
+	 */
+	locked_mods = xkb_state_serialize_mods(dev->state, XKB_STATE_MODS_LOCKED);
+	locked_layout = xkb_state_serialize_layout(dev->state, XKB_STATE_LAYOUT_LOCKED);
+
+	/* There is no way to clear the current state, so destroy and recreate a new one */
+	xkb_state_unref(dev->state);
+
+	dev->state = xkb_state_new(dev->input->keymap);
+	if (!dev->state) {
+		log_error("cannot create XKB state");
 		return;
 	}
 
-	/*
-	 * On VT re-entry we may have missed key-release events for modifier
-	 * keys released while the VT was inactive. The previous delta-based
-	 * approach (comparing against the sleep-time snapshot) is racey when
-	 * a Wayland compositor on another VT holds EVIOCGRAB: EVIOCGKEY can
-	 * still report a modifier as pressed at the exact moment we read it,
-	 * so the delta sees no change and no key-up is synthesized.
-	 *
-	 * Instead: clear all depressed and latched modifiers from xkb state
-	 * (preserving locked mods like CapsLock/NumLock) and rebuild purely
-	 * from the current kernel key state reported by EVIOCGKEY.
-	 */
-	locked_mods = xkb_state_serialize_mods(dev->state, XKB_STATE_MODS_LOCKED);
-	group = xkb_state_serialize_layout(dev->state, XKB_STATE_LAYOUT_EFFECTIVE);
-	xkb_state_update_mask(dev->state, 0, 0, locked_mods, 0, 0, group);
-
-	for (code = 0; code < KEY_CNT; code++) {
-		cur_bit = (cur_bits[code / 8] & (1 << (code % 8)));
-		if (cur_bit)
-			xkb_state_update_key(dev->state, code + EVDEV_KEYCODE_OFFSET, XKB_KEY_DOWN);
-	}
+	xkb_state_update_mask(dev->state, 0, 0, locked_mods, 0, 0, locked_layout);
 
 	uxkb_dev_update_keyboard_leds(dev);
 
