@@ -562,7 +562,7 @@
         <term><option>--mode {width}x{height}</option></term>
         <listitem>
           <para>Set the desired output mode. The given width
-          and height must match a supported more exactly for this option to have
+          and height must match a supported mode exactly for this option to have
           any effect; if there is no supported mode that matches exactly, or if there is
           an error when using the desired mode, then the default mode (first valid mode
           found) will be used.</para>
