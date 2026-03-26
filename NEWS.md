@@ -1,5 +1,41 @@
 = KMSCON Release News =
 
+## CHANGES with 9.3.3
+* New features:
+  - font: Add a fontconfig/freetype2 renderer by @kdj0c in https://github.com/kmscon/kmscon/pull/287
+  - freetype: Add glyph fallback support by @kdj0c in https://github.com/kmscon/kmscon/pull/308
+  - Freetype cache by @kdj0c in https://github.com/kmscon/kmscon/pull/314
+  - Unifont: compress the font data with zlib by @kdj0c in https://github.com/kmscon/kmscon/pull/321
+
+* Bug fixes:
+  - terminal: mark displays dirty on session activate by @michaelburch in https://github.com/kmscon/kmscon/pull/291
+  - Fix use after free in bbulk_unset() by @kdj0c in https://github.com/kmscon/kmscon/pull/298
+  - unifont: Fix sparse search by @kdj0c in https://github.com/kmscon/kmscon/pull/302
+  - Cleanup the log module by @kdj0c in https://github.com/kmscon/kmscon/pull/299
+  - Refactor font and redraw by @kdj0c in https://github.com/kmscon/kmscon/pull/303
+  - conf: Allow to zoom in with ctrl+= and ctrl++ by @kdj0c in https://github.com/kmscon/kmscon/pull/305
+  - drm: take drm_master before looking for connector/display by @kdj0c in https://github.com/kmscon/kmscon/pull/304
+  - conf:  Allow to rotate with <logo>+= and <logo>++ by @kdj0c in https://github.com/kmscon/kmscon/pull/306
+  - unifont: fix lookup_block() infinite loop by @kdj0c in https://github.com/kmscon/kmscon/pull/307
+  - input: fix stuck modifiers on VT re-entry by @valentinradu in https://github.com/kmscon/kmscon/pull/293
+  - text_bbulk: initialize x1 and y1 to fix -Werror=maybe-uninitialized by @OscarAC in https://github.com/kmscon/kmscon/pull/311
+  - input_uxkb: fix wrong cur_bit size by @kdj0c in https://github.com/kmscon/kmscon/pull/312
+  - Fix two simple memory leaks by @kdj0c in https://github.com/kmscon/kmscon/pull/313
+  - Cleanup by @kdj0c in https://github.com/kmscon/kmscon/pull/310
+  - Improved error messages around configuring to build documentation by @opensiriusfox in https://github.com/kmscon/kmscon/pull/297
+  - Add blocks to unicode-test, and a simple checkattr.sh script by @kdj0c in https://github.com/kmscon/kmscon/pull/317
+  - input_uxkb: Clear xkb_state on wake-up by @kdj0c in https://github.com/kmscon/kmscon/pull/315
+  - manpage: fix a typo by @kdj0c in https://github.com/kmscon/kmscon/pull/319
+
+## New Contributors
+* @michaelburch made their first contribution in https://github.com/kmscon/kmscon/pull/291
+* @valentinradu made their first contribution in https://github.com/kmscon/kmscon/pull/293
+* @OscarAC made their first contribution in https://github.com/kmscon/kmscon/pull/311
+* @opensiriusfox made their first contribution in https://github.com/kmscon/kmscon/pull/297
+
+**Full Changelog**: https://github.com/kmscon/kmscon/compare/v9.3.2...v9.3.3
+
+
 ## CHANGES WITH 9.3.2
 * New features:
   - Unifont scale by @kdj0c in https://github.com/kmscon/kmscon/pull/275
