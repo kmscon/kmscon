@@ -67,7 +67,7 @@ struct unifont_glyph_block {
 
 struct unifont_data {
 	unsigned char *font_data;
-	size_t len;
+	unsigned long len;
 	struct shl_hashtable *cache;
 };
 
