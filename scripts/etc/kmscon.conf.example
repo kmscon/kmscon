@@ -84,7 +84,7 @@
 
 ## Terminal options
 ## value of the $TERM variable
-#term=kmscon
+#term=linux
 
 ## Reset environment [on]
 #reset-env
