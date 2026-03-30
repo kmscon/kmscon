@@ -83,9 +83,7 @@ static int blit_outputs(struct uterm_video *video)
 		if (uterm_display_get_state(iter) != UTERM_DISPLAY_ACTIVE)
 			continue;
 
-		ret = uterm_display_fill(iter, 0xff, 0xff, 0xff, 0, 0,
-					 uterm_display_get_width(iter),
-					 uterm_display_get_height(iter));
+		ret = uterm_display_clear(iter, 0xff, 0xff, 0xff);
 		if (ret) {
 			log_err("cannot fill framebuffer");
 			continue;

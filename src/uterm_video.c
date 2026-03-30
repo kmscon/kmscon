@@ -303,13 +303,12 @@ bool uterm_display_is_swapping(struct uterm_display *disp)
 }
 
 SHL_EXPORT
-int uterm_display_fill(struct uterm_display *disp, uint8_t r, uint8_t g, uint8_t b, unsigned int x,
-		       unsigned int y, unsigned int width, unsigned int height)
+int uterm_display_clear(struct uterm_display *disp, uint8_t r, uint8_t g, uint8_t b)
 {
 	if (!disp || !display_is_online(disp) || !video_is_awake(disp->video))
 		return -EINVAL;
 
-	return VIDEO_CALL(disp->ops->fill, -EOPNOTSUPP, disp, r, g, b, x, y, width, height);
+	return VIDEO_CALL(disp->ops->clear, -EOPNOTSUPP, disp, r, g, b);
 }
 
 SHL_EXPORT

@@ -106,17 +106,12 @@ bool uterm_display_supports_damage(struct uterm_display *disp)
 	(void)disp;
 	return true;
 }
-int uterm_display_fill(struct uterm_display *disp, uint8_t r, uint8_t g, uint8_t b, unsigned int x,
-		       unsigned int y, unsigned int w, unsigned int h)
+int uterm_display_clear(struct uterm_display *disp, uint8_t r, uint8_t g, uint8_t b)
 {
 	(void)disp;
 	(void)r;
 	(void)g;
 	(void)b;
-	(void)x;
-	(void)y;
-	(void)w;
-	(void)h;
 	return 0;
 }
 int uterm_display_fake_blendv(struct uterm_display *disp, const struct uterm_video_blend_req *req,

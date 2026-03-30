@@ -51,12 +51,7 @@ struct kmscon_dummy {
 
 static void dummy_redraw(struct kmscon_dummy *dummy, struct display *d)
 {
-	unsigned int w, h;
-
-	w = uterm_display_get_width(d->disp);
-	h = uterm_display_get_height(d->disp);
-
-	uterm_display_fill(d->disp, 0, 0, 0, 0, 0, w, h);
+	uterm_display_clear(d->disp, 0, 0, 0);
 	uterm_display_swap(d->disp);
 }
 

@@ -80,8 +80,6 @@ struct fbdev_video {
 
 int uterm_fbdev_display_fake_blendv(struct uterm_display *disp,
 				    const struct uterm_video_blend_req *req, size_t num);
-int uterm_fbdev_display_fill(struct uterm_display *disp, uint8_t r, uint8_t g, uint8_t b,
-			     unsigned int x, unsigned int y, unsigned int width,
-			     unsigned int height);
+int uterm_fbdev_display_clear(struct uterm_display *disp, uint8_t r, uint8_t g, uint8_t b);
 
 #endif /* UTERM_FBDEV_INTERNAL_H */
