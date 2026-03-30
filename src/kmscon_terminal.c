@@ -315,6 +315,12 @@ static bool terminal_update_size(struct kmscon_terminal *term)
 
 	term->min_cols = min_cols;
 	term->min_rows = min_rows;
+
+	shl_dlist_for_each(iter, &term->screens)
+	{
+		scr = shl_dlist_entry(iter, struct screen, list);
+		kmscon_text_resize(scr->txt, term->min_cols, term->min_rows);
+	}
 	return true;
 }
 
@@ -457,6 +463,7 @@ static int add_display(struct kmscon_terminal *term, struct uterm_display *disp)
 	log_debug("added display %p to terminal %p", disp, term);
 
 	terminal_update_size_notify(term);
+	kmscon_text_resize(scr->txt, term->min_cols, term->min_rows);
 	update_pointer_max_all(term);
 	uterm_display_ref(scr->disp);
 	return 0;

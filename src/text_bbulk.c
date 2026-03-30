@@ -127,16 +127,18 @@ static int bbulk_set(struct kmscon_text *txt)
 		return -EINVAL;
 
 	if (txt->orientation == OR_NORMAL || txt->orientation == OR_UPSIDE_DOWN) {
-		txt->cols = bb->sw / FONT_WIDTH(txt);
-		txt->rows = bb->sh / FONT_HEIGHT(txt);
+		txt->max_cols = bb->sw / FONT_WIDTH(txt);
+		txt->max_rows = bb->sh / FONT_HEIGHT(txt);
 	} else {
-		txt->rows = bb->sw / FONT_HEIGHT(txt);
-		txt->cols = bb->sh / FONT_WIDTH(txt);
+		txt->max_rows = bb->sw / FONT_HEIGHT(txt);
+		txt->max_cols = bb->sh / FONT_WIDTH(txt);
 	}
+	txt->cols = txt->max_cols;
+	txt->rows = txt->max_rows;
 
-	bb->cells = txt->cols * txt->rows;
+	bb->cells = txt->max_cols * txt->max_rows;
 	bb->req_total_len = bb->cells + 1; /* + 1 for the mouse pointer */
-	max_damage_rects = SHL_DIV_ROUND_UP(txt->cols, DAMAGE_MERGE_LEN + 1) * txt->rows;
+	max_damage_rects = SHL_DIV_ROUND_UP(txt->max_cols, DAMAGE_MERGE_LEN + 1) * txt->max_rows;
 
 	bb->reqs = malloc(sizeof(*bb->reqs) * bb->req_total_len);
 	if (!bb->reqs)

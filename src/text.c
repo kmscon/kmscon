@@ -298,6 +298,25 @@ void kmscon_text_unset(struct kmscon_text *txt)
 }
 
 /**
+ * kmscon_text_resize:
+ * @txt: valid text renderer
+ * @cols: number of columns
+ * @rows: number of rows
+ *
+ * After setting the arguments with kmscon_text_set(), the renderer will compute
+ * the number of columns/rows of the console that it can display on the screen.
+ * But in case of multi-screen setup the actual size of the terminal might be
+ * smaller, so call this function to set the current terminal size.
+ */
+void kmscon_text_resize(struct kmscon_text *txt, unsigned int cols, unsigned int rows)
+{
+	if (!txt || !cols || cols > txt->max_cols || !rows || rows > txt->max_rows)
+		return;
+	if (txt->ops->resize)
+		txt->ops->resize(txt, cols, rows);
+}
+
+/**
  * kmscon_text_get_cols:
  * @txt: valid text renderer
  *
@@ -313,7 +332,7 @@ unsigned int kmscon_text_get_cols(struct kmscon_text *txt)
 	if (!txt)
 		return 0;
 
-	return txt->cols;
+	return txt->max_cols;
 }
 
 /**
@@ -332,7 +351,7 @@ unsigned int kmscon_text_get_rows(struct kmscon_text *txt)
 	if (!txt)
 		return 0;
 
-	return txt->rows;
+	return txt->max_rows;
 }
 
 /**
