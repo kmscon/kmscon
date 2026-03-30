@@ -76,6 +76,8 @@ struct bbulk {
 	struct uterm_video_rect *damage_rects;
 	unsigned int damage_rect_len;
 	uint8_t redraw;
+	unsigned int off_x;
+	unsigned int off_y;
 };
 
 static int bbulk_init(struct kmscon_text *txt)
@@ -112,6 +114,19 @@ static void damage_cell(struct bbulk *bb, unsigned int off)
 	bb->damages[off] = true;
 }
 
+static void compute_border(struct kmscon_text *txt)
+{
+	struct bbulk *bb = txt->data;
+
+	if (txt->orientation == OR_NORMAL || txt->orientation == OR_UPSIDE_DOWN) {
+		bb->off_x = (bb->sw - txt->cols * FONT_WIDTH(txt)) / 2;
+		bb->off_y = (bb->sh - txt->rows * FONT_HEIGHT(txt)) / 2;
+	} else {
+		bb->off_x = (bb->sw - txt->rows * FONT_HEIGHT(txt)) / 2;
+		bb->off_y = (bb->sh - txt->cols * FONT_WIDTH(txt)) / 2;
+	}
+}
+
 static int bbulk_set(struct kmscon_text *txt)
 {
 	struct bbulk *bb = txt->data;
@@ -135,6 +150,7 @@ static int bbulk_set(struct kmscon_text *txt)
 	}
 	txt->cols = txt->max_cols;
 	txt->rows = txt->max_rows;
+	compute_border(txt);
 
 	bb->cells = txt->max_cols * txt->max_rows;
 	bb->req_total_len = bb->cells + 1; /* + 1 for the mouse pointer */
@@ -190,6 +206,16 @@ static void bbulk_unset(struct kmscon_text *txt)
 	bb->reqs = NULL;
 	bb->damages = NULL;
 	bb->prev = NULL;
+}
+
+static void bbulk_resize(struct kmscon_text *txt, unsigned int cols, unsigned int rows)
+{
+	struct bbulk *bb = txt->data;
+
+	txt->cols = cols;
+	txt->rows = rows;
+	compute_border(txt);
+	bb->redraw = 2;
 }
 
 static int bbulk_rotate(struct kmscon_text *txt, enum Orientation orientation)
@@ -348,6 +374,8 @@ static void set_coordinate(struct kmscon_text *txt, unsigned int *x, unsigned in
 		*y = bb->sh - (posx + 1) * FONT_WIDTH(txt);
 		break;
 	}
+	*x += bb->off_x;
+	*y += bb->off_y;
 }
 
 static void set_color(struct uterm_video_blend_req *req, const struct tsm_screen_attr *attr)
@@ -541,14 +569,14 @@ static void set_pointer_coordinate(struct bbulk *bb, struct kmscon_text *txt,
 	x = clamp(x, hf_w, bb->sw - hf_w);
 	y = clamp(y, hf_h, bb->sh - hf_h);
 
-	x -= hf_w;
-	y -= hf_h;
+	x += bb->off_x - hf_w;
+	y += bb->off_y - hf_h;
 
 	req->x = x;
 	req->y = y;
 }
 
-static int bblit_draw_pointer(struct kmscon_text *txt, unsigned int pointer_x,
+static int bbulk_draw_pointer(struct kmscon_text *txt, unsigned int pointer_x,
 			      unsigned int pointer_y)
 {
 	struct bbulk *bb = txt->data;
@@ -704,10 +732,11 @@ struct kmscon_text_ops kmscon_text_bbulk_ops = {
 	.destroy = bbulk_destroy,
 	.set = bbulk_set,
 	.unset = bbulk_unset,
+	.resize = bbulk_resize,
 	.rotate = bbulk_rotate,
 	.prepare = bbulk_prepare,
 	.draw = bbulk_draw,
-	.draw_pointer = bblit_draw_pointer,
+	.draw_pointer = bbulk_draw_pointer,
 	.render = bbulk_render,
 	.abort = NULL,
 };
