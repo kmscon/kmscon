@@ -196,12 +196,14 @@ static int gltex_set(struct kmscon_text *txt)
 	gt->sh = uterm_display_get_height(txt->disp);
 
 	if (txt->orientation == OR_NORMAL || txt->orientation == OR_UPSIDE_DOWN) {
-		txt->cols = gt->sw / FONT_WIDTH(txt);
-		txt->rows = gt->sh / FONT_HEIGHT(txt);
+		txt->max_cols = gt->sw / FONT_WIDTH(txt);
+		txt->max_rows = gt->sh / FONT_HEIGHT(txt);
 	} else {
-		txt->cols = gt->sh / FONT_WIDTH(txt);
-		txt->rows = gt->sw / FONT_HEIGHT(txt);
+		txt->max_cols = gt->sh / FONT_WIDTH(txt);
+		txt->max_rows = gt->sw / FONT_HEIGHT(txt);
 	}
+	txt->cols = txt->max_cols;
+	txt->rows = txt->max_rows;
 
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &s);
 	if (s <= 0)
@@ -329,7 +331,7 @@ try_next:
 
 	log_debug("new atlas of size %ux%u for %zu", width, height, newsize);
 
-	nsize = txt->cols * txt->rows + 1; // +1 for the mouse pointer
+	nsize = txt->max_cols * txt->max_rows + 1; // +1 for the mouse pointer
 
 	atlas->cache_pos = malloc(sizeof(GLfloat) * nsize * 2 * 6);
 	if (!atlas->cache_pos)

@@ -62,8 +62,9 @@ struct kmscon_text {
 	struct uterm_display *disp;
 	unsigned int cols;
 	unsigned int rows;
+	unsigned int max_cols;
+	unsigned int max_rows;
 	bool rendering;
-	bool overflow_next;
 	enum Orientation orientation;
 };
 
@@ -74,6 +75,7 @@ struct kmscon_text_ops {
 	void (*destroy)(struct kmscon_text *txt);
 	int (*set)(struct kmscon_text *txt);
 	void (*unset)(struct kmscon_text *txt);
+	void (*resize)(struct kmscon_text *txt, unsigned int cols, unsigned int rows);
 	int (*rotate)(struct kmscon_text *txt, enum Orientation orientation);
 	int (*prepare)(struct kmscon_text *txt, struct tsm_screen_attr *attr);
 	int (*draw)(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, size_t len,
@@ -100,6 +102,7 @@ unsigned int kmscon_text_get_cols(struct kmscon_text *txt);
 unsigned int kmscon_text_get_rows(struct kmscon_text *txt);
 
 enum Orientation kmscon_text_get_orientation(struct kmscon_text *txt);
+void kmscon_text_resize(struct kmscon_text *txt, unsigned int cols, unsigned int rows);
 int kmscon_text_rotate(struct kmscon_text *txt, enum Orientation orientation);
 
 int kmscon_text_prepare(struct kmscon_text *txt, struct tsm_screen_attr *attr);
