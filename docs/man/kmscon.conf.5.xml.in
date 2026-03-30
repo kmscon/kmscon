@@ -83,7 +83,9 @@ font-engine=pango
 font-size=18
 font-name=Ubuntu Mono
     </programlisting>
-    <para>Any line starting with a #-character is ignored and considered to be a comment.</para>
+    <para>In any line, every character are ignored after a # and considered to be a comment.
+          whitespace are ignored at begining and ending of a line, and around the '=' when
+          assigning a parameter</para>
   </refsect1>
 
   <refsect1>
@@ -92,7 +94,6 @@ font-name=Ubuntu Mono
           possible values.</para>
 
     <variablelist>
-      <para><emphasis>### General Options ###</emphasis></para>
       <varlistentry>
         <term><option>verbose</option></term>
         <listitem>
@@ -132,7 +133,6 @@ font-name=Ubuntu Mono
         </listitem>
       </varlistentry>
 
-      <para><emphasis>### Seat Options ###</emphasis></para>
       <varlistentry>
         <term><option>vt</option></term>
         <listitem>
@@ -154,8 +154,6 @@ font-name=Ubuntu Mono
         </listitem>
       </varlistentry>
 
-      <para><emphasis>### Session Options ###</emphasis></para>
-
       <varlistentry>
         <term><option>session-max</option></term>
         <listitem>
@@ -176,8 +174,6 @@ font-name=Ubuntu Mono
           <para>Enable terminal session. (default: on)</para>
         </listitem>
       </varlistentry>
-
-      <para><emphasis>### Terminal Options ###</emphasis></para>
 
       <varlistentry>
         <term><option>login</option></term>
@@ -221,7 +217,6 @@ font-name=Ubuntu Mono
         </listitem>
       </varlistentry>
 
-      <para><emphasis>### Input Options ###</emphasis></para>
       <varlistentry>
         <term><option>xkb-model</option></term>
         <listitem>
@@ -272,7 +267,7 @@ font-name=Ubuntu Mono
       </varlistentry>
 
       <varlistentry>
-        <term><option>--mouse</option></term>
+        <term><option>mouse</option></term>
         <listitem>
           <para>Enable mouse/touchpad/trackpoint in kmscon (default: on).
                 It allows to select, and copy/paste text with a pointing device,
@@ -283,7 +278,7 @@ font-name=Ubuntu Mono
       </varlistentry>
 
       <varlistentry>
-        <term><option>--dpms-timeout</option></term>
+        <term><option>dpms-timeout</option></term>
         <listitem>
           <para>Set screen timeout in seconds (default: 0 = disabled).
                 When enabled, the screen will automatically turn off (DPMS OFF)
@@ -295,7 +290,6 @@ font-name=Ubuntu Mono
         </listitem>
       </varlistentry>
 
-      <para><emphasis>### Grabs/Keyboard-Shortcuts ###</emphasis></para>
       <varlistentry>
         <term><option>grab-scroll-up</option></term>
         <listitem>
@@ -402,7 +396,6 @@ font-name=Ubuntu Mono
         </listitem>
       </varlistentry>
 
-      <para><emphasis>### Video Options ###</emphasis></para>
       <varlistentry>
         <term><option>drm</option></term>
         <listitem>
@@ -445,7 +438,6 @@ font-name=Ubuntu Mono
         </listitem>
       </varlistentry>
 
-      <para><emphasis>### Font Options ###</emphasis></para>
       <varlistentry>
         <term><option>font-engine</option></term>
         <listitem>
@@ -479,7 +471,20 @@ font-name=Ubuntu Mono
 
   <refsect1>
     <title>Files</title>
-    <para><emphasis>/etc/kmsconf.conf</emphasis></para>
+    <variablelist>
+      <varlistentry>
+        <term><option>Main configuration file</option></term>
+        <listitem>
+          <para><filename>@CONFIG_DIR@/kmscon.conf</filename></para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term><option>Seat specific configuration file</option></term>
+        <listitem>
+          <para><filename>@CONFIG_DIR@/{seat_name}.kmscon.conf</filename></para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
   </refsect1>
 
   <refsect1>
