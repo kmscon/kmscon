@@ -279,85 +279,13 @@ int uterm_drm3d_display_fake_blendv(struct uterm_display *disp,
 	return 0;
 }
 
-int uterm_drm3d_display_fill(struct uterm_display *disp, uint8_t r, uint8_t g, uint8_t b,
-			     unsigned int x, unsigned int y, unsigned int width,
-			     unsigned int height)
+int uterm_drm3d_display_clear(struct uterm_display *disp, uint8_t r, uint8_t g, uint8_t b)
 {
-	struct uterm_drm3d_video *v3d;
-	unsigned int sw, sh, tmp, i;
-	float mat[16];
-	float vertices[6 * 2], colors[6 * 4];
-	int ret;
-
-	v3d = uterm_drm_video_get_data(disp->video);
-	ret = uterm_drm3d_display_use(disp);
-	if (ret)
-		return ret;
-	ret = init_shaders(disp->video);
-	if (ret)
-		return ret;
-
-	sw = disp->width;
-	sh = disp->height;
-
-	for (i = 0; i < 6; ++i) {
-		colors[i * 4 + 0] = r / 255.0;
-		colors[i * 4 + 1] = g / 255.0;
-		colors[i * 4 + 2] = b / 255.0;
-		colors[i * 4 + 3] = 1.0;
-	}
-
-	vertices[0] = -1.0;
-	vertices[1] = -1.0;
-	vertices[2] = -1.0;
-	vertices[3] = +1.0;
-	vertices[4] = +1.0;
-	vertices[5] = +1.0;
-
-	vertices[6] = -1.0;
-	vertices[7] = -1.0;
-	vertices[8] = +1.0;
-	vertices[9] = +1.0;
-	vertices[10] = +1.0;
-	vertices[11] = -1.0;
-
-	tmp = x + width;
-	if (tmp < x || x >= sw)
-		return -EINVAL;
-	if (tmp > sw)
-		width = sw - x;
-	tmp = y + height;
-	if (tmp < y || y >= sh)
-		return -EINVAL;
-	if (tmp > sh)
-		height = sh - y;
-
-	/* Caution:
-	 * opengl uses a coordinate system with the origin at _lower-left_ corner
-	 * and positive y-axis up, while other parts uses a coordinate system
-	 * with the origin at _upper-left_ corner and positive y-axis down.
-	 */
-	y = sh - y;  // invert y-axis
-	y -= height; // move origin to lower left corner
-
-	glViewport(x, y, width, height);
-	glDisable(GL_BLEND);
-
-	gl_shader_use(v3d->fill_shader);
-	gl_m4_identity(mat);
-	glUniformMatrix4fv(v3d->uni_fill_proj, 1, GL_FALSE, mat);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, vertices);
-	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0, colors);
-	glEnableVertexAttribArray(0);
-	glEnableVertexAttribArray(1);
-	glDrawArrays(GL_TRIANGLES, 0, 6);
-	glDisableVertexAttribArray(0);
-	glDisableVertexAttribArray(1);
-
-	if (gl_has_error(v3d->fill_shader)) {
-		log_warning("GL error");
+	if (uterm_drm3d_display_use(disp))
 		return -EFAULT;
-	}
+
+	glClearColor(r, g, b, 0);
+	glClear(GL_COLOR_BUFFER_BIT);
 
 	return 0;
 }

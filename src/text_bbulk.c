@@ -709,7 +709,7 @@ static int bbulk_prepare(struct kmscon_text *txt, struct tsm_screen_attr *attr)
 	bb->attr = *attr;
 
 	if (bb->redraw) {
-		uterm_display_fill(txt->disp, attr->br, attr->bg, attr->bb, 0, 0, bb->sw, bb->sh);
+		uterm_display_clear(txt->disp, attr->br, attr->bg, attr->bb);
 		for (i = 0; i < bb->cells; i++)
 			damage_cell(bb, i);
 	} else if (uterm_display_has_damage(txt->disp)) {

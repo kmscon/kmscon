@@ -168,8 +168,7 @@ bool uterm_display_is_swapping(struct uterm_display *disp);
 void uterm_display_set_need_redraw(struct uterm_display *disp);
 bool uterm_display_need_redraw(struct uterm_display *disp);
 
-int uterm_display_fill(struct uterm_display *disp, uint8_t r, uint8_t g, uint8_t b, unsigned int x,
-		       unsigned int y, unsigned int width, unsigned int height);
+int uterm_display_clear(struct uterm_display *disp, uint8_t r, uint8_t g, uint8_t b);
 int uterm_display_fake_blendv(struct uterm_display *disp, const struct uterm_video_blend_req *req,
 			      size_t num);
 void uterm_display_set_damage(struct uterm_display *disp, size_t n_rect,

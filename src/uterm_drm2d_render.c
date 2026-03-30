@@ -133,33 +133,17 @@ int uterm_drm2d_display_fake_blendv(struct uterm_display *disp,
 	return 0;
 }
 
-int uterm_drm2d_display_fill(struct uterm_display *disp, uint8_t r, uint8_t g, uint8_t b,
-			     unsigned int x, unsigned int y, unsigned int width,
-			     unsigned int height)
+int uterm_drm2d_display_clear(struct uterm_display *disp, uint8_t r, uint8_t g, uint8_t b)
 {
-	unsigned int tmp, i;
-	uint8_t *dst;
-	unsigned int sw, sh;
 	struct uterm_drm2d_rb *rb;
 	struct uterm_drm2d_display *d2d = disp->data;
+	unsigned int width = disp->width;
+	unsigned int height = disp->height;
+	uint8_t *dst;
+	int i;
 
 	rb = &d2d->rb[d2d->current_rb ^ 1];
-	sw = disp->width;
-	sh = disp->height;
-
-	tmp = x + width;
-	if (tmp < x || x >= sw)
-		return -EINVAL;
-	if (tmp > sw)
-		width = sw - x;
-	tmp = y + height;
-	if (tmp < y || y >= sh)
-		return -EINVAL;
-	if (tmp > sh)
-		height = sh - y;
-
 	dst = rb->map;
-	dst = &dst[y * rb->stride + x * 4];
 
 	while (height--) {
 		for (i = 0; i < width; ++i)

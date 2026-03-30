@@ -270,31 +270,19 @@ int uterm_fbdev_display_fake_blendv(struct uterm_display *disp,
 	return 0;
 }
 
-int uterm_fbdev_display_fill(struct uterm_display *disp, uint8_t r, uint8_t g, uint8_t b,
-			     unsigned int x, unsigned int y, unsigned int width,
-			     unsigned int height)
+int uterm_fbdev_display_clear(struct uterm_display *disp, uint8_t r, uint8_t g, uint8_t b)
 {
-	unsigned int tmp, i;
+	unsigned int i;
 	uint8_t *dst;
 	uint32_t full_val, rgb32;
 	struct fbdev_display *fbdev = disp->data;
-
-	tmp = x + width;
-	if (tmp < x || x >= fbdev->xres)
-		return -EINVAL;
-	if (tmp > fbdev->xres)
-		width = fbdev->xres - x;
-	tmp = y + height;
-	if (tmp < y || y >= fbdev->yres)
-		return -EINVAL;
-	if (tmp > fbdev->yres)
-		height = fbdev->yres - y;
+	unsigned int width = fbdev->xres;
+	unsigned int height = fbdev->yres;
 
 	if (!(disp->flags & DISPLAY_DBUF) || fbdev->bufid)
 		dst = fbdev->map;
 	else
 		dst = &fbdev->map[fbdev->yres * fbdev->stride];
-	dst = &dst[y * fbdev->stride + x * fbdev->Bpp];
 
 	full_val = ((r & 0xff) >> (8 - fbdev->len_r)) << fbdev->off_r;
 	full_val |= ((g & 0xff) >> (8 - fbdev->len_g)) << fbdev->off_g;
