@@ -103,6 +103,8 @@ struct gltex {
 
 	GLfloat advance_x;
 	GLfloat advance_y;
+	GLfloat off_x;
+	GLfloat off_y;
 
 	struct gl_shader *shader;
 	GLuint uni_cos;
@@ -145,6 +147,31 @@ static void free_glyph(void *data)
 	struct glyph *glyph = data;
 
 	free(glyph);
+}
+
+static void gltex_set_cos(struct gltex *gt, enum Orientation orientation)
+{
+	float sin_table[5] = {0.0, 1.0, 0.0, -1.0, 0.0};
+
+	gt->cos = sin_table[orientation + 1];
+	gt->sin = sin_table[orientation];
+}
+
+static void compute_advance_and_offset(struct kmscon_text *txt)
+{
+	struct gltex *gt = txt->data;
+
+	if (txt->orientation == OR_NORMAL || txt->orientation == OR_UPSIDE_DOWN) {
+		gt->advance_x = 2.0 / gt->sw * FONT_WIDTH(txt);
+		gt->advance_y = 2.0 / gt->sh * FONT_HEIGHT(txt);
+		gt->off_x = (gt->sw - txt->cols * FONT_WIDTH(txt)) / (float)gt->sw;
+		gt->off_y = (gt->sh - txt->rows * FONT_HEIGHT(txt)) / (float)gt->sh;
+	} else {
+		gt->advance_x = 2.0 / gt->sh * FONT_WIDTH(txt);
+		gt->advance_y = 2.0 / gt->sw * FONT_HEIGHT(txt);
+		gt->off_x = (gt->sh - txt->cols * FONT_WIDTH(txt)) / (float)gt->sh;
+		gt->off_y = (gt->sw - txt->rows * FONT_HEIGHT(txt)) / (float)gt->sw;
+	}
 }
 
 static int gltex_set(struct kmscon_text *txt)
@@ -204,6 +231,8 @@ static int gltex_set(struct kmscon_text *txt)
 	}
 	txt->cols = txt->max_cols;
 	txt->rows = txt->max_rows;
+	compute_advance_and_offset(txt);
+	gltex_set_cos(gt, txt->orientation);
 
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &s);
 	if (s <= 0)
@@ -496,32 +525,17 @@ err_free:
 	return ret;
 }
 
-static void gltex_set_rotate(struct gltex *gt, enum Orientation orientation)
+static void gltex_resize(struct kmscon_text *txt, unsigned int cols, unsigned int rows)
 {
-	float sin_table[5] = {0.0, 1.0, 0.0, -1.0, 0.0};
-
-	gt->cos = sin_table[orientation + 1];
-	gt->sin = sin_table[orientation];
+	txt->cols = cols;
+	txt->rows = rows;
+	compute_advance_and_offset(txt);
 }
 
 static int gltex_rotate(struct kmscon_text *txt, enum Orientation orientation)
 {
-	struct gltex *gt = txt->data;
-
 	txt->orientation = orientation;
 
-	if (txt->orientation == OR_NORMAL || txt->orientation == OR_UPSIDE_DOWN) {
-		txt->cols = gt->sw / FONT_WIDTH(txt);
-		txt->rows = gt->sh / FONT_HEIGHT(txt);
-		gt->advance_x = 2.0 / gt->sw * FONT_WIDTH(txt);
-		gt->advance_y = 2.0 / gt->sh * FONT_HEIGHT(txt);
-	} else {
-		float aspect = (float)gt->sw / (float)gt->sh;
-		txt->cols = gt->sh / FONT_WIDTH(txt);
-		txt->rows = gt->sw / FONT_HEIGHT(txt);
-		gt->advance_x = 2.0 / gt->sw * FONT_WIDTH(txt) * aspect;
-		gt->advance_y = 2.0 / gt->sh * FONT_HEIGHT(txt) * (1. / aspect);
-	}
 	gltex_unset(txt);
 	gltex_set(txt);
 	return 0;
@@ -544,17 +558,6 @@ static int gltex_prepare(struct kmscon_text *txt, struct tsm_screen_attr *attr)
 
 		atlas->cache_num = 0;
 	}
-
-	if (txt->orientation == OR_NORMAL || txt->orientation == OR_UPSIDE_DOWN) {
-		gt->advance_x = 2.0 / gt->sw * FONT_WIDTH(txt);
-		gt->advance_y = 2.0 / gt->sh * FONT_HEIGHT(txt);
-	} else {
-		float aspect = (float)gt->sw / (float)gt->sh;
-		gt->advance_x = 2.0 / gt->sw * FONT_WIDTH(txt) * aspect;
-		gt->advance_y = 2.0 / gt->sh * FONT_HEIGHT(txt) * (1. / aspect);
-	}
-	gltex_set_rotate(gt, txt->orientation);
-
 	gt->attr = *attr;
 
 	glClearColor(gt->attr.br / 255.0, gt->attr.bg / 255.0, gt->attr.bb / 255.0, 1);
@@ -595,9 +598,9 @@ static int gltex_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, 
 		return -ERANGE;
 
 	idx = atlas->cache_num * 2 * 6;
-	gl_x1 = gt->advance_x * posx - 1.0;
+	gl_x1 = gt->off_x + gt->advance_x * posx - 1.0;
 	gl_x2 = gl_x1 + width * gt->advance_x;
-	gl_y1 = 1.0 - gt->advance_y * posy;
+	gl_y1 = 1.0 - gt->off_y - gt->advance_y * posy;
 	gl_y2 = gl_y1 - gt->advance_y;
 
 	atlas->cache_pos[idx + 0] = gl_x1;
@@ -686,8 +689,8 @@ static int gltex_draw_pointer(struct kmscon_text *txt, unsigned int x, unsigned 
 	if (y > sh)
 		y = sh;
 
-	gl_x1 = x * 2.0 / sw - 1.0 - gt->advance_x / 2.0;
-	gl_y1 = 1.0 - y * 2.0 / sh + gt->advance_y / 2.0;
+	gl_x1 = gt->off_x + x * 2.0 / sw - 1.0 - gt->advance_x / 2.0;
+	gl_y1 = 1.0 - gt->off_y - y * 2.0 / sh + gt->advance_y / 2.0;
 	gl_x2 = gl_x1 + gt->advance_x;
 	gl_y2 = gl_y1 - gt->advance_y;
 
@@ -800,6 +803,7 @@ struct kmscon_text_ops kmscon_text_gltex_ops = {
 	.destroy = gltex_destroy,
 	.set = gltex_set,
 	.unset = gltex_unset,
+	.resize = gltex_resize,
 	.rotate = gltex_rotate,
 	.prepare = gltex_prepare,
 	.draw = gltex_draw,
