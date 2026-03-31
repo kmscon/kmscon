@@ -49,8 +49,6 @@
 #include "shl_log.h"
 #include "uterm_drm3d_blend.frag.bin.h"
 #include "uterm_drm3d_blend.vert.bin.h"
-#include "uterm_drm3d_fill.frag.bin.h"
-#include "uterm_drm3d_fill.vert.bin.h"
 #include "uterm_drm3d_internal.h"
 #include "uterm_drm_shared_internal.h"
 #include "uterm_video.h"
@@ -62,11 +60,9 @@ static int init_shaders(struct uterm_video *video)
 {
 	struct uterm_drm3d_video *v3d = uterm_drm_video_get_data(video);
 	int ret;
-	char *fill_attr[] = {"position", "color"};
 	char *blend_attr[] = {"position", "texture_position"};
-	int blend_vlen, blend_flen, fill_vlen, fill_flen;
+	int blend_vlen, blend_flen;
 	const char *blend_vert, *blend_frag;
-	const char *fill_vert, *fill_frag;
 
 	if (v3d->sinit == 1)
 		return -EFAULT;
@@ -79,17 +75,6 @@ static int init_shaders(struct uterm_video *video)
 	blend_vlen = _binary_uterm_drm3d_blend_vert_size;
 	blend_frag = _binary_uterm_drm3d_blend_frag_start;
 	blend_flen = _binary_uterm_drm3d_blend_frag_size;
-	fill_vert = _binary_uterm_drm3d_fill_vert_start;
-	fill_vlen = _binary_uterm_drm3d_fill_vert_size;
-	fill_frag = _binary_uterm_drm3d_fill_frag_start;
-	fill_flen = _binary_uterm_drm3d_fill_frag_size;
-
-	ret = gl_shader_new(&v3d->fill_shader, fill_vert, fill_vlen, fill_frag, fill_flen,
-			    fill_attr, 2);
-	if (ret)
-		return ret;
-
-	v3d->uni_fill_proj = gl_shader_get_uniform(v3d->fill_shader, "projection");
 
 	ret = gl_shader_new(&v3d->blend_shader, blend_vert, blend_vlen, blend_frag, blend_flen,
 			    blend_attr, 2);
@@ -117,7 +102,6 @@ void uterm_drm3d_deinit_shaders(struct uterm_video *video)
 	v3d->sinit = 0;
 	gl_tex_free(&v3d->tex, 1);
 	gl_shader_unref(v3d->blend_shader);
-	gl_shader_unref(v3d->fill_shader);
 }
 
 static int display_blend(struct uterm_display *disp, const struct uterm_video_buffer *buf,
