@@ -226,11 +226,10 @@ static int bbulk_rotate(struct kmscon_text *txt, enum Orientation orientation)
 }
 
 static int bbulk_rotate_glyph(struct kmscon_glyph *vb, const struct kmscon_glyph *glyph,
-			      enum Orientation orientation, uint8_t align)
+			      enum Orientation orientation)
 {
 	int width;
 	int height;
-	int stride;
 	int i, j;
 	uint8_t *dst, *src;
 	const struct uterm_video_buffer *buf = &glyph->buf;
@@ -243,8 +242,7 @@ static int bbulk_rotate_glyph(struct kmscon_glyph *vb, const struct kmscon_glyph
 		height = buf->width;
 	}
 
-	stride = align * ((width + (align - 1)) / align);
-	vb->buf.data = malloc(stride * height);
+	vb->buf.data = malloc(width * height);
 
 	if (!vb->buf.data)
 		return -ENOMEM;
@@ -257,14 +255,14 @@ static int bbulk_rotate_glyph(struct kmscon_glyph *vb, const struct kmscon_glyph
 	case OR_NORMAL:
 		for (i = 0; i < buf->height; i++) {
 			memcpy(dst, src, buf->width);
-			dst += stride;
+			dst += width;
 			src += buf->stride;
 		}
 		break;
 	case OR_RIGHT:
 		for (i = 0; i < buf->height; i++) {
 			for (j = 0; j < buf->width; j++) {
-				dst[j * stride + (width - i - 1)] = src[j];
+				dst[j * width + (width - i - 1)] = src[j];
 			}
 			src += buf->stride;
 		}
@@ -274,21 +272,21 @@ static int bbulk_rotate_glyph(struct kmscon_glyph *vb, const struct kmscon_glyph
 		for (i = 0; i < buf->height; i++) {
 			for (j = 0; j < buf->width; j++)
 				dst[j] = src[buf->width - j - 1];
-			dst += stride;
+			dst += width;
 			src -= buf->stride;
 		}
 		break;
 	case OR_LEFT:
 		for (i = 0; i < buf->height; i++) {
 			for (j = 0; j < buf->width; j++) {
-				dst[(height - j - 1) * stride + i] = src[j];
+				dst[(height - j - 1) * width + i] = src[j];
 			}
 			src += buf->stride;
 		}
 	}
 	vb->buf.width = width;
 	vb->buf.height = height;
-	vb->buf.stride = stride;
+	vb->buf.stride = width;
 	vb->buf.format = buf->format;
 	vb->width = glyph->width;
 	return 0;
@@ -330,7 +328,7 @@ static int find_glyph(struct kmscon_text *txt, struct kmscon_glyph **out, uint64
 			goto err_free;
 	}
 
-	ret = bbulk_rotate_glyph(bb_glyph, glyph, txt->orientation, 1);
+	ret = bbulk_rotate_glyph(bb_glyph, glyph, txt->orientation);
 	if (ret)
 		goto err_free;
 
