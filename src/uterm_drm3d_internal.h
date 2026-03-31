@@ -77,9 +77,6 @@ struct uterm_drm3d_video {
 	bool supports_rowlen;
 	GLuint tex;
 
-	struct gl_shader *fill_shader;
-	GLuint uni_fill_proj;
-
 	struct gl_shader *blend_shader;
 	GLuint uni_blend_proj;
 	GLuint uni_blend_tex;
