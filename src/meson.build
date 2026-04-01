@@ -239,6 +239,7 @@ kmscon_srcs = [
   'pty.c',
   'font.c',
   'font_8x16.c',
+   embed_gen.process('font_8x16.data'),
   'text.c',
   'text_bbulk.c',
   'kmscon_seat.c',
