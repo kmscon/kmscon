@@ -68,6 +68,7 @@ void pointer_dev_sync(struct uterm_input_dev *dev)
 
 	shl_hook_call(dev->input->pointer_hook, dev->input, &pev);
 	pointer_update_inactivity_timer(dev);
+	dev->pointer.touchpaddown = false;
 }
 
 void pointer_dev_rel(struct uterm_input_dev *dev, uint16_t code, int32_t value)
@@ -197,7 +198,7 @@ void pointer_dev_button(struct uterm_input_dev *dev, uint16_t code, int32_t valu
 		pointer_dev_send_button(dev, 2, pressed, false);
 		break;
 	case BTN_TOUCH:
-		dev->pointer.touchpaddown = (value == 0);
+		dev->pointer.touchpaddown = pressed;
 		break;
 	default:
 		break;
