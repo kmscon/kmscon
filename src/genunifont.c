@@ -191,6 +191,10 @@ static void pack_glyph(struct unifont_glyph *list, FILE *out)
 		size += g->len / 2;
 
 	buf = malloc(size);
+	if (!buf) {
+		free(blocks);
+		return;
+	}
 
 	*(uint32_t *)buf = n_blocks;
 	offset += 4;
