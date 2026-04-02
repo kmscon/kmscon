@@ -40,8 +40,8 @@ unsigned int kmscon_font_get_height(const struct kmscon_font *font)
 }
 
 /* Stub font rendering APIs used by text_bbulk.c */
-int kmscon_font_render(struct kmscon_font *font, uint64_t id, const uint32_t *ch, size_t len,
-		       const struct kmscon_glyph **out)
+struct kmscon_glyph *kmscon_font_render(struct kmscon_font *font, uint64_t id, const uint32_t *ch,
+					size_t len)
 {
 	static struct kmscon_glyph g;
 	(void)font;
@@ -51,24 +51,20 @@ int kmscon_font_render(struct kmscon_font *font, uint64_t id, const uint32_t *ch
 	memset(&g, 0, sizeof(g));
 	g.buf.width = g.buf.height = FAKE_CELL_W;
 	g.buf.stride = g.buf.width * 4;
-	if (out)
-		*out = &g;
-	return 0;
+	return &g;
 }
-int kmscon_font_render_inval(struct kmscon_font *font, const struct kmscon_glyph **out)
+struct kmscon_glyph *kmscon_font_render_inval(struct kmscon_font *font)
 {
-	return kmscon_font_render_empty(font, out);
+	return kmscon_font_render_empty(font);
 }
-int kmscon_font_render_empty(struct kmscon_font *font, const struct kmscon_glyph **out)
+struct kmscon_glyph *kmscon_font_render_empty(struct kmscon_font *font)
 {
 	static struct kmscon_glyph g;
 	(void)font;
 	memset(&g, 0, sizeof(g));
 	g.buf.width = g.buf.height = FAKE_CELL_W;
 	g.buf.stride = g.buf.width * 4;
-	if (out)
-		*out = &g;
-	return 0;
+	return &g;
 }
 int kmscon_rotate_glyph(struct kmscon_glyph *vb, const struct kmscon_glyph *glyph,
 			enum Orientation o, uint8_t align)

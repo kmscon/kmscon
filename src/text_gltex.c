@@ -401,14 +401,13 @@ err_free:
 	return NULL;
 }
 
-static int find_glyph(struct kmscon_text *txt, struct glyph **out, uint64_t id, const uint32_t *ch,
-		      size_t len, const struct tsm_screen_attr *attr)
+static struct glyph *find_glyph(struct kmscon_text *txt, uint64_t id, const uint32_t *ch,
+				size_t len, const struct tsm_screen_attr *attr)
 {
 	struct gltex *gt = txt->data;
 	struct atlas *atlas;
 	struct glyph *glyph;
-	bool res;
-	int ret, i;
+	int i;
 	GLenum err;
 	uint8_t *packed_data, *dst;
 	const uint8_t *src;
@@ -419,34 +418,29 @@ static int find_glyph(struct kmscon_text *txt, struct glyph **out, uint64_t id, 
 	font->attr.italic = !!attr->italic;
 	font->attr.bold = !!attr->bold;
 
-	res = shl_hashtable_find(gt->glyphs, (void **)&glyph, id);
-	if (res) {
-		*out = glyph;
-		return 0;
-	}
+	if (shl_hashtable_find(gt->glyphs, (void **)&glyph, id))
+		return glyph;
 
 	glyph = malloc(sizeof(*glyph));
 	if (!glyph)
-		return -ENOMEM;
+		return NULL;
 	memset(glyph, 0, sizeof(*glyph));
 
 	if (!len)
-		ret = kmscon_font_render_empty(font, &glyph->glyph);
+		glyph->glyph = kmscon_font_render_empty(font);
 	else
-		ret = kmscon_font_render(font, id, ch, len, &glyph->glyph);
+		glyph->glyph = kmscon_font_render(font, id, ch, len);
 
-	if (ret) {
-		ret = kmscon_font_render_inval(font, &glyph->glyph);
-		if (ret)
-			goto err_free;
+	if (!glyph->glyph) {
+		glyph->glyph = kmscon_font_render_inval(font);
+		if (!glyph->glyph)
+			return NULL;
 	}
 
 	num = kmscon_glyph_cwidth(glyph->glyph);
 	atlas = get_atlas(txt, num);
-	if (!atlas) {
-		ret = -EFAULT;
+	if (!atlas)
 		goto err_free;
-	}
 
 	/* Funnily, not all OpenGLESv2 implementations support specifying the
 	 * stride of a texture. Therefore, we then need to create a
@@ -468,7 +462,6 @@ static int find_glyph(struct kmscon_text *txt, struct glyph **out, uint64_t id, 
 			packed_data = malloc(GLYPH_WIDTH(glyph) * GLYPH_HEIGHT(glyph));
 			if (!packed_data) {
 				log_error("cannot allocate memory for glyph storage");
-				ret = -ENOMEM;
 				goto err_free;
 			}
 
@@ -508,25 +501,22 @@ static int find_glyph(struct kmscon_text *txt, struct glyph **out, uint64_t id, 
 		log_warning("cannot load glyph data into OpenGL texture (%d: %s); disable the "
 			    "GL-renderer if this does not work reliably",
 			    err, gl_err_to_str(err));
-		ret = -EFAULT;
 		goto err_free;
 	}
 
 	glyph->atlas = atlas;
 	glyph->texoff = atlas->fill;
 
-	ret = shl_hashtable_insert(gt->glyphs, id, glyph);
-	if (ret)
+	if (shl_hashtable_insert(gt->glyphs, id, glyph))
 		goto err_free;
 
 	atlas->fill += num;
 
-	*out = glyph;
-	return 0;
+	return glyph;
 
 err_free:
 	free(glyph);
-	return ret;
+	return NULL;
 }
 
 static void gltex_resize(struct kmscon_text *txt, unsigned int cols, unsigned int rows)
@@ -577,7 +567,7 @@ static int gltex_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, 
 	struct atlas *atlas;
 	struct glyph *glyph;
 	float gl_x1, gl_x2, gl_y1, gl_y2;
-	int ret, i, idx;
+	int i, idx;
 
 	if (!width)
 		return 0;
@@ -586,9 +576,10 @@ static int gltex_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, 
 		gt->previous_overflow = false;
 		return 0;
 	}
-	ret = find_glyph(txt, &glyph, id, ch, len, attr);
-	if (ret)
-		return ret;
+	glyph = find_glyph(txt, id, ch, len, attr);
+	if (!glyph)
+		return -ENOMEM;
+
 	atlas = glyph->atlas;
 
 	if (width == 1 && glyph->glyph->double_width) {
@@ -666,13 +657,13 @@ static int gltex_draw_pointer(struct kmscon_text *txt, unsigned int x, unsigned 
 	struct glyph *glyph;
 	float gl_x1, gl_x2, gl_y1, gl_y2;
 	unsigned int sw, sh;
-	int ret, i, idx;
+	int i, idx;
 	uint32_t ch = 'I';
 	uint64_t id = ch;
 
-	ret = find_glyph(txt, &glyph, id, &ch, 1, &gt->attr);
-	if (ret)
-		return ret;
+	glyph = find_glyph(txt, id, &ch, 1, &gt->attr);
+	if (!glyph)
+		return -ENOMEM;
 
 	atlas = glyph->atlas;
 

@@ -91,10 +91,10 @@ struct kmscon_font_ops {
 	struct shl_module *owner;
 	int (*init)(struct kmscon_font *out, const struct kmscon_font_attr *attr);
 	void (*destroy)(struct kmscon_font *font);
-	int (*render)(struct kmscon_font *font, uint64_t id, const uint32_t *ch, size_t len,
-		      const struct kmscon_glyph **out);
-	int (*render_empty)(struct kmscon_font *font, const struct kmscon_glyph **out);
-	int (*render_inval)(struct kmscon_font *font, const struct kmscon_glyph **out);
+	struct kmscon_glyph *(*render)(struct kmscon_font *font, uint64_t id, const uint32_t *ch,
+				       size_t len);
+	struct kmscon_glyph *(*render_empty)(struct kmscon_font *font);
+	struct kmscon_glyph *(*render_inval)(struct kmscon_font *font);
 };
 
 int kmscon_font_register(const struct kmscon_font_ops *ops);
@@ -105,10 +105,10 @@ int kmscon_font_find(struct kmscon_font **out, const struct kmscon_font_attr *at
 void kmscon_font_ref(struct kmscon_font *font);
 void kmscon_font_unref(struct kmscon_font *font);
 
-int kmscon_font_render(struct kmscon_font *font, uint64_t id, const uint32_t *ch, size_t len,
-		       const struct kmscon_glyph **out);
-int kmscon_font_render_empty(struct kmscon_font *font, const struct kmscon_glyph **out);
-int kmscon_font_render_inval(struct kmscon_font *font, const struct kmscon_glyph **out);
+struct kmscon_glyph *kmscon_font_render(struct kmscon_font *font, uint64_t id, const uint32_t *ch,
+					size_t len);
+struct kmscon_glyph *kmscon_font_render_empty(struct kmscon_font *font);
+struct kmscon_glyph *kmscon_font_render_inval(struct kmscon_font *font);
 
 /* modularized backends */
 

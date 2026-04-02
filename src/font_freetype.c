@@ -359,32 +359,32 @@ static void copy_glyph(struct uterm_video_buffer *buf, FT_Face face, FT_Bitmap *
 		draw_underline(buf, face);
 }
 
-static int render_glyph(struct shl_hashtable *cache, FT_Face face, FT_UInt index, uint64_t id,
-			const uint32_t *ch, const struct kmscon_font_attr *attr,
-			const struct kmscon_glyph **out)
+static struct kmscon_glyph *render_glyph(struct shl_hashtable *cache, FT_Face face, FT_UInt index,
+					 uint64_t id, const uint32_t *ch,
+					 const struct kmscon_font_attr *attr)
 {
 	unsigned int cwidth;
 	struct kmscon_glyph *glyph;
 
 	cwidth = tsm_ucs4_get_width(*ch);
 	if (!cwidth)
-		return -ERANGE;
+		return NULL;
 
 	if (FT_Load_Glyph(face, index, FT_LOAD_NO_HINTING)) {
 		log_err("Failed to load glyph\n");
-		return -EINVAL;
+		return NULL;
 	}
 
 	if (FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL)) {
 		log_err("Failed to render glyph\n");
-		return -EINVAL;
+		return NULL;
 	}
 
 	cwidth = glyph_is_wide(face->glyph, attr->width) ? 2 : cwidth;
 	glyph = malloc(sizeof(*glyph) + cwidth * attr->width * attr->height);
 	if (!glyph) {
 		log_error("cannot allocate memory for new glyph");
-		return -ENOMEM;
+		return NULL;
 	}
 	memset(glyph, 0, sizeof(*glyph) + cwidth * attr->width * attr->height);
 
@@ -398,10 +398,11 @@ static int render_glyph(struct shl_hashtable *cache, FT_Face face, FT_UInt index
 	else
 		copy_glyph(&glyph->buf, face, &face->glyph->bitmap, attr->underline);
 
-	shl_hashtable_insert(cache, id, glyph);
-
-	*out = glyph;
-	return 0;
+	if (shl_hashtable_insert(cache, id, glyph)) {
+		free(glyph);
+		return NULL;
+	}
+	return glyph;
 }
 
 static void select_font_size(FT_Face face, struct kmscon_font_attr *attr)
@@ -469,51 +470,48 @@ static int get_fallback(uint32_t ch, struct ft_font *ftf)
 	return -EINVAL;
 }
 
-static int kmscon_font_freetype_render(struct kmscon_font *font, uint64_t id, const uint32_t *ch,
-				       size_t len, const struct kmscon_glyph **out)
+static struct kmscon_glyph *kmscon_font_freetype_render(struct kmscon_font *font, uint64_t id,
+							const uint32_t *ch, size_t len)
 {
 	struct ft_data *ftd = font->data;
 	struct ft_font *ftfont = font->attr.bold ? &ftd->bold : &ftd->regular;
 	FT_UInt glyph_index = FT_Get_Char_Index(ftfont->face, *ch);
 	int fallback_index;
 	FT_Face fallback;
-	int ret;
+	struct kmscon_glyph *glyph;
 
 	if (!len)
-		return -ERANGE;
+		return NULL;
 
-	if (shl_hashtable_find(ftd->cache, (void **)out, id))
-		return 0;
+	if (shl_hashtable_find(ftd->cache, (void **)&glyph, id))
+		return glyph;
 
 	if (glyph_index)
-		return render_glyph(ftd->cache, ftfont->face, glyph_index, id, ch, &font->attr,
-				    out);
+		return render_glyph(ftd->cache, ftfont->face, glyph_index, id, ch, &font->attr);
 
 	fallback_index = get_fallback(*ch, ftfont);
 	fallback = prepare_tmp_face(ftd->ft, ftfont, fallback_index);
 
-	if (fallback) {
-		select_font_size(fallback, &font->attr);
-		glyph_index = FT_Get_Char_Index(fallback, *ch);
-		ret = render_glyph(ftd->cache, fallback, glyph_index, id, ch, &font->attr, out);
-		FT_Done_Face(fallback);
-		return ret;
-	}
-	return -EINVAL;
+	if (!fallback)
+		return NULL;
+
+	select_font_size(fallback, &font->attr);
+	glyph_index = FT_Get_Char_Index(fallback, *ch);
+	glyph = render_glyph(ftd->cache, fallback, glyph_index, id, ch, &font->attr);
+	FT_Done_Face(fallback);
+	return glyph;
 }
 
-static int kmscon_font_freetype_render_empty(struct kmscon_font *font,
-					     const struct kmscon_glyph **out)
+static struct kmscon_glyph *kmscon_font_freetype_render_empty(struct kmscon_font *font)
 {
 	static const uint32_t empty_char = ' ';
-	return kmscon_font_freetype_render(font, empty_char, &empty_char, 1, out);
+	return kmscon_font_freetype_render(font, empty_char, &empty_char, 1);
 }
 
-static int kmscon_font_freetype_render_inval(struct kmscon_font *font,
-					     const struct kmscon_glyph **out)
+static struct kmscon_glyph *kmscon_font_freetype_render_inval(struct kmscon_font *font)
 {
 	static const uint32_t question_mark = '?';
-	return kmscon_font_freetype_render(font, question_mark, &question_mark, 1, out);
+	return kmscon_font_freetype_render(font, question_mark, &question_mark, 1);
 }
 
 struct kmscon_font_ops kmscon_font_freetype_ops = {
