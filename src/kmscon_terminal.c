@@ -397,6 +397,13 @@ static void osc_event(struct tsm_vte *vte, const char *osc_string, size_t osc_le
 	}
 }
 
+static void bell_event(struct tsm_vte *vte, void *data)
+{
+	struct kmscon_terminal *term = data;
+
+	kmscon_session_bell(term->session);
+}
+
 static void mouse_event(struct tsm_vte *vte, enum tsm_mouse_track_mode track_mode,
 			bool track_pixels, void *data)
 {
@@ -1081,6 +1088,7 @@ int kmscon_terminal_register(struct kmscon_session **out, struct kmscon_seat *se
 
 	tsm_vte_set_osc_cb(term->vte, osc_event, (void *)term);
 	tsm_vte_set_mouse_cb(term->vte, mouse_event, (void *)term);
+	tsm_vte_set_bell_cb(term->vte, bell_event, (void *)term);
 
 	ret = tsm_vte_set_palette(term->vte, term->conf->palette);
 	if (ret)

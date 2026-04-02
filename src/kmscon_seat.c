@@ -1324,6 +1324,14 @@ bool kmscon_session_is_enabled(struct kmscon_session *sess)
 	return sess && sess->enabled;
 }
 
+void kmscon_session_bell(struct kmscon_session *sess)
+{
+	if (!sess || !sess->seat)
+		return;
+
+	uterm_vt_bell(sess->seat->vt);
+}
+
 void kmscon_session_notify_deactivated(struct kmscon_session *sess)
 {
 	struct kmscon_seat *seat;

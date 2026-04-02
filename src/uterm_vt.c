@@ -1013,6 +1013,19 @@ unsigned int uterm_vt_get_num(struct uterm_vt *vt)
 }
 
 SHL_EXPORT
+void uterm_vt_bell(struct uterm_vt *vt)
+{
+	int ret;
+
+	if (!vt || vt->mode != UTERM_VT_REAL || vt->real_fd < 0)
+		return;
+
+	ret = write(vt->real_fd, "\a", 1);
+	if (ret != 1)
+		log_warning("cannot write bell to VT (%d): %m", errno);
+}
+
+SHL_EXPORT
 int uterm_vt_master_new(struct uterm_vt_master **out, struct ev_eloop *eloop)
 {
 	struct uterm_vt_master *vtm;

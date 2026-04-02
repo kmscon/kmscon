@@ -83,6 +83,7 @@ int uterm_vt_deactivate(struct uterm_vt *vt);
 void uterm_vt_retry(struct uterm_vt *vt);
 unsigned int uterm_vt_get_type(struct uterm_vt *vt);
 unsigned int uterm_vt_get_num(struct uterm_vt *vt);
+void uterm_vt_bell(struct uterm_vt *vt);
 int uterm_vt_restore(struct uterm_vt *vt);
 
 #endif /* UTERM_UTERM_VT_H */
