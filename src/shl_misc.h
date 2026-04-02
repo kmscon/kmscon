@@ -427,6 +427,7 @@ static inline int shl_split_command_string(const char *arg, char ***out, unsigne
 
 static inline char *shl_replace_var(char *in)
 {
+	char *ret;
 	if (!in)
 		return NULL;
 	if (*in != '$')
@@ -435,7 +436,8 @@ static inline char *shl_replace_var(char *in)
 	/* if start with $$, remove 1 $ for escaping */
 	if (*in == '$')
 		return in;
-	return getenv(in);
+	ret = getenv(in);
+	return ret ? ret : "";
 }
 
 static inline int shl_replace_array_with_env(char ***out, char **argv)
