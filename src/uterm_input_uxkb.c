@@ -66,7 +66,7 @@ static void uxkb_log(struct xkb_context *context, enum xkb_log_level level, cons
 		sev = LOG_DEBUG;
 		break;
 	}
-	log_printf(sev, format, args);
+	log_submit(LOG_DEFAULT, sev, format, args);
 }
 
 int uxkb_desc_init(struct uterm_input *input, const char *model, const char *layout,
