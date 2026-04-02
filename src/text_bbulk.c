@@ -224,8 +224,8 @@ static int bbulk_rotate(struct kmscon_text *txt, enum Orientation orientation)
 	return bbulk_set(txt);
 }
 
-static int bbulk_rotate_glyph(struct kmscon_glyph *vb, const struct kmscon_glyph *glyph,
-			      enum Orientation orientation)
+static void bbulk_rotate_glyph(struct kmscon_glyph *rglyph, const struct kmscon_glyph *glyph,
+			       enum Orientation orientation)
 {
 	int width;
 	int height;
@@ -243,7 +243,7 @@ static int bbulk_rotate_glyph(struct kmscon_glyph *vb, const struct kmscon_glyph
 	}
 
 	src = buf->data;
-	dst = vb->buf.data;
+	dst = rglyph->buf.data;
 
 	switch (orientation) {
 	default:
@@ -279,64 +279,51 @@ static int bbulk_rotate_glyph(struct kmscon_glyph *vb, const struct kmscon_glyph
 			src += buf->stride;
 		}
 	}
-	vb->buf.width = width;
-	vb->buf.height = height;
-	vb->buf.stride = width;
-	vb->double_width = glyph->double_width;
-	return 0;
+	rglyph->buf.width = width;
+	rglyph->buf.height = height;
+	rglyph->buf.stride = width;
+	rglyph->double_width = glyph->double_width;
 }
 
-static int find_glyph(struct kmscon_text *txt, struct kmscon_glyph **out, uint64_t id,
-		      const uint32_t *ch, size_t len, const struct tsm_screen_attr *attr)
+static struct kmscon_glyph *find_glyph(struct kmscon_text *txt, uint64_t id, const uint32_t *ch,
+				       size_t len, const struct tsm_screen_attr *attr)
 {
 	struct bbulk *bb = txt->data;
 	struct kmscon_glyph *bb_glyph;
-	const struct kmscon_glyph *glyph;
+	struct kmscon_glyph *glyph;
 	struct kmscon_font *font = txt->font;
-	int ret;
-	bool res;
 
 	font->attr.underline = !!attr->underline;
 	font->attr.italic = !!attr->italic;
 	font->attr.bold = !!attr->bold;
 
-	res = shl_hashtable_find(bb->glyphs, (void **)&bb_glyph, id);
-	if (res) {
-		*out = bb_glyph;
-		return 0;
-	}
+	if (shl_hashtable_find(bb->glyphs, (void **)&glyph, id))
+		return glyph;
 
 	if (!len)
-		ret = kmscon_font_render_empty(font, &glyph);
+		glyph = kmscon_font_render_empty(font);
 	else
-		ret = kmscon_font_render(font, id, ch, len, &glyph);
+		glyph = kmscon_font_render(font, id, ch, len);
 
-	if (ret) {
-		ret = kmscon_font_render_inval(font, &glyph);
-		if (ret)
-			return ret;
+	if (!glyph) {
+		glyph = kmscon_font_render_inval(font);
+		if (!glyph)
+			return NULL;
 	}
 
 	bb_glyph = malloc(sizeof(*bb_glyph) + glyph->buf.width * glyph->buf.height);
 	if (!bb_glyph)
-		return -ENOMEM;
+		return NULL;
 
 	memset(bb_glyph, 0, sizeof(*bb_glyph) + glyph->buf.width * glyph->buf.height);
 
-	ret = bbulk_rotate_glyph(bb_glyph, glyph, txt->orientation);
-	if (ret)
-		goto err_bb_glyph;
+	bbulk_rotate_glyph(bb_glyph, glyph, txt->orientation);
 
-	ret = shl_hashtable_insert(bb->glyphs, id, bb_glyph);
-	if (ret)
-		goto err_bb_glyph;
-
-	*out = bb_glyph;
-	return 0;
-
-err_bb_glyph:
-	free(bb_glyph);
-	return ret;
+	if (shl_hashtable_insert(bb->glyphs, id, bb_glyph)) {
+		free(bb_glyph);
+		return NULL;
+	}
+	return bb_glyph;
 }
 
 /*
@@ -393,12 +380,11 @@ static int bbulk_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, 
 		      const struct tsm_screen_attr *attr)
 {
 	struct bbulk *bb = txt->data;
-	struct kmscon_glyph *bb_glyph;
+	struct kmscon_glyph *glyph;
 	struct uterm_video_blend_req *req;
 	struct bbcell *prev;
 	unsigned int offset = posx + posy * txt->cols;
 	bool last_col = (posx == txt->cols - 1);
-	int ret;
 
 	if (!width)
 		return 0;
@@ -433,11 +419,11 @@ static int bbulk_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, 
 	prev->id = id;
 	memcpy(&prev->attr, attr, sizeof(*attr));
 
-	ret = find_glyph(txt, &bb_glyph, id, ch, len, attr);
-	if (ret)
-		return ret;
+	glyph = find_glyph(txt, id, ch, len, attr);
+	if (!glyph)
+		return -ENOMEM;
 
-	if (bb_glyph->double_width && !last_col) {
+	if (glyph->double_width && !last_col) {
 		prev->overflow = true;
 		bb->prev[offset + 1].overflow = false;
 	} else
@@ -455,21 +441,21 @@ static int bbulk_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, 
 	else
 		set_coordinate(txt, &req->x, &req->y, posx, posy);
 
-	req->buf = &bb_glyph->buf;
+	req->buf = &glyph->buf;
 	set_color(req, attr);
 
-	if (width == 2 && !bb_glyph->double_width && !last_col) {
+	if (width == 2 && !glyph->double_width && !last_col) {
 		/* libtsm thinks this glyph is wide, but the font uses a single
 		 * width character. So draw a space on next cell to avoid a
 		 * graphical glitch
 		 */
-		ret = find_glyph(txt, &bb_glyph, ' ', NULL, 0, attr);
-		if (ret)
-			return ret;
+		glyph = find_glyph(txt, ' ', NULL, 0, attr);
+		if (!glyph)
+			return -ENOMEM;
 
 		req = &bb->reqs[bb->req_len++];
 		set_coordinate(txt, &req->x, &req->y, posx + 1, posy);
-		req->buf = &bb_glyph->buf;
+		req->buf = &glyph->buf;
 		set_color(req, attr);
 	}
 	return 0;
@@ -576,8 +562,6 @@ static int bbulk_draw_pointer(struct kmscon_text *txt, unsigned int pointer_x,
 	uint32_t ch = 'I';
 	uint64_t id = ch;
 
-	int ret;
-
 	if (bb->req_len >= bb->req_total_len)
 		return -ENOMEM;
 
@@ -587,9 +571,9 @@ static int bbulk_draw_pointer(struct kmscon_text *txt, unsigned int pointer_x,
 	req = &bb->reqs[bb->req_len++];
 	mark_damaged(txt, bb, pointer_x, pointer_y);
 
-	ret = find_glyph(txt, &bb_glyph, id, &ch, 1, &bb->attr);
-	if (ret)
-		return ret;
+	bb_glyph = find_glyph(txt, id, &ch, 1, &bb->attr);
+	if (!bb_glyph)
+		return -ENOMEM;
 
 	req->buf = &bb_glyph->buf;
 	set_pointer_coordinate(bb, txt, req, pointer_x, pointer_y);

@@ -110,32 +110,23 @@ static struct kmscon_glyph *new_glyph(uint32_t ch)
 	return glyph;
 }
 
-static int kmscon_font_8x16_render(struct kmscon_font *font, uint64_t id, const uint32_t *ch,
-				   size_t len, const struct kmscon_glyph **out)
+static struct kmscon_glyph *kmscon_font_8x16_render(struct kmscon_font *font, uint64_t id,
+						    const uint32_t *ch, size_t len)
 {
-	struct kmscon_glyph *glyph;
-
 	if (len > 1 || *ch >= 256)
-		return -ERANGE;
+		return NULL;
 
-	glyph = new_glyph(*ch);
-	if (!glyph)
-		return -ENOMEM;
-
-	*out = glyph;
-	return 0;
+	return new_glyph(*ch);
 }
 
-static int kmscon_font_8x16_render_empty(struct kmscon_font *font, const struct kmscon_glyph **out)
+static struct kmscon_glyph *kmscon_font_8x16_render_empty(struct kmscon_font *font)
 {
-	*out = new_glyph(' ');
-	return 0;
+	return new_glyph(' ');
 }
 
-static int kmscon_font_8x16_render_inval(struct kmscon_font *font, const struct kmscon_glyph **out)
+static struct kmscon_glyph *kmscon_font_8x16_render_inval(struct kmscon_font *font)
 {
-	*out = new_glyph('?');
-	return 0;
+	return new_glyph('?');
 }
 
 struct kmscon_font_ops kmscon_font_8x16_ops = {

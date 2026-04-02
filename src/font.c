@@ -343,63 +343,57 @@ void kmscon_font_unref(struct kmscon_font *font)
  * @id: Unique ID that identifies @ch globally
  * @ch: Symbol to find a glyph for
  * @len: Length of @ch
- * @out: Output buffer for glyph
  *
- * Renders the glyph for symbol @sym and places a pointer to the glyph in @out.
- * If the glyph cannot be found or is invalid, an error is returned. The glyph
- * is cached internally and removed when the last reference to this font is
- * dropped.
- * If the glyph is no available in this font-set, then -ERANGE is returned.
+ * Renders the glyph for symbol @ch and returns a pointer to the glyph.
+ * If the glyph cannot be found or is invalid, NULL is returned.
  *
- * Returns: 0 on success, negative error code on failure
+ * Returns: a new allocated glyph object on success, NULL on failure
  */
 SHL_EXPORT
-int kmscon_font_render(struct kmscon_font *font, uint64_t id, const uint32_t *ch, size_t len,
-		       const struct kmscon_glyph **out)
+struct kmscon_glyph *kmscon_font_render(struct kmscon_font *font, uint64_t id, const uint32_t *ch,
+					size_t len)
 {
-	if (!font || !out || !ch || !len)
-		return -EINVAL;
+	if (!font || !ch || !len)
+		return NULL;
 
-	return font->ops->render(font, id, ch, len, out);
+	return font->ops->render(font, id, ch, len);
 }
 
 /**
  * kmscon_font_render_empty:
  * @font: Valid font object
- * @out: Output buffer for glyph
  *
  * Same as kmscon_font_render() but this renders a glyph that has no content and
  * can be used to blit solid backgrounds. That is, the resulting buffer will be
  * all 0 but the dimensions are the same as for all other glyphs.
  *
- * Returns: 0 on success, negative error code on failure
+ * Returns: a new allocated glyph object on success, NULL on failure
  */
 SHL_EXPORT
-int kmscon_font_render_empty(struct kmscon_font *font, const struct kmscon_glyph **out)
+struct kmscon_glyph *kmscon_font_render_empty(struct kmscon_font *font)
 {
-	if (!font || !out)
-		return -EINVAL;
+	if (!font)
+		return NULL;
 
-	return font->ops->render_empty(font, out);
+	return font->ops->render_empty(font);
 }
 
 /**
  * kmscon_font_render_inval:
  * @font: Valid font object
- * @out: Output buffer for glyph
  *
- * Same sa kmscon_font_render_empty() but renders a glyph that can be used as
+ * Same as kmscon_font_render_empty() but renders a glyph that can be used as
  * replacement for any other non-drawable glyph. That is, if
- * kmscon_font_render() returns -ERANGE, then this glyph can be used as
+ * kmscon_font_render() returns NULL, then this glyph can be used as
  * replacement.
  *
- * Returns: 0 on success ,engative error code on failure
+ * Returns: a new allocated glyph object on success, NULL on failure
  */
 SHL_EXPORT
-int kmscon_font_render_inval(struct kmscon_font *font, const struct kmscon_glyph **out)
+struct kmscon_glyph *kmscon_font_render_inval(struct kmscon_font *font)
 {
-	if (!font || !out)
-		return -EINVAL;
+	if (!font)
+		return NULL;
 
-	return font->ops->render_inval(font, out);
+	return font->ops->render_inval(font);
 }
