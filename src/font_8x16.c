@@ -92,7 +92,7 @@ static struct kmscon_glyph *new_glyph(uint32_t ch)
 	if (font_data + 16 > _binary_font_8x16_data_end)
 		return NULL;
 
-	glyph = malloc(sizeof(*glyph));
+	glyph = malloc(sizeof(*glyph) + 8 * 16);
 	if (!glyph)
 		return NULL;
 
@@ -102,10 +102,6 @@ static struct kmscon_glyph *new_glyph(uint32_t ch)
 	glyph->buf.stride = 8;
 	glyph->buf.format = UTERM_FORMAT_GREY;
 
-	glyph->buf.data = malloc(glyph->buf.stride * glyph->buf.height);
-	if (!glyph->buf.data)
-		goto err_free;
-
 	for (i = 0; i < 16; i++) {
 		for (j = 0; j < 8; j++) {
 			c = (uint8_t)font_data[i];
@@ -113,10 +109,6 @@ static struct kmscon_glyph *new_glyph(uint32_t ch)
 		}
 	}
 	return glyph;
-
-err_free:
-	free(glyph);
-	return NULL;
 }
 
 static int kmscon_font_8x16_render(struct kmscon_font *font, uint64_t id, const uint32_t *ch,

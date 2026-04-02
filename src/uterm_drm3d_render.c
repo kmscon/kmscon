@@ -113,7 +113,8 @@ static int display_blend(struct uterm_display *disp, const struct uterm_video_bu
 	float mat[16];
 	float vertices[6 * 2], texpos[6 * 2], fgcol[3], bgcol[3];
 	int ret;
-	uint8_t *packed, *src, *dst;
+	uint8_t *packed, *dst;
+	const uint8_t *src;
 
 	if (!buf || buf->format != UTERM_FORMAT_GREY)
 		return -EINVAL;

@@ -118,7 +118,8 @@ int uterm_fbdev_display_fake_blendv(struct uterm_display *disp,
 				    const struct uterm_video_blend_req *req, size_t num)
 {
 	unsigned int tmp;
-	uint8_t *dst, *src;
+	uint8_t *dst;
+	const uint8_t *src;
 	unsigned int width, height, i, j;
 	unsigned int r, g, b;
 	uint32_t val;

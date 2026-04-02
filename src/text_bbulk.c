@@ -104,7 +104,6 @@ static void free_glyph(void *data)
 {
 	struct uterm_video_buffer *bb_glyph = data;
 
-	free(bb_glyph->data);
 	free(bb_glyph);
 }
 
@@ -231,7 +230,8 @@ static int bbulk_rotate_glyph(struct kmscon_glyph *vb, const struct kmscon_glyph
 	int width;
 	int height;
 	int i, j;
-	uint8_t *dst, *src;
+	uint8_t *dst;
+	const uint8_t *src;
 	const struct uterm_video_buffer *buf = &glyph->buf;
 
 	if (orientation == OR_NORMAL || orientation == OR_UPSIDE_DOWN) {
@@ -241,11 +241,6 @@ static int bbulk_rotate_glyph(struct kmscon_glyph *vb, const struct kmscon_glyph
 		width = buf->height;
 		height = buf->width;
 	}
-
-	vb->buf.data = malloc(width * height);
-
-	if (!vb->buf.data)
-		return -ENOMEM;
 
 	src = buf->data;
 	dst = vb->buf.data;
@@ -312,11 +307,6 @@ static int find_glyph(struct kmscon_text *txt, struct kmscon_glyph **out, uint64
 		return 0;
 	}
 
-	bb_glyph = malloc(sizeof(*bb_glyph));
-	if (!bb_glyph)
-		return -ENOMEM;
-	memset(bb_glyph, 0, sizeof(*bb_glyph));
-
 	if (!len)
 		ret = kmscon_font_render_empty(font, &glyph);
 	else
@@ -325,23 +315,27 @@ static int find_glyph(struct kmscon_text *txt, struct kmscon_glyph **out, uint64
 	if (ret) {
 		ret = kmscon_font_render_inval(font, &glyph);
 		if (ret)
-			goto err_free;
+			return ret;
 	}
+
+	bb_glyph = malloc(sizeof(*bb_glyph) + glyph->buf.width * glyph->buf.height);
+	if (!bb_glyph)
+		return -ENOMEM;
+
+	memset(bb_glyph, 0, sizeof(*bb_glyph) + glyph->buf.width * glyph->buf.height);
 
 	ret = bbulk_rotate_glyph(bb_glyph, glyph, txt->orientation);
 	if (ret)
-		goto err_free;
+		goto err_bb_glyph;
 
 	ret = shl_hashtable_insert(bb->glyphs, id, bb_glyph);
 	if (ret)
-		goto err_free_vb;
+		goto err_bb_glyph;
 
 	*out = bb_glyph;
 	return 0;
 
-err_free_vb:
-	free(bb_glyph->buf.data);
-err_free:
+err_bb_glyph:
 	free(bb_glyph);
 	return ret;
 }

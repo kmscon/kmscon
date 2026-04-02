@@ -83,9 +83,6 @@ int kmscon_rotate_glyph(struct kmscon_glyph *vb, const struct kmscon_glyph *glyp
 	if (glyph->buf.stride == 0 || glyph->buf.height == 0)
 		return 0;
 	size_t buf_size = glyph->buf.stride * glyph->buf.height;
-	vb->buf.data = malloc(buf_size);
-	if (!vb->buf.data)
-		return -ENOMEM;
 	memset(vb->buf.data, 0x11, buf_size);
 	return 0;
 }
