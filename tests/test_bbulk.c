@@ -49,7 +49,6 @@ int kmscon_font_render(struct kmscon_font *font, uint64_t id, const uint32_t *ch
 	(void)ch;
 	(void)len;
 	memset(&g, 0, sizeof(g));
-	g.buf.format = UTERM_FORMAT_XRGB32;
 	g.buf.width = g.buf.height = FAKE_CELL_W;
 	g.buf.stride = g.buf.width * 4;
 	if (out)
@@ -65,7 +64,6 @@ int kmscon_font_render_empty(struct kmscon_font *font, const struct kmscon_glyph
 	static struct kmscon_glyph g;
 	(void)font;
 	memset(&g, 0, sizeof(g));
-	g.buf.format = UTERM_FORMAT_XRGB32;
 	g.buf.width = g.buf.height = FAKE_CELL_W;
 	g.buf.stride = g.buf.width * 4;
 	if (out)

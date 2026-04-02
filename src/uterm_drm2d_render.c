@@ -69,9 +69,6 @@ int uterm_drm2d_display_fake_blendv(struct uterm_display *disp,
 		if (!req->buf)
 			continue;
 
-		if (req->buf->format != UTERM_FORMAT_GREY)
-			return -EOPNOTSUPP;
-
 		tmp = req->x + req->buf->width;
 		if (tmp < req->x || req->x >= sw)
 			return -EINVAL;
