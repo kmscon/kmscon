@@ -101,17 +101,21 @@ static void pointer_dev_abs_x(struct uterm_input_dev *dev, int32_t value)
 {
 	switch (dev->pointer.kind) {
 	case POINTER_TOUCHPAD:
-		if (dev->pointer.touchpaddown == true)
+		if (dev->pointer.touchpad_needs_sync_off_x) {
 			dev->pointer.off_x = dev->pointer.x - value;
-
-		dev->pointer.x = dev->pointer.off_x + value;
-		if (dev->pointer.x < 0) {
-			dev->pointer.x = 0;
-			dev->pointer.off_x = -value;
+			dev->pointer.touchpad_needs_sync_off_x = false;
 		}
-		if (dev->pointer.x > dev->input->pointer_max_x) {
-			dev->pointer.x = dev->input->pointer_max_x;
-			dev->pointer.off_x = dev->input->pointer_max_x - value;
+
+		if (dev->pointer.touchpaddown) {
+			dev->pointer.x = dev->pointer.off_x + value;
+			if (dev->pointer.x < 0) {
+				dev->pointer.x = 0;
+				dev->pointer.off_x = -value;
+			}
+			if (dev->pointer.x > dev->input->pointer_max_x) {
+				dev->pointer.x = dev->input->pointer_max_x;
+				dev->pointer.off_x = dev->input->pointer_max_x - value;
+			}
 		}
 		break;
 	case POINTER_TOUCHSCREEN:
@@ -129,17 +133,21 @@ static void pointer_dev_abs_y(struct uterm_input_dev *dev, int32_t value)
 {
 	switch (dev->pointer.kind) {
 	case POINTER_TOUCHPAD:
-		if (dev->pointer.touchpaddown == true)
+		if (dev->pointer.touchpad_needs_sync_off_y) {
 			dev->pointer.off_y = dev->pointer.y - value;
-
-		dev->pointer.y = dev->pointer.off_y + value;
-		if (dev->pointer.y < 0) {
-			dev->pointer.y = 0;
-			dev->pointer.off_y = -value;
+			dev->pointer.touchpad_needs_sync_off_y = false;
 		}
-		if (dev->pointer.y > dev->input->pointer_max_y) {
-			dev->pointer.y = dev->input->pointer_max_y;
-			dev->pointer.off_y = dev->input->pointer_max_y - value;
+
+		if (dev->pointer.touchpaddown) {
+			dev->pointer.y = dev->pointer.off_y + value;
+			if (dev->pointer.y < 0) {
+				dev->pointer.y = 0;
+				dev->pointer.off_y = -value;
+			}
+			if (dev->pointer.y > dev->input->pointer_max_y) {
+				dev->pointer.y = dev->input->pointer_max_y;
+				dev->pointer.off_y = dev->input->pointer_max_y - value;
+			}
 		}
 		break;
 	case POINTER_TOUCHSCREEN:
@@ -197,7 +205,11 @@ void pointer_dev_button(struct uterm_input_dev *dev, uint16_t code, int32_t valu
 		pointer_dev_send_button(dev, 2, pressed, false);
 		break;
 	case BTN_TOUCH:
-		dev->pointer.touchpaddown = (value == 0);
+		dev->pointer.touchpaddown = pressed;
+		if (pressed) {
+			dev->pointer.touchpad_needs_sync_off_x = true;
+			dev->pointer.touchpad_needs_sync_off_y = true;
+		}
 		break;
 	default:
 		break;

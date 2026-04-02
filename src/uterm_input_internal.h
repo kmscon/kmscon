@@ -69,6 +69,9 @@ struct uterm_input_pointer {
 	int32_t y;
 
 	bool touchpaddown;
+	bool touchpad_needs_sync_off_x;
+	bool touchpad_needs_sync_off_y;
+
 	int32_t off_x;
 	int32_t off_y;
 
