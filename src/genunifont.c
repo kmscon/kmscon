@@ -155,9 +155,12 @@ static struct unifont_glyph_block *gen_blocks(struct unifont_glyph *list, uint32
 			i++;
 			if (i >= table_size) {
 				table_size *= 2;
-				blocks = realloc(blocks, table_size * sizeof(*blocks));
-				if (!blocks)
+				void *tmp = realloc(blocks, table_size * sizeof(*blocks));
+				if (!tmp) {
+					free(blocks);
 					return NULL;
+				}
+				blocks = tmp;
 			}
 			blocks[i].len = 1;
 			blocks[i].codepoint = g->codepoint;
