@@ -409,7 +409,8 @@ static int find_glyph(struct kmscon_text *txt, struct glyph **out, uint64_t id, 
 	bool res;
 	int ret, i;
 	GLenum err;
-	uint8_t *packed_data, *dst, *src;
+	uint8_t *packed_data, *dst;
+	const uint8_t *src;
 	struct kmscon_font *font = txt->font;
 
 	font->attr.underline = !!attr->underline;

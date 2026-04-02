@@ -108,7 +108,7 @@ struct uterm_video_buffer {
 	unsigned int height;
 	unsigned int stride;
 	unsigned int format;
-	uint8_t *data;
+	uint8_t data[];
 };
 
 struct uterm_video_blend_req {

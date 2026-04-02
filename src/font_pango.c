@@ -136,14 +136,6 @@ static int get_glyph(struct face *face, struct kmscon_glyph **out, uint64_t id, 
 
 	manager_lock();
 
-	glyph = malloc(sizeof(*glyph));
-	if (!glyph) {
-		log_error("cannot allocate memory for new glyph");
-		ret = -ENOMEM;
-		goto out_unlock;
-	}
-	memset(glyph, 0, sizeof(*glyph));
-
 	layout = pango_layout_new(face->ctx);
 	attrlist = pango_layout_get_attributes(layout);
 	if (attrlist == NULL) {
@@ -179,7 +171,7 @@ static int get_glyph(struct face *face, struct kmscon_glyph **out, uint64_t id, 
 	val = tsm_ucs4_to_utf8_alloc(ch, len, &ulen);
 	if (!val) {
 		ret = -ERANGE;
-		goto out_glyph;
+		goto out_layout;
 	}
 	pango_layout_set_text(layout, val, ulen);
 	free(val);
@@ -187,7 +179,7 @@ static int get_glyph(struct face *face, struct kmscon_glyph **out, uint64_t id, 
 	cnt = pango_layout_get_line_count(layout);
 	if (cnt == 0) {
 		ret = -ERANGE;
-		goto out_glyph;
+		goto out_layout;
 	}
 
 	line = pango_layout_get_line_readonly(layout, 0);
@@ -195,25 +187,22 @@ static int get_glyph(struct face *face, struct kmscon_glyph **out, uint64_t id, 
 	pango_layout_line_get_extents(line, &logical_rec, &rec);
 	pango_extents_to_pixels(&rec, &logical_rec);
 
-	glyph->width =
-		(logical_rec.x + logical_rec.width > rec.x + face->real_attr.width) ? 2 : cwidth;
+	if (logical_rec.x + logical_rec.width > rec.x + face->real_attr.width)
+		cwidth = 2;
+
+	glyph = malloc(sizeof(*glyph) + cwidth * face->real_attr.width * face->real_attr.height);
+	if (!glyph) {
+		log_error("cannot allocate memory for new glyph");
+		ret = -ENOMEM;
+		goto out_unlock;
+	}
+	memset(glyph, 0, sizeof(*glyph) + cwidth * face->real_attr.width * face->real_attr.height);
+
+	glyph->width = cwidth;
 	glyph->buf.width = face->real_attr.width * glyph->width;
 	glyph->buf.height = face->real_attr.height;
 	glyph->buf.stride = glyph->buf.width;
 	glyph->buf.format = UTERM_FORMAT_GREY;
-
-	if (!glyph->buf.width || !glyph->buf.height) {
-		ret = -ERANGE;
-		goto out_glyph;
-	}
-
-	glyph->buf.data = malloc(glyph->buf.height * glyph->buf.stride);
-	if (!glyph->buf.data) {
-		log_error("cannot allocate bitmap memory");
-		ret = -ENOMEM;
-		goto out_glyph;
-	}
-	memset(glyph->buf.data, 0, glyph->buf.height * glyph->buf.stride);
 
 	bitmap.rows = glyph->buf.height;
 	bitmap.width = glyph->buf.width;
@@ -229,14 +218,12 @@ static int get_glyph(struct face *face, struct kmscon_glyph **out, uint64_t id, 
 	pthread_mutex_unlock(&face->glyph_lock);
 	if (ret) {
 		log_error("cannot add glyph to hashtable");
-		goto out_buffer;
+		goto out_glyph;
 	}
 
 	*out = glyph;
 	goto out_layout;
 
-out_buffer:
-	free(glyph->buf.data);
 out_glyph:
 	free(glyph);
 out_layout:
@@ -250,7 +237,6 @@ static void free_glyph(void *data)
 {
 	struct kmscon_glyph *glyph = data;
 
-	free(glyph->buf.data);
 	free(glyph);
 }
 

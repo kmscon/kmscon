@@ -82,7 +82,6 @@ static void free_glyph(void *data)
 {
 	struct kmscon_glyph *g = data;
 
-	free(g->buf.data);
 	free(g);
 }
 
@@ -144,7 +143,7 @@ static struct kmscon_glyph *new_glyph(const struct kmscon_font_attr *attr, const
 	int off = 0;
 
 	scale = attr->height / 16;
-	g = malloc(sizeof(*g));
+	g = malloc(sizeof(*g) + width * attr->width * attr->height);
 	if (!g)
 		return NULL;
 	memset(g, 0, sizeof(*g));
@@ -153,12 +152,6 @@ static struct kmscon_glyph *new_glyph(const struct kmscon_font_attr *attr, const
 	g->buf.height = attr->height;
 	g->buf.stride = g->width * attr->width;
 	g->buf.format = UTERM_FORMAT_GREY;
-
-	g->buf.data = malloc(g->buf.stride * g->buf.height);
-	if (!g->buf.data) {
-		free(g);
-		return NULL;
-	}
 
 	/* Unpack the glyph and apply scaling */
 	for (i = 0; i < 16; i++) {
@@ -236,7 +229,6 @@ static int find_glyph(uint64_t id, const struct kmscon_glyph **out, const struct
 	return 0;
 
 err_data:
-	free(g->buf.data);
 	free(g);
 	return ret;
 }

@@ -57,7 +57,6 @@ static void free_glyph(void *data)
 {
 	struct kmscon_glyph *g = data;
 
-	free(g->buf.data);
 	free(g);
 }
 
@@ -381,26 +380,19 @@ static int render_glyph(struct shl_hashtable *cache, FT_Face face, FT_UInt index
 		return -EINVAL;
 	}
 
-	glyph = malloc(sizeof(*glyph));
+	cwidth = (glyph_is_wide(face->glyph, attr->width) ? 2 : cwidth);
+	glyph = malloc(sizeof(*glyph) + cwidth * attr->width * attr->height);
 	if (!glyph) {
 		log_error("cannot allocate memory for new glyph");
 		return -ENOMEM;
 	}
-	memset(glyph, 0, sizeof(*glyph));
+	memset(glyph, 0, sizeof(*glyph) + cwidth * attr->width * attr->height);
 
-	glyph->width = glyph_is_wide(face->glyph, attr->width) ? 2 : cwidth;
+	glyph->width = cwidth;
 	glyph->buf.width = attr->width * glyph->width;
 	glyph->buf.height = attr->height;
 	glyph->buf.stride = glyph->buf.width;
 	glyph->buf.format = UTERM_FORMAT_GREY;
-
-	glyph->buf.data = malloc(glyph->buf.height * glyph->buf.stride);
-	if (!glyph->buf.data) {
-		log_error("cannot allocate bitmap memory");
-		free(glyph);
-		return -ENOMEM;
-	}
-	memset(glyph->buf.data, 0, glyph->buf.height * glyph->buf.stride);
 
 	if (face->glyph->bitmap.pixel_mode == FT_PIXEL_MODE_MONO)
 		copy_mono(&glyph->buf, &face->glyph->bitmap, attr->underline);
