@@ -202,7 +202,6 @@ static int get_glyph(struct face *face, struct kmscon_glyph **out, uint64_t id, 
 	glyph->buf.width = face->real_attr.width * glyph->width;
 	glyph->buf.height = face->real_attr.height;
 	glyph->buf.stride = glyph->buf.width;
-	glyph->buf.format = UTERM_FORMAT_GREY;
 
 	bitmap.rows = glyph->buf.height;
 	bitmap.width = glyph->buf.width;

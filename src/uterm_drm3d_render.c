@@ -116,7 +116,7 @@ static int display_blend(struct uterm_display *disp, const struct uterm_video_bu
 	uint8_t *packed, *dst;
 	const uint8_t *src;
 
-	if (!buf || buf->format != UTERM_FORMAT_GREY)
+	if (!buf)
 		return -EINVAL;
 
 	v3d = uterm_drm_video_get_data(disp->video);

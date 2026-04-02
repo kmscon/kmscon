@@ -100,7 +100,6 @@ static struct kmscon_glyph *new_glyph(uint32_t ch)
 	glyph->buf.width = 8;
 	glyph->buf.height = 16;
 	glyph->buf.stride = 8;
-	glyph->buf.format = UTERM_FORMAT_GREY;
 
 	for (i = 0; i < 16; i++) {
 		for (j = 0; j < 8; j++) {

@@ -392,7 +392,6 @@ static int render_glyph(struct shl_hashtable *cache, FT_Face face, FT_UInt index
 	glyph->buf.width = attr->width * glyph->width;
 	glyph->buf.height = attr->height;
 	glyph->buf.stride = glyph->buf.width;
-	glyph->buf.format = UTERM_FORMAT_GREY;
 
 	if (face->glyph->bitmap.pixel_mode == FT_PIXEL_MODE_MONO)
 		copy_mono(&glyph->buf, &face->glyph->bitmap, attr->underline);

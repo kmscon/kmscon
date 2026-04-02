@@ -151,7 +151,6 @@ static struct kmscon_glyph *new_glyph(const struct kmscon_font_attr *attr, const
 	g->buf.width = g->width * attr->width;
 	g->buf.height = attr->height;
 	g->buf.stride = g->width * attr->width;
-	g->buf.format = UTERM_FORMAT_GREY;
 
 	/* Unpack the glyph and apply scaling */
 	for (i = 0; i < 16; i++) {

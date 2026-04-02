@@ -282,7 +282,6 @@ static int bbulk_rotate_glyph(struct kmscon_glyph *vb, const struct kmscon_glyph
 	vb->buf.width = width;
 	vb->buf.height = height;
 	vb->buf.stride = width;
-	vb->buf.format = buf->format;
 	vb->width = glyph->width;
 	return 0;
 }
