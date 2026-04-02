@@ -55,7 +55,7 @@ struct unifont_glyph_block {
 	uint32_t codepoint; // First codepoint of the block
 	uint32_t offset;    // offset of the data
 	uint16_t len;	    // number of glyph in this block
-	uint8_t width;	    // glyph width (1 or 2 for double-width glyph)
+	uint8_t cwidth;	    // glyph width (1 or 2 for double-width glyph)
 } __attribute__((__packed__));
 
 static uint8_t hex_val(char c)
@@ -143,15 +143,15 @@ static struct unifont_glyph_block *gen_blocks(struct unifont_glyph *list, uint32
 	blocks[i].len = 0;
 	blocks[i].offset = 0;
 	blocks[i].codepoint = g->codepoint;
-	blocks[i].width = get_width(g->len);
+	blocks[i].cwidth = get_width(g->len);
 	while (g) {
-		if (blocks[i].width == get_width(g->len) &&
+		if (blocks[i].cwidth == get_width(g->len) &&
 		    g->codepoint == blocks[i].codepoint + blocks[i].len) {
 			/* This glyph can fit in current block */
 			blocks[i].len++;
 		} else {
 			/* Start a new block with this glyph as first glyph */
-			offset += blocks[i].len * 16 * blocks[i].width;
+			offset += blocks[i].len * 16 * blocks[i].cwidth;
 			i++;
 			if (i >= table_size) {
 				table_size *= 2;
@@ -164,7 +164,7 @@ static struct unifont_glyph_block *gen_blocks(struct unifont_glyph *list, uint32
 			}
 			blocks[i].len = 1;
 			blocks[i].codepoint = g->codepoint;
-			blocks[i].width = get_width(g->len);
+			blocks[i].cwidth = get_width(g->len);
 			blocks[i].offset = offset;
 		}
 		g = g->next;

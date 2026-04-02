@@ -68,9 +68,14 @@ void kmscon_font_attr_normalize(struct kmscon_font_attr *attr);
 bool kmscon_font_attr_match(const struct kmscon_font_attr *a1, const struct kmscon_font_attr *a2);
 
 struct kmscon_glyph {
-	unsigned int width;
+	bool double_width;
 	struct uterm_video_buffer buf; // Must be last
 };
+
+static inline unsigned int kmscon_glyph_cwidth(const struct kmscon_glyph *glyph)
+{
+	return glyph->double_width ? 2 : 1;
+}
 
 struct kmscon_font {
 	unsigned long ref;

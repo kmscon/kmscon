@@ -96,7 +96,7 @@ static struct kmscon_glyph *new_glyph(uint32_t ch)
 	if (!glyph)
 		return NULL;
 
-	glyph->width = 1;
+	glyph->double_width = false;
 	glyph->buf.width = 8;
 	glyph->buf.height = 16;
 	glyph->buf.stride = 8;
