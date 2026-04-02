@@ -151,8 +151,8 @@ static inline const char *shl_ring_peek(struct shl_ring *ring, size_t *len, size
 		iter = iter->next;
 	}
 
-	*len = ring->first->len - offset;
-	return &ring->first->buf[offset];
+	*len = iter->len - offset;
+	return &iter->buf[offset];
 }
 
 static inline void shl_ring_drop(struct shl_ring *ring, size_t len)
