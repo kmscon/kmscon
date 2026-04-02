@@ -282,7 +282,7 @@ static int bbulk_rotate_glyph(struct kmscon_glyph *vb, const struct kmscon_glyph
 	vb->buf.width = width;
 	vb->buf.height = height;
 	vb->buf.stride = width;
-	vb->width = glyph->width;
+	vb->double_width = glyph->double_width;
 	return 0;
 }
 
@@ -437,7 +437,7 @@ static int bbulk_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, 
 	if (ret)
 		return ret;
 
-	if (bb_glyph->width == 2 && !last_col) {
+	if (bb_glyph->double_width && !last_col) {
 		prev->overflow = true;
 		bb->prev[offset + 1].overflow = false;
 	} else
@@ -458,7 +458,7 @@ static int bbulk_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, 
 	req->buf = &bb_glyph->buf;
 	set_color(req, attr);
 
-	if (width == 2 && bb_glyph->width == 1 && !last_col) {
+	if (width == 2 && !bb_glyph->double_width && !last_col) {
 		/* libtsm thinks this glyph is wide, but the font uses a single
 		 * width character. So draw a space on next cell to avoid a
 		 * graphical glitch

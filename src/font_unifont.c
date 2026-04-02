@@ -62,7 +62,7 @@ struct unifont_glyph_block {
 	uint32_t codepoint; // First codepoint of the block
 	uint32_t offset;    // offset of the data
 	uint16_t len;	    // number of glyph in this block
-	uint8_t width;	    // glyph width (1 or 2 for double-width glyph)
+	uint8_t cwidth;	    // glyph width (1 or 2 for double-width glyph)
 } __attribute__((__packed__));
 
 struct unifont_data {
@@ -134,7 +134,7 @@ static int lookup_block(const struct unifont_glyph_block *blocks, uint32_t len, 
 }
 
 static struct kmscon_glyph *new_glyph(const struct kmscon_font_attr *attr, const uint8_t *data,
-				      int width)
+				      int cwidth)
 {
 	struct kmscon_glyph *g;
 	uint8_t c;
@@ -143,25 +143,25 @@ static struct kmscon_glyph *new_glyph(const struct kmscon_font_attr *attr, const
 	int off = 0;
 
 	scale = attr->height / 16;
-	g = malloc(sizeof(*g) + width * attr->width * attr->height);
+	g = malloc(sizeof(*g) + cwidth * attr->width * attr->height);
 	if (!g)
 		return NULL;
 	memset(g, 0, sizeof(*g));
-	g->width = width;
-	g->buf.width = g->width * attr->width;
+	g->double_width = (cwidth == 2);
+	g->buf.width = cwidth * attr->width;
 	g->buf.height = attr->height;
-	g->buf.stride = g->width * attr->width;
+	g->buf.stride = g->buf.width;
 
 	/* Unpack the glyph and apply scaling */
 	for (i = 0; i < 16; i++) {
-		c = apply_attr(data[g->width * i], attr, i == 15);
-		for (j = 0; j < g->buf.width / g->width; j++) {
+		c = apply_attr(data[cwidth * i], attr, i == 15);
+		for (j = 0; j < g->buf.width / cwidth; j++) {
 			k = j / scale;
 			g->buf.data[off++] = unfold(c & (1 << (7 - k)));
 		}
-		if (g->width == 2) {
-			c = apply_attr(data[g->width * i + 1], attr, i == 15);
-			for (j = 0; j < g->buf.width / g->width; j++) {
+		if (g->double_width) {
+			c = apply_attr(data[cwidth * i + 1], attr, i == 15);
+			for (j = 0; j < g->buf.width / cwidth; j++) {
 				k = j / scale;
 				g->buf.data[off++] = unfold(c & (1 << (7 - k)));
 			}
@@ -208,13 +208,13 @@ static int find_glyph(uint64_t id, const struct kmscon_glyph **out, const struct
 		}
 	}
 
-	data += blocks[idx].offset + (ch - blocks[idx].codepoint) * blocks[idx].width * 16;
-	if (data + 16 * blocks[idx].width > uf->font_data + uf->len) {
+	data += blocks[idx].offset + (ch - blocks[idx].codepoint) * blocks[idx].cwidth * 16;
+	if (data + 16 * blocks[idx].cwidth > uf->font_data + uf->len) {
 		log_warning("glyph out of range %p %p", data, uf->font_data + uf->len);
 		return -ERANGE;
 	}
 
-	g = new_glyph(&font->attr, data, blocks[idx].width);
+	g = new_glyph(&font->attr, data, blocks[idx].cwidth);
 	if (!g)
 		return -ENOMEM;
 

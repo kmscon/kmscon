@@ -45,6 +45,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include "font.h"
 #include "shl_dlist.h"
 #include "shl_gl.h"
 #include "shl_hashtable.h"
@@ -412,6 +413,7 @@ static int find_glyph(struct kmscon_text *txt, struct glyph **out, uint64_t id, 
 	uint8_t *packed_data, *dst;
 	const uint8_t *src;
 	struct kmscon_font *font = txt->font;
+	unsigned int num;
 
 	font->attr.underline = !!attr->underline;
 	font->attr.italic = !!attr->italic;
@@ -439,7 +441,8 @@ static int find_glyph(struct kmscon_text *txt, struct glyph **out, uint64_t id, 
 			goto err_free;
 	}
 
-	atlas = get_atlas(txt, glyph->glyph->width);
+	num = kmscon_glyph_cwidth(glyph->glyph);
+	atlas = get_atlas(txt, num);
 	if (!atlas) {
 		ret = -EFAULT;
 		goto err_free;
@@ -516,7 +519,7 @@ static int find_glyph(struct kmscon_text *txt, struct glyph **out, uint64_t id, 
 	if (ret)
 		goto err_free;
 
-	atlas->fill += glyph->glyph->width;
+	atlas->fill += num;
 
 	*out = glyph;
 	return 0;
@@ -588,7 +591,7 @@ static int gltex_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, 
 		return ret;
 	atlas = glyph->atlas;
 
-	if (width == 1 && glyph->glyph->width == 2) {
+	if (width == 1 && glyph->glyph->double_width) {
 		gt->previous_overflow = true;
 		width = 2;
 	} else {

@@ -380,7 +380,7 @@ static int render_glyph(struct shl_hashtable *cache, FT_Face face, FT_UInt index
 		return -EINVAL;
 	}
 
-	cwidth = (glyph_is_wide(face->glyph, attr->width) ? 2 : cwidth);
+	cwidth = glyph_is_wide(face->glyph, attr->width) ? 2 : cwidth;
 	glyph = malloc(sizeof(*glyph) + cwidth * attr->width * attr->height);
 	if (!glyph) {
 		log_error("cannot allocate memory for new glyph");
@@ -388,8 +388,8 @@ static int render_glyph(struct shl_hashtable *cache, FT_Face face, FT_UInt index
 	}
 	memset(glyph, 0, sizeof(*glyph) + cwidth * attr->width * attr->height);
 
-	glyph->width = cwidth;
-	glyph->buf.width = attr->width * glyph->width;
+	glyph->double_width = cwidth == 2;
+	glyph->buf.width = attr->width * cwidth;
 	glyph->buf.height = attr->height;
 	glyph->buf.stride = glyph->buf.width;
 

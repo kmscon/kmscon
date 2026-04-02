@@ -198,8 +198,8 @@ static int get_glyph(struct face *face, struct kmscon_glyph **out, uint64_t id, 
 	}
 	memset(glyph, 0, sizeof(*glyph) + cwidth * face->real_attr.width * face->real_attr.height);
 
-	glyph->width = cwidth;
-	glyph->buf.width = face->real_attr.width * glyph->width;
+	glyph->double_width = cwidth == 2;
+	glyph->buf.width = face->real_attr.width * cwidth;
 	glyph->buf.height = face->real_attr.height;
 	glyph->buf.stride = glyph->buf.width;
 
