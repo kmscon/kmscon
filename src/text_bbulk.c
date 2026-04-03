@@ -102,9 +102,9 @@ static void bbulk_destroy(struct kmscon_text *txt)
 
 static void free_glyph(void *data)
 {
-	struct uterm_video_buffer *bb_glyph = data;
+	struct kmscon_glyph *glyph = data;
 
-	free(bb_glyph);
+	free(glyph);
 }
 
 static void damage_cell(struct bbulk *bb, unsigned int off)
@@ -224,15 +224,24 @@ static int bbulk_rotate(struct kmscon_text *txt, enum Orientation orientation)
 	return bbulk_set(txt);
 }
 
-static void bbulk_rotate_glyph(struct kmscon_glyph *rglyph, const struct kmscon_glyph *glyph,
-			       enum Orientation orientation)
+/*
+ * Rotate a glyph to the given orientation
+ * Return a new rotated glyph, and free the original glyph
+ */
+static struct kmscon_glyph *bbulk_rotate_glyph(struct kmscon_glyph *glyph,
+					       enum Orientation orientation)
 {
-	int width;
-	int height;
-	int i, j;
-	uint8_t *dst;
-	const uint8_t *src;
-	const struct uterm_video_buffer *buf = &glyph->buf;
+	struct uterm_video_buffer *buf = &glyph->buf;
+	struct kmscon_glyph *rglyph;
+	int width, height, i, j;
+	uint8_t *dst, *src;
+	unsigned int size = sizeof(*rglyph) + glyph->buf.width * glyph->buf.height;
+
+	rglyph = malloc(size);
+	if (!rglyph)
+		goto err_free;
+
+	memset(rglyph, 0, size);
 
 	if (orientation == OR_NORMAL || orientation == OR_UPSIDE_DOWN) {
 		width = buf->width;
@@ -241,18 +250,13 @@ static void bbulk_rotate_glyph(struct kmscon_glyph *rglyph, const struct kmscon_
 		width = buf->height;
 		height = buf->width;
 	}
-
 	src = buf->data;
 	dst = rglyph->buf.data;
 
 	switch (orientation) {
 	default:
 	case OR_NORMAL:
-		for (i = 0; i < buf->height; i++) {
-			memcpy(dst, src, buf->width);
-			dst += width;
-			src += buf->stride;
-		}
+		/* should never happen */
 		break;
 	case OR_RIGHT:
 		for (i = 0; i < buf->height; i++) {
@@ -283,13 +287,16 @@ static void bbulk_rotate_glyph(struct kmscon_glyph *rglyph, const struct kmscon_
 	rglyph->buf.height = height;
 	rglyph->buf.stride = width;
 	rglyph->double_width = glyph->double_width;
+
+err_free:
+	free(glyph);
+	return rglyph;
 }
 
 static struct kmscon_glyph *find_glyph(struct kmscon_text *txt, uint64_t id, const uint32_t *ch,
 				       size_t len, const struct tsm_screen_attr *attr)
 {
 	struct bbulk *bb = txt->data;
-	struct kmscon_glyph *bb_glyph;
 	struct kmscon_glyph *glyph;
 	struct kmscon_font *font = txt->font;
 
@@ -311,19 +318,14 @@ static struct kmscon_glyph *find_glyph(struct kmscon_text *txt, uint64_t id, con
 			return NULL;
 	}
 
-	bb_glyph = malloc(sizeof(*bb_glyph) + glyph->buf.width * glyph->buf.height);
-	if (!bb_glyph)
-		return NULL;
+	if (txt->orientation != OR_NORMAL)
+		glyph = bbulk_rotate_glyph(glyph, txt->orientation);
 
-	memset(bb_glyph, 0, sizeof(*bb_glyph) + glyph->buf.width * glyph->buf.height);
-
-	bbulk_rotate_glyph(bb_glyph, glyph, txt->orientation);
-
-	if (shl_hashtable_insert(bb->glyphs, id, bb_glyph)) {
-		free(bb_glyph);
+	if (shl_hashtable_insert(bb->glyphs, id, glyph)) {
+		free(glyph);
 		return NULL;
 	}
-	return bb_glyph;
+	return glyph;
 }
 
 /*
