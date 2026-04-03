@@ -84,7 +84,7 @@ struct atlas {
 };
 
 struct glyph {
-	const struct kmscon_glyph *glyph;
+	struct kmscon_glyph *glyph;
 	struct atlas *atlas;
 	unsigned int texoff;
 };
@@ -147,6 +147,7 @@ static void free_glyph(void *data)
 {
 	struct glyph *glyph = data;
 
+	free(glyph->glyph);
 	free(glyph);
 }
 
