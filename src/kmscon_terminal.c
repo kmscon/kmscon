@@ -401,6 +401,9 @@ static void bell_event(struct tsm_vte *vte, void *data)
 {
 	struct kmscon_terminal *term = data;
 
+	if (!term->conf->bell)
+		return;
+
 	kmscon_session_bell(term->session);
 }
 
