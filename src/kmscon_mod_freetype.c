@@ -28,7 +28,7 @@
  * Freetype font backend module
  * This module registers the text-font freetype backend with kmscon.
  */
-
+#include <fontconfig/fontconfig.h>
 #include <stdlib.h>
 #include "font.h"
 #include "shl_log.h"
@@ -53,6 +53,8 @@ static int kmscon_freetype_load(void)
 static void kmscon_freetype_unload(void)
 {
 	kmscon_font_unregister(kmscon_font_freetype_ops.name);
+	/* Release the cache memory of the fontconfig library */
+	FcFini();
 }
 
 SHL_MODULE(NULL, kmscon_freetype_load, kmscon_freetype_unload, NULL);
