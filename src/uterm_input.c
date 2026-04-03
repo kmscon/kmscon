@@ -667,3 +667,20 @@ void uterm_input_set_pointer_max(struct uterm_input *input, unsigned int max_x, 
 	input->pointer_max_x = max_x;
 	input->pointer_max_y = max_y;
 }
+
+SHL_EXPORT
+void uterm_input_set_leds(struct uterm_input *input, unsigned int scroll_lock,
+			  unsigned int num_lock, unsigned int caps_lock)
+{
+	struct shl_dlist *iter;
+	struct uterm_input_dev *dev;
+
+	if (!input)
+		return;
+
+	shl_dlist_for_each(iter, &input->devices)
+	{
+		dev = shl_dlist_entry(iter, struct uterm_input_dev, list);
+		uxkb_dev_set_leds(dev, scroll_lock, num_lock, caps_lock);
+	}
+}

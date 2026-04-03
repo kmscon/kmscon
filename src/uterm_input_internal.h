@@ -141,6 +141,8 @@ int uxkb_dev_init(struct uterm_input_dev *dev);
 void uxkb_dev_destroy(struct uterm_input_dev *dev);
 int uxkb_dev_process(struct uterm_input_dev *dev, uint16_t key_state, uint16_t code);
 void uxkb_dev_wake_up(struct uterm_input_dev *dev);
+void uxkb_dev_set_leds(struct uterm_input_dev *dev, unsigned int scroll_lock, unsigned int num_lock,
+		       unsigned int caps_lock);
 
 void pointer_dev_rel(struct uterm_input_dev *dev, uint16_t code, int32_t value);
 void pointer_dev_abs(struct uterm_input_dev *dev, uint16_t code, int32_t value);
