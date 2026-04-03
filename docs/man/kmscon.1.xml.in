@@ -270,6 +270,15 @@
           <para>Specify the size of the scrollback buffer (in lines). (default: 1000)</para>
         </listitem>
       </varlistentry>
+
+      <varlistentry>
+        <term><option>--bell</option></term>
+        <listitem>
+          <para>Enable bell forwarding to the VT. When enabled, the BEL character
+                (0x07) from applications is forwarded to the underlying VT.
+                (default: off)</para>
+        </listitem>
+      </varlistentry>
     </variablelist>
 
     <para>Input Options:</para>

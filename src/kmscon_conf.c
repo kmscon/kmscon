@@ -101,6 +101,8 @@ static void print_help()
 		"\t                              pressed\n"
 		"\t    --sb-size <num>         [1000]\n"
 		"\t                              Size of the scrollback-buffer in lines\n"
+		"\t    --bell                  [off]\n"
+		"\t                              Enable bell forwarding to the VT\n"
 		"\n"
 		"Input Options:\n"
 		"\t    --xkb-model <model>        [-]  Set XkbModel for input devices\n"
@@ -760,6 +762,7 @@ int kmscon_conf_new(struct conf_ctx **out)
 		CONF_OPTION_BOOL(0, "reset-env", &conf->reset_env, true),
 		CONF_OPTION_BOOL(0, "backspace-delete", &conf->backspace_delete, true),
 		CONF_OPTION_UINT(0, "sb-size", &conf->sb_size, 1000),
+		CONF_OPTION_BOOL(0, "bell", &conf->bell, false),
 
 		/* Input Options */
 		CONF_OPTION_STRING(0, "xkb-model", &conf->xkb_model, ""),

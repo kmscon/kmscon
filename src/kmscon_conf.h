@@ -97,6 +97,8 @@ struct kmscon_conf_t {
 	bool backspace_delete;
 	/* terminal scroll-back buffer size */
 	unsigned int sb_size;
+	/* enable bell forwarding */
+	bool bell;
 
 	/* Input Options */
 	/* input KBD model */
