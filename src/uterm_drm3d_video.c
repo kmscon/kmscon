@@ -199,9 +199,6 @@ static void display_freefb(struct uterm_display *disp)
 	if (v3d->ctx)
 		eglMakeCurrent(v3d->disp, EGL_NO_SURFACE, EGL_NO_SURFACE, v3d->ctx);
 
-	if (d3d->surface)
-		eglDestroySurface(v3d->disp, d3d->surface);
-
 	if (d3d->current) {
 		gbm_surface_release_buffer(d3d->gbm, d3d->current->bo);
 		d3d->current = NULL;
@@ -210,7 +207,12 @@ static void display_freefb(struct uterm_display *disp)
 		gbm_surface_release_buffer(d3d->gbm, d3d->next->bo);
 		d3d->next = NULL;
 	}
-	gbm_surface_destroy(d3d->gbm);
+	if (d3d->surface) {
+		eglDestroySurface(v3d->disp, d3d->surface);
+		d3d->surface = NULL;
+	}
+	if (d3d->gbm)
+		gbm_surface_destroy(d3d->gbm);
 }
 
 static int display_prepare_modeset(struct uterm_display *disp, drmModeAtomicReqPtr req)
