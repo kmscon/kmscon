@@ -43,7 +43,6 @@
  * pango, freetype2 and more.
  */
 
-#include <errno.h>
 #include <glib.h>
 #include <libtsm.h>
 #include <pango/pango.h>
@@ -53,8 +52,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "font.h"
-#include "shl_dlist.h"
-#include "shl_hashtable.h"
 #include "shl_log.h"
 #include "uterm_video.h"
 
@@ -65,8 +62,6 @@ struct face {
 	struct kmscon_font_attr real_attr;
 	unsigned int baseline;
 	PangoContext *ctx;
-	pthread_mutex_t glyph_lock;
-	struct shl_hashtable *glyphs;
 };
 
 static pthread_mutex_t manager_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -108,7 +103,7 @@ static void manager__unref()
 static struct kmscon_glyph *get_glyph(struct face *face, uint64_t id, const uint32_t *ch,
 				      size_t len, const struct kmscon_font_attr *attr)
 {
-	struct kmscon_glyph *glyph;
+	struct kmscon_glyph *glyph = NULL;
 	PangoLayout *layout;
 	PangoAttrList *attrlist;
 	PangoRectangle rec, logical_rec;
@@ -117,20 +112,12 @@ static struct kmscon_glyph *get_glyph(struct face *face, uint64_t id, const uint
 	unsigned int cwidth;
 	size_t ulen, cnt;
 	char *val;
-	bool res;
-	int ret;
 
 	if (!len)
 		return NULL;
 	cwidth = tsm_ucs4_get_width(*ch);
 	if (!cwidth)
 		return NULL;
-
-	pthread_mutex_lock(&face->glyph_lock);
-	res = shl_hashtable_find(face->glyphs, (void **)&glyph, id);
-	pthread_mutex_unlock(&face->glyph_lock);
-	if (res)
-		return glyph;
 
 	manager_lock();
 
@@ -206,31 +193,11 @@ static struct kmscon_glyph *get_glyph(struct face *face, uint64_t id, const uint
 
 	pango_ft2_render_layout_line(&bitmap, line, -rec.x, face->baseline);
 
-	pthread_mutex_lock(&face->glyph_lock);
-	ret = shl_hashtable_insert(face->glyphs, id, glyph);
-	pthread_mutex_unlock(&face->glyph_lock);
-	if (ret) {
-		log_error("cannot add glyph to hashtable");
-		goto out_glyph;
-	}
-	g_object_unref(layout);
-	manager_unlock();
-	return glyph;
-
-out_glyph:
-	free(glyph);
 out_layout:
 	g_object_unref(layout);
 out_unlock:
 	manager_unlock();
-	return NULL;
-}
-
-static void free_glyph(void *data)
-{
-	struct kmscon_glyph *glyph = data;
-
-	free(glyph);
+	return glyph;
 }
 
 /*
@@ -306,18 +273,6 @@ static int manager_get_face(struct face **out, struct kmscon_font_attr *attr)
 	memset(face, 0, sizeof(*face));
 	memcpy(&face->attr, attr, sizeof(*attr));
 
-	ret = pthread_mutex_init(&face->glyph_lock, NULL);
-	if (ret) {
-		log_error("cannot initialize glyph lock");
-		goto err_free;
-	}
-
-	ret = shl_hashtable_new(&face->glyphs, shl_direct_hash, shl_direct_equal, free_glyph);
-	if (ret) {
-		log_error("cannot allocate hashtable");
-		goto err_lock;
-	}
-
 	face->ctx = pango_font_map_create_context(manager__lib);
 	pango_context_set_base_dir(face->ctx, PANGO_DIRECTION_LTR);
 	pango_context_set_language(face->ctx, pango_language_get_default());
@@ -365,10 +320,6 @@ static int manager_get_face(struct face **out, struct kmscon_font_attr *attr)
 
 err_face:
 	g_object_unref(face->ctx);
-	shl_hashtable_free(face->glyphs);
-err_lock:
-	pthread_mutex_destroy(&face->glyph_lock);
-err_free:
 	free(face);
 err_manager:
 	manager__unref();
@@ -419,8 +370,6 @@ static void kmscon_font_pango_destroy(struct kmscon_font *font)
 
 	manager_lock();
 
-	shl_hashtable_free(face->glyphs);
-	pthread_mutex_destroy(&face->glyph_lock);
 	g_object_unref(face->ctx);
 	free(face);
 	manager__unref();
