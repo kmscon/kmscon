@@ -107,6 +107,8 @@ void kmscon_session_enable(struct kmscon_session *sess);
 void kmscon_session_disable(struct kmscon_session *sess);
 bool kmscon_session_is_enabled(struct kmscon_session *sess);
 void kmscon_session_bell(struct kmscon_session *sess);
+void kmscon_session_set_leds(struct kmscon_session *sess, unsigned int scroll_lock,
+			     unsigned int num_lock, unsigned int caps_lock);
 
 void kmscon_session_notify_deactivated(struct kmscon_session *sess);
 

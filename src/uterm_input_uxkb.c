@@ -257,6 +257,34 @@ static void uxkb_dev_update_keyboard_leds(struct uterm_input_dev *dev)
 		log_warning("cannot update LED state (%d): %m", errno);
 }
 
+void uxkb_dev_set_leds(struct uterm_input_dev *dev, unsigned int scroll_lock, unsigned int num_lock,
+		       unsigned int caps_lock)
+{
+	struct input_event events[3];
+	int ret;
+
+	if (!(dev->capabilities & UTERM_DEVICE_HAS_LEDS))
+		return;
+
+	memset(events, 0, sizeof(events));
+
+	events[0].type = EV_LED;
+	events[0].code = LED_SCROLLL;
+	events[0].value = !!scroll_lock;
+
+	events[1].type = EV_LED;
+	events[1].code = LED_NUML;
+	events[1].value = !!num_lock;
+
+	events[2].type = EV_LED;
+	events[2].code = LED_CAPSL;
+	events[2].value = !!caps_lock;
+
+	ret = write(dev->rfd, events, sizeof(events));
+	if (ret != sizeof(events))
+		log_warning("cannot set LED state (%d): %m", errno);
+}
+
 static inline int uxkb_dev_resize_event(struct uterm_input_dev *dev, size_t s)
 {
 	uint32_t *tmp;

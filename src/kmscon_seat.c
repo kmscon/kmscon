@@ -1332,6 +1332,15 @@ void kmscon_session_bell(struct kmscon_session *sess)
 	uterm_vt_bell(sess->seat->vt);
 }
 
+void kmscon_session_set_leds(struct kmscon_session *sess, unsigned int scroll_lock,
+			     unsigned int num_lock, unsigned int caps_lock)
+{
+	if (!sess || !sess->seat)
+		return;
+
+	uterm_input_set_leds(sess->seat->input, scroll_lock, num_lock, caps_lock);
+}
+
 void kmscon_session_notify_deactivated(struct kmscon_session *sess)
 {
 	struct kmscon_seat *seat;

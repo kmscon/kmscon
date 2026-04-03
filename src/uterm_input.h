@@ -112,4 +112,7 @@ void uterm_input_wake_up(struct uterm_input *input);
 bool uterm_input_is_awake(struct uterm_input *input);
 void uterm_input_set_pointer_max(struct uterm_input *input, unsigned int max_x, unsigned int max_y);
 
+void uterm_input_set_leds(struct uterm_input *input, unsigned int scroll_lock,
+			  unsigned int num_lock, unsigned int caps_lock);
+
 #endif /* UTERM_UTERM_INPUT_H */
