@@ -261,22 +261,10 @@ static struct kmscon_glyph *kmscon_font_unifont_render(struct kmscon_font *font,
 	return find_glyph(id, font);
 }
 
-static struct kmscon_glyph *kmscon_font_unifont_render_inval(struct kmscon_font *font)
-{
-	return find_glyph(0xfffd, font);
-}
-
-static struct kmscon_glyph *kmscon_font_unifont_render_empty(struct kmscon_font *font)
-{
-	return find_glyph(' ', font);
-}
-
 struct kmscon_font_ops kmscon_font_unifont_ops = {
 	.name = "unifont",
 	.owner = NULL,
 	.init = kmscon_font_unifont_init,
 	.destroy = kmscon_font_unifont_destroy,
 	.render = kmscon_font_unifont_render,
-	.render_empty = kmscon_font_unifont_render_empty,
-	.render_inval = kmscon_font_unifont_render_inval,
 };

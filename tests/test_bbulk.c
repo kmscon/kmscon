@@ -43,29 +43,18 @@ unsigned int kmscon_font_get_height(const struct kmscon_font *font)
 struct kmscon_glyph *kmscon_font_render(struct kmscon_font *font, uint64_t id, const uint32_t *ch,
 					size_t len)
 {
-	static struct kmscon_glyph g;
+	struct kmscon_glyph *g;
 	(void)font;
 	(void)id;
 	(void)ch;
 	(void)len;
-	memset(&g, 0, sizeof(g));
-	g.buf.width = g.buf.height = FAKE_CELL_W;
-	g.buf.stride = g.buf.width * 4;
-	return &g;
+	g = malloc(sizeof(*g) + FAKE_CELL_W * FAKE_CELL_W);
+	memset(g, 0, sizeof(*g) + FAKE_CELL_W * FAKE_CELL_W);
+	g->buf.width = g->buf.height = FAKE_CELL_W;
+	g->buf.stride = g->buf.width;
+	return g;
 }
-struct kmscon_glyph *kmscon_font_render_inval(struct kmscon_font *font)
-{
-	return kmscon_font_render_empty(font);
-}
-struct kmscon_glyph *kmscon_font_render_empty(struct kmscon_font *font)
-{
-	static struct kmscon_glyph g;
-	(void)font;
-	memset(&g, 0, sizeof(g));
-	g.buf.width = g.buf.height = FAKE_CELL_W;
-	g.buf.stride = g.buf.width * 4;
-	return &g;
-}
+
 int kmscon_rotate_glyph(struct kmscon_glyph *vb, const struct kmscon_glyph *glyph,
 			enum Orientation o, uint8_t align)
 {

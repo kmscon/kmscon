@@ -307,16 +307,9 @@ static struct kmscon_glyph *find_glyph(struct kmscon_text *txt, uint64_t id, con
 	if (shl_hashtable_find(bb->glyphs, (void **)&glyph, id))
 		return glyph;
 
-	if (!len)
-		glyph = kmscon_font_render_empty(font);
-	else
-		glyph = kmscon_font_render(font, id, ch, len);
-
-	if (!glyph) {
-		glyph = kmscon_font_render_inval(font);
-		if (!glyph)
-			return NULL;
-	}
+	glyph = kmscon_font_render(font, id, ch, len);
+	if (!glyph)
+		return NULL;
 
 	if (txt->orientation != OR_NORMAL)
 		glyph = bbulk_rotate_glyph(glyph, txt->orientation);
