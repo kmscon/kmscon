@@ -52,12 +52,10 @@
  * is shared between different threads to reduce memory-footprint.
  */
 
-#include <errno.h>
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
 #include "font.h"
-#include "shl_dlist.h"
 #include "shl_log.h"
 #include "shl_misc.h"
 #include "shl_module.h"
@@ -353,47 +351,22 @@ SHL_EXPORT
 struct kmscon_glyph *kmscon_font_render(struct kmscon_font *font, uint64_t id, const uint32_t *ch,
 					size_t len)
 {
-	if (!font || !ch || !len)
-		return NULL;
+	uint32_t empty_char = ' ';
+	uint32_t replacement_char = 0xfffd;
+	uint32_t invalid_char = '?';
+	struct kmscon_glyph *glyph;
 
-	return font->ops->render(font, id, ch, len);
-}
-
-/**
- * kmscon_font_render_empty:
- * @font: Valid font object
- *
- * Same as kmscon_font_render() but this renders a glyph that has no content and
- * can be used to blit solid backgrounds. That is, the resulting buffer will be
- * all 0 but the dimensions are the same as for all other glyphs.
- *
- * Returns: a new allocated glyph object on success, NULL on failure
- */
-SHL_EXPORT
-struct kmscon_glyph *kmscon_font_render_empty(struct kmscon_font *font)
-{
 	if (!font)
 		return NULL;
 
-	return font->ops->render_empty(font);
-}
+	if (!len) {
+		return font->ops->render(font, empty_char, &empty_char, 1);
+	}
 
-/**
- * kmscon_font_render_inval:
- * @font: Valid font object
- *
- * Same as kmscon_font_render_empty() but renders a glyph that can be used as
- * replacement for any other non-drawable glyph. That is, if
- * kmscon_font_render() returns NULL, then this glyph can be used as
- * replacement.
- *
- * Returns: a new allocated glyph object on success, NULL on failure
- */
-SHL_EXPORT
-struct kmscon_glyph *kmscon_font_render_inval(struct kmscon_font *font)
-{
-	if (!font)
-		return NULL;
-
-	return font->ops->render_inval(font);
+	glyph = font->ops->render(font, id, ch, len);
+	if (!glyph)
+		glyph = font->ops->render(font, replacement_char, &replacement_char, 1);
+	if (!glyph)
+		glyph = font->ops->render(font, invalid_char, &invalid_char, 1);
+	return glyph;
 }

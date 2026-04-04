@@ -93,8 +93,6 @@ struct kmscon_font_ops {
 	void (*destroy)(struct kmscon_font *font);
 	struct kmscon_glyph *(*render)(struct kmscon_font *font, uint64_t id, const uint32_t *ch,
 				       size_t len);
-	struct kmscon_glyph *(*render_empty)(struct kmscon_font *font);
-	struct kmscon_glyph *(*render_inval)(struct kmscon_font *font);
 };
 
 int kmscon_font_register(const struct kmscon_font_ops *ops);
@@ -107,8 +105,6 @@ void kmscon_font_unref(struct kmscon_font *font);
 
 struct kmscon_glyph *kmscon_font_render(struct kmscon_font *font, uint64_t id, const uint32_t *ch,
 					size_t len);
-struct kmscon_glyph *kmscon_font_render_empty(struct kmscon_font *font);
-struct kmscon_glyph *kmscon_font_render_inval(struct kmscon_font *font);
 
 /* modularized backends */
 

@@ -383,24 +383,10 @@ static struct kmscon_glyph *kmscon_font_pango_render(struct kmscon_font *font, u
 	return get_glyph(font->data, id, ch, len, &font->attr);
 }
 
-static struct kmscon_glyph *kmscon_font_pango_render_empty(struct kmscon_font *font)
-{
-	static const uint32_t empty_char = ' ';
-	return kmscon_font_pango_render(font, empty_char, &empty_char, 1);
-}
-
-static struct kmscon_glyph *kmscon_font_pango_render_inval(struct kmscon_font *font)
-{
-	static const uint32_t question_mark = '?';
-	return kmscon_font_pango_render(font, question_mark, &question_mark, 1);
-}
-
 struct kmscon_font_ops kmscon_font_pango_ops = {
 	.name = "pango",
 	.owner = NULL,
 	.init = kmscon_font_pango_init,
 	.destroy = kmscon_font_pango_destroy,
 	.render = kmscon_font_pango_render,
-	.render_empty = kmscon_font_pango_render_empty,
-	.render_inval = kmscon_font_pango_render_inval,
 };

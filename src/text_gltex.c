@@ -427,16 +427,9 @@ static struct glyph *find_glyph(struct kmscon_text *txt, uint64_t id, const uint
 		return NULL;
 	memset(glyph, 0, sizeof(*glyph));
 
-	if (!len)
-		glyph->glyph = kmscon_font_render_empty(font);
-	else
-		glyph->glyph = kmscon_font_render(font, id, ch, len);
-
-	if (!glyph->glyph) {
-		glyph->glyph = kmscon_font_render_inval(font);
-		if (!glyph->glyph)
-			return NULL;
-	}
+	glyph->glyph = kmscon_font_render(font, id, ch, len);
+	if (!glyph->glyph)
+		return NULL;
 
 	num = kmscon_glyph_cwidth(glyph->glyph);
 	atlas = get_atlas(txt, num);

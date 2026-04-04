@@ -119,22 +119,10 @@ static struct kmscon_glyph *kmscon_font_8x16_render(struct kmscon_font *font, ui
 	return new_glyph(*ch);
 }
 
-static struct kmscon_glyph *kmscon_font_8x16_render_empty(struct kmscon_font *font)
-{
-	return new_glyph(' ');
-}
-
-static struct kmscon_glyph *kmscon_font_8x16_render_inval(struct kmscon_font *font)
-{
-	return new_glyph('?');
-}
-
 struct kmscon_font_ops kmscon_font_8x16_ops = {
 	.name = "8x16",
 	.owner = NULL,
 	.init = kmscon_font_8x16_init,
 	.destroy = kmscon_font_8x16_destroy,
 	.render = kmscon_font_8x16_render,
-	.render_empty = kmscon_font_8x16_render_empty,
-	.render_inval = kmscon_font_8x16_render_inval,
 };
