@@ -97,9 +97,6 @@ static int lookup_block(const struct unifont_glyph_block *blocks, uint32_t len, 
 		look = max;
 
 	while (min < max) {
-		log_debug("lookup %d codep %d, look %d min %d max %d", ch, blocks[look].codepoint,
-			  look, min, max);
-
 		if (is_in_block(&blocks[look], ch))
 			return look;
 
