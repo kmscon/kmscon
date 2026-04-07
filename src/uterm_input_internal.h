@@ -29,6 +29,7 @@
 #define UTERM_INPUT_INTERNAL_H
 
 #include <inttypes.h>
+#include <libseat.h>
 #include <limits.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -90,6 +91,7 @@ struct uterm_input_dev {
 
 	unsigned int capabilities;
 	int rfd;
+	int device_id; /* libseat device id for close */
 	char *node;
 	struct ev_fd *fd;
 
@@ -107,9 +109,16 @@ struct uterm_input_dev {
 	struct uterm_input_pointer pointer;
 };
 
+struct uterm_input_pending {
+	struct shl_dlist list;
+	char *node;
+	bool mouse;
+};
+
 struct uterm_input {
 	unsigned long ref;
 	struct ev_eloop *eloop;
+	struct libseat *libseat;
 	int awake;
 	unsigned int repeat_rate;
 	unsigned int repeat_delay;
@@ -125,6 +134,7 @@ struct uterm_input {
 	struct ev_timer *hide_pointer;
 
 	struct shl_dlist devices;
+	struct shl_dlist pending_devices;
 };
 
 static inline bool input_bit_is_set(const unsigned long *array, int bit)

@@ -114,13 +114,13 @@ typedef void (*uterm_drm_page_flip_t)(struct uterm_display *disp);
 struct uterm_drm_video {
 	char *name;
 	int fd;
+	bool external_fd; /* fd was provided externally (libseat), don't close */
 	struct ev_fd *efd;
 	uterm_drm_page_flip_t page_flip;
 	void *data;
 	struct shl_timer *timer;
 	struct ev_timer *vt_timer;
 	bool legacy;
-	bool master;
 	bool cursor_hotspot;
 	const struct display_ops *display_ops;
 };

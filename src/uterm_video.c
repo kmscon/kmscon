@@ -408,7 +408,7 @@ bool uterm_display_has_damage(struct uterm_display *disp)
 SHL_EXPORT
 int uterm_video_new(struct uterm_video **out, struct ev_eloop *eloop, const char *node,
 		    const char *backend, unsigned int desired_width, unsigned int desired_height,
-		    bool use_original)
+		    bool use_original, int preopen_fd)
 {
 	struct shl_register_record *record;
 	const char *name = backend ? backend : "<default>";
@@ -435,6 +435,7 @@ int uterm_video_new(struct uterm_video **out, struct ev_eloop *eloop, const char
 	}
 	memset(video, 0, sizeof(*video));
 	video->ref = 1;
+	video->preopen_fd = preopen_fd;
 
 	video->record = record;
 	video->mod = record->data;

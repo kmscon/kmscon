@@ -38,14 +38,13 @@
 #include "eloop.h"
 #include "uterm_input.h"
 #include "uterm_video.h"
-#include "uterm_vt.h"
 
 struct kmscon_seat;
 struct kmscon_session;
+struct libseat;
 
 enum kmscon_seat_event {
 	KMSCON_SEAT_WAKE_UP,
-	KMSCON_SEAT_SLEEP,
 	KMSCON_SEAT_BACKGROUND,
 	KMSCON_SEAT_FOREGROUND,
 	KMSCON_SEAT_HUP,
@@ -71,8 +70,7 @@ typedef int (*kmscon_session_cb_t)(struct kmscon_session *session,
 				   struct kmscon_session_event *event, void *data);
 
 int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf, struct ev_eloop *eloop,
-		    struct uterm_vt_master *vtm, unsigned int vt_types, const char *seatname,
-		    kmscon_seat_cb_t cb, void *data);
+		    const char *seatname, kmscon_seat_cb_t cb, void *data);
 void kmscon_seat_free(struct kmscon_seat *seat);
 void kmscon_seat_startup(struct kmscon_seat *seat);
 
@@ -86,6 +84,7 @@ const char *kmscon_seat_get_name(struct kmscon_seat *seat);
 struct uterm_input *kmscon_seat_get_input(struct kmscon_seat *seat);
 struct ev_eloop *kmscon_seat_get_eloop(struct kmscon_seat *seat);
 struct conf_ctx *kmscon_seat_get_conf(struct kmscon_seat *seat);
+struct libseat *kmscon_seat_get_libseat(struct kmscon_seat *seat);
 
 void kmscon_seat_schedule(struct kmscon_seat *seat, unsigned int id);
 

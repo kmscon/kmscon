@@ -39,6 +39,7 @@
 #include <stdlib.h>
 
 struct uterm_input;
+struct libseat;
 
 /* keep in sync with shl_xkb_mods */
 enum uterm_input_modifier {
@@ -89,8 +90,8 @@ typedef void (*uterm_input_key_cb)(struct uterm_input *input, struct uterm_input
 typedef void (*uterm_input_pointer_cb)(struct uterm_input *input,
 				       struct uterm_input_pointer_event *ev, void *data);
 
-int uterm_input_new(struct uterm_input **out, struct ev_eloop *eloop, const char *model,
-		    const char *layout, const char *variant, const char *options,
+int uterm_input_new(struct uterm_input **out, struct ev_eloop *eloop, struct libseat *libseat,
+		    const char *model, const char *layout, const char *variant, const char *options,
 		    const char *locale, const char *keymap, const char *compose_file,
 		    size_t compose_file_len, unsigned int repeat_delay, unsigned int repeat_rate);
 void uterm_input_ref(struct uterm_input *input);
