@@ -109,7 +109,9 @@ void uterm_display_set_damage(struct uterm_display *disp, size_t n_rect,
 	(void)n_rect;
 	(void)damages;
 }
-
+#include "shl_log.h"
+#undef log_warning
+#define log_warning(f, ...)
 /* Pull in the implementation so we can call bbulk_set directly */
 #include "../src/text_bbulk.c"
 
