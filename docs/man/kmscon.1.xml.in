@@ -359,6 +359,15 @@
       </varlistentry>
 
       <varlistentry>
+        <term><option>--soft-cursor</option></term>
+        <listitem>
+          <para>Force software cursor, if hardware cursor is not working properly.
+                (default: off)
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
         <term><option>--dpms-timeout</option></term>
         <listitem>
           <para>Set screen timeout in seconds (default: 0 = disabled).

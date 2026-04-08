@@ -75,6 +75,8 @@
 
 ## Enable mouse
 #mouse
+## Force software cursor
+#soft-cursor
 
 ## Power Management
 ## Screen timeout in seconds (0 = disabled)
