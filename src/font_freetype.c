@@ -443,11 +443,11 @@ static int get_fallback(uint32_t ch, struct ft_font *ftf)
 
 	for (i = 0; i < ftf->fc->nfont; i++) {
 		FcCharSet *cs;
-		FcPatternGetCharSet(ftf->fc->fonts[i], FC_CHARSET, 0, &cs);
-		if (FcCharSetHasChar(cs, ch))
-			return i;
+		if (FcPatternGetCharSet(ftf->fc->fonts[i], FC_CHARSET, 0, &cs) == FcResultMatch)
+			if (FcCharSetHasChar(cs, ch))
+				return i;
 	}
-	return -EINVAL;
+	return -ENOENT;
 }
 
 static struct kmscon_glyph *kmscon_font_freetype_render(struct kmscon_font *font, uint64_t id,
@@ -468,6 +468,9 @@ static struct kmscon_glyph *kmscon_font_freetype_render(struct kmscon_font *font
 
 	/* Fallback, if the glyph is not found in the regular font */
 	fallback_index = get_fallback(*ch, ftfont);
+	if (fallback_index < 0)
+		return NULL;
+
 	fallback = prepare_tmp_face(ftd->ft, ftfont, fallback_index);
 
 	if (!fallback)
@@ -475,6 +478,8 @@ static struct kmscon_glyph *kmscon_font_freetype_render(struct kmscon_font *font
 
 	select_font_size(fallback, &font->attr);
 	glyph_index = FT_Get_Char_Index(fallback, *ch);
+	if (!glyph_index)
+		return NULL;
 	glyph = render_glyph(fallback, glyph_index, id, ch, &font->attr);
 	FT_Done_Face(fallback);
 	return glyph;
