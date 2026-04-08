@@ -46,10 +46,27 @@ struct drm_object {
 
 /* drm display */
 
+struct uterm_drm_cursor {
+	uint32_t bo_handle;
+	uint32_t fb_id;
+	uint32_t width;
+	uint32_t height;
+	uint32_t stride;
+	uint8_t *map;
+	uint64_t map_size;
+	bool active;
+	bool visible;
+	int32_t x;
+	int32_t y;
+	int32_t hot_x;
+	int32_t hot_y;
+};
+
 struct uterm_drm_display {
 	struct drm_object connector;
 	struct drm_object crtc;
 	struct drm_object plane;
+	struct drm_object cursor_plane;
 
 	drmModeModeInfo mode;
 	uint32_t mode_blob_id;
@@ -64,11 +81,20 @@ struct uterm_drm_display {
 	/* For legacy modesetting */
 	uint32_t fb_id;
 
+	struct uterm_drm_cursor cursor;
+
 	int (*prepare_modeset)(struct uterm_display *disp, drmModeAtomicReqPtr rec);
 	void (*done_modeset)(struct uterm_display *disp, int status);
 };
 
 int uterm_drm_display_set_dpms(struct uterm_display *disp, int state);
+
+int uterm_drm_display_setup_cursor(struct uterm_display *disp, const uint32_t *pixels,
+				   unsigned int img_width, unsigned int img_height, int hot_x,
+				   int hot_y);
+void uterm_drm_display_destroy_cursor(struct uterm_display *disp);
+int uterm_drm_display_show_cursor(struct uterm_display *disp, int32_t x, int32_t y);
+int uterm_drm_display_hide_cursor(struct uterm_display *disp);
 int uterm_drm_display_wait_pflip(struct uterm_display *disp);
 int uterm_drm_prepare_commit(int fd, struct uterm_drm_display *ddrm, drmModeAtomicReq *req,
 			     uint32_t fb, uint32_t width, uint32_t height);

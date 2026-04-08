@@ -29,10 +29,12 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <libdrm/drm_fourcc.h>
 #include <poll.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/mman.h>
 #include <unistd.h>
 #include <xf86drm.h>
 #include <xf86drmMode.h>
@@ -45,6 +47,11 @@
 #include "uterm_video_internal.h"
 
 #define LOG_SUBSYSTEM "drm_shared"
+
+static void modeset_drm_object_fini(struct drm_object *obj);
+static void modeset_get_object_properties(int fd, struct drm_object *obj, uint32_t type);
+static int set_drm_object_property(drmModeAtomicReq *req, struct drm_object *obj, const char *name,
+				   uint64_t value);
 
 static uint32_t get_property_id(int fd, drmModeObjectPropertiesPtr props, const char *name)
 {
@@ -225,6 +232,7 @@ static int modeset_find_plane(int fd, struct uterm_display *disp)
 	struct uterm_drm_display *ddrm = disp->data;
 	drmModePlaneResPtr plane_res;
 	bool found_primary = false;
+	bool found_cursor = false;
 	int i, ret = -EINVAL;
 
 	plane_res = drmModeGetPlaneResources(fd);
@@ -233,9 +241,9 @@ static int modeset_find_plane(int fd, struct uterm_display *disp)
 		return -ENOENT;
 	}
 
-	/* iterates through all planes of a certain device */
-	for (i = 0; (i < plane_res->count_planes) && !found_primary; i++) {
+	for (i = 0; i < plane_res->count_planes; i++) {
 		int plane_id = plane_res->planes[i];
+		uint64_t plane_type;
 
 		drmModePlanePtr plane = drmModeGetPlane(fd, plane_id);
 		if (!plane) {
@@ -243,21 +251,27 @@ static int modeset_find_plane(int fd, struct uterm_display *disp)
 			continue;
 		}
 
-		/* check if the plane can be used by our CRTC */
 		if (plane->possible_crtcs & (1 << ddrm->crtc_index)) {
 			drmModeObjectPropertiesPtr props =
 				drmModeObjectGetProperties(fd, plane_id, DRM_MODE_OBJECT_PLANE);
 
-			if (get_property_value(fd, props, "type") == DRM_PLANE_TYPE_PRIMARY) {
+			plane_type = get_property_value(fd, props, "type");
+			if (!found_primary && plane_type == DRM_PLANE_TYPE_PRIMARY) {
 				found_primary = true;
 				ddrm->plane.id = plane_id;
 				ret = 0;
 				if (get_property_id(fd, props, "FB_DAMAGE_CLIPS") > 0)
 					disp->flags |= DISPLAY_DAMAGE;
+			} else if (!found_cursor && plane_type == DRM_PLANE_TYPE_CURSOR) {
+				found_cursor = true;
+				ddrm->cursor_plane.id = plane_id;
 			}
 			drmModeFreeObjectProperties(props);
 		}
 		drmModeFreePlane(plane);
+
+		if (found_primary && found_cursor)
+			break;
 	}
 	drmModeFreePlaneResources(plane_res);
 
@@ -266,6 +280,10 @@ static int modeset_find_plane(int fd, struct uterm_display *disp)
 			  disp->flags & DISPLAY_DAMAGE ? "yes" : "no");
 	else
 		log_warn("couldn't find a primary plane\n");
+
+	if (found_cursor)
+		log_debug("found cursor plane, id: %d\n", ddrm->cursor_plane.id);
+
 	return ret;
 }
 
@@ -310,6 +328,179 @@ static void modeset_clear_cursor(drmModeAtomicReq *req, int fd)
 	drmModeFreePlaneResources(plane_res);
 }
 
+static int cursor_create_buffer(int fd, struct uterm_drm_cursor *cursor, uint32_t width,
+				uint32_t height)
+{
+	uint32_t handles[4], pitches[4], offsets[4];
+	uint64_t mmap_offset;
+	int ret;
+
+	cursor->width = width;
+	cursor->height = height;
+
+	if (drmModeCreateDumbBuffer(fd, width, height, 32, 0, &cursor->bo_handle, &cursor->stride,
+				    &cursor->map_size)) {
+		log_err("cannot create cursor dumb buffer");
+		return -EFAULT;
+	}
+
+	handles[0] = cursor->bo_handle;
+	handles[1] = handles[2] = handles[3] = 0;
+	pitches[0] = cursor->stride;
+	pitches[1] = pitches[2] = pitches[3] = 0;
+	offsets[0] = offsets[1] = offsets[2] = offsets[3] = 0;
+
+	ret = drmModeAddFB2(fd, width, height, DRM_FORMAT_ARGB8888, handles, pitches, offsets,
+			    &cursor->fb_id, 0);
+	if (ret) {
+		log_err("cannot create cursor framebuffer");
+		goto err_buf;
+	}
+
+	ret = drmModeMapDumbBuffer(fd, cursor->bo_handle, &mmap_offset);
+	if (ret) {
+		log_err("cannot map cursor dumb buffer");
+		goto err_fb;
+	}
+
+	cursor->map =
+		mmap(0, cursor->map_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, mmap_offset);
+	if (cursor->map == MAP_FAILED) {
+		log_err("cannot mmap cursor dumb buffer");
+		cursor->map = NULL;
+		goto err_fb;
+	}
+
+	memset(cursor->map, 0, cursor->map_size);
+	return 0;
+
+err_fb:
+	drmModeRmFB(fd, cursor->fb_id);
+	cursor->fb_id = 0;
+err_buf:
+	drmModeDestroyDumbBuffer(fd, cursor->bo_handle);
+	cursor->bo_handle = 0;
+	return -EFAULT;
+}
+
+static void cursor_destroy_buffer(int fd, struct uterm_drm_cursor *cursor)
+{
+	if (!cursor->map)
+		return;
+
+	munmap(cursor->map, cursor->map_size);
+	cursor->map = NULL;
+
+	if (cursor->fb_id) {
+		drmModeRmFB(fd, cursor->fb_id);
+		cursor->fb_id = 0;
+	}
+	if (cursor->bo_handle) {
+		drmModeDestroyDumbBuffer(fd, cursor->bo_handle);
+		cursor->bo_handle = 0;
+	}
+}
+
+int uterm_drm_display_setup_cursor(struct uterm_display *disp, const uint32_t *pixels,
+				   unsigned int img_width, unsigned int img_height, int hot_x,
+				   int hot_y)
+{
+	struct uterm_drm_display *ddrm = disp->data;
+	struct uterm_drm_video *vdrm = disp->video->data;
+	struct uterm_drm_cursor *cursor = &ddrm->cursor;
+	uint64_t cap_w = 64, cap_h = 64;
+	uint32_t *dst;
+	unsigned int pitch, copy_w, copy_h, off_x, off_y;
+	unsigned int x, y;
+	int ret;
+
+	if (!pixels)
+		return -EINVAL;
+
+	if (!ddrm->cursor_plane.id)
+		return -EOPNOTSUPP;
+
+	if (cursor->active)
+		uterm_drm_display_destroy_cursor(disp);
+
+	drmGetCap(vdrm->fd, DRM_CAP_CURSOR_WIDTH, &cap_w);
+	drmGetCap(vdrm->fd, DRM_CAP_CURSOR_HEIGHT, &cap_h);
+	if (cap_w > 4096)
+		cap_w = 4096;
+	if (cap_h > 4096)
+		cap_h = 4096;
+
+	ret = cursor_create_buffer(vdrm->fd, cursor, cap_w, cap_h);
+	if (ret)
+		return ret;
+
+	dst = (uint32_t *)cursor->map;
+	pitch = cursor->stride / 4;
+	copy_w = img_width < cap_w ? img_width : cap_w;
+	copy_h = img_height < cap_h ? img_height : cap_h;
+	off_x = (cap_w - copy_w) / 2;
+	off_y = (cap_h - copy_h) / 2;
+
+	for (y = 0; y < copy_h; y++) {
+		for (x = 0; x < copy_w; x++) {
+			dst[(off_y + y) * pitch + (off_x + x)] = pixels[y * img_width + x];
+		}
+	}
+
+	cursor->hot_x = hot_x + off_x;
+	cursor->hot_y = hot_y + off_y;
+	cursor->active = true;
+	cursor->visible = false;
+
+	return 0;
+}
+
+void uterm_drm_display_destroy_cursor(struct uterm_display *disp)
+{
+	struct uterm_drm_display *ddrm = disp->data;
+	struct uterm_drm_video *vdrm = disp->video->data;
+	struct uterm_drm_cursor *cursor = &ddrm->cursor;
+
+	if (!cursor->active)
+		return;
+
+	if (cursor->visible)
+		uterm_drm_display_hide_cursor(disp);
+
+	cursor_destroy_buffer(vdrm->fd, cursor);
+	cursor->active = false;
+}
+
+int uterm_drm_display_show_cursor(struct uterm_display *disp, int32_t x, int32_t y)
+{
+	struct uterm_drm_display *ddrm = disp->data;
+	struct uterm_drm_cursor *cursor = &ddrm->cursor;
+
+	if (!cursor->active)
+		return -EINVAL;
+
+	cursor->x = x;
+	cursor->y = y;
+	cursor->visible = true;
+	uterm_display_set_need_redraw(disp);
+
+	return 0;
+}
+
+int uterm_drm_display_hide_cursor(struct uterm_display *disp)
+{
+	struct uterm_drm_display *ddrm = disp->data;
+	struct uterm_drm_cursor *cursor = &ddrm->cursor;
+
+	if (!cursor->active || !cursor->visible)
+		return 0;
+
+	cursor->visible = false;
+	uterm_display_set_need_redraw(disp);
+
+	return 0;
+}
+
 static void modeset_drm_object_fini(struct drm_object *obj)
 {
 	if (!obj->props)
@@ -337,10 +528,18 @@ static int modeset_setup_objects(int fd, struct uterm_drm_display *ddrm)
 	if (!crtc->props)
 		goto out_crtc;
 
-	/* retrieve plane properties from the device */
+	/* retrieve primary plane properties from the device */
 	modeset_get_object_properties(fd, plane, DRM_MODE_OBJECT_PLANE);
 	if (!plane->props)
 		goto out_plane;
+
+	if (ddrm->cursor_plane.id) {
+		modeset_get_object_properties(fd, &ddrm->cursor_plane, DRM_MODE_OBJECT_PLANE);
+		if (!ddrm->cursor_plane.props) {
+			log_warn("cannot get cursor plane properties, disabling HW cursor");
+			ddrm->cursor_plane.id = 0;
+		}
+	}
 
 	return 0;
 
@@ -357,9 +556,12 @@ void uterm_drm_display_free_properties(struct uterm_display *disp)
 	struct uterm_drm_display *ddrm = disp->data;
 	struct uterm_drm_video *vdrm = disp->video->data;
 
+	uterm_drm_display_destroy_cursor(disp);
+
 	modeset_drm_object_fini(&ddrm->connector);
 	modeset_drm_object_fini(&ddrm->crtc);
 	modeset_drm_object_fini(&ddrm->plane);
+	modeset_drm_object_fini(&ddrm->cursor_plane);
 
 	drmModeDestroyPropertyBlob(vdrm->fd, ddrm->mode_blob_id);
 }
@@ -417,6 +619,44 @@ int uterm_drm_prepare_commit(int fd, struct uterm_drm_display *ddrm, drmModeAtom
 			return -1;
 		}
 	}
+
+	if (ddrm->cursor_plane.id) {
+		struct drm_object *cp = &ddrm->cursor_plane;
+		struct uterm_drm_cursor *cursor = &ddrm->cursor;
+
+		if (cursor->active && cursor->visible) {
+			if (set_drm_object_property(req, cp, "FB_ID", cursor->fb_id) < 0)
+				return -1;
+			if (set_drm_object_property(req, cp, "CRTC_ID", ddrm->crtc.id) < 0)
+				return -1;
+			if (set_drm_object_property(req, cp, "SRC_X", 0) < 0)
+				return -1;
+			if (set_drm_object_property(req, cp, "SRC_Y", 0) < 0)
+				return -1;
+			if (set_drm_object_property(req, cp, "SRC_W",
+						    (uint64_t)cursor->width << 16) < 0)
+				return -1;
+			if (set_drm_object_property(req, cp, "SRC_H",
+						    (uint64_t)cursor->height << 16) < 0)
+				return -1;
+			if (set_drm_object_property(req, cp, "CRTC_X", cursor->x - cursor->hot_x) <
+			    0)
+				return -1;
+			if (set_drm_object_property(req, cp, "CRTC_Y", cursor->y - cursor->hot_y) <
+			    0)
+				return -1;
+			if (set_drm_object_property(req, cp, "CRTC_W", cursor->width) < 0)
+				return -1;
+			if (set_drm_object_property(req, cp, "CRTC_H", cursor->height) < 0)
+				return -1;
+		} else {
+			if (set_drm_object_property(req, cp, "FB_ID", 0) < 0)
+				return -1;
+			if (set_drm_object_property(req, cp, "CRTC_ID", 0) < 0)
+				return -1;
+		}
+	}
+
 	return 0;
 }
 

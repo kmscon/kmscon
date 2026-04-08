@@ -340,6 +340,45 @@ bool uterm_display_need_redraw(struct uterm_display *disp)
 }
 
 SHL_EXPORT
+int uterm_display_setup_cursor(struct uterm_display *disp, const uint32_t *pixels,
+			       unsigned int img_width, unsigned int img_height, int hot_x,
+			       int hot_y)
+{
+	if (!disp || !display_is_online(disp) || !video_is_awake(disp->video))
+		return -EINVAL;
+
+	return VIDEO_CALL(disp->ops->setup_cursor, -EOPNOTSUPP, disp, pixels, img_width, img_height,
+			  hot_x, hot_y);
+}
+
+SHL_EXPORT
+void uterm_display_destroy_cursor(struct uterm_display *disp)
+{
+	if (!disp)
+		return;
+
+	VIDEO_CALL(disp->ops->destroy_cursor, 0, disp);
+}
+
+SHL_EXPORT
+int uterm_display_show_cursor(struct uterm_display *disp, int32_t x, int32_t y)
+{
+	if (!disp || !display_is_online(disp) || !video_is_awake(disp->video))
+		return -EINVAL;
+
+	return VIDEO_CALL(disp->ops->show_cursor, -EOPNOTSUPP, disp, x, y);
+}
+
+SHL_EXPORT
+int uterm_display_hide_cursor(struct uterm_display *disp)
+{
+	if (!disp || !display_is_online(disp) || !video_is_awake(disp->video))
+		return -EINVAL;
+
+	return VIDEO_CALL(disp->ops->hide_cursor, -EOPNOTSUPP, disp);
+}
+
+SHL_EXPORT
 void uterm_display_set_damage(struct uterm_display *disp, size_t n_rect,
 			      struct uterm_video_rect *damages)
 {

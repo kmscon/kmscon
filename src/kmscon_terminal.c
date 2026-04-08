@@ -58,6 +58,7 @@ struct screen {
 
 	bool swapping;
 	bool pending;
+	bool hw_cursor;
 };
 
 struct kmscon_pointer {
@@ -119,10 +120,118 @@ static void coord_to_cell(struct kmscon_terminal *term, int32_t x, int32_t y, un
 
 static void draw_pointer(struct screen *scr)
 {
-	if (!scr->term->pointer.visible)
+	if (!scr->term->pointer.visible || scr->hw_cursor)
 		return;
 
 	kmscon_text_draw_pointer(scr->txt, scr->term->pointer.x, scr->term->pointer.y);
+}
+
+static inline uint32_t argb(uint8_t a, uint8_t r, uint8_t g, uint8_t b)
+{
+	return ((uint32_t)a << 24) | ((uint32_t)r << 16) | ((uint32_t)g << 8) | (uint32_t)b;
+}
+
+/*
+ * Thin I-beam: 1px stem, proportional top/bottom serifs, 1px outline halo.
+ * The shape is built into a boolean mask, then rendered in a single pass
+ * that fills white on the shape and a dark outline on any pixel adjacent
+ * to it (8-connected).
+ */
+static void generate_ibeam_cursor(uint32_t *buf, unsigned int w, unsigned int h, int *out_hot_x,
+				  int *out_hot_y)
+{
+	unsigned int cx, cap_half, y, px, npix;
+	int x, dy, dx, ny, nx;
+	bool *shape, near;
+	uint32_t white, outline;
+
+	cx = w / 2;
+	cap_half = h / 6;
+	if (cap_half < 2)
+		cap_half = 2;
+
+	white = argb(255, 255, 255, 255);
+	outline = argb(220, 0, 0, 0);
+
+	npix = w * h;
+	shape = calloc(npix, sizeof(*shape));
+	if (!shape)
+		return;
+
+	memset(buf, 0, npix * sizeof(*buf));
+
+	/* 1px vertical stem */
+	for (y = 0; y < h; y++)
+		shape[y * w + cx] = true;
+
+	/* Top and bottom serifs, 1px tall */
+	for (x = -(int)cap_half; x <= (int)cap_half; x++) {
+		px = cx + x;
+		if (px >= w)
+			continue;
+		shape[px] = true;
+		shape[(h - 1) * w + px] = true;
+	}
+
+	/* White fill on the shape, dark halo on 8-connected neighbors */
+	for (y = 0; y < h; y++) {
+		for (px = 0; px < w; px++) {
+			if (shape[y * w + px]) {
+				buf[y * w + px] = white;
+				continue;
+			}
+			near = false;
+			for (dy = -1; dy <= 1 && !near; dy++) {
+				for (dx = -1; dx <= 1 && !near; dx++) {
+					ny = (int)y + dy;
+					nx = (int)px + dx;
+					if (ny >= 0 && ny < (int)h && nx >= 0 && nx < (int)w &&
+					    shape[ny * w + nx])
+						near = true;
+				}
+			}
+			if (near)
+				buf[y * w + px] = outline;
+		}
+	}
+
+	free(shape);
+	*out_hot_x = cx;
+	*out_hot_y = h / 2;
+}
+
+static void setup_hw_cursor(struct screen *scr)
+{
+	struct kmscon_terminal *term = scr->term;
+	unsigned int fh = term->font->attr.height;
+	unsigned int beam_h = fh > 4 ? fh : 20;
+	unsigned int cap_half = beam_h / 6;
+	unsigned int beam_w;
+	uint32_t *pixels;
+	int hot_x = 0, hot_y = 0;
+	int ret;
+
+	if (cap_half < 2)
+		cap_half = 2;
+	beam_w = 2 * cap_half + 5;
+
+	pixels = calloc(beam_w * beam_h, sizeof(uint32_t));
+	if (!pixels)
+		return;
+
+	generate_ibeam_cursor(pixels, beam_w, beam_h, &hot_x, &hot_y);
+
+	ret = uterm_display_setup_cursor(scr->disp, pixels, beam_w, beam_h, hot_x, hot_y);
+	free(pixels);
+
+	if (ret) {
+		log_debug("HW cursor not available for display %s, using software",
+			  uterm_display_name(scr->disp));
+		scr->hw_cursor = false;
+	} else {
+		log_debug("HW cursor enabled for display %s", uterm_display_name(scr->disp));
+		scr->hw_cursor = true;
+	}
 }
 
 static void do_redraw_screen(struct screen *scr)
@@ -462,6 +571,9 @@ static int add_display(struct kmscon_terminal *term, struct uterm_display *disp)
 
 	log_debug("added display %p to terminal %p", disp, term);
 
+	if (term->conf->mouse && !term->conf->soft_cursor)
+		setup_hw_cursor(scr);
+
 	terminal_update_size_notify(term);
 	kmscon_text_resize(scr->txt, term->min_cols, term->min_rows);
 	update_pointer_max_all(term);
@@ -482,6 +594,8 @@ static void free_screen(struct screen *scr, bool update)
 	struct kmscon_terminal *term = scr->term;
 
 	log_debug("destroying terminal screen %p", scr);
+	if (scr->hw_cursor)
+		uterm_display_destroy_cursor(scr->disp);
 	shl_dlist_unlink(&scr->list);
 	kmscon_text_unref(scr->txt);
 	uterm_display_unregister_cb(scr->disp, display_event, scr);
@@ -687,6 +801,32 @@ static void handle_pointer_button(struct kmscon_terminal *term,
 	}
 }
 
+static void hw_cursor_show(struct kmscon_terminal *term, int32_t x, int32_t y)
+{
+	struct shl_dlist *iter;
+	struct screen *scr;
+
+	shl_dlist_for_each(iter, &term->screens)
+	{
+		scr = shl_dlist_entry(iter, struct screen, list);
+		if (scr->hw_cursor)
+			uterm_display_show_cursor(scr->disp, x, y);
+	}
+}
+
+static void hw_cursor_hide(struct kmscon_terminal *term)
+{
+	struct shl_dlist *iter;
+	struct screen *scr;
+
+	shl_dlist_for_each(iter, &term->screens)
+	{
+		scr = shl_dlist_entry(iter, struct screen, list);
+		if (scr->hw_cursor)
+			uterm_display_hide_cursor(scr->disp);
+	}
+}
+
 static void pointer_event(struct uterm_input *input, struct uterm_input_pointer_event *ev,
 			  void *data)
 {
@@ -699,6 +839,7 @@ static void pointer_event(struct uterm_input *input, struct uterm_input_pointer_
 		coord_to_cell(term, term->pointer.x, term->pointer.y, &term->pointer.posx,
 			      &term->pointer.posy);
 		term->pointer.visible = true;
+		hw_cursor_show(term, ev->pointer_x, ev->pointer_y);
 	}
 
 	if (tsm_vte_get_mouse_mode(term->vte) != TSM_MOUSE_TRACK_DISABLE &&
@@ -730,6 +871,7 @@ static void pointer_event(struct uterm_input *input, struct uterm_input_pointer_
 	case UTERM_HIDE_TIMEOUT:
 		tsm_screen_selection_reset(term->console);
 		term->pointer.visible = false;
+		hw_cursor_hide(term);
 		break;
 	}
 }
@@ -809,6 +951,15 @@ static int session_event(struct kmscon_session *session, struct kmscon_session_e
 		rm_display(term, ev->disp);
 		break;
 	case KMSCON_SESSION_DISPLAY_REFRESH:
+		if (term->pointer.visible) {
+			shl_dlist_for_each(iter, &term->screens)
+			{
+				scr = shl_dlist_entry(iter, struct screen, list);
+				if (scr->hw_cursor)
+					uterm_display_show_cursor(scr->disp, term->pointer.x,
+								  term->pointer.y);
+			}
+		}
 		redraw_all_text(term);
 		break;
 	case KMSCON_SESSION_ACTIVATE:
@@ -819,11 +970,15 @@ static int session_event(struct kmscon_session *session, struct kmscon_session_e
 		{
 			scr = shl_dlist_entry(iter, struct screen, list);
 			uterm_display_set_need_redraw(scr->disp);
+			if (scr->hw_cursor && term->pointer.visible)
+				uterm_display_show_cursor(scr->disp, term->pointer.x,
+							  term->pointer.y);
 		}
 		redraw_all_text(term);
 		break;
 	case KMSCON_SESSION_DEACTIVATE:
 		term->awake = false;
+		hw_cursor_hide(term);
 		break;
 	case KMSCON_SESSION_UNREGISTER:
 		terminal_destroy(term);
