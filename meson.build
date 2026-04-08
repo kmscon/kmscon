@@ -195,6 +195,11 @@ endif
 dirs_info = configuration_data()
 dirs_info.set('libexecdir', prefix / libexecdir)
 dirs_info.set('bindir', prefix / bindir)
+if enable_libseat
+  dirs_info.set('PAM_CFG', 'User=root\nPAMName=kmscon')
+else
+  dirs_info.set('PAM_CFG', '')
+endif
 foreach filename, kwargs : {
   'scripts/kmscon.in': {
     'install_dir': bindir,
@@ -203,6 +208,14 @@ foreach filename, kwargs : {
   'scripts/kmscon-launch-gui.sh': {
     'install_dir': bindir,
     'install_mode': 'rwxr-xr-x',
+  },
+  'scripts/systemd/kmscon.service.in': {
+    'install_dir': systemdsystemunitdir,
+    'install_mode': 'rw-r--r--',
+  },
+  'scripts/systemd/kmsconvt@.service.in': {
+    'install_dir': systemdsystemunitdir,
+    'install_mode': 'rw-r--r--',
   },
 }
   install_data(configure_file(input: filename, output: '@BASENAME@', configuration: dirs_info),
@@ -215,11 +228,10 @@ install_data(
   'scripts/etc/kmscon.conf.example',
   install_dir: join_paths(get_option('sysconfdir'), 'kmscon')
 )
-install_data(
-  'scripts/systemd/kmscon.service',
-  install_dir: systemdsystemunitdir,
-)
-install_data(
-  'scripts/systemd/kmsconvt@.service',
-  install_dir: systemdsystemunitdir,
-)
+if enable_libseat
+  install_data(
+    'scripts/pam/kmscon',
+    install_dir: get_option('sysconfdir') / 'pam.d',
+    rename: 'kmscon',
+  )
+endif
