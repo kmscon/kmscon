@@ -85,6 +85,10 @@ struct kmscon_conf_t {
 	bool terminal_session;
 
 	/* Terminal Options */
+	/* display /etc/issue before login prompt */
+	bool issue;
+	/* colon-separated issue search path */
+	char *issue_path;
 	/* custom login process */
 	bool login;
 	/* argv for login process */

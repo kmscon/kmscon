@@ -33,12 +33,14 @@
 #include <errno.h>
 #include <inttypes.h>
 #include <libtsm.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "conf.h"
 #include "eloop.h"
 #include "font.h"
 #include "kmscon_conf.h"
+#include "kmscon_issue.h"
 #include "kmscon_seat.h"
 #include "kmscon_terminal.h"
 #include "pty.h"
@@ -764,6 +766,8 @@ static int terminal_open(struct kmscon_terminal *term)
 		return ret;
 
 	term->opened = true;
+	if (term->conf->issue)
+		kmscon_issue_write(term->vte, term->pty, term->conf->issue_path);
 
 	update_pointer_max_all(term);
 	redraw_all(term);

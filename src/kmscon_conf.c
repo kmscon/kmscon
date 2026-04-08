@@ -83,6 +83,13 @@ static void print_help()
 		"\t    --terminal-session          [on]  Enable terminal session\n"
 		"\n"
 		"Terminal Options:\n"
+		"\t    --issue                 [on]\n"
+		"\t                              Display issue files before the\n"
+		"\t                              login prompt. Use --no-issue to\n"
+		"\t                              let the login process handle it.\n"
+		"\t    --issue-path <path>     [/etc/issue:/etc/issue.d]\n"
+		"\t                              Colon-separated list of issue\n"
+		"\t                              files and directories to read\n"
 		"\t-l, --login                 [/bin/login -p]\n"
 		"\t                              Start the given login process instead\n"
 		"\t                              of the default process; all arguments\n"
@@ -754,6 +761,8 @@ int kmscon_conf_new(struct conf_ctx **out)
 		CONF_OPTION_BOOL(0, "terminal-session", &conf->terminal_session, true),
 
 		/* Terminal Options */
+		CONF_OPTION_BOOL(0, "issue", &conf->issue, true),
+		CONF_OPTION_STRING(0, "issue-path", &conf->issue_path, "/etc/issue:/etc/issue.d"),
 		CONF_OPTION(0, 'l', "login", &conf_login, aftercheck_login, NULL, file_login,
 			    &conf->login, false),
 		CONF_OPTION_STRING('t', "term", &conf->term, "linux"),

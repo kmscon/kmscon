@@ -603,6 +603,14 @@ void kmscon_pty_signal(struct kmscon_pty *pty, int signum)
 	log_debug("send signal %d to child", signum);
 }
 
+int kmscon_pty_get_slave_name(struct kmscon_pty *pty, char *buf, size_t len)
+{
+	if (!pty || !buf || !len || !pty_is_open(pty))
+		return -EINVAL;
+
+	return ptsname_r(pty->fd, buf, len);
+}
+
 void kmscon_pty_resize(struct kmscon_pty *pty, unsigned short width, unsigned short height)
 {
 	int ret;

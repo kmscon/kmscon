@@ -244,6 +244,7 @@ kmscon_srcs = [
   'text_bbulk.c',
   'kmscon_seat.c',
   'kmscon_conf.c',
+  'kmscon_issue.c',
   'kmscon_main.c',
 ]
 if enable_session_dummy
