@@ -42,8 +42,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include "font.h"
-#include "shl_hashtable.h"
 #include "shl_log.h"
+#include "shl_lru.h"
 #include "shl_misc.h"
 #include "text.h"
 #include "uterm_video.h"
@@ -67,7 +67,7 @@ struct bbulk {
 	unsigned int req_len;
 	unsigned int req_total_len;
 	struct tsm_screen_attr attr;
-	struct shl_hashtable *glyphs;
+	struct shl_lru *glyphs;
 	struct bbcell *prev;
 	unsigned int cells;
 	unsigned int sw;
@@ -98,13 +98,6 @@ static void bbulk_destroy(struct kmscon_text *txt)
 	struct bbulk *bb = txt->data;
 
 	free(bb);
-}
-
-static void free_glyph(void *data)
-{
-	struct kmscon_glyph *glyph = data;
-
-	free(glyph);
 }
 
 static void damage_cell(struct bbulk *bb, unsigned int off)
@@ -176,7 +169,9 @@ static int bbulk_set(struct kmscon_text *txt)
 	for (i = 0; i < (int)bb->cells; i++)
 		damage_cell(bb, i);
 
-	if (shl_hashtable_new(&bb->glyphs, shl_direct_hash, shl_direct_equal, free_glyph))
+	/* lru size should be at least bb->cells large */
+	bb->glyphs = shl_lru_new(2 * bb->cells);
+	if (!bb->glyphs)
 		goto free_r_damages;
 	return 0;
 
@@ -195,7 +190,7 @@ static void bbulk_unset(struct kmscon_text *txt)
 {
 	struct bbulk *bb = txt->data;
 
-	shl_hashtable_free(bb->glyphs);
+	shl_lru_free(bb->glyphs);
 	free(bb->damage_rects);
 	free(bb->reqs);
 	free(bb->damages);
@@ -304,7 +299,8 @@ static struct kmscon_glyph *find_glyph(struct kmscon_text *txt, uint64_t id, con
 	font->attr.italic = !!attr->italic;
 	font->attr.bold = !!attr->bold;
 
-	if (shl_hashtable_find(bb->glyphs, (void **)&glyph, id))
+	glyph = shl_lru_get(bb->glyphs, id);
+	if (glyph)
 		return glyph;
 
 	glyph = kmscon_font_render(font, id, ch, len);
@@ -314,7 +310,7 @@ static struct kmscon_glyph *find_glyph(struct kmscon_text *txt, uint64_t id, con
 	if (txt->orientation != OR_NORMAL)
 		glyph = bbulk_rotate_glyph(glyph, txt->orientation);
 
-	if (shl_hashtable_insert(bb->glyphs, id, glyph)) {
+	if (shl_lru_insert(bb->glyphs, id, glyph)) {
 		free(glyph);
 		return NULL;
 	}
