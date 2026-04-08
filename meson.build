@@ -222,3 +222,8 @@ install_data(
   'scripts/systemd/kmsconvt@.service',
   install_dir: systemdsystemunitdir,
 )
+install_data(
+  'scripts/pam/kmscon',
+  install_dir: get_option('sysconfdir') / 'pam.d',
+  rename: 'kmscon',
+)
