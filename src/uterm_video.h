@@ -169,6 +169,13 @@ void uterm_display_set_need_redraw(struct uterm_display *disp);
 bool uterm_display_need_redraw(struct uterm_display *disp);
 
 int uterm_display_clear(struct uterm_display *disp, uint8_t r, uint8_t g, uint8_t b);
+
+int uterm_display_setup_cursor(struct uterm_display *disp, const uint32_t *pixels,
+			       unsigned int img_width, unsigned int img_height, int hot_x,
+			       int hot_y);
+void uterm_display_destroy_cursor(struct uterm_display *disp);
+int uterm_display_show_cursor(struct uterm_display *disp, int32_t x, int32_t y);
+int uterm_display_hide_cursor(struct uterm_display *disp);
 int uterm_display_fake_blendv(struct uterm_display *disp, const struct uterm_video_blend_req *req,
 			      size_t num);
 void uterm_display_set_damage(struct uterm_display *disp, size_t n_rect,
