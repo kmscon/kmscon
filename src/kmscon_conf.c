@@ -117,6 +117,8 @@ static void print_help()
 		"\t                                 Delay between two key repeats in ms\n"
 		"\t    --mouse                    [on]\n"
 		"\t                                 Enable mouse support\n"
+		"\t    --soft-cursor              [off]\n"
+		"\t                                 Force software cursor\n"
 		"\t    --dpms-timeout <secs>      [0]\n"
 		"\t                                 Screen timeout in seconds (0=off)\n"
 		"\n"
