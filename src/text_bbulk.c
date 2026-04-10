@@ -294,10 +294,17 @@ static struct kmscon_glyph *find_glyph(struct kmscon_text *txt, uint64_t id, con
 	struct bbulk *bb = txt->data;
 	struct kmscon_glyph *glyph;
 	struct kmscon_font *font = txt->font;
+	const uint32_t replacement_char = 0xfffd;
 
 	font->attr.underline = !!attr->underline;
 	font->attr.italic = !!attr->italic;
 	font->attr.bold = !!attr->bold;
+
+	if (len == 1 && !kmscon_font_has_glyph(font, ch, len)) {
+		id = (id & ~0xffffffff) | replacement_char;
+		ch = &replacement_char;
+		len = 1;
+	}
 
 	glyph = shl_lru_get(bb->glyphs, id);
 	if (glyph)

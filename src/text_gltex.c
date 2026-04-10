@@ -414,10 +414,17 @@ static struct glyph *find_glyph(struct kmscon_text *txt, uint64_t id, const uint
 	const uint8_t *src;
 	struct kmscon_font *font = txt->font;
 	unsigned int num;
+	const uint32_t replacement_char = 0xfffd;
 
 	font->attr.underline = !!attr->underline;
 	font->attr.italic = !!attr->italic;
 	font->attr.bold = !!attr->bold;
+
+	if (len == 1 && !kmscon_font_has_glyph(font, ch, len)) {
+		id = (id & ~0xffffffff) | replacement_char;
+		ch = &replacement_char;
+		len = 1;
+	}
 
 	if (shl_hashtable_find(gt->glyphs, (void **)&glyph, id))
 		return glyph;
