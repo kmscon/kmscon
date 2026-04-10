@@ -83,16 +83,16 @@ struct atlas {
 	GLfloat advance_vtex;
 };
 
-struct glyph {
-	struct kmscon_glyph *glyph;
+struct gl_glyph {
+	bool double_width;
 	struct atlas *atlas;
 	unsigned int texoff;
 };
 
-#define GLYPH_WIDTH(gly) ((gly)->glyph->buf.width)
-#define GLYPH_HEIGHT(gly) ((gly)->glyph->buf.height)
-#define GLYPH_STRIDE(gly) ((gly)->glyph->buf.stride)
-#define GLYPH_DATA(gly) ((gly)->glyph->buf.data)
+#define GLYPH_WIDTH(gly) ((gly)->buf.width)
+#define GLYPH_HEIGHT(gly) ((gly)->buf.height)
+#define GLYPH_STRIDE(gly) ((gly)->buf.stride)
+#define GLYPH_DATA(gly) ((gly)->buf.data)
 
 struct gltex {
 	struct shl_hashtable *glyphs;
@@ -145,9 +145,8 @@ static void gltex_destroy(struct kmscon_text *txt)
 
 static void free_glyph(void *data)
 {
-	struct glyph *glyph = data;
+	struct gl_glyph *glyph = data;
 
-	free(glyph->glyph);
 	free(glyph);
 }
 
@@ -402,12 +401,12 @@ err_free:
 	return NULL;
 }
 
-static struct glyph *find_glyph(struct kmscon_text *txt, uint64_t id, const uint32_t *ch,
-				size_t len, const struct tsm_screen_attr *attr)
+static struct gl_glyph *find_glyph(struct kmscon_text *txt, uint64_t id, const uint32_t *ch,
+				   size_t len, const struct tsm_screen_attr *attr)
 {
 	struct gltex *gt = txt->data;
 	struct atlas *atlas;
-	struct glyph *glyph;
+	struct gl_glyph *glglyph;
 	int i;
 	GLenum err;
 	uint8_t *packed_data, *dst;
@@ -415,6 +414,7 @@ static struct glyph *find_glyph(struct kmscon_text *txt, uint64_t id, const uint
 	struct kmscon_font *font = txt->font;
 	unsigned int num;
 	const uint32_t replacement_char = 0xfffd;
+	struct kmscon_glyph *glyph;
 
 	font->attr.underline = !!attr->underline;
 	font->attr.italic = !!attr->italic;
@@ -426,19 +426,21 @@ static struct glyph *find_glyph(struct kmscon_text *txt, uint64_t id, const uint
 		len = 1;
 	}
 
-	if (shl_hashtable_find(gt->glyphs, (void **)&glyph, id))
-		return glyph;
+	if (shl_hashtable_find(gt->glyphs, (void **)&glglyph, id))
+		return glglyph;
 
-	glyph = malloc(sizeof(*glyph));
+	glglyph = malloc(sizeof(*glglyph));
+	if (!glglyph)
+		return NULL;
+	memset(glglyph, 0, sizeof(*glglyph));
+
+	glyph = kmscon_font_render(font, id, ch, len);
 	if (!glyph)
 		return NULL;
-	memset(glyph, 0, sizeof(*glyph));
 
-	glyph->glyph = kmscon_font_render(font, id, ch, len);
-	if (!glyph->glyph)
-		return NULL;
+	glglyph->double_width = glyph->double_width;
 
-	num = kmscon_glyph_cwidth(glyph->glyph);
+	num = kmscon_glyph_cwidth(glyph);
 	atlas = get_atlas(txt, num);
 	if (!atlas)
 		goto err_free;
@@ -505,18 +507,20 @@ static struct glyph *find_glyph(struct kmscon_text *txt, uint64_t id, const uint
 		goto err_free;
 	}
 
-	glyph->atlas = atlas;
-	glyph->texoff = atlas->fill;
+	glglyph->atlas = atlas;
+	glglyph->texoff = atlas->fill;
 
-	if (shl_hashtable_insert(gt->glyphs, id, glyph))
+	if (shl_hashtable_insert(gt->glyphs, id, glglyph))
 		goto err_free;
 
 	atlas->fill += num;
+	free(glyph);
 
-	return glyph;
+	return glglyph;
 
 err_free:
 	free(glyph);
+	free(glglyph);
 	return NULL;
 }
 
@@ -566,7 +570,7 @@ static int gltex_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, 
 {
 	struct gltex *gt = txt->data;
 	struct atlas *atlas;
-	struct glyph *glyph;
+	struct gl_glyph *glglyph;
 	float gl_x1, gl_x2, gl_y1, gl_y2;
 	int i, idx;
 
@@ -577,13 +581,13 @@ static int gltex_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, 
 		gt->previous_overflow = false;
 		return 0;
 	}
-	glyph = find_glyph(txt, id, ch, len, attr);
-	if (!glyph)
+	glglyph = find_glyph(txt, id, ch, len, attr);
+	if (!glglyph)
 		return -ENOMEM;
 
-	atlas = glyph->atlas;
+	atlas = glglyph->atlas;
 
-	if (width == 1 && glyph->glyph->double_width) {
+	if (width == 1 && glglyph->double_width) {
 		gt->previous_overflow = true;
 		width = 2;
 	} else {
@@ -613,18 +617,18 @@ static int gltex_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, 
 	atlas->cache_pos[idx + 10] = gl_x2;
 	atlas->cache_pos[idx + 11] = gl_y1;
 
-	atlas->cache_texpos[idx + 0] = glyph->texoff;
+	atlas->cache_texpos[idx + 0] = glglyph->texoff;
 	atlas->cache_texpos[idx + 1] = 0.0;
-	atlas->cache_texpos[idx + 2] = glyph->texoff;
+	atlas->cache_texpos[idx + 2] = glglyph->texoff;
 	atlas->cache_texpos[idx + 3] = 1.0;
-	atlas->cache_texpos[idx + 4] = glyph->texoff + width;
+	atlas->cache_texpos[idx + 4] = glglyph->texoff + width;
 	atlas->cache_texpos[idx + 5] = 1.0;
 
-	atlas->cache_texpos[idx + 6] = glyph->texoff;
+	atlas->cache_texpos[idx + 6] = glglyph->texoff;
 	atlas->cache_texpos[idx + 7] = 0.0;
-	atlas->cache_texpos[idx + 8] = glyph->texoff + width;
+	atlas->cache_texpos[idx + 8] = glglyph->texoff + width;
 	atlas->cache_texpos[idx + 9] = 1.0;
-	atlas->cache_texpos[idx + 10] = glyph->texoff + width;
+	atlas->cache_texpos[idx + 10] = glglyph->texoff + width;
 	atlas->cache_texpos[idx + 11] = 0.0;
 
 	for (i = 0; i < 6; ++i) {
@@ -655,7 +659,7 @@ static int gltex_draw_pointer(struct kmscon_text *txt, unsigned int x, unsigned 
 {
 	struct gltex *gt = txt->data;
 	struct atlas *atlas;
-	struct glyph *glyph;
+	struct gl_glyph *glyph;
 	float gl_x1, gl_x2, gl_y1, gl_y2;
 	unsigned int sw, sh;
 	int i, idx;
