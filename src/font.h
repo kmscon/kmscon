@@ -91,6 +91,7 @@ struct kmscon_font_ops {
 	struct shl_module *owner;
 	int (*init)(struct kmscon_font *out, const struct kmscon_font_attr *attr);
 	void (*destroy)(struct kmscon_font *font);
+	bool (*has_glyph)(struct kmscon_font *font, const uint32_t *ch, size_t len);
 	struct kmscon_glyph *(*render)(struct kmscon_font *font, uint64_t id, const uint32_t *ch,
 				       size_t len);
 };
@@ -105,6 +106,7 @@ void kmscon_font_unref(struct kmscon_font *font);
 
 struct kmscon_glyph *kmscon_font_render(struct kmscon_font *font, uint64_t id, const uint32_t *ch,
 					size_t len);
+bool kmscon_font_has_glyph(struct kmscon_font *font, const uint32_t *ch, size_t len);
 
 /* modularized backends */
 

@@ -370,3 +370,22 @@ struct kmscon_glyph *kmscon_font_render(struct kmscon_font *font, uint64_t id, c
 		glyph = font->ops->render(font, invalid_char, &invalid_char, 1);
 	return glyph;
 }
+
+/**
+ * kmscon_font_has_glyph:
+ * @font: Valid font object
+ * @ch: Symbol to find a glyph for
+ * @len: Length of @ch
+ *
+ * Checks if the font has a glyph for the given symbol @ch.
+ *
+ * Returns: true if the font has a glyph for the given symbol, false otherwise
+ */
+SHL_EXPORT
+bool kmscon_font_has_glyph(struct kmscon_font *font, const uint32_t *ch, size_t len)
+{
+	if (!font)
+		return false;
+
+	return font->ops->has_glyph(font, ch, len);
+}
