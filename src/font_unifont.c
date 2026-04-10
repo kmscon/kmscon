@@ -155,6 +155,20 @@ static struct kmscon_glyph *new_glyph(const struct kmscon_font_attr *attr, const
 	return g;
 }
 
+static bool kmscon_font_unifont_has_glyph(struct kmscon_font *font, const uint32_t *ch, size_t len)
+{
+	struct unifont_data *uf = font->data;
+	uint32_t block_len;
+	const struct unifont_glyph_block *blocks;
+
+	/* First the length of the block index */
+	block_len = *((uint32_t *)uf->font_data);
+	/* Then the block index */
+	blocks = (struct unifont_glyph_block *)(uf->font_data + 4);
+
+	return lookup_block(blocks, block_len, *ch) >= 0;
+}
+
 static struct kmscon_glyph *find_glyph(uint64_t id, const struct kmscon_font *font)
 {
 	struct unifont_data *uf = font->data;
@@ -256,5 +270,6 @@ struct kmscon_font_ops kmscon_font_unifont_ops = {
 	.owner = NULL,
 	.init = kmscon_font_unifont_init,
 	.destroy = kmscon_font_unifont_destroy,
+	.has_glyph = kmscon_font_unifont_has_glyph,
 	.render = kmscon_font_unifont_render,
 };

@@ -377,6 +377,11 @@ static void kmscon_font_pango_destroy(struct kmscon_font *font)
 	manager_unlock();
 }
 
+static bool kmscon_font_pango_has_glyph(struct kmscon_font *font, const uint32_t *ch, size_t len)
+{
+	return true;
+}
+
 static struct kmscon_glyph *kmscon_font_pango_render(struct kmscon_font *font, uint64_t id,
 						     const uint32_t *ch, size_t len)
 {
@@ -388,5 +393,6 @@ struct kmscon_font_ops kmscon_font_pango_ops = {
 	.owner = NULL,
 	.init = kmscon_font_pango_init,
 	.destroy = kmscon_font_pango_destroy,
+	.has_glyph = kmscon_font_pango_has_glyph,
 	.render = kmscon_font_pango_render,
 };

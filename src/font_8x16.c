@@ -110,9 +110,20 @@ static struct kmscon_glyph *new_glyph(uint32_t ch)
 	return glyph;
 }
 
+static bool kmscon_font_8x16_has_glyph(struct kmscon_font *font, const uint32_t *ch, size_t len)
+{
+	return (len == 1 && *ch < 256);
+}
+
 static struct kmscon_glyph *kmscon_font_8x16_render(struct kmscon_font *font, uint64_t id,
 						    const uint32_t *ch, size_t len)
 {
+	uint32_t c = *ch;
+
+	// Handle replacement character
+	if (c == 0xfffd)
+		c = '?';
+
 	if (len > 1 || *ch >= 256)
 		return NULL;
 
@@ -124,5 +135,6 @@ struct kmscon_font_ops kmscon_font_8x16_ops = {
 	.owner = NULL,
 	.init = kmscon_font_8x16_init,
 	.destroy = kmscon_font_8x16_destroy,
+	.has_glyph = kmscon_font_8x16_has_glyph,
 	.render = kmscon_font_8x16_render,
 };
