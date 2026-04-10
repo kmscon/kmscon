@@ -55,6 +55,14 @@ struct kmscon_glyph *kmscon_font_render(struct kmscon_font *font, uint64_t id, c
 	return g;
 }
 
+bool kmscon_font_has_glyph(struct kmscon_font *font, const uint32_t *ch, size_t len)
+{
+	(void)font;
+	(void)ch;
+	(void)len;
+	return true;
+}
+
 int kmscon_rotate_glyph(struct kmscon_glyph *vb, const struct kmscon_glyph *glyph,
 			enum Orientation o, uint8_t align)
 {
