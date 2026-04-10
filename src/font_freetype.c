@@ -320,28 +320,29 @@ static void copy_glyph(struct uterm_video_buffer *buf, FT_Face face, FT_Bitmap *
 {
 	int top = (face->size->metrics.ascender >> 6) - face->glyph->bitmap_top;
 	int left = face->glyph->bitmap_left;
-	int width = min(buf->width, map->width);
-	int height = min(buf->height, map->rows);
+	int width, height;
 	int left_src = 0;
 	int top_src = 0;
 	int i;
 	uint8_t *dst;
 
-	if (top + height > buf->height)
-		height = buf->height - top;
+	if (!map->width || !map->rows)
+		return;
+
 	if (top < 0) {
 		top_src = -top;
-		height = min(buf->height, map->rows + top);
 		top = 0;
 	}
+	height = min((int)(buf->height - top), (int)(map->rows - top_src));
 
 	if (left < 0) {
 		left_src = -left;
-		width = min(buf->width, map->width + left);
 		left = 0;
 	}
-	if (left + width > buf->width)
-		width = buf->width - left;
+	width = min((int)(buf->width - left), (int)(map->width - left_src));
+
+	if (width <= 0 || height <= 0)
+		return;
 
 	dst = buf->data + left + top * buf->stride;
 	for (i = 0; i < height; i++) {
@@ -353,8 +354,8 @@ static void copy_glyph(struct uterm_video_buffer *buf, FT_Face face, FT_Bitmap *
 		draw_underline(buf, face);
 }
 
-static struct kmscon_glyph *render_glyph(FT_Face face, FT_UInt index, uint64_t id,
-					 const uint32_t *ch, const struct kmscon_font_attr *attr)
+static struct kmscon_glyph *render_glyph(FT_Face face, FT_UInt index, const uint32_t *ch,
+					 const struct kmscon_font_attr *attr)
 {
 	unsigned int cwidth;
 	struct kmscon_glyph *glyph;
@@ -471,7 +472,7 @@ static struct kmscon_glyph *kmscon_font_freetype_render(struct kmscon_font *font
 		return NULL;
 
 	if (glyph_index)
-		return render_glyph(ftfont->face, glyph_index, id, ch, &font->attr);
+		return render_glyph(ftfont->face, glyph_index, ch, &font->attr);
 
 	/* Fallback, if the glyph is not found in the regular font */
 	fallback_index = get_fallback(*ch, ftfont);
@@ -495,7 +496,7 @@ static struct kmscon_glyph *kmscon_font_freetype_render(struct kmscon_font *font
 	glyph_index = FT_Get_Char_Index(ftfont->fallback, *ch);
 	if (!glyph_index)
 		return NULL;
-	return render_glyph(ftfont->fallback, glyph_index, id, ch, &font->attr);
+	return render_glyph(ftfont->fallback, glyph_index, ch, &font->attr);
 }
 
 struct kmscon_font_ops kmscon_font_freetype_ops = {
