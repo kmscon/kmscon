@@ -460,6 +460,18 @@ static int get_fallback(uint32_t ch, struct ft_font *ftf)
 	return -ENOENT;
 }
 
+static bool kmscon_font_freetype_has_glyph(struct kmscon_font *font, const uint32_t *ch, size_t len)
+{
+	struct ft_data *ftd = font->data;
+	struct ft_font *ftfont = font->attr.bold ? &ftd->bold : &ftd->regular;
+	FT_UInt glyph_index = FT_Get_Char_Index(ftfont->face, *ch);
+
+	if (glyph_index)
+		return true;
+
+	return get_fallback(*ch, ftfont) >= 0;
+}
+
 static struct kmscon_glyph *kmscon_font_freetype_render(struct kmscon_font *font, uint64_t id,
 							const uint32_t *ch, size_t len)
 {
@@ -504,5 +516,6 @@ struct kmscon_font_ops kmscon_font_freetype_ops = {
 	.owner = NULL,
 	.init = kmscon_font_freetype_init,
 	.destroy = kmscon_font_freetype_destroy,
+	.has_glyph = kmscon_font_freetype_has_glyph,
 	.render = kmscon_font_freetype_render,
 };
