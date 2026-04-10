@@ -171,15 +171,8 @@ static struct kmscon_glyph *find_glyph(uint64_t id, const struct kmscon_font *fo
 	data = (uint8_t *)uf->font_data + 4 + len * sizeof(struct unifont_glyph_block);
 
 	int idx = lookup_block(blocks, len, ch);
-	if (idx < 0) {
-		log_debug("codepoint %08x not found, using replacement glyph", ch);
-		ch = 0xfffd;
-		idx = lookup_block(blocks, len, ch);
-		if (idx < 0) {
-			log_warning("Replacement glyph not found");
-			return NULL;
-		}
-	}
+	if (idx < 0)
+		return NULL;
 
 	data += blocks[idx].offset + (ch - blocks[idx].codepoint) * blocks[idx].cwidth * 16;
 	if (data + 16 * blocks[idx].cwidth > uf->font_data + uf->len) {
