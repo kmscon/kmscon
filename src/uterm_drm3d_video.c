@@ -259,7 +259,7 @@ static int display_prepare_modeset(struct uterm_display *disp, drmModeAtomicReqP
 		}
 	}
 	ret = uterm_drm_prepare_commit(vdrm->fd, &d3d->ddrm, req, d3d->current->id, disp->width,
-				       disp->height);
+				       disp->height, vdrm->cursor_hotspot);
 	if (ret) {
 		gbm_surface_release_buffer(d3d->gbm, d3d->current->bo);
 		return ret;

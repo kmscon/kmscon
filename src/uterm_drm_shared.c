@@ -567,7 +567,7 @@ void uterm_drm_display_free_properties(struct uterm_display *disp)
 }
 
 int uterm_drm_prepare_commit(int fd, struct uterm_drm_display *ddrm, drmModeAtomicReq *req,
-			     uint32_t fb, uint32_t width, uint32_t height)
+			     uint32_t fb, uint32_t width, uint32_t height, bool cursor_hotspot)
 {
 	struct drm_object *plane = &ddrm->plane;
 
@@ -625,6 +625,12 @@ int uterm_drm_prepare_commit(int fd, struct uterm_drm_display *ddrm, drmModeAtom
 		struct uterm_drm_cursor *cursor = &ddrm->cursor;
 
 		if (cursor->active && cursor->visible) {
+			if (cursor_hotspot) {
+				if (set_drm_object_property(req, cp, "HOTSPOT_X", cursor->x) < 0)
+					return -1;
+				if (set_drm_object_property(req, cp, "HOTSPOT_Y", cursor->y) < 0)
+					return -1;
+			}
 			if (set_drm_object_property(req, cp, "FB_ID", cursor->fb_id) < 0)
 				return -1;
 			if (set_drm_object_property(req, cp, "CRTC_ID", ddrm->crtc.id) < 0)
@@ -1002,6 +1008,7 @@ static int legacy_pageflip(int fd, struct uterm_display *disp, uint32_t fb)
 static int pageflip(int fd, struct uterm_display *disp, uint32_t fb)
 {
 	struct uterm_drm_display *ddrm = disp->data;
+	struct uterm_drm_video *vdrm = disp->video->data;
 	drmModeAtomicReq *req;
 	int ret, flags;
 	uint32_t width, height;
@@ -1012,7 +1019,7 @@ static int pageflip(int fd, struct uterm_display *disp, uint32_t fb)
 	height = disp->height;
 	width = disp->width;
 
-	ret = uterm_drm_prepare_commit(fd, ddrm, req, fb, width, height);
+	ret = uterm_drm_prepare_commit(fd, ddrm, req, fb, width, height, vdrm->cursor_hotspot);
 	if (ret) {
 		log_warn("prepare atomic pageflip failed for [%s], %d\n", disp->name, ret);
 		return -EINVAL;
@@ -1260,6 +1267,10 @@ int uterm_drm_video_init(struct uterm_video *video, const char *node,
 		log_warn("Device %s doesn't support atomic modesetting, using legacy", node);
 		vdrm->legacy = true;
 	}
+
+	/* support hardware cursor on VM */
+	ret = drmSetClientCap(vdrm->fd, DRM_CLIENT_CAP_CURSOR_PLANE_HOTSPOT, 1);
+	vdrm->cursor_hotspot = (ret == 0);
 
 	ret = ev_eloop_new_fd(video->eloop, &vdrm->efd, vdrm->fd, EV_READABLE, io_event, video);
 	if (ret)
