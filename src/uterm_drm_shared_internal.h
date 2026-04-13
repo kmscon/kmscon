@@ -97,7 +97,7 @@ int uterm_drm_display_show_cursor(struct uterm_display *disp, int32_t x, int32_t
 int uterm_drm_display_hide_cursor(struct uterm_display *disp);
 int uterm_drm_display_wait_pflip(struct uterm_display *disp);
 int uterm_drm_prepare_commit(int fd, struct uterm_drm_display *ddrm, drmModeAtomicReq *req,
-			     uint32_t fb, uint32_t width, uint32_t height);
+			     uint32_t fb, uint32_t width, uint32_t height, bool cursor_hotspot);
 int uterm_drm_display_swap(struct uterm_display *disp, uint32_t fb);
 bool uterm_drm_is_swapping(struct uterm_display *disp);
 void uterm_drm_display_free_properties(struct uterm_display *disp);
@@ -119,6 +119,7 @@ struct uterm_drm_video {
 	struct ev_timer *vt_timer;
 	bool legacy;
 	bool master;
+	bool cursor_hotspot;
 	const struct display_ops *display_ops;
 };
 

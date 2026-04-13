@@ -168,7 +168,7 @@ static int display_prepare_modeset(struct uterm_display *disp, drmModeAtomicReqP
 	rb = d2d->current_rb ^ 1;
 
 	ret = uterm_drm_prepare_commit(vdrm->fd, &d2d->ddrm, req, d2d->rb[rb].id, disp->width,
-				       disp->height);
+				       disp->height, vdrm->cursor_hotspot);
 	if (ret)
 		return ret;
 	return 0;
