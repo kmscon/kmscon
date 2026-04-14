@@ -819,25 +819,53 @@ static const char *find_locale(void)
 	return locale;
 }
 
-/*
- * Wait for the target VT to become active, then return its number.
- * If --vt was specified, wait for that VT. Otherwise return 0 (no wait).
- * Seatd always assigns a seat for the currently active VT; wait for
- * ours to be active so that seatd assigns the session to the correct VT.
- */
-static int seat_wait_for_vt(struct kmscon_seat *seat)
+static int wait_for_signal(void)
 {
-	int fd, ret, vt_num;
-	struct stat st;
-	const char *vt_name = seat->conf->vt;
+	sigset_t set, oldset;
+	int sig, ret = -EINTR;
 
-	if (!vt_name)
-		return 0;
+	// Initialize the set and add the signals
+	sigemptyset(&set);
+	sigaddset(&set, SIGUSR1);
+	sigaddset(&set, SIGUSR2);
+	sigaddset(&set, SIGTERM);
+	sigaddset(&set, SIGINT);
+	sigaddset(&set, SIGPIPE);
+
+	// Block the signals so they don't trigger the default handlers
+	sigprocmask(SIG_BLOCK, &set, &oldset);
+	log_debug("Waiting for SIGUSR1 or SIGTERM (PID: %d)...\n", getpid());
+
+	// Wait until one of the signals in 'set' is delivered
+	sigwait(&set, &sig);
+
+	if (sig == SIGUSR1) {
+		log_debug("Our VT is now active");
+		ret = 0;
+	} else if (sig == SIGTERM) {
+		// SIGTERM is not an error, but we need to exit the loop.
+		log_debug("Received SIGTERM. Exiting.");
+		ret = -EBUSY;
+	} else {
+		log_debug("Received signal %d. Exiting.", sig);
+	}
+
+	// restore the old signal mask
+	sigprocmask(SIG_SETMASK, &oldset, NULL);
+	return ret;
+}
+
+int kmscon_seat_wait_for_vt(char *vt_name, int *vt_num)
+{
+	int fd, ret;
+	struct stat st;
+	struct vt_mode mode;
+	struct vt_stat stat;
 
 	fd = open(vt_name, O_RDWR | O_NOCTTY | O_CLOEXEC);
 	if (fd < 0) {
 		log_err("cannot open tty %s (%d): %m", vt_name, errno);
-		return -errno;
+		return -ENOENT;
 	}
 
 	ret = fstat(fd, &st);
@@ -846,24 +874,32 @@ static int seat_wait_for_vt(struct kmscon_seat *seat)
 		close(fd);
 		return -EINVAL;
 	}
-	vt_num = minor(st.st_rdev);
-	close(fd);
+	*vt_num = minor(st.st_rdev);
 
-	fd = open("/dev/tty0", O_RDWR | O_NOCTTY | O_CLOEXEC);
-	if (fd < 0) {
-		log_warning("cannot open /dev/tty0: %m");
-		return vt_num;
-	}
-
-	log_info("waiting for VT %d to become active...", vt_num);
-	ret = ioctl(fd, VT_WAITACTIVE, vt_num);
-	close(fd);
+	ret = ioctl(fd, VT_GETSTATE, &stat);
 	if (ret) {
-		log_err("VT_WAITACTIVE failed for VT %d: %m", vt_num);
-		return -errno;
+		log_err("VT_GETSTATE failed for VT %d: %m", *vt_num);
+		close(fd);
+		return -EINVAL;
+	}
+	if (stat.v_active == *vt_num) {
+		log_info("VT %d is already active", *vt_num);
+		close(fd);
+		return 0;
 	}
 
-	return vt_num;
+	memset(&mode, 0, sizeof(mode));
+	mode.mode = VT_PROCESS;
+	mode.acqsig = SIGUSR1;
+	mode.relsig = SIGUSR2;
+	if (ioctl(fd, VT_SETMODE, &mode)) {
+		log_err("VT_SETMODE failed for VT %d: %m", *vt_num);
+		close(fd);
+		return -EINVAL;
+	}
+	ret = wait_for_signal();
+	close(fd);
+	return ret;
 }
 
 /*
@@ -871,20 +907,17 @@ static int seat_wait_for_vt(struct kmscon_seat *seat)
  * which VT seatd assigned to us. The fd is kept for the lifetime of the
  * seat and used by activate/deactivate to toggle KD_GRAPHICS and K_OFF.
  */
-static int seat_open_tty(struct kmscon_seat *seat, int vt_num)
+static int seat_open_tty(struct kmscon_seat *seat, char *vt_path)
 {
-	char path[64];
 	int fd, ret;
 
-	snprintf(path, sizeof(path), "/dev/tty%d", vt_num);
-	fd = open(path, O_RDWR | O_NOCTTY | O_CLOEXEC);
+	fd = open(vt_path, O_RDWR | O_NOCTTY | O_CLOEXEC);
 	if (fd < 0) {
-		log_warning("cannot open VT %s: %m", path);
+		log_warning("cannot open VT %s: %m", vt_path);
 		return -errno;
 	}
 
 	seat->tty_fd = fd;
-	seat->tty_num = vt_num;
 
 	ret = ioctl(fd, KDGKBMODE, &seat->saved_kbmode);
 	if (ret)
@@ -941,7 +974,7 @@ static const struct libseat_seat_listener seat_libseat_listener = {
 };
 
 int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf, struct ev_eloop *eloop,
-		    const char *seatname, kmscon_seat_cb_t cb, void *data)
+		    const char *seatname, kmscon_seat_cb_t cb, int vt_num, void *data)
 {
 	struct kmscon_seat *seat;
 	int ret, libseat_fd;
@@ -960,6 +993,7 @@ int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf, struct
 	seat->cb = cb;
 	seat->data = data;
 	seat->tty_fd = -1;
+	seat->tty_num = vt_num;
 	shl_dlist_init(&seat->displays);
 	shl_dlist_init(&seat->sessions);
 
@@ -984,18 +1018,10 @@ int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf, struct
 	}
 
 	/*
-	 * If --vt is specified, wait for that VT to become active before
-	 * connecting to libseat. This ensures seatd assigns us to the correct
-	 * VT. Multiple kmscon instances (one per VT) each block here until
-	 * the user switches to their VT.
+	 * If --vt is specified, open the TTY for our VT.
 	 */
-	ret = seat_wait_for_vt(seat);
-	if (ret < 0) {
-		log_error("cannot wait for VT: %d", ret);
-		goto err_conf;
-	}
-	if (ret > 0)
-		seat_open_tty(seat, ret);
+	if (seat->conf->vt)
+		seat_open_tty(seat, seat->conf->vt);
 
 	/*
 	 * Open libseat. If another client is still being disabled (race
@@ -1536,10 +1562,13 @@ bool kmscon_session_is_enabled(struct kmscon_session *sess)
 
 void kmscon_session_bell(struct kmscon_session *sess)
 {
-	if (!sess || !sess->seat)
+	int ret;
+	if (!sess || !sess->seat || sess->seat->tty_fd <= 0)
 		return;
 
-	uterm_vt_bell(sess->seat->vt);
+	ret = write(sess->seat->tty_fd, "\a", 1);
+	if (ret != 1)
+		log_warning("cannot write bell to VT (%d): %m", sess->seat->tty_num);
 }
 
 void kmscon_session_set_leds(struct kmscon_session *sess, unsigned int scroll_lock,

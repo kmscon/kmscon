@@ -74,6 +74,7 @@ struct kmscon_app {
 	struct conf_ctx *conf_ctx;
 	struct kmscon_conf_t *conf;
 	bool exiting;
+	int vt_num;
 
 	struct ev_eloop *eloop;
 
@@ -201,7 +202,8 @@ static int app_seat_new(struct kmscon_app *app, const char *sname, struct uterm_
 		goto err_free;
 	}
 
-	ret = kmscon_seat_new(&seat->seat, app->conf_ctx, app->eloop, sname, app_seat_event, seat);
+	ret = kmscon_seat_new(&seat->seat, app->conf_ctx, app->eloop, sname, app_seat_event,
+			      app->vt_num, seat);
 	if (ret) {
 		log_error("cannot create seat object on seat %s: %d", sname, ret);
 		goto err_name;
@@ -617,6 +619,20 @@ int main(int argc, char **argv)
 	memset(&app, 0, sizeof(app));
 	app.conf_ctx = conf_ctx;
 	app.conf = conf;
+
+	/*
+	 * If --vt is specified, wait for that VT to become active before
+	 * connecting to libseat. This ensures seatd assigns us to the correct VT.
+	 */
+	if (conf->vt) {
+		ret = kmscon_seat_wait_for_vt(conf->vt, &app.vt_num);
+		if (ret) {
+			// SIGTERM is not an error, but we need to exit the program with 0.
+			if (ret == -EBUSY)
+				ret = 0;
+			goto err_unload;
+		}
+	}
 
 	ret = setup_app(&app);
 	if (ret)
