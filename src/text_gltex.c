@@ -161,17 +161,22 @@ static void gltex_set_cos(struct gltex *gt, enum Orientation orientation)
 static void compute_advance_and_offset(struct kmscon_text *txt)
 {
 	struct gltex *gt = txt->data;
+	unsigned int off_x, off_y;
 
 	if (txt->orientation == OR_NORMAL || txt->orientation == OR_UPSIDE_DOWN) {
 		gt->advance_x = 2.0 / gt->sw * FONT_WIDTH(txt);
 		gt->advance_y = 2.0 / gt->sh * FONT_HEIGHT(txt);
-		gt->off_x = (gt->sw - txt->cols * FONT_WIDTH(txt)) / (float)gt->sw;
-		gt->off_y = (gt->sh - txt->rows * FONT_HEIGHT(txt)) / (float)gt->sh;
+		off_x = (gt->sw - txt->cols * FONT_WIDTH(txt)) / 2;
+		off_y = (gt->sh - txt->rows * FONT_HEIGHT(txt)) / 2;
+		gt->off_x = (float)2.0 * off_x / gt->sw;
+		gt->off_y = (float)2.0 * off_y / gt->sh;
 	} else {
 		gt->advance_x = 2.0 / gt->sh * FONT_WIDTH(txt);
 		gt->advance_y = 2.0 / gt->sw * FONT_HEIGHT(txt);
-		gt->off_x = (gt->sh - txt->cols * FONT_WIDTH(txt)) / (float)gt->sh;
-		gt->off_y = (gt->sw - txt->rows * FONT_HEIGHT(txt)) / (float)gt->sw;
+		off_x = (gt->sh - txt->cols * FONT_WIDTH(txt)) / 2;
+		off_y = (gt->sw - txt->rows * FONT_HEIGHT(txt)) / 2;
+		gt->off_x = (float)2.0 * off_x / gt->sh;
+		gt->off_y = (float)2.0 * off_y / gt->sw;
 	}
 }
 
