@@ -140,7 +140,7 @@ static inline uint32_t argb(uint8_t a, uint8_t r, uint8_t g, uint8_t b)
  * to it (8-connected).
  */
 static uint32_t *generate_ibeam_cursor(unsigned int font_height, unsigned int *width,
-				       unsigned int *height)
+				       unsigned int *height, bool rotate)
 {
 	unsigned int h, w;
 	int x, y, ny, nx;
@@ -164,14 +164,29 @@ static uint32_t *generate_ibeam_cursor(unsigned int font_height, unsigned int *w
 		return NULL;
 	}
 
-	/* 1px vertical stem */
-	for (y = 1; y < h - 1; y++)
-		shape[y * w + w / 2] = true;
+	if (rotate) {
+		unsigned tmp = w;
+		w = h;
+		h = tmp;
+		/* 1px vertical stem */
+		for (x = 1; x < w - 1; x++)
+			shape[x + (h / 2) * w] = true;
 
-	/* Top and bottom serifs, 1px tall */
-	for (x = 1; x < w - 1; x++) {
-		shape[w + x] = true;
-		shape[(h - 2) * w + x] = true;
+		/* Top and bottom serifs, 1px tall */
+		for (y = 1; y < h - 1; y++) {
+			shape[1 + y * w] = true;
+			shape[w - 2 + y * w] = true;
+		}
+	} else {
+		/* 1px vertical stem */
+		for (y = 1; y < h - 1; y++)
+			shape[w / 2 + y * w] = true;
+
+		/* Top and bottom serifs, 1px tall */
+		for (x = 1; x < w - 1; x++) {
+			shape[w + x] = true;
+			shape[(h - 2) * w + x] = true;
+		}
 	}
 
 	/* White fill on the shape, dark halo on 8-connected neighbors */
@@ -202,12 +217,13 @@ static uint32_t *generate_ibeam_cursor(unsigned int font_height, unsigned int *w
 static void setup_hw_cursor(struct screen *scr)
 {
 	struct kmscon_terminal *term = scr->term;
+	bool rotate = scr->txt->orientation == OR_LEFT || scr->txt->orientation == OR_RIGHT;
 	unsigned int beam_h;
 	unsigned int beam_w;
 	uint32_t *pixels;
 	int ret;
 
-	pixels = generate_ibeam_cursor(term->font->attr.height, &beam_w, &beam_h);
+	pixels = generate_ibeam_cursor(term->font->attr.height, &beam_w, &beam_h, rotate);
 	if (!pixels)
 		return;
 
