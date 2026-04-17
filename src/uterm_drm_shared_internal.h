@@ -60,6 +60,8 @@ struct uterm_drm_cursor {
 	int32_t y;
 	int32_t hot_x;
 	int32_t hot_y;
+	int32_t off_x;
+	int32_t off_y;
 };
 
 struct uterm_drm_display {
@@ -95,6 +97,7 @@ int uterm_drm_display_setup_cursor(struct uterm_display *disp, const uint32_t *p
 void uterm_drm_display_destroy_cursor(struct uterm_display *disp);
 int uterm_drm_display_show_cursor(struct uterm_display *disp, int32_t x, int32_t y);
 int uterm_drm_display_hide_cursor(struct uterm_display *disp);
+void uterm_drm_display_set_cursor_offset(struct uterm_display *disp, int32_t x, int32_t y);
 int uterm_drm_display_wait_pflip(struct uterm_display *disp);
 int uterm_drm_prepare_commit(int fd, struct uterm_drm_display *ddrm, drmModeAtomicReq *req,
 			     uint32_t fb, uint32_t width, uint32_t height, bool cursor_hotspot);

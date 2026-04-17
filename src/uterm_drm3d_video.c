@@ -381,6 +381,7 @@ static const struct display_ops drm_display_ops = {
 	.destroy_cursor = uterm_drm_display_destroy_cursor,
 	.show_cursor = uterm_drm_display_show_cursor,
 	.hide_cursor = uterm_drm_display_hide_cursor,
+	.set_cursor_offset = uterm_drm_display_set_cursor_offset,
 };
 
 static void show_displays(struct uterm_video *video)

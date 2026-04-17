@@ -117,6 +117,12 @@ void uterm_display_set_damage(struct uterm_display *disp, size_t n_rect,
 	(void)n_rect;
 	(void)damages;
 }
+void uterm_display_set_cursor_offset(struct uterm_display *disp, int32_t x, int32_t y)
+{
+	(void)disp;
+	(void)x;
+	(void)y;
+}
 #include "shl_log.h"
 #undef log_warning
 #define log_warning(f, ...)

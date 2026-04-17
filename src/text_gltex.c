@@ -173,11 +173,12 @@ static void compute_advance_and_offset(struct kmscon_text *txt)
 	} else {
 		gt->advance_x = 2.0 / gt->sh * FONT_WIDTH(txt);
 		gt->advance_y = 2.0 / gt->sw * FONT_HEIGHT(txt);
-		off_x = (gt->sh - txt->cols * FONT_WIDTH(txt)) / 2;
-		off_y = (gt->sw - txt->rows * FONT_HEIGHT(txt)) / 2;
-		gt->off_x = (float)2.0 * off_x / gt->sh;
-		gt->off_y = (float)2.0 * off_y / gt->sw;
+		off_x = (gt->sw - txt->rows * FONT_HEIGHT(txt)) / 2;
+		off_y = (gt->sh - txt->cols * FONT_WIDTH(txt)) / 2;
+		gt->off_x = (float)2.0 * off_y / gt->sh;
+		gt->off_y = (float)2.0 * off_x / gt->sw;
 	}
+	uterm_display_set_cursor_offset(txt->disp, off_x, off_y);
 }
 
 static int gltex_set(struct kmscon_text *txt)

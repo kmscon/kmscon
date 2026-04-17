@@ -168,6 +168,7 @@ int uterm_display_setup_cursor(struct uterm_display *disp, const uint32_t *pixel
 void uterm_display_destroy_cursor(struct uterm_display *disp);
 int uterm_display_show_cursor(struct uterm_display *disp, int32_t x, int32_t y);
 int uterm_display_hide_cursor(struct uterm_display *disp);
+void uterm_display_set_cursor_offset(struct uterm_display *disp, int32_t x, int32_t y);
 int uterm_display_fake_blendv(struct uterm_display *disp, const struct uterm_video_blend_req *req,
 			      size_t num);
 void uterm_display_set_damage(struct uterm_display *disp, size_t n_rect,
