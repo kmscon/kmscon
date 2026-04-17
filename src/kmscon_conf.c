@@ -782,6 +782,7 @@ int kmscon_conf_new(struct conf_ctx **out)
 		CONF_OPTION_UINT(0, "xkb-repeat-delay", &conf->xkb_repeat_delay, 250),
 		CONF_OPTION_UINT(0, "xkb-repeat-rate", &conf->xkb_repeat_rate, 50),
 		CONF_OPTION_BOOL(0, "mouse", &conf->mouse, true),
+		CONF_OPTION_BOOL(0, "soft-cursor", &conf->soft_cursor, false),
 		CONF_OPTION_UINT(0, "dpms-timeout", &conf->dpms_timeout, 0),
 
 		/* Grabs / Keyboard-Shortcuts */
