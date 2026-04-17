@@ -139,91 +139,79 @@ static inline uint32_t argb(uint8_t a, uint8_t r, uint8_t g, uint8_t b)
  * that fills white on the shape and a dark outline on any pixel adjacent
  * to it (8-connected).
  */
-static void generate_ibeam_cursor(uint32_t *buf, unsigned int w, unsigned int h, int *out_hot_x,
-				  int *out_hot_y)
+static uint32_t *generate_ibeam_cursor(unsigned int font_height, unsigned int *width,
+				       unsigned int *height)
 {
-	unsigned int cx, cap_half, y, px, npix;
-	int x, dy, dx, ny, nx;
+	unsigned int h, w;
+	int x, y, ny, nx;
 	bool *shape, near;
 	uint32_t white, outline;
+	uint32_t *pixels;
 
-	cx = w / 2;
-	cap_half = h / 6;
-	if (cap_half < 2)
-		cap_half = 2;
+	h = font_height > 8 ? font_height : 8;
+	w = 2 * (h / 6) + 3;
 
 	white = argb(255, 255, 255, 255);
 	outline = argb(220, 0, 0, 0);
 
-	npix = w * h;
-	shape = calloc(npix, sizeof(*shape));
+	shape = calloc(w, h * sizeof(*shape));
 	if (!shape)
-		return;
+		return NULL;
 
-	memset(buf, 0, npix * sizeof(*buf));
+	pixels = calloc(w, h * sizeof(*pixels));
+	if (!pixels) {
+		free(shape);
+		return NULL;
+	}
 
 	/* 1px vertical stem */
-	for (y = 0; y < h; y++)
-		shape[y * w + cx] = true;
+	for (y = 1; y < h - 1; y++)
+		shape[y * w + w / 2] = true;
 
 	/* Top and bottom serifs, 1px tall */
-	for (x = -(int)cap_half; x <= (int)cap_half; x++) {
-		px = cx + x;
-		if (px >= w)
-			continue;
-		shape[px] = true;
-		shape[(h - 1) * w + px] = true;
+	for (x = 1; x < w - 1; x++) {
+		shape[w + x] = true;
+		shape[(h - 2) * w + x] = true;
 	}
 
 	/* White fill on the shape, dark halo on 8-connected neighbors */
 	for (y = 0; y < h; y++) {
-		for (px = 0; px < w; px++) {
-			if (shape[y * w + px]) {
-				buf[y * w + px] = white;
+		for (x = 0; x < w; x++) {
+			if (shape[y * w + x]) {
+				pixels[y * w + x] = white;
 				continue;
 			}
 			near = false;
-			for (dy = -1; dy <= 1 && !near; dy++) {
-				for (dx = -1; dx <= 1 && !near; dx++) {
-					ny = (int)y + dy;
-					nx = (int)px + dx;
+			for (ny = y - 1; ny <= y + 1 && !near; ny++) {
+				for (nx = x - 1; nx <= x + 1 && !near; nx++) {
 					if (ny >= 0 && ny < (int)h && nx >= 0 && nx < (int)w &&
 					    shape[ny * w + nx])
 						near = true;
 				}
 			}
 			if (near)
-				buf[y * w + px] = outline;
+				pixels[y * w + x] = outline;
 		}
 	}
-
 	free(shape);
-	*out_hot_x = cx;
-	*out_hot_y = h / 2;
+	*width = w;
+	*height = h;
+	return pixels;
 }
 
 static void setup_hw_cursor(struct screen *scr)
 {
 	struct kmscon_terminal *term = scr->term;
-	unsigned int fh = term->font->attr.height;
-	unsigned int beam_h = fh > 4 ? fh : 20;
-	unsigned int cap_half = beam_h / 6;
+	unsigned int beam_h;
 	unsigned int beam_w;
 	uint32_t *pixels;
-	int hot_x = 0, hot_y = 0;
 	int ret;
 
-	if (cap_half < 2)
-		cap_half = 2;
-	beam_w = 2 * cap_half + 5;
-
-	pixels = calloc(beam_w * beam_h, sizeof(uint32_t));
+	pixels = generate_ibeam_cursor(term->font->attr.height, &beam_w, &beam_h);
 	if (!pixels)
 		return;
 
-	generate_ibeam_cursor(pixels, beam_w, beam_h, &hot_x, &hot_y);
-
-	ret = uterm_display_setup_cursor(scr->disp, pixels, beam_w, beam_h, hot_x, hot_y);
+	ret = uterm_display_setup_cursor(scr->disp, pixels, beam_w, beam_h, beam_w / 2, beam_h / 2);
 	free(pixels);
 
 	if (ret) {
@@ -234,6 +222,15 @@ static void setup_hw_cursor(struct screen *scr)
 		log_debug("HW cursor enabled for display %s", uterm_display_name(scr->disp));
 		scr->hw_cursor = true;
 	}
+}
+
+static void refresh_hw_cursor(struct screen *scr)
+{
+	if (!scr->hw_cursor)
+		return;
+
+	uterm_display_destroy_cursor(scr->disp);
+	setup_hw_cursor(scr);
 }
 
 static void do_redraw_screen(struct screen *scr)
@@ -449,7 +446,7 @@ static int font_set(struct kmscon_terminal *term)
 	int ret;
 	struct kmscon_font *font;
 	struct shl_dlist *iter;
-	struct screen *ent;
+	struct screen *scr;
 
 	ret = kmscon_font_find(&font, &term->font_attr, term->conf->font_engine);
 	if (ret)
@@ -462,11 +459,12 @@ static int font_set(struct kmscon_terminal *term)
 	term->min_rows = 0;
 	shl_dlist_for_each(iter, &term->screens)
 	{
-		ent = shl_dlist_entry(iter, struct screen, list);
+		scr = shl_dlist_entry(iter, struct screen, list);
 
-		ret = kmscon_text_set(ent->txt, font, ent->disp);
+		ret = kmscon_text_set(scr->txt, font, scr->disp);
 		if (ret)
 			log_warning("cannot change text-renderer font: %d", ret);
+		refresh_hw_cursor(scr);
 	}
 	terminal_update_size_notify(term);
 	return 0;
@@ -477,6 +475,7 @@ static void rotate_cw_screen(struct screen *scr)
 	unsigned int orientation = kmscon_text_get_orientation(scr->txt);
 	orientation = (orientation + 1) % (OR_LEFT + 1);
 	kmscon_text_rotate(scr->txt, orientation);
+	refresh_hw_cursor(scr);
 }
 
 static void rotate_cw_all(struct kmscon_terminal *term)
@@ -501,6 +500,7 @@ static void rotate_ccw_screen(struct screen *scr)
 	else
 		orientation -= 1;
 	kmscon_text_rotate(scr->txt, orientation);
+	refresh_hw_cursor(scr);
 }
 
 static void rotate_ccw_all(struct kmscon_terminal *term)
