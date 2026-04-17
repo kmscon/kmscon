@@ -449,6 +449,8 @@ int uterm_drm_display_setup_cursor(struct uterm_display *disp, const uint32_t *p
 
 	cursor->hot_x = hot_x + off_x;
 	cursor->hot_y = hot_y + off_y;
+	cursor->off_x = 0;
+	cursor->off_y = 0;
 	cursor->active = true;
 	cursor->visible = false;
 
@@ -482,7 +484,6 @@ int uterm_drm_display_show_cursor(struct uterm_display *disp, int32_t x, int32_t
 	cursor->x = x;
 	cursor->y = y;
 	cursor->visible = true;
-	uterm_display_set_need_redraw(disp);
 
 	return 0;
 }
@@ -496,9 +497,17 @@ int uterm_drm_display_hide_cursor(struct uterm_display *disp)
 		return 0;
 
 	cursor->visible = false;
-	uterm_display_set_need_redraw(disp);
 
 	return 0;
+}
+
+void uterm_drm_display_set_cursor_offset(struct uterm_display *disp, int32_t x, int32_t y)
+{
+	struct uterm_drm_display *ddrm = disp->data;
+	struct uterm_drm_cursor *cursor = &ddrm->cursor;
+
+	cursor->off_x = x;
+	cursor->off_y = y;
 }
 
 static void modeset_drm_object_fini(struct drm_object *obj)
@@ -645,11 +654,11 @@ int uterm_drm_prepare_commit(int fd, struct uterm_drm_display *ddrm, drmModeAtom
 			if (set_drm_object_property(req, cp, "SRC_H",
 						    (uint64_t)cursor->height << 16) < 0)
 				return -1;
-			if (set_drm_object_property(req, cp, "CRTC_X", cursor->x - cursor->hot_x) <
-			    0)
+			if (set_drm_object_property(req, cp, "CRTC_X",
+						    cursor->off_x + cursor->x - cursor->hot_x) < 0)
 				return -1;
-			if (set_drm_object_property(req, cp, "CRTC_Y", cursor->y - cursor->hot_y) <
-			    0)
+			if (set_drm_object_property(req, cp, "CRTC_Y",
+						    cursor->off_y + cursor->y - cursor->hot_y) < 0)
 				return -1;
 			if (set_drm_object_property(req, cp, "CRTC_W", cursor->width) < 0)
 				return -1;

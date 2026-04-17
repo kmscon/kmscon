@@ -57,6 +57,7 @@ struct display_ops {
 	void (*destroy_cursor)(struct uterm_display *disp);
 	int (*show_cursor)(struct uterm_display *disp, int32_t x, int32_t y);
 	int (*hide_cursor)(struct uterm_display *disp);
+	void (*set_cursor_offset)(struct uterm_display *disp, int32_t x, int32_t y);
 };
 
 struct video_ops {

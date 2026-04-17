@@ -117,6 +117,7 @@ static void compute_border(struct kmscon_text *txt)
 		bb->off_x = (bb->sw - txt->rows * FONT_HEIGHT(txt)) / 2;
 		bb->off_y = (bb->sh - txt->cols * FONT_WIDTH(txt)) / 2;
 	}
+	uterm_display_set_cursor_offset(txt->disp, bb->off_x, bb->off_y);
 }
 
 static int bbulk_set(struct kmscon_text *txt)

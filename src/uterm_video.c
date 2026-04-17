@@ -379,6 +379,15 @@ int uterm_display_hide_cursor(struct uterm_display *disp)
 }
 
 SHL_EXPORT
+void uterm_display_set_cursor_offset(struct uterm_display *disp, int32_t x, int32_t y)
+{
+	if (!disp || !display_is_online(disp) || !video_is_awake(disp->video))
+		return;
+
+	VIDEO_CALL(disp->ops->set_cursor_offset, 0, disp, x, y);
+}
+
+SHL_EXPORT
 void uterm_display_set_damage(struct uterm_display *disp, size_t n_rect,
 			      struct uterm_video_rect *damages)
 {
