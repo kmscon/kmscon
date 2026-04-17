@@ -803,6 +803,28 @@ static void handle_pointer_button(struct kmscon_terminal *term,
 	}
 }
 
+static void text_show_cursor(struct kmscon_text *txt, int32_t x, int32_t y)
+{
+	unsigned int sw = txt->cols * FONT_WIDTH(txt);
+	unsigned int sh = txt->rows * FONT_HEIGHT(txt);
+
+	switch (txt->orientation) {
+	default:
+	case OR_NORMAL:
+		uterm_display_show_cursor(txt->disp, x, y);
+		break;
+	case OR_UPSIDE_DOWN:
+		uterm_display_show_cursor(txt->disp, sw - x, sh - y);
+		break;
+	case OR_RIGHT:
+		uterm_display_show_cursor(txt->disp, sh - y, x);
+		break;
+	case OR_LEFT:
+		uterm_display_show_cursor(txt->disp, y, sw - x);
+		break;
+	}
+}
+
 static void hw_cursor_show(struct kmscon_terminal *term, int32_t x, int32_t y)
 {
 	struct shl_dlist *iter;
@@ -812,7 +834,7 @@ static void hw_cursor_show(struct kmscon_terminal *term, int32_t x, int32_t y)
 	{
 		scr = shl_dlist_entry(iter, struct screen, list);
 		if (scr->hw_cursor)
-			uterm_display_show_cursor(scr->disp, x, y);
+			text_show_cursor(scr->txt, x, y);
 	}
 }
 
@@ -944,8 +966,6 @@ static int session_event(struct kmscon_session *session, struct kmscon_session_e
 			 void *data)
 {
 	struct kmscon_terminal *term = data;
-	struct shl_dlist *iter;
-	struct screen *scr;
 
 	switch (ev->type) {
 	case KMSCON_SESSION_DISPLAY_NEW:
@@ -955,29 +975,16 @@ static int session_event(struct kmscon_session *session, struct kmscon_session_e
 		rm_display(term, ev->disp);
 		break;
 	case KMSCON_SESSION_DISPLAY_REFRESH:
-		if (term->pointer.visible) {
-			shl_dlist_for_each(iter, &term->screens)
-			{
-				scr = shl_dlist_entry(iter, struct screen, list);
-				if (scr->hw_cursor)
-					uterm_display_show_cursor(scr->disp, term->pointer.x,
-								  term->pointer.y);
-			}
-		}
+		if (term->pointer.visible)
+			hw_cursor_show(term, term->pointer.x, term->pointer.y);
 		redraw_all_text(term);
 		break;
 	case KMSCON_SESSION_ACTIVATE:
 		term->awake = true;
 		if (!term->opened)
 			terminal_open(term);
-		shl_dlist_for_each(iter, &term->screens)
-		{
-			scr = shl_dlist_entry(iter, struct screen, list);
-			uterm_display_set_need_redraw(scr->disp);
-			if (scr->hw_cursor && term->pointer.visible)
-				uterm_display_show_cursor(scr->disp, term->pointer.x,
-							  term->pointer.y);
-		}
+		if (term->pointer.visible)
+			hw_cursor_show(term, term->pointer.x, term->pointer.y);
 		redraw_all_text(term);
 		break;
 	case KMSCON_SESSION_DEACTIVATE:
