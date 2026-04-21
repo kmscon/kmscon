@@ -43,7 +43,7 @@ static int kmscon_unifont_load(void)
 	kmscon_font_unifont_ops.owner = SHL_THIS_MODULE;
 	ret = kmscon_font_register(&kmscon_font_unifont_ops);
 	if (ret) {
-		log_error("cannot register pango font");
+		log_error("cannot register unifont font");
 		return ret;
 	}
 
