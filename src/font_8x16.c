@@ -66,7 +66,6 @@ static int kmscon_font_8x16_init(struct kmscon_font *out, const struct kmscon_fo
 	out->attr.italic = false;
 	out->attr.width = 8;
 	out->attr.height = 16;
-	kmscon_font_attr_normalize(&out->attr);
 
 	return 0;
 }

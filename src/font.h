@@ -49,8 +49,6 @@ struct kmscon_font_ops;
 
 struct kmscon_font_attr {
 	char name[KMSCON_FONT_MAX_NAME];
-	unsigned int ppi;
-	unsigned int points;
 	bool bold;
 	bool italic;
 	bool underline;
@@ -64,7 +62,6 @@ static inline void kmscon_copy_attr(struct kmscon_font_attr *to,
 	memcpy(to, from, sizeof(*to));
 }
 
-void kmscon_font_attr_normalize(struct kmscon_font_attr *attr);
 bool kmscon_font_attr_match(const struct kmscon_font_attr *a1, const struct kmscon_font_attr *a2);
 
 struct kmscon_glyph {

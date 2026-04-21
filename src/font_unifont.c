@@ -228,13 +228,12 @@ static int kmscon_font_unifont_init(struct kmscon_font *out, const struct kmscon
 	out->attr.bold = attr->bold;
 	out->attr.italic = false;
 
-	scale = (attr->points + 8) / 16;
+	scale = (attr->height + 8) / 16;
 	if (!scale)
 		scale = 1;
 
 	out->attr.width = 8 * scale;
 	out->attr.height = 16 * scale;
-	kmscon_font_attr_normalize(&out->attr);
 	out->increase_step = 16;
 	out->data = uf;
 

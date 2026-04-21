@@ -625,7 +625,7 @@
       <varlistentry>
         <term><option>--font-size {points}</option></term>
         <listitem>
-          <para>Font size in points (pt). (default: 12)</para>
+          <para>Font size in pixels. (default: 12)</para>
         </listitem>
       </varlistentry>
 
@@ -635,14 +635,6 @@
           <para>Name of the font to be used, note that Fontconfig fallback may
                 be used if the `pango' font rendering engine is specified.
                 (default: monospace)</para>
-        </listitem>
-      </varlistentry>
-
-      <varlistentry>
-        <term><option>--font-dpi {dpi}</option></term>
-        <listitem>
-          <para>DPI (dots-per-inch) used for font-rendering. Per monitor DPI
-                values override this global default. (default: 96)</para>
         </listitem>
       </varlistentry>
     </variablelist>
