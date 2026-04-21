@@ -623,9 +623,9 @@
       </varlistentry>
 
       <varlistentry>
-        <term><option>--font-size {points}</option></term>
+        <term><option>--font-size {pixels}</option></term>
         <listitem>
-          <para>Font size in pixels. (default: 12)</para>
+          <para>Font size in pixels. (default: 16)</para>
         </listitem>
       </varlistentry>
 
