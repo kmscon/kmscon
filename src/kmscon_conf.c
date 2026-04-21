@@ -178,7 +178,7 @@ static void print_help()
 		"Font Options:\n"
 		"\t    --font-engine <engine>  [pango]\n"
 		"\t                              Font rendering engine\n"
-		"\t    --font-size <pixels>    [12]\n"
+		"\t    --font-size <pixels>    [16]\n"
 		"\t                              Font size in pixels\n"
 		"\t    --font-name <name>      [monospace]\n"
 		"\t                              Font name\n"
@@ -820,7 +820,7 @@ int kmscon_conf_new(struct conf_ctx **out)
 
 		/* Font Options */
 		CONF_OPTION_STRING(0, "font-engine", &conf->font_engine, "pango"),
-		CONF_OPTION_UINT(0, "font-size", &conf->font_size, 12),
+		CONF_OPTION_UINT(0, "font-size", &conf->font_size, 16),
 		CONF_OPTION_STRING(0, "font-name", &conf->font_name, "monospace"),
 
 		/* Palette Options */

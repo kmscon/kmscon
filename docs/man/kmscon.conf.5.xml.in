@@ -466,7 +466,7 @@ font-name=Ubuntu Mono
       <varlistentry>
         <term><option>font-size</option></term>
         <listitem>
-          <para>Font size in pixels. (default: 12)</para>
+          <para>Font size in pixels. (default: 16)</para>
         </listitem>
       </varlistentry>
 
