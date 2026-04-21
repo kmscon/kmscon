@@ -120,41 +120,48 @@ void kmscon_font_unregister(const char *name)
 	shl_register_remove(&font_reg, name);
 }
 
-static int new_font(struct kmscon_font *font, const struct kmscon_font_attr *attr,
-		    const char *backend)
-{
-	struct shl_register_record *record;
-	const char *name = backend ? backend : "<default>";
-	int ret;
+static const char *default_font[] = {"freetype", "pango", "unifont", "8x16"};
 
+static int init_font(struct kmscon_font *font, struct shl_register_record *record,
+		     const struct kmscon_font_attr *attr)
+{
 	memset(font, 0, sizeof(*font));
 	font->ref = 1;
-
-	if (backend)
-		record = shl_register_find(&font_reg, backend);
-	else
-		record = shl_register_first(&font_reg);
-
-	if (!record) {
-		log_error("requested backend '%s' not found", name);
-		return -ENOENT;
-	}
-
 	font->record = record;
 	font->ops = record->data;
 
 	if (font->ops->init)
-		ret = font->ops->init(font, attr);
-	else
-		ret = 0;
-
-	if (ret) {
-		log_warning("backend %s cannot create font", name);
-		shl_register_record_unref(record);
-		return ret;
-	}
-
+		return font->ops->init(font, attr);
 	return 0;
+}
+
+static int try_font(struct kmscon_font *font, const struct kmscon_font_attr *attr,
+		    const char *backend)
+{
+	struct shl_register_record *record = shl_register_find(&font_reg, backend);
+	if (!record)
+		return -ENOENT;
+	return init_font(font, record, attr);
+}
+
+static int new_font(struct kmscon_font *font, const struct kmscon_font_attr *attr,
+		    const char *backend)
+{
+	int ret = -ENOENT;
+
+	if (backend)
+		ret = try_font(font, attr, backend);
+
+	if (ret == 0)
+		return 0;
+
+	for (int i = 0; i < sizeof(default_font) / sizeof(default_font[0]); i++) {
+		ret = try_font(font, attr, default_font[i]);
+		if (ret == 0)
+			return 0;
+	}
+	/* last resort */
+	return init_font(font, shl_register_first(&font_reg), attr);
 }
 
 /**
@@ -210,12 +217,8 @@ int kmscon_font_find(struct kmscon_font **out, const struct kmscon_font_attr *at
 	}
 
 	ret = new_font(font, attr, backend);
-	if (ret) {
-		if (backend)
-			ret = new_font(font, attr, NULL);
-		if (ret)
-			goto err_free;
-	}
+	if (ret)
+		goto err_free;
 
 	log_debug("using: be: %s nm: %s b: %d size %ux%u", font->ops->name, font->attr.name,
 		  font->attr.bold, font->attr.height, font->attr.width);
@@ -223,6 +226,7 @@ int kmscon_font_find(struct kmscon_font **out, const struct kmscon_font_attr *at
 	return 0;
 
 err_free:
+	log_error("No font backend available: %d", ret);
 	free(font);
 	return ret;
 }

@@ -75,11 +75,10 @@ dpms-timeout=0
 drm
 hwaccel
 gpus=all
-render-engine=gltex
 rotate=normal
 
 ### Font Options ###
-font-engine=pango
+font-engine=freetype
 font-size=18
 font-name=Ubuntu Mono
     </programlisting>
@@ -459,7 +458,7 @@ font-name=Ubuntu Mono
       <varlistentry>
         <term><option>font-engine</option></term>
         <listitem>
-          <para>Font engine to use. (default: pango)</para>
+          <para>Font engine to use. (default: freetype)</para>
         </listitem>
       </varlistentry>
 
