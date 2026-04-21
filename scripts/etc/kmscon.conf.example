@@ -36,9 +36,10 @@
 #rotate=left
 
 ## Fonts
-## font-engine, can be [8x16, unifont, pango]
-#font-engine=pango
+## font-engine, can be [freetype, pango, unifont, 8x16], by default kmscon tries in this order.
+#font-engine=freetype
 #font-size=18
+## font-name is only for freetype/pange. Unifont and 8x16 uses their own bitmap.
 #font-name=Hack Nerd Font
 
 ### Input Options ###

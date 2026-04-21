@@ -92,7 +92,7 @@
           <para>Print version information and exit. When combined with
                 <option>--verbose</option>, additional build information is shown
                 including compilation date and time, and enabled build options
-                (DRM 2D/3D support, FBDEV support, Pango font support).</para>
+                (DRM 2D/3D support, FBDEV support, Freetype font support).</para>
         </listitem>
       </varlistentry>
 
@@ -605,7 +605,7 @@
                 are 'normal' meaning output is not rotated, 'right' meaning output is
                 rotated 90° clock-wise, 'upside-down' meaning output is rotated 180°
                 clock-wise and 'left' meaning output is rotated 90° counter clock-wise.
-                This has only effect for the 'gltex' render-engine. (default: 'normal')
+                (default: 'normal')
           </para>
         </listitem>
       </varlistentry>
@@ -618,7 +618,7 @@
         <term><option>--font-engine {engine}</option></term>
         <listitem>
           <para>Specify the font rendering engine. Available engines are
-                `pango', `unifont', and `8x16'. (default: pango)</para>
+                `freetype', `pango', `unifont', and `8x16'. (default: freetype)</para>
         </listitem>
       </varlistentry>
 
@@ -633,7 +633,7 @@
         <term><option>--font-name {name}</option></term>
         <listitem>
           <para>Name of the font to be used, note that Fontconfig fallback may
-                be used if the `pango' font rendering engine is specified.
+                be used if the `freetype' or `pango' font rendering engine is specified.
                 (default: monospace)</para>
         </listitem>
       </varlistentry>

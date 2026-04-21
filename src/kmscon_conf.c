@@ -819,7 +819,7 @@ int kmscon_conf_new(struct conf_ctx **out)
 		CONF_OPTION_STRING(0, "rotate", &conf->rotate, "normal"),
 
 		/* Font Options */
-		CONF_OPTION_STRING(0, "font-engine", &conf->font_engine, "pango"),
+		CONF_OPTION_STRING(0, "font-engine", &conf->font_engine, NULL),
 		CONF_OPTION_UINT(0, "font-size", &conf->font_size, 16),
 		CONF_OPTION_STRING(0, "font-name", &conf->font_name, "monospace"),
 
