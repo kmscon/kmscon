@@ -218,6 +218,15 @@ font-name=Ubuntu Mono
       </varlistentry>
 
       <varlistentry>
+        <term><option>bell</option></term>
+        <listitem>
+          <para>Enable bell forwarding to the VT. When enabled, the BEL character
+                (0x07) from applications is forwarded to the underlying VT.
+                (default: off)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
         <term><option>xkb-model</option></term>
         <listitem>
           <para>Set XkbModel for input devices. (default: unset)</para>
