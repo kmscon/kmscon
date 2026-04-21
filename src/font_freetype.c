@@ -219,7 +219,6 @@ static int kmscon_font_freetype_init(struct kmscon_font *out, const struct kmsco
 		return -ENOMEM;
 	memset(ftf, 0, sizeof(*ftf));
 	kmscon_copy_attr(&out->attr, attr);
-	kmscon_font_attr_normalize(&out->attr);
 	kmscon_copy_attr(&bold_attr, &out->attr);
 	bold_attr.bold = true;
 

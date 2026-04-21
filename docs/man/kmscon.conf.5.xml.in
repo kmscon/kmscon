@@ -466,7 +466,7 @@ font-name=Ubuntu Mono
       <varlistentry>
         <term><option>font-size</option></term>
         <listitem>
-          <para>Font size in points. (default: 12)</para>
+          <para>Font size in pixels. (default: 12)</para>
         </listitem>
       </varlistentry>
 
@@ -474,13 +474,6 @@ font-name=Ubuntu Mono
         <term><option>font-name</option></term>
         <listitem>
           <para>Font name to use. (default: monospace)</para>
-        </listitem>
-      </varlistentry>
-
-      <varlistentry>
-        <term><option>font-dpi</option></term>
-        <listitem>
-          <para>Force DPI value for all fonts. (default: 96)</para>
         </listitem>
       </varlistentry>
 

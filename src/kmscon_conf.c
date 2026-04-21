@@ -178,12 +178,10 @@ static void print_help()
 		"Font Options:\n"
 		"\t    --font-engine <engine>  [pango]\n"
 		"\t                              Font rendering engine\n"
-		"\t    --font-size <points>    [12]\n"
-		"\t                              Font size in points (pt)\n"
+		"\t    --font-size <pixels>    [12]\n"
+		"\t                              Font size in pixels\n"
 		"\t    --font-name <name>      [monospace]\n"
 		"\t                              Font name\n"
-		"\t    --font-dpi <dpi>        [96]\n"
-		"\t                              Force DPI value for all fonts\n"
 		"\n"
 		"Palette Options:\n"
 		"\t    --palette <name>                [default]\n"
@@ -824,7 +822,6 @@ int kmscon_conf_new(struct conf_ctx **out)
 		CONF_OPTION_STRING(0, "font-engine", &conf->font_engine, "pango"),
 		CONF_OPTION_UINT(0, "font-size", &conf->font_size, 12),
 		CONF_OPTION_STRING(0, "font-name", &conf->font_name, "monospace"),
-		CONF_OPTION_UINT(0, "font-dpi", &conf->font_ppi, 96),
 
 		/* Palette Options */
 		CONF_OPTION_STRING(0, "palette", &conf->palette, NULL),

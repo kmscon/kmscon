@@ -701,22 +701,22 @@ static void input_event(struct uterm_input *input, struct uterm_input_key_event 
 	}
 	if (conf_grab_matches(term->conf->grab_zoom_in, ev->mods, ev->num_syms, ev->keysyms)) {
 		ev->handled = true;
-		if (term->font_attr.points + term->font->increase_step < term->font_attr.points)
+		if (term->font_attr.height + term->font->increase_step < term->font_attr.height)
 			return;
 
-		term->font_attr.points += term->font->increase_step;
+		term->font_attr.height += term->font->increase_step;
 		if (font_set(term))
-			term->font_attr.points -= term->font->increase_step;
+			term->font_attr.height -= term->font->increase_step;
 		return;
 	}
 	if (conf_grab_matches(term->conf->grab_zoom_out, ev->mods, ev->num_syms, ev->keysyms)) {
 		ev->handled = true;
-		if (term->font_attr.points <= term->font->increase_step)
+		if (term->font_attr.height <= term->font->increase_step)
 			return;
 
-		term->font_attr.points -= term->font->increase_step;
+		term->font_attr.height -= term->font->increase_step;
 		if (font_set(term))
-			term->font_attr.points += term->font->increase_step;
+			term->font_attr.height += term->font->increase_step;
 		return;
 	}
 	if (conf_grab_matches(term->conf->grab_rotate_cw, ev->mods, ev->num_syms, ev->keysyms)) {
@@ -1083,8 +1083,7 @@ int kmscon_terminal_register(struct kmscon_session **out, struct kmscon_seat *se
 	term->conf = conf_ctx_get_mem(term->conf_ctx);
 
 	strncpy(term->font_attr.name, term->conf->font_name, KMSCON_FONT_MAX_NAME - 1);
-	term->font_attr.ppi = term->conf->font_ppi;
-	term->font_attr.points = term->conf->font_size;
+	term->font_attr.height = term->conf->font_size;
 
 	ret = tsm_screen_new(&term->console, log_llog, NULL);
 	if (ret)

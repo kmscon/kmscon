@@ -65,39 +65,6 @@
 
 static struct shl_register font_reg = SHL_REGISTER_INIT(font_reg);
 
-/**
- * kmscon_font_attr_normalize:
- * @attr: Attribute to normalize
- *
- * This normalizes @attr and fills out missing entries. The following is done:
- * - If attr->name is empty, then it is set to KMSCON_FONT_DEFAULT_NAME
- * - If attr->ppi is 0, it is set to KMSCON_FONT_DEFAULT_PPI
- * - If attr->height is not set but attr->points is given, then attr->heights is
- *   calculated from attr->points.
- * - If attr->height is set, then attr->points is recalculated and overwritten
- *
- * The other fields are not changed. If attr->points is set but attr->height is
- * not set, then the height is calculated and after that the points are
- * recalculated so we will never have division-errors.
- */
-SHL_EXPORT
-void kmscon_font_attr_normalize(struct kmscon_font_attr *attr)
-{
-	if (!attr)
-		return;
-
-	if (!*attr->name)
-		memcpy(attr->name, KMSCON_FONT_DEFAULT_NAME, sizeof(KMSCON_FONT_DEFAULT_NAME));
-
-	if (!attr->ppi)
-		attr->ppi = KMSCON_FONT_DEFAULT_PPI;
-
-	if (!attr->height && attr->points)
-		attr->height = attr->points * attr->ppi / 72;
-	if (attr->height)
-		attr->points = attr->height * 72 / attr->ppi;
-}
-
 static inline void kmscon_font_destroy(void *data)
 {
 	const struct kmscon_font_ops *ops = data;
@@ -220,47 +187,7 @@ static int new_font(struct kmscon_font *font, const struct kmscon_font_attr *att
  * that you can allocate your own fallback font are pretty small so don't do it.
  *
  * About DPI and Point Sizes:
- * Many computer graphics systems use "Points" as measurement for font sizes.
- * However, most of them also use 72 or 96 as fixed DPI size for monitors. This
- * means, the Point sizes can be directly converted into pixels. But lets
- * look at the facts:
- *   1 Point is defined as 1/72 of an inch. That is, a 10 Point font will be
- *   exactly 10 / 72 inches, which is ~0.13889 inches, which is
- *   0.13889 * 2.54 cm, which is approximately 0.3528 cm. This applies to
- *   printed paper. If we want the same on a monitor, we must need more
- *   information. First, the monitor renders in pixels, that is, we must know
- *   how many Pixels per Inch (PPI) are displayed. Often the same information is
- *   given as Dots per Inch (DPI) but these two are identical in this context.
- *   If the DPI is 96, we know that our 10 Point font is 10 / 72 inches. Which
- *   then means it is 10 / 72 * 96 pixels, which is ~13.333 pixels. So we
- *   internally render the font with 13 pixels and display it as 13 pixels. This
- *   guarantees, that the font will be 10 Point big which means 0.3528 cm on the
- *   display. This of course requires that we know the exact PPI/DPI of the
- *   display.
- * But if we take into account that Windows uses fixed 96 PPI and Mac OS X 72
- * PPI (independent of the monitor), they drop all this information and instead
- * render the font in pixel sizes. Because if you use fixed 72 PPI, a 10 Point
- * font will always be 10 / 72 * 72 = 10 pixels high. This means, it would be
- * rather convenient to directly specify pixel-sizes on the monitor. If you want
- * to work with documents that shall be printed, you want to specify Points so
- * the printed result will look nice. But the disadvantage is, that your monitor
- * can print this font in the weirdest size if it uses PPI much bigger or lower
- * than the common 96 or 72. Therefore, if you work with a monitor you probably
- * want to also specify the pixel-height of the font as you probably don't know
- * the PPI of your monitor and don't want to do all that math in your head.
- * Therefore, for applications that will probably never print their output (like
- * the virtual (!) console this is for), it is often requested that we can
- * specify the pixel size instead of the Point size of a font so you can
- * predict the output better.
- * Hence, we provide both. If pixel information is given, that is, attr->height
- * is not 0, then we try to return a font with this pixel height.
- * If it is 0, attr->points is used together with attr->ppi to calculate the
- * pixel size. If attr->ppi is 0, then 72 is used.
- * After the font was chosen, all fields "points", "ppi", "height" and "width"
- * will contain the exact values for this font. If "ppi" was zero and pixel
- * sizes where specified, then the resulting "points" size is calculated with
- * "ppi" = 72 again. So if you use the "points" field please always specify
- * "ppi", either.
+ * Use a fixed DPI of 72, so point size is the same as height in pixels.
  *
  * Returns: 0 on success, error code on failure
  */
@@ -273,9 +200,8 @@ int kmscon_font_find(struct kmscon_font **out, const struct kmscon_font_attr *at
 	if (!out || !attr)
 		return -EINVAL;
 
-	log_debug("searching for: be: %s nm: %s ppi: %u pt: %u b: %d i: %d he: %u wt: %u", backend,
-		  attr->name, attr->ppi, attr->points, attr->bold, attr->italic, attr->height,
-		  attr->width);
+	log_debug("searching for: be: %s nm: %s b: %d size %ux%u", backend, attr->name, attr->bold,
+		  attr->height, attr->width);
 
 	font = malloc(sizeof(*font));
 	if (!font) {
@@ -291,9 +217,8 @@ int kmscon_font_find(struct kmscon_font **out, const struct kmscon_font_attr *at
 			goto err_free;
 	}
 
-	log_debug("using: be: %s nm: %s ppi: %u pt: %u b: %d i: %d he: %u wt: %u", font->ops->name,
-		  font->attr.name, font->attr.ppi, font->attr.points, font->attr.bold,
-		  font->attr.italic, font->attr.height, font->attr.width);
+	log_debug("using: be: %s nm: %s b: %d size %ux%u", font->ops->name, font->attr.name,
+		  font->attr.bold, font->attr.height, font->attr.width);
 	*out = font;
 	return 0;
 

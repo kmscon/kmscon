@@ -308,7 +308,6 @@ static int manager_get_face(struct face **out, struct kmscon_font_attr *attr)
 	face->baseline = PANGO_PIXELS_CEIL(pango_layout_get_baseline(layout));
 	g_object_unref(layout);
 
-	kmscon_font_attr_normalize(&face->real_attr);
 	if (!face->real_attr.height || !face->real_attr.width) {
 		log_warning("invalid scaled font sizes");
 		ret = -EFAULT;
@@ -345,7 +344,6 @@ static int kmscon_font_pango_init(struct kmscon_font *out, const struct kmscon_f
 	int ret;
 
 	memcpy(&out->attr, attr, sizeof(*attr));
-	kmscon_font_attr_normalize(&out->attr);
 
 	log_debug("loading pango font %s", out->attr.name);
 
