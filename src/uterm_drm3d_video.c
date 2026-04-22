@@ -576,6 +576,7 @@ static int video_init(struct uterm_video *video, const char *node)
 		log_warning("your GL implementation does not support GL_EXT_unpack_subimage, "
 			    "rendering may be slower than usual");
 
+	free(cfgs);
 	return 0;
 
 err_ctx:
