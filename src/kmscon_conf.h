@@ -169,6 +169,8 @@ struct kmscon_conf_t {
 	bool use_original_mode;
 	/* screen resolution */
 	char *mode;
+	/* multiple monitors */
+	char *multi_monitor;
 	/* orientation/rotation of output */
 	char *rotate;
 
