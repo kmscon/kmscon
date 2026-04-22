@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 project('kmscon', 'c',
-  version: '9.3.3',
+  version: '9.3.4',
   license: 'MIT',
   # meson 0.58: f-string
   # meson 0.62: dependency libdl
@@ -47,7 +47,7 @@ systemdsystemunitdir = systemd_deps.get_variable('systemdsystemunitdir', default
 fs = import('fs')
 
 xkbcommon_deps = dependency('xkbcommon', version: '>=0.5.0')
-libtsm_deps = dependency('libtsm', version: '>=4.4.0', allow_fallback: true)
+libtsm_deps = dependency('libtsm', version: '>=4.5.0', allow_fallback: true)
 libudev_deps = dependency('libudev', version: '>=172')
 dl_deps = dependency('dl')
 threads_deps = dependency('threads')

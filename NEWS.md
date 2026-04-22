@@ -1,5 +1,38 @@
 = KMSCON Release News =
+## CHANGES with 9.3.4
+* unifont: fix build on i686 by @kdj0c in https://github.com/kmscon/kmscon/pull/323
+* fix: change default value of `term` to linux in the example config by @mikelei8291 in https://github.com/kmscon/kmscon/pull/324
+* man: fix kmscon.conf.5 manpage by @kdj0c in https://github.com/kmscon/kmscon/pull/329
+* Center the terminal on the screen by @kdj0c in https://github.com/kmscon/kmscon/pull/328
+* Fixed: cursor jumping when touchpad clicked by @ken-morel in https://github.com/kmscon/kmscon/pull/333
+* Rename fill to clear by @kdj0c in https://github.com/kmscon/kmscon/pull/331
+* Fix touchpad offset calculation by @ken-morel in https://github.com/kmscon/kmscon/pull/336
+* Memfixes by @kdj0c in https://github.com/kmscon/kmscon/pull/338
+* font_8x16: move font data to binary file by @kdj0c in https://github.com/kmscon/kmscon/pull/335
+* Fix high-risk memory safety and undefined behavior bugs by @aruiz in https://github.com/kmscon/kmscon/pull/337
+* hardware cursor plane support and software pointer rework by @aruiz in https://github.com/kmscon/kmscon/pull/342
+* Simplify font engine by @kdj0c in https://github.com/kmscon/kmscon/pull/341
+* freetype: Fix fallback when no font has the glyph by @kdj0c in https://github.com/kmscon/kmscon/pull/345
+* terminal: display /etc/issue before login prompt by @aruiz in https://github.com/kmscon/kmscon/pull/344
+* Add an LRU hashtable, and use it for glyphs by @kdj0c in https://github.com/kmscon/kmscon/pull/349
+* systemd: start login instead of agetty by @kdj0c in https://github.com/kmscon/kmscon/pull/350
+* drm: Use cursor plane hotspot for Virtual GPU by @kdj0c in https://github.com/kmscon/kmscon/pull/351
+* conf: Fix soft-cursor option by @kdj0c in https://github.com/kmscon/kmscon/pull/355
+* gltex: Fix offset to avoid blur by @kdj0c in https://github.com/kmscon/kmscon/pull/353
+* hw_cursor: Set offset by @kdj0c in https://github.com/kmscon/kmscon/pull/356
+* Hw cursor rotation by @kdj0c in https://github.com/kmscon/kmscon/pull/357
+* Add bell and keyboard LED support by @aruiz in https://github.com/kmscon/kmscon/pull/339
+* docs: Add missing bell configuration option to kmscon.conf.example by @kdj0c in https://github.com/kmscon/kmscon/pull/359
+* font: remove the dpi option by @kdj0c in https://github.com/kmscon/kmscon/pull/360
+* Font freetype default by @kdj0c in https://github.com/kmscon/kmscon/pull/358
+* multi-monitor: Add an option to use only the largest monitor. by @kdj0c in https://github.com/kmscon/kmscon/pull/361
 
+## New Contributors
+* @mikelei8291 made their first contribution in https://github.com/kmscon/kmscon/pull/324
+* @ken-morel made their first contribution in https://github.com/kmscon/kmscon/pull/333
+* @aruiz made their first contribution in https://github.com/kmscon/kmscon/pull/337
+
+**Full Changelog**: https://github.com/kmscon/kmscon/compare/v9.3.3...v9.3.4
 ## CHANGES with 9.3.3
 * New features:
   - font: Add a fontconfig/freetype2 renderer by @kdj0c in https://github.com/kmscon/kmscon/pull/287
