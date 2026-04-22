@@ -599,6 +599,19 @@
       </varlistentry>
 
       <varlistentry>
+        <term><option>--multi-monitor {clone,largest}</option></term>
+        <listitem>
+          <para>When there are multiple monitors, this option controls how the monitors are
+          used.</para>
+          <para>`clone': All monitors will have the same size. The smallest monitor will be
+          used to determine the size.</para>
+          <para>`largest': The largest monitor will be used to determine the size. The other
+          monitors will be disabled. If multiple monitors have the largest size, they will all be used.</para>
+          <para>default: clone</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
         <term><option>--rotate {orientation}</option></term>
         <listitem>
           <para>Select the desired orientation of the output. Available orientations

@@ -816,6 +816,7 @@ int kmscon_conf_new(struct conf_ctx **out)
 			    (void *)KMSCON_GPU_ALL),
 		CONF_OPTION_BOOL(0, "use-original-mode", &conf->use_original_mode, true),
 		CONF_OPTION_STRING(0, "mode", &conf->mode, NULL),
+		CONF_OPTION_STRING(0, "multi-monitor", &conf->multi_monitor, "clone"),
 		CONF_OPTION_STRING(0, "rotate", &conf->rotate, "normal"),
 
 		/* Font Options */

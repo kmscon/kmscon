@@ -61,6 +61,7 @@ struct screen {
 	bool swapping;
 	bool pending;
 	bool hw_cursor;
+	bool enabled;
 };
 
 struct kmscon_pointer {
@@ -249,6 +250,33 @@ static void refresh_hw_cursor(struct screen *scr)
 	setup_hw_cursor(scr);
 }
 
+static void disable_screen(struct screen *scr)
+{
+	int ret;
+
+	log_debug("Disabling screen %s", uterm_display_name(scr->disp));
+	if (scr->swapping)
+		scr->pending = true;
+	else {
+		log_info("Disabling screen %s", uterm_display_name(scr->disp));
+		scr->pending = false;
+		uterm_display_clear(scr->disp, 0, 0, 0);
+		ret = uterm_display_swap(scr->disp);
+		if (ret) {
+			if (ret != -EBUSY)
+				log_warning("cannot swap display [%s] %d",
+					    uterm_display_name(scr->disp), ret);
+			else {
+				log_debug("display [%s] is swapping",
+					  uterm_display_name(scr->disp));
+				scr->pending = true;
+			}
+		}
+		scr->swapping = true;
+	}
+	scr->enabled = false;
+}
+
 static void do_redraw_screen(struct screen *scr)
 {
 	struct tsm_screen_attr attr;
@@ -256,6 +284,13 @@ static void do_redraw_screen(struct screen *scr)
 
 	if (!scr->term->awake || !kmscon_session_get_foreground(scr->term->session))
 		return;
+
+	if (!scr->enabled) {
+		/* make sure to clear unused screen */
+		if (scr->pending)
+			disable_screen(scr);
+		return;
+	}
 
 	scr->pending = false;
 
@@ -278,7 +313,7 @@ static void do_redraw_screen(struct screen *scr)
 
 static void redraw_screen(struct screen *scr)
 {
-	if (!scr->term->awake)
+	if (!scr->term->awake || !scr->enabled)
 		return;
 
 	if (scr->swapping)
@@ -335,6 +370,8 @@ static void update_pointer_max_all(struct kmscon_terminal *term)
 	shl_dlist_for_each(iter, &term->screens)
 	{
 		scr = shl_dlist_entry(iter, struct screen, list);
+		if (!scr->enabled)
+			continue;
 
 		if (scr->txt->orientation == OR_NORMAL || scr->txt->orientation == OR_UPSIDE_DOWN) {
 			sw = uterm_display_get_width(scr->disp);
@@ -425,12 +462,10 @@ static void mouse_event(struct tsm_vte *vte, enum tsm_mouse_track_mode track_mod
 }
 
 /*
- * Resize terminal
- * We support multiple monitors per terminal. As some software-rendering
- * backends do not support scaling, we always use the smallest cols/rows that are
- * provided so wider displays will have black margins.
+ * We support multiple monitors per terminal. In clone mode, we use the smallest cols/rows that are
+ * provided so wider monitors will have black margins.
  */
-static bool terminal_update_size(struct kmscon_terminal *term)
+static bool terminal_update_size_clone(struct kmscon_terminal *term)
 {
 	struct shl_dlist *iter;
 	struct screen *scr;
@@ -458,10 +493,66 @@ static bool terminal_update_size(struct kmscon_terminal *term)
 	term->min_cols = min_cols;
 	term->min_rows = min_rows;
 
+	return true;
+}
+
+/*
+ * In largest mode, we use the largest cols/rows that are
+ * provided so smaller monitors will be disabled.
+ */
+static bool terminal_update_size_largest(struct kmscon_terminal *term)
+{
+	struct shl_dlist *iter;
+	struct screen *scr;
+	unsigned int rows, cols, cells;
+	unsigned int max_cells = 0;
+
 	shl_dlist_for_each(iter, &term->screens)
 	{
 		scr = shl_dlist_entry(iter, struct screen, list);
-		kmscon_text_resize(scr->txt, term->min_cols, term->min_rows);
+		rows = kmscon_text_get_rows(scr->txt);
+		cols = kmscon_text_get_cols(scr->txt);
+		cells = rows * cols;
+		if (cells > max_cells) {
+			max_cells = cells;
+			term->min_cols = cols;
+			term->min_rows = rows;
+		}
+	}
+	shl_dlist_for_each(iter, &term->screens)
+	{
+		scr = shl_dlist_entry(iter, struct screen, list);
+		rows = kmscon_text_get_rows(scr->txt);
+		cols = kmscon_text_get_cols(scr->txt);
+		if (rows != term->min_rows || cols != term->min_cols)
+			disable_screen(scr);
+		else if (!scr->enabled) {
+			log_info("Enabling screen %s", uterm_display_name(scr->disp));
+			scr->enabled = true;
+		}
+	}
+	return max_cells > 0;
+}
+
+static bool terminal_update_size(struct kmscon_terminal *term)
+{
+	struct shl_dlist *iter;
+	struct screen *scr;
+	bool ret;
+
+	if (term->conf->multi_monitor && !strcmp(term->conf->multi_monitor, "largest")) {
+		ret = terminal_update_size_largest(term);
+	} else {
+		ret = terminal_update_size_clone(term);
+	}
+	if (!ret)
+		return false;
+
+	shl_dlist_for_each(iter, &term->screens)
+	{
+		scr = shl_dlist_entry(iter, struct screen, list);
+		if (scr->enabled)
+			kmscon_text_resize(scr->txt, term->min_cols, term->min_rows);
 	}
 	return true;
 }
@@ -574,6 +665,7 @@ static int add_display(struct kmscon_terminal *term, struct uterm_display *disp)
 	memset(scr, 0, sizeof(*scr));
 	scr->term = term;
 	scr->disp = disp;
+	scr->enabled = true;
 
 	ret = uterm_display_register_cb(scr->disp, display_event, scr);
 	if (ret) {
@@ -614,6 +706,7 @@ static int add_display(struct kmscon_terminal *term, struct uterm_display *disp)
 	kmscon_text_resize(scr->txt, term->min_cols, term->min_rows);
 	update_pointer_max_all(term);
 	uterm_display_ref(scr->disp);
+	do_redraw_screen(scr);
 	return 0;
 
 err_text:
