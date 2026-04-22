@@ -126,7 +126,7 @@ static inline int shl_lru_evict(struct shl_lru *lru)
 			return 0;
 		}
 	}
-	log_warning("LRU evict failed key not found%ld", last->key);
+	log_warning("LRU evict failed key not found %" PRIu64, last->key);
 	return -ENOENT;
 }
 
