@@ -133,6 +133,7 @@ struct uterm_video {
 	unsigned long ref;
 	unsigned int flags;
 	struct ev_eloop *eloop;
+	struct shl_register_record *record;
 
 	struct shl_dlist displays;
 	struct shl_hook *hook;

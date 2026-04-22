@@ -437,6 +437,7 @@ int uterm_video_new(struct uterm_video **out, struct ev_eloop *eloop, const char
 	memset(video, 0, sizeof(*video));
 	video->ref = 1;
 
+	video->record = record;
 	video->mod = record->data;
 
 	video->eloop = eloop;
@@ -494,6 +495,7 @@ void uterm_video_unref(struct uterm_video *video)
 	VIDEO_CALL(video->mod->ops.destroy, 0, video);
 	shl_hook_free(video->hook);
 	ev_eloop_unref(video->eloop);
+	shl_register_record_unref(video->record);
 	free(video);
 }
 
