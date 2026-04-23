@@ -150,6 +150,7 @@ static uint32_t *generate_ibeam_cursor(unsigned int font_height, unsigned int *w
 	uint32_t *pixels;
 
 	h = font_height > 8 ? font_height : 8;
+	h = min(h, UTERM_CURSOR_MAX_SIZE);
 	w = 2 * (h / 6) + 3;
 
 	white = argb(255, 255, 255, 255);
