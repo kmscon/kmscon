@@ -341,14 +341,13 @@ bool uterm_display_need_redraw(struct uterm_display *disp)
 
 SHL_EXPORT
 int uterm_display_setup_cursor(struct uterm_display *disp, const uint32_t *pixels,
-			       unsigned int img_width, unsigned int img_height, int hot_x,
-			       int hot_y)
+			       unsigned int width, unsigned int height, int hot_x, int hot_y)
 {
 	if (!disp || !display_is_online(disp) || !video_is_awake(disp->video))
 		return -EINVAL;
 
-	return VIDEO_CALL(disp->ops->setup_cursor, -EOPNOTSUPP, disp, pixels, img_width, img_height,
-			  hot_x, hot_y);
+	return VIDEO_CALL(disp->ops->setup_cursor, -EOPNOTSUPP, disp, pixels, width, height, hot_x,
+			  hot_y);
 }
 
 SHL_EXPORT

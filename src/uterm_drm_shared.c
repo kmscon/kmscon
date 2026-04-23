@@ -328,19 +328,15 @@ static void modeset_clear_cursor(drmModeAtomicReq *req, int fd)
 	drmModeFreePlaneResources(plane_res);
 }
 
-static int cursor_create_buffer(int fd, struct uterm_drm_cursor *cursor, uint32_t width,
-				uint32_t height)
+static int cursor_create_buffer(int fd, struct uterm_drm_cursor *cursor)
 {
 	uint32_t handles[4], pitches[4], offsets[4];
 	uint64_t mmap_offset;
 	int ret;
 
-	cursor->width = width;
-	cursor->height = height;
-
-	if (drmModeCreateDumbBuffer(fd, width, height, 32, 0, &cursor->bo_handle, &cursor->stride,
-				    &cursor->map_size)) {
-		log_err("cannot create cursor dumb buffer");
+	if (drmModeCreateDumbBuffer(fd, cursor->width, cursor->height, 32, 0, &cursor->bo_handle,
+				    &cursor->stride, &cursor->map_size)) {
+		log_err("cannot create cursor dumb buffer %dx%d", cursor->width, cursor->height);
 		return -EFAULT;
 	}
 
@@ -350,23 +346,23 @@ static int cursor_create_buffer(int fd, struct uterm_drm_cursor *cursor, uint32_
 	pitches[1] = pitches[2] = pitches[3] = 0;
 	offsets[0] = offsets[1] = offsets[2] = offsets[3] = 0;
 
-	ret = drmModeAddFB2(fd, width, height, DRM_FORMAT_ARGB8888, handles, pitches, offsets,
-			    &cursor->fb_id, 0);
+	ret = drmModeAddFB2(fd, cursor->width, cursor->height, DRM_FORMAT_ARGB8888, handles,
+			    pitches, offsets, &cursor->fb_id, 0);
 	if (ret) {
-		log_err("cannot create cursor framebuffer");
+		log_err("cannot create cursor framebuffer %d", ret);
 		goto err_buf;
 	}
 
 	ret = drmModeMapDumbBuffer(fd, cursor->bo_handle, &mmap_offset);
 	if (ret) {
-		log_err("cannot map cursor dumb buffer");
+		log_err("cannot map cursor dumb buffer %d", ret);
 		goto err_fb;
 	}
 
 	cursor->map =
 		mmap(0, cursor->map_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, mmap_offset);
 	if (cursor->map == MAP_FAILED) {
-		log_err("cannot mmap cursor dumb buffer");
+		log_err("cannot mmap cursor dumb buffer %d", ret);
 		cursor->map = NULL;
 		goto err_fb;
 	}
@@ -402,16 +398,14 @@ static void cursor_destroy_buffer(int fd, struct uterm_drm_cursor *cursor)
 }
 
 int uterm_drm_display_setup_cursor(struct uterm_display *disp, const uint32_t *pixels,
-				   unsigned int img_width, unsigned int img_height, int hot_x,
-				   int hot_y)
+				   unsigned int width, unsigned int height, int hot_x, int hot_y)
 {
 	struct uterm_drm_display *ddrm = disp->data;
 	struct uterm_drm_video *vdrm = disp->video->data;
 	struct uterm_drm_cursor *cursor = &ddrm->cursor;
-	uint64_t cap_w = 64, cap_h = 64;
+	uint64_t cap_w, cap_h;
 	uint32_t *dst;
-	unsigned int pitch, copy_w, copy_h, off_x, off_y;
-	unsigned int x, y;
+	unsigned int pitch, x, y, copy_w, copy_h;
 	int ret;
 
 	if (!pixels)
@@ -423,32 +417,31 @@ int uterm_drm_display_setup_cursor(struct uterm_display *disp, const uint32_t *p
 	if (cursor->active)
 		uterm_drm_display_destroy_cursor(disp);
 
-	drmGetCap(vdrm->fd, DRM_CAP_CURSOR_WIDTH, &cap_w);
-	drmGetCap(vdrm->fd, DRM_CAP_CURSOR_HEIGHT, &cap_h);
-	if (cap_w > 4096)
-		cap_w = 4096;
-	if (cap_h > 4096)
-		cap_h = 4096;
+	if (drmGetCap(vdrm->fd, DRM_CAP_CURSOR_WIDTH, &cap_w) < 0)
+		return -EOPNOTSUPP;
+	if (drmGetCap(vdrm->fd, DRM_CAP_CURSOR_HEIGHT, &cap_h) < 0)
+		return -EOPNOTSUPP;
 
-	ret = cursor_create_buffer(vdrm->fd, cursor, cap_w, cap_h);
+	cursor->width = min(cap_w, UTERM_CURSOR_MAX_SIZE);
+	cursor->height = min(cap_h, UTERM_CURSOR_MAX_SIZE);
+
+	ret = cursor_create_buffer(vdrm->fd, cursor);
 	if (ret)
 		return ret;
 
 	dst = (uint32_t *)cursor->map;
 	pitch = cursor->stride / 4;
-	copy_w = img_width < cap_w ? img_width : cap_w;
-	copy_h = img_height < cap_h ? img_height : cap_h;
-	off_x = (cap_w - copy_w) / 2;
-	off_y = (cap_h - copy_h) / 2;
+	copy_w = min(width, cursor->width);
+	copy_h = min(height, cursor->height);
 
 	for (y = 0; y < copy_h; y++) {
 		for (x = 0; x < copy_w; x++) {
-			dst[(off_y + y) * pitch + (off_x + x)] = pixels[y * img_width + x];
+			dst[y * pitch + x] = pixels[y * width + x];
 		}
 	}
 
-	cursor->hot_x = hot_x + off_x;
-	cursor->hot_y = hot_y + off_y;
+	cursor->hot_x = hot_x;
+	cursor->hot_y = hot_y;
 	cursor->off_x = 0;
 	cursor->off_y = 0;
 	cursor->active = true;
@@ -635,9 +628,11 @@ int uterm_drm_prepare_commit(int fd, struct uterm_drm_display *ddrm, drmModeAtom
 
 		if (cursor->active && cursor->visible) {
 			if (cursor_hotspot) {
-				if (set_drm_object_property(req, cp, "HOTSPOT_X", cursor->x) < 0)
+				if (set_drm_object_property(req, cp, "HOTSPOT_X", cursor->hot_x) <
+				    0)
 					return -1;
-				if (set_drm_object_property(req, cp, "HOTSPOT_Y", cursor->y) < 0)
+				if (set_drm_object_property(req, cp, "HOTSPOT_Y", cursor->hot_y) <
+				    0)
 					return -1;
 			}
 			if (set_drm_object_property(req, cp, "FB_ID", cursor->fb_id) < 0)

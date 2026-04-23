@@ -92,8 +92,7 @@ struct uterm_drm_display {
 int uterm_drm_display_set_dpms(struct uterm_display *disp, int state);
 
 int uterm_drm_display_setup_cursor(struct uterm_display *disp, const uint32_t *pixels,
-				   unsigned int img_width, unsigned int img_height, int hot_x,
-				   int hot_y);
+				   unsigned int width, unsigned int height, int hot_x, int hot_y);
 void uterm_drm_display_destroy_cursor(struct uterm_display *disp);
 int uterm_drm_display_show_cursor(struct uterm_display *disp, int32_t x, int32_t y);
 int uterm_drm_display_hide_cursor(struct uterm_display *disp);

@@ -52,8 +52,8 @@ struct display_ops {
 	void (*set_damage)(struct uterm_display *disp, size_t n_rect,
 			   struct uterm_video_rect *damages);
 	bool (*has_damage)(struct uterm_display *disp);
-	int (*setup_cursor)(struct uterm_display *disp, const uint32_t *pixels,
-			    unsigned int img_width, unsigned int img_height, int hot_x, int hot_y);
+	int (*setup_cursor)(struct uterm_display *disp, const uint32_t *pixels, unsigned int width,
+			    unsigned int height, int hot_x, int hot_y);
 	void (*destroy_cursor)(struct uterm_display *disp);
 	int (*show_cursor)(struct uterm_display *disp, int32_t x, int32_t y);
 	int (*hide_cursor)(struct uterm_display *disp);
