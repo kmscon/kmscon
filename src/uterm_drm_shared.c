@@ -381,12 +381,6 @@ err_buf:
 
 static void cursor_destroy_buffer(int fd, struct uterm_drm_cursor *cursor)
 {
-	if (!cursor->map)
-		return;
-
-	munmap(cursor->map, cursor->map_size);
-	cursor->map = NULL;
-
 	if (cursor->fb_id) {
 		drmModeRmFB(fd, cursor->fb_id);
 		cursor->fb_id = 0;
@@ -439,6 +433,9 @@ int uterm_drm_display_setup_cursor(struct uterm_display *disp, const uint32_t *p
 			dst[y * pitch + x] = pixels[y * width + x];
 		}
 	}
+	munmap(cursor->map, cursor->map_size);
+	cursor->map = NULL;
+	cursor->map_size = 0;
 
 	cursor->hot_x = hot_x;
 	cursor->hot_y = hot_y;
