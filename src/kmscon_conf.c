@@ -128,7 +128,7 @@ static void print_help()
 		"\t                                 Enable mouse support\n"
 		"\t    --soft-cursor              [off]\n"
 		"\t                                 Force software cursor\n"
-		"\t    --dpms-timeout <secs>      [0]\n"
+		"\t    --dpms-timeout <secs>      [600]\n"
 		"\t                                 Screen timeout in seconds (0=off)\n"
 		"\n"
 		"Grabs / Keyboard-Shortcuts:\n"
@@ -784,7 +784,7 @@ int kmscon_conf_new(struct conf_ctx **out)
 		CONF_OPTION_UINT(0, "xkb-repeat-rate", &conf->xkb_repeat_rate, 50),
 		CONF_OPTION_BOOL(0, "mouse", &conf->mouse, true),
 		CONF_OPTION_BOOL(0, "soft-cursor", &conf->soft_cursor, false),
-		CONF_OPTION_UINT(0, "dpms-timeout", &conf->dpms_timeout, 0),
+		CONF_OPTION_UINT(0, "dpms-timeout", &conf->dpms_timeout, 600),
 
 		/* Grabs / Keyboard-Shortcuts */
 		CONF_OPTION_GRAB(0, "grab-scroll-up", &conf->grab_scroll_up, &def_grab_scroll_up),

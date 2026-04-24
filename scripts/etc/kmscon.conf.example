@@ -85,7 +85,7 @@
 ## Screen timeout in seconds (0 = disabled)
 ## The screen will be turned off (DPMS OFF) after this period of inactivity
 ## Any keyboard or mouse input will turn the screen back on
-#dpms-timeout=0
+#dpms-timeout=600
 
 ## Terminal options
 ## value of the $TERM variable
