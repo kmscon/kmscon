@@ -1,4 +1,11 @@
 = KMSCON Release News =
+
+## CHANGES with 9.3.5
+* shl_lru: fix build error on i686 by @kdj0c in https://github.com/kmscon/kmscon/pull/363
+* Fix leaks by @kdj0c in https://github.com/kmscon/kmscon/pull/364
+* cursor: Fix hardware cursor on VM by @kdj0c in https://github.com/kmscon/kmscon/pull/366
+* dpms: Set default timeout to 10min by @kdj0c in https://github.com/kmscon/kmscon/pull/367
+
 ## CHANGES with 9.3.4
 * unifont: fix build on i686 by @kdj0c in https://github.com/kmscon/kmscon/pull/323
 * fix: change default value of `term` to linux in the example config by @mikelei8291 in https://github.com/kmscon/kmscon/pull/324

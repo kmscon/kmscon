@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 project('kmscon', 'c',
-  version: '9.3.4',
+  version: '9.3.5',
   license: 'MIT',
   # meson 0.58: f-string
   # meson 0.62: dependency libdl
