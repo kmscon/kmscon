@@ -1204,27 +1204,6 @@ void uterm_drm_video_arm_vt_timer(struct uterm_video *video)
 	ev_timer_update(vdrm->vt_timer, &spec);
 }
 
-static int set_drm_master(struct uterm_drm_video *vdrm)
-{
-	int ret;
-
-	if (vdrm->master)
-		return 0;
-
-	ret = drmSetMaster(vdrm->fd);
-	if (ret)
-		log_err("Cannot set drm master for %s", vdrm->name);
-	else
-		vdrm->master = true;
-	return ret;
-}
-
-static void drop_drm_master(struct uterm_drm_video *vdrm)
-{
-	drmDropMaster(vdrm->fd);
-	vdrm->master = false;
-}
-
 int uterm_drm_video_init(struct uterm_video *video, const char *node,
 			 const struct display_ops *display_ops, uterm_drm_page_flip_t pflip,
 			 void *data)
@@ -1248,14 +1227,21 @@ int uterm_drm_video_init(struct uterm_video *video, const char *node,
 		ret = -ENOMEM;
 		goto err_free;
 	}
-	vdrm->fd = open(node, O_RDWR | O_CLOEXEC | O_NONBLOCK);
-	if (vdrm->fd < 0) {
-		log_err("cannot open drm device %s (%d): %m", node, errno);
-		ret = -EFAULT;
-		goto err_free_name;
+
+	/* Use pre-opened fd from libseat if available */
+	if (video->preopen_fd >= 0) {
+		vdrm->fd = video->preopen_fd;
+		vdrm->external_fd = true;
+		log_info("using pre-opened fd %d for drm device %s", vdrm->fd, node);
+	} else {
+		vdrm->fd = open(node, O_RDWR | O_CLOEXEC | O_NONBLOCK);
+		if (vdrm->fd < 0) {
+			log_err("cannot open drm device %s (%d): %m", node, errno);
+			ret = -EFAULT;
+			goto err_free_name;
+		}
+		vdrm->external_fd = false;
 	}
-	/* TODO: fix the race-condition with DRM-Master-on-open */
-	drop_drm_master(vdrm);
 
 	ret = drmSetClientCap(vdrm->fd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1);
 	if (ret) {
@@ -1309,7 +1295,8 @@ void uterm_drm_video_destroy(struct uterm_video *video)
 	ev_eloop_unregister_idle_cb(video->eloop, do_pflips, video, EV_SINGLE);
 	shl_timer_free(vdrm->timer);
 	ev_eloop_rm_fd(vdrm->efd);
-	close(vdrm->fd);
+	if (!vdrm->external_fd)
+		close(vdrm->fd);
 	free(vdrm->name);
 	free(video->data);
 }
@@ -1514,8 +1501,6 @@ int uterm_drm_video_hotplug(struct uterm_video *video, bool read_dpms, bool mode
 			uterm_display_unbind(disp);
 	}
 	if (shl_dlist_empty(&video->displays)) {
-		// If there are no display available, drop drm master
-		drop_drm_master(vdrm);
 		goto finish_hotplug;
 	}
 
@@ -1537,26 +1522,14 @@ finish_hotplug:
 
 int uterm_drm_video_wake_up(struct uterm_video *video)
 {
-	int ret;
-	struct uterm_drm_video *vdrm = video->data;
-
-	ret = set_drm_master(vdrm);
-	if (ret)
-		return ret;
-
 	video->flags |= VIDEO_AWAKE | VIDEO_HOTPLUG;
-	ret = uterm_drm_video_hotplug(video, true, true);
-	if (ret)
-		drop_drm_master(vdrm);
-
-	return ret;
+	return uterm_drm_video_hotplug(video, true, true);
 }
 
 void uterm_drm_video_sleep(struct uterm_video *video)
 {
 	struct uterm_drm_video *vdrm = video->data;
 
-	drop_drm_master(vdrm);
 	ev_timer_drain(vdrm->vt_timer, NULL);
 	ev_timer_update(vdrm->vt_timer, NULL);
 }

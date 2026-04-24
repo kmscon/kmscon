@@ -14,6 +14,7 @@ Kmscon requires the following software:
   - [libxkbcommon](https://xkbcommon.org/): providing internationalized keyboard handling
   - [libdrm](https://gitlab.freedesktop.org/mesa/drm): graphics access to DRM/KMS subsystem
   - linux-headers: linux kernel headers for ABI definitions
+  - [libseat](https://sr.ht/~kennylevinsen/seatd/): seat management library
 
 Everything else is optional:
 

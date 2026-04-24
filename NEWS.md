@@ -1,4 +1,16 @@
 = KMSCON Release News =
+## CHANGES with 10.0.0 (unreleased)
+* New features
+  - libseat: new dependency.
+  - kmscon only needs to run as root when using `--tty`, or if its child
+    process needs to run as root (e.g.: `agetty`/`login`). libseat is
+    now used for integrating with the local seat manager.
+  - When using logind (either elogind or systemd-logind), kmscon needs to run
+    inside a PAM session. The supplied service files have been updated
+    accordingly.
+  - For an emergency rescue shell, run `LIBSEAT_BACKEND=builtin kmscon` as
+    root. This bypasses the seat manager entirely.
+
 ## CHANGES with 9.3.4
 * unifont: fix build on i686 by @kdj0c in https://github.com/kmscon/kmscon/pull/323
 * fix: change default value of `term` to linux in the example config by @mikelei8291 in https://github.com/kmscon/kmscon/pull/324

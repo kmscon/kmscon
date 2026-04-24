@@ -24,6 +24,7 @@
  */
 
 #include <errno.h>
+#include <libseat.h>
 #include <paths.h>
 #include <signal.h>
 #include <stdbool.h>
@@ -31,6 +32,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/signalfd.h>
+#include <unistd.h>
 #include "conf.h"
 #include "eloop.h"
 #include "kmscon_conf.h"
@@ -43,7 +45,6 @@
 #include "uterm_input.h"
 #include "uterm_monitor.h"
 #include "uterm_video.h"
-#include "uterm_vt.h"
 
 struct app_video {
 	struct shl_dlist list;
@@ -52,6 +53,8 @@ struct app_video {
 
 	char *node;
 	struct uterm_video *video;
+	int drm_device_id; /* libseat device id, -1 if not libseat-managed */
+	int drm_fd;	   /* fd from libseat_open_device */
 };
 
 struct app_seat {
@@ -71,11 +74,10 @@ struct kmscon_app {
 	struct conf_ctx *conf_ctx;
 	struct kmscon_conf_t *conf;
 	bool exiting;
+	int vt_num;
 
 	struct ev_eloop *eloop;
-	unsigned int vt_exit_count;
 
-	struct uterm_vt_master *vtm;
 	struct uterm_monitor *mon;
 	struct shl_dlist seats;
 	unsigned int running_seats;
@@ -110,13 +112,6 @@ static int app_seat_event(struct kmscon_seat *s, unsigned int event, void *data)
 		}
 
 		seat->awake = false;
-		break;
-	case KMSCON_SEAT_SLEEP:
-		if (app->vt_exit_count > 0) {
-			log_debug("deactivating VT on exit, %d to go", app->vt_exit_count - 1);
-			if (!--app->vt_exit_count)
-				ev_eloop_exit(app->eloop);
-		}
 		break;
 	case KMSCON_SEAT_WAKE_UP:
 		if (app->exiting)
@@ -158,7 +153,7 @@ static int app_seat_new(struct kmscon_app *app, const char *sname, struct uterm_
 {
 	struct app_seat *seat;
 	int ret;
-	unsigned int i, types;
+	unsigned int i;
 	bool found;
 	char *cseat;
 
@@ -207,17 +202,10 @@ static int app_seat_new(struct kmscon_app *app, const char *sname, struct uterm_
 		goto err_free;
 	}
 
-	types = UTERM_VT_FAKE;
-	if (!app->conf->listen)
-		types |= UTERM_VT_REAL;
-
-	ret = kmscon_seat_new(&seat->seat, app->conf_ctx, app->eloop, app->vtm, types, sname,
-			      app_seat_event, seat);
+	ret = kmscon_seat_new(&seat->seat, app->conf_ctx, app->eloop, sname, app_seat_event,
+			      app->vt_num, seat);
 	if (ret) {
-		if (ret == -ERANGE)
-			log_debug("ignoring seat %s as it already has a seat manager", sname);
-		else
-			log_error("cannot create seat object on seat %s: %d", sname, ret);
+		log_error("cannot create seat object on seat %s: %d", sname, ret);
 		goto err_name;
 	}
 	seat->conf_ctx = kmscon_seat_get_conf(seat->seat);
@@ -317,6 +305,8 @@ static int app_seat_add_video(struct app_seat *seat, unsigned int type, unsigned
 	int ret;
 	const char *backend;
 	struct app_video *vid;
+	struct libseat *libseat;
+	int drm_fd = -1, drm_device_id = -1;
 
 	if (seat->app->exiting)
 		return -EBUSY;
@@ -336,6 +326,8 @@ static int app_seat_add_video(struct app_seat *seat, unsigned int type, unsigned
 	memset(vid, 0, sizeof(*vid));
 	vid->seat = seat;
 	vid->udev = udev;
+	vid->drm_device_id = -1;
+	vid->drm_fd = -1;
 
 	vid->node = strdup(node);
 	if (!vid->node) {
@@ -349,6 +341,18 @@ static int app_seat_add_video(struct app_seat *seat, unsigned int type, unsigned
 			backend = be_drm3d;
 		else
 			backend = be_drm2d;
+
+		libseat = kmscon_seat_get_libseat(seat->seat);
+		if (libseat) {
+			drm_device_id = libseat_open_device(libseat, node, &drm_fd);
+			if (drm_device_id < 0) {
+				log_error("cannot open DRM device %s via libseat: %m", node);
+				ret = -errno;
+				goto err_node;
+			}
+			vid->drm_device_id = drm_device_id;
+			vid->drm_fd = drm_fd;
+		}
 	} else {
 		backend = be_fbdev;
 	}
@@ -366,18 +370,18 @@ static int app_seat_add_video(struct app_seat *seat, unsigned int type, unsigned
 		}
 	}
 	ret = uterm_video_new(&vid->video, seat->app->eloop, node, backend, desired_width,
-			      desired_height, seat->conf->use_original_mode);
+			      desired_height, seat->conf->use_original_mode, drm_fd);
 	if (ret) {
 		if (backend == be_drm3d) {
 			log_info("cannot create drm3d device %s on seat %s (%d); trying drm2d mode",
 				 vid->node, seat->name, ret);
 			ret = uterm_video_new(&vid->video, seat->app->eloop, node, be_drm2d,
 					      desired_width, desired_height,
-					      seat->conf->use_original_mode);
+					      seat->conf->use_original_mode, drm_fd);
 			if (ret)
-				goto err_node;
+				goto err_drm;
 		} else {
-			goto err_node;
+			goto err_drm;
 		}
 	}
 
@@ -397,6 +401,14 @@ static int app_seat_add_video(struct app_seat *seat, unsigned int type, unsigned
 
 err_video:
 	uterm_video_unref(vid->video);
+err_drm:
+	if (vid->drm_device_id >= 0) {
+		libseat = kmscon_seat_get_libseat(seat->seat);
+		if (libseat)
+			libseat_close_device(libseat, vid->drm_device_id);
+		if (vid->drm_fd >= 0)
+			close(vid->drm_fd);
+	}
 err_node:
 	free(vid->node);
 err_free:
@@ -407,6 +419,7 @@ err_free:
 static void app_seat_remove_video(struct app_seat *seat, struct app_video *vid)
 {
 	struct uterm_display *disp;
+	struct libseat *libseat;
 
 	log_debug("free video device %s on seat %s", vid->node, seat->name);
 
@@ -421,6 +434,15 @@ static void app_seat_remove_video(struct app_seat *seat, struct app_video *vid)
 	}
 
 	uterm_video_unref(vid->video);
+
+	if (vid->drm_device_id >= 0) {
+		libseat = kmscon_seat_get_libseat(seat->seat);
+		if (libseat)
+			libseat_close_device(libseat, vid->drm_device_id);
+		if (vid->drm_fd >= 0)
+			close(vid->drm_fd);
+	}
+
 	free(vid->node);
 	free(vid);
 }
@@ -512,7 +534,6 @@ static void app_sig_ignore(struct ev_eloop *eloop, struct signalfd_siginfo *info
 static void destroy_app(struct kmscon_app *app)
 {
 	uterm_monitor_unref(app->mon);
-	uterm_vt_master_unref(app->vtm);
 	ev_eloop_unregister_signal_cb(app->eloop, SIGPIPE, app_sig_ignore, app);
 	ev_eloop_unregister_signal_cb(app->eloop, SIGINT, app_sig_generic, app);
 	ev_eloop_unregister_signal_cb(app->eloop, SIGTERM, app_sig_generic, app);
@@ -547,12 +568,6 @@ static int setup_app(struct kmscon_app *app)
 	ret = ev_eloop_register_signal_cb(app->eloop, SIGPIPE, app_sig_ignore, app);
 	if (ret) {
 		log_error("cannot register SIGPIPE signal handler: %d", ret);
-		goto err_app;
-	}
-
-	ret = uterm_vt_master_new(&app->vtm, app->eloop);
-	if (ret) {
-		log_error("cannot create VT master: %d", ret);
 		goto err_app;
 	}
 
@@ -605,6 +620,20 @@ int main(int argc, char **argv)
 	app.conf_ctx = conf_ctx;
 	app.conf = conf;
 
+	/*
+	 * If --vt is specified, wait for that VT to become active before
+	 * connecting to libseat. This ensures seatd assigns us to the correct VT.
+	 */
+	if (conf->vt) {
+		ret = kmscon_seat_wait_for_vt(conf->vt, &app.vt_num);
+		if (ret) {
+			// SIGTERM is not an error, but we need to exit the program with 0.
+			if (ret == -EBUSY)
+				ret = 0;
+			goto err_unload;
+		}
+	}
+
 	ret = setup_app(&app);
 	if (ret)
 		goto err_unload;
@@ -617,23 +646,6 @@ int main(int argc, char **argv)
 	}
 
 	app.exiting = true;
-
-	if (app.conf->switchvt) {
-		/* The VT subsystem needs to acknowledge the VT-leave so if it
-		 * returns -EINPROGRESS we need to wait for the VT-leave SIGUSR2
-		 * signal to arrive. Therefore, we use a separate eloop object
-		 * which is used by the VT system only. Therefore, waiting on
-		 * this eloop allows us to safely wait 50ms for the SIGUSR2 to
-		 * arrive.
-		 * We use a timeout of 100ms to avoid hanging on exit. */
-		log_debug("deactivating VTs during shutdown");
-		ret = uterm_vt_master_deactivate_all(app.vtm);
-		if (ret > 0) {
-			log_debug("waiting for %d VTs to deactivate", ret);
-			app.vt_exit_count = ret;
-			ev_eloop_run(app.eloop, 50);
-		}
-	}
 
 	ret = 0;
 

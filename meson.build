@@ -72,6 +72,7 @@ else
 	multi_seat_dep = 'libsystemd'
 endif
 libsystemd_deps = dependency(multi_seat_dep, disabler: true, required: get_option('multi_seat'))
+libseat_deps = dependency('libseat')
 libdrm_deps = dependency('libdrm', disabler: true, required: require_libdrm)
 gbm_deps = dependency('gbm', disabler: true, required: get_option('video_drm3d'))
 egl_deps = dependency('egl', disabler: true, required: get_option('video_drm3d'))
@@ -220,4 +221,9 @@ install_data(
 install_data(
   'scripts/systemd/kmsconvt@.service',
   install_dir: systemdsystemunitdir,
+)
+install_data(
+  'scripts/pam/kmscon',
+  install_dir: get_option('sysconfdir') / 'pam.d',
+  rename: 'kmscon',
 )

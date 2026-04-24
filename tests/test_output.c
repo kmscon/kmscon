@@ -198,13 +198,13 @@ int main(int argc, char **argv)
 	log_notice("Creating video object using %s...", node);
 
 	ret = uterm_video_new(&video, eloop, node, mode, output_conf.desired_width,
-			      output_conf.desired_height, false);
+			      output_conf.desired_height, false, -1);
 	if (ret) {
 		if (!output_conf.fbdev) {
 			log_notice("cannot create drm device; trying drm2d mode");
 			ret = uterm_video_new(&video, eloop, node, "drm2d",
 					      output_conf.desired_width, output_conf.desired_height,
-					      false);
+					      false, -1);
 			if (ret)
 				goto err_exit;
 		} else {

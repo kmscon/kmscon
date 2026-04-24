@@ -99,7 +99,6 @@ eloop_deps = declare_dependency(
 uterm_srcs = [
   'uterm_video.c',
   'uterm_monitor.c',
-  'uterm_vt.c',
   'uterm_input.c',
   'uterm_input_uxkb.c',
   'uterm_input_pointer.c',
@@ -108,6 +107,7 @@ uterm_srcs = [
 uterm_dep = [
   libudev_deps,
   xkbcommon_deps,
+  libseat_deps,
   shl_deps,
   eloop_deps,
 ]

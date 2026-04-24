@@ -6,6 +6,8 @@ After=systemd-user-sessions.service
 After=rc-local.service
 
 [Service]
+User=root
+PAMName=kmscon
 ExecStart=kmscon
 
 [Install]

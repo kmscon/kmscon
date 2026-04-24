@@ -30,12 +30,21 @@
  */
 
 #include <errno.h>
+#include <fcntl.h>
+#include <libseat.h>
+#include <linux/kd.h>
+#include <linux/major.h>
+#include <linux/vt.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/ioctl.h>
 #include <sys/reboot.h>
+#include <sys/stat.h>
+#include <sys/sysmacros.h>
 #include <unistd.h>
+#include <xkbcommon/xkbcommon-keysyms.h>
 #include "conf.h"
 #include "eloop.h"
 #include "kmscon_conf.h"
@@ -44,9 +53,9 @@
 #include "kmscon_terminal.h"
 #include "shl_dlist.h"
 #include "shl_log.h"
+#include "shl_misc.h"
 #include "uterm_input.h"
 #include "uterm_video.h"
-#include "uterm_vt.h"
 
 #define LOG_SUBSYSTEM "seat"
 
@@ -80,13 +89,16 @@ enum kmscon_async_schedule {
 
 struct kmscon_seat {
 	struct ev_eloop *eloop;
-	struct uterm_vt_master *vtm;
 	struct conf_ctx *conf_ctx;
 	struct kmscon_conf_t *conf;
 
 	char *name;
 	struct uterm_input *input;
-	struct uterm_vt *vt;
+	struct libseat *libseat;
+	struct ev_fd *libseat_efd;
+	int tty_fd;
+	int tty_num;
+	int saved_kbmode;
 	struct shl_dlist displays;
 
 	size_t session_count;
@@ -179,6 +191,7 @@ static void activate_display(struct kmscon_display *d)
 		{
 			s = shl_dlist_entry(iter, struct kmscon_session, list);
 			session_call_display_new(s, d->disp);
+			session_call_display_refresh(s, d->disp);
 		}
 	}
 }
@@ -236,7 +249,7 @@ static int seat_go_background(struct kmscon_seat *seat, bool force)
 
 static int seat_go_asleep(struct kmscon_seat *seat, bool force)
 {
-	int ret, err = 0;
+	int err = 0;
 
 	if (!seat->awake)
 		return 0;
@@ -247,15 +260,6 @@ static int seat_go_asleep(struct kmscon_seat *seat, bool force)
 			err = -EBUSY;
 		} else {
 			return -EBUSY;
-		}
-	}
-
-	if (seat->cb) {
-		ret = seat->cb(seat, KMSCON_SEAT_SLEEP, seat->data);
-		if (ret) {
-			log_warning("cannot put seat %s asleep: %d", seat->name, ret);
-			if (!force)
-				return ret;
 		}
 	}
 
@@ -534,37 +538,53 @@ static void seat_refresh_display(struct kmscon_seat *seat, struct kmscon_display
 	}
 }
 
-static int seat_vt_event(struct uterm_vt *vt, struct uterm_vt_event *ev, void *data)
+static void seat_tty_activate(struct kmscon_seat *seat);
+static void seat_tty_deactivate(struct kmscon_seat *seat);
+
+static void seat_libseat_enable(struct libseat *libseat, void *data)
 {
 	struct kmscon_seat *seat = data;
 	int ret;
 
-	switch (ev->action) {
-	case UTERM_VT_ACTIVATE:
-		ret = seat_go_awake(seat);
-		if (ret)
-			return ret;
-		seat_run(seat);
-		break;
-	case UTERM_VT_DEACTIVATE:
-		seat->async_schedule = SCHEDULE_VT;
-		ret = seat_pause(seat, false);
-		if (ret)
-			return ret;
-		ret = seat_go_background(seat, false);
-		if (ret)
-			return ret;
-		ret = seat_go_asleep(seat, false);
-		if (ret)
-			return ret;
-		break;
-	case UTERM_VT_HUP:
-		if (seat->cb)
-			seat->cb(seat, KMSCON_SEAT_HUP, seat->data);
-		break;
-	}
+	struct shl_dlist *iter;
+	struct kmscon_display *d;
 
-	return 0;
+	log_debug("libseat: seat enabled");
+	seat_tty_activate(seat);
+	ret = seat_go_awake(seat);
+	if (ret) {
+		log_warning("cannot wake up seat on enable: %d", ret);
+		return;
+	}
+	seat_run(seat);
+
+	/* Force redraw after VT switch */
+	shl_dlist_for_each(iter, &seat->displays)
+	{
+		d = shl_dlist_entry(iter, struct kmscon_display, list);
+		seat_refresh_display(seat, d);
+	}
+}
+
+static void seat_libseat_disable(struct libseat *libseat, void *data)
+{
+	struct kmscon_seat *seat = data;
+
+	log_debug("libseat: seat disabled");
+	seat->async_schedule = SCHEDULE_VT;
+	seat_pause(seat, true);
+	seat_go_background(seat, true);
+	seat_go_asleep(seat, true);
+	seat_tty_deactivate(seat);
+	libseat_disable_seat(seat->libseat);
+}
+
+static void seat_libseat_event(struct ev_fd *fd, int mask, void *data)
+{
+	struct kmscon_seat *seat = data;
+
+	if (libseat_dispatch(seat->libseat, 0) < 0)
+		log_warning("libseat dispatch failed: %m");
 }
 
 static void seat_trigger_reboot(struct kmscon_seat *seat)
@@ -741,7 +761,7 @@ static void seat_input_event(struct uterm_input *input, struct uterm_input_key_e
 		ev->handled = true;
 		if (!seat->conf->session_control)
 			return;
-		ret = kmscon_terminal_register(&s, seat, uterm_vt_get_num(seat->vt));
+		ret = kmscon_terminal_register(&s, seat, seat->tty_num);
 		if (ret == -EOPNOTSUPP) {
 			log_notice("terminal support not compiled in");
 		} else if (ret) {
@@ -758,6 +778,24 @@ static void seat_input_event(struct uterm_input *input, struct uterm_input_key_e
 		ev->handled = true;
 		seat_trigger_reboot(seat);
 		return;
+	}
+
+	/* VT switching via Ctrl+Alt+F1-F12 or XF86Switch_VT keys */
+	if (seat->libseat) {
+		int vt_id = 0;
+		if (SHL_HAS_BITS(ev->mods, SHL_CONTROL_MASK | SHL_ALT_MASK) &&
+		    ev->keysyms[0] >= XKB_KEY_F1 && ev->keysyms[0] <= XKB_KEY_F12) {
+			ev->handled = true;
+			vt_id = ev->keysyms[0] - XKB_KEY_F1 + 1;
+		} else if (ev->keysyms[0] >= XKB_KEY_XF86Switch_VT_1 &&
+			   ev->keysyms[0] <= XKB_KEY_XF86Switch_VT_12) {
+			ev->handled = true;
+			vt_id = ev->keysyms[0] - XKB_KEY_XF86Switch_VT_1 + 1;
+		}
+		if (vt_id > 0 && vt_id != seat->tty_num) {
+			log_debug("switching to VT %d via libseat", vt_id);
+			libseat_switch_session(seat->libseat, vt_id);
+		}
 	}
 }
 
@@ -781,17 +819,170 @@ static const char *find_locale(void)
 	return locale;
 }
 
+static int wait_for_signal(void)
+{
+	sigset_t set, oldset;
+	int sig, ret = -EINTR;
+
+	// Initialize the set and add the signals
+	sigemptyset(&set);
+	sigaddset(&set, SIGUSR1);
+	sigaddset(&set, SIGUSR2);
+	sigaddset(&set, SIGTERM);
+	sigaddset(&set, SIGINT);
+	sigaddset(&set, SIGPIPE);
+
+	// Block the signals so they don't trigger the default handlers
+	sigprocmask(SIG_BLOCK, &set, &oldset);
+	log_debug("Waiting for SIGUSR1 or SIGTERM (PID: %d)...\n", getpid());
+
+	// Wait until one of the signals in 'set' is delivered
+	sigwait(&set, &sig);
+
+	if (sig == SIGUSR1) {
+		log_debug("Our VT is now active");
+		ret = 0;
+	} else if (sig == SIGTERM) {
+		// SIGTERM is not an error, but we need to exit the loop.
+		log_debug("Received SIGTERM. Exiting.");
+		ret = -EBUSY;
+	} else {
+		log_debug("Received signal %d. Exiting.", sig);
+	}
+
+	// restore the old signal mask
+	sigprocmask(SIG_SETMASK, &oldset, NULL);
+	return ret;
+}
+
+int kmscon_seat_wait_for_vt(char *vt_name, int *vt_num)
+{
+	int fd, ret;
+	struct stat st;
+	struct vt_mode mode;
+	struct vt_stat stat;
+
+	fd = open(vt_name, O_RDWR | O_NOCTTY | O_CLOEXEC);
+	if (fd < 0) {
+		log_err("cannot open tty %s (%d): %m", vt_name, errno);
+		return -ENOENT;
+	}
+
+	ret = fstat(fd, &st);
+	if (ret || major(st.st_rdev) != TTY_MAJOR) {
+		log_err("%s is not a VT", vt_name);
+		close(fd);
+		return -EINVAL;
+	}
+	*vt_num = minor(st.st_rdev);
+
+	ret = ioctl(fd, VT_GETSTATE, &stat);
+	if (ret) {
+		log_err("VT_GETSTATE failed for VT %d: %m", *vt_num);
+		close(fd);
+		return -EINVAL;
+	}
+	if (stat.v_active == *vt_num) {
+		log_info("VT %d is already active", *vt_num);
+		close(fd);
+		return 0;
+	}
+
+	memset(&mode, 0, sizeof(mode));
+	mode.mode = VT_PROCESS;
+	mode.acqsig = SIGUSR1;
+	mode.relsig = SIGUSR2;
+	if (ioctl(fd, VT_SETMODE, &mode)) {
+		log_err("VT_SETMODE failed for VT %d: %m", *vt_num);
+		close(fd);
+		return -EINVAL;
+	}
+	ret = wait_for_signal();
+	close(fd);
+	return ret;
+}
+
+/*
+ * Open the TTY for our VT. Called once after seat_wait_for_vt determines
+ * which VT seatd assigned to us. The fd is kept for the lifetime of the
+ * seat and used by activate/deactivate to toggle KD_GRAPHICS and K_OFF.
+ */
+static int seat_open_tty(struct kmscon_seat *seat, char *vt_path)
+{
+	int fd, ret;
+
+	fd = open(vt_path, O_RDWR | O_NOCTTY | O_CLOEXEC);
+	if (fd < 0) {
+		log_warning("cannot open VT %s: %m", vt_path);
+		return -errno;
+	}
+
+	seat->tty_fd = fd;
+
+	ret = ioctl(fd, KDGKBMODE, &seat->saved_kbmode);
+	if (ret)
+		seat->saved_kbmode = K_UNICODE;
+	if (seat->saved_kbmode == K_OFF)
+		seat->saved_kbmode = K_UNICODE;
+
+	return 0;
+}
+
+/*
+ * Set KD_GRAPHICS and K_OFF on our VT. Called when our session is enabled.
+ *
+ * Some libseat backends (elogind/logind) do not set K_OFF, so we
+ * always do it ourselves. It's harmless if seatd already set it.
+ */
+static void seat_tty_activate(struct kmscon_seat *seat)
+{
+	if (seat->tty_fd < 0)
+		return;
+
+	log_debug("activating VT %d", seat->tty_num);
+	ioctl(seat->tty_fd, KDSETMODE, KD_GRAPHICS);
+	ioctl(seat->tty_fd, KDSKBMODE, K_OFF);
+}
+
+/*
+ * Restore VT to text mode. Called when our session is disabled.
+ */
+static void seat_tty_deactivate(struct kmscon_seat *seat)
+{
+	if (seat->tty_fd < 0)
+		return;
+
+	log_debug("deactivating VT %d", seat->tty_num);
+	ioctl(seat->tty_fd, KDSKBMODE, seat->saved_kbmode);
+	ioctl(seat->tty_fd, KDSETMODE, KD_TEXT);
+}
+
+static void seat_close_tty(struct kmscon_seat *seat)
+{
+	if (seat->tty_fd < 0)
+		return;
+
+	ioctl(seat->tty_fd, KDSKBMODE, seat->saved_kbmode);
+	ioctl(seat->tty_fd, KDSETMODE, KD_TEXT);
+	close(seat->tty_fd);
+	seat->tty_fd = -1;
+}
+
+static const struct libseat_seat_listener seat_libseat_listener = {
+	.enable_seat = seat_libseat_enable,
+	.disable_seat = seat_libseat_disable,
+};
+
 int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf, struct ev_eloop *eloop,
-		    struct uterm_vt_master *vtm, unsigned int vt_types, const char *seatname,
-		    kmscon_seat_cb_t cb, void *data)
+		    const char *seatname, kmscon_seat_cb_t cb, int vt_num, void *data)
 {
 	struct kmscon_seat *seat;
-	int ret;
+	int ret, libseat_fd;
 	const char *locale;
 	char *keymap, *compose_file;
 	size_t compose_file_len;
 
-	if (!out || !eloop || !vtm || !seatname)
+	if (!out || !eloop || !seatname)
 		return -EINVAL;
 
 	seat = malloc(sizeof(*seat));
@@ -799,9 +990,10 @@ int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf, struct
 		return -ENOMEM;
 	memset(seat, 0, sizeof(*seat));
 	seat->eloop = eloop;
-	seat->vtm = vtm;
 	seat->cb = cb;
 	seat->data = data;
+	seat->tty_fd = -1;
+	seat->tty_num = vt_num;
 	shl_dlist_init(&seat->displays);
 	shl_dlist_init(&seat->sessions);
 
@@ -825,11 +1017,52 @@ int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf, struct
 		goto err_conf;
 	}
 
+	/*
+	 * If --vt is specified, open the TTY for our VT.
+	 */
+	if (seat->conf->vt)
+		seat_open_tty(seat, seat->conf->vt);
+
+	/*
+	 * Open libseat. If another client is still being disabled (race
+	 * between VT_WAITACTIVE and seatd processing the switch), retry
+	 * briefly.
+	 */
+	for (int attempts = 0; attempts < 50; attempts++) {
+		seat->libseat = libseat_open_seat(&seat_libseat_listener, seat);
+		if (seat->libseat)
+			break;
+		if (errno != EBUSY && errno != EBADF) {
+			if (attempts == 0) {
+				log_warning(
+					"cannot open libseat: %m, trying again with noop backend");
+				setenv("LIBSEAT_BACKEND", "noop", 1);
+				continue;
+			}
+			log_error("cannot open libseat: %m");
+			ret = -errno;
+			goto err_conf;
+		}
+		if (attempts == 0)
+			log_info("seat busy, waiting for previous client to release...");
+		usleep(100000);
+	}
+	if (!seat->libseat) {
+		log_error("cannot open libseat after retries: %m");
+		ret = -errno;
+		goto err_conf;
+	}
+
+	libseat_fd = libseat_get_fd(seat->libseat);
+	ret = ev_eloop_new_fd(seat->eloop, &seat->libseat_efd, libseat_fd, EV_READABLE,
+			      seat_libseat_event, seat);
+	if (ret) {
+		log_error("cannot register libseat fd with eloop: %d", ret);
+		goto err_libseat;
+	}
+
 	locale = find_locale();
 
-	/* TODO: The XKB-API currently requires zero-terminated strings as
-	 * keymap input. Hence, we have to read it in instead of using mmap().
-	 * We should fix this upstream! */
 	keymap = NULL;
 	if (seat->conf->xkb_keymap && *seat->conf->xkb_keymap) {
 		ret = shl_read_file(seat->conf->xkb_keymap, &keymap, NULL);
@@ -846,14 +1079,15 @@ int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf, struct
 				  ret);
 	}
 
-	ret = uterm_input_new(
-		&seat->input, seat->eloop, seat->conf->xkb_model, seat->conf->xkb_layout,
-		seat->conf->xkb_variant, seat->conf->xkb_options, locale, keymap, compose_file,
-		compose_file_len, seat->conf->xkb_repeat_delay, seat->conf->xkb_repeat_rate);
+	ret = uterm_input_new(&seat->input, seat->eloop, seat->libseat, seat->conf->xkb_model,
+			      seat->conf->xkb_layout, seat->conf->xkb_variant,
+			      seat->conf->xkb_options, locale, keymap, compose_file,
+			      compose_file_len, seat->conf->xkb_repeat_delay,
+			      seat->conf->xkb_repeat_rate);
 	free(keymap);
 
 	if (ret)
-		goto err_conf;
+		goto err_libseat_fd;
 
 	ret = uterm_input_register_key_cb(seat->input, seat_input_event, seat);
 	if (ret)
@@ -878,34 +1112,22 @@ int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf, struct
 		if (ret) {
 			log_warning("cannot create DPMS timer: %d", ret);
 		} else {
-			/* Start the timer */
 			memset(&spec, 0, sizeof(spec));
 			spec.it_value.tv_sec = seat->conf->dpms_timeout;
 			ev_timer_update(seat->dpms_timer, &spec);
 		}
 	}
 
-	ret = uterm_vt_allocate(seat->vtm, &seat->vt, vt_types, seat->name, seat->input,
-				seat->conf->vt, seat_vt_event, seat);
-	if (ret)
-		goto err_input_cb;
-
-	if (seat->conf->session_control && uterm_vt_get_type(seat->vt) == UTERM_VT_REAL) {
-		log_warning("session control cannot be configured on real VT, disabling session "
-			    "control");
-		seat->conf->session_control = false;
-	}
-
 	ev_eloop_ref(seat->eloop);
-	uterm_vt_master_ref(seat->vtm);
 	*out = seat;
 	return 0;
 
-err_input_cb:
-	uterm_input_unregister_key_cb(seat->input, seat_input_event, seat);
-	uterm_input_unregister_pointer_cb(seat->input, seat_pointer_event, seat);
 err_input:
 	uterm_input_unref(seat->input);
+err_libseat_fd:
+	ev_eloop_rm_fd(seat->libseat_efd);
+err_libseat:
+	libseat_close_seat(seat->libseat);
 err_conf:
 	kmscon_conf_free(seat->conf_ctx);
 err_name:
@@ -946,13 +1168,14 @@ void kmscon_seat_free(struct kmscon_seat *seat)
 	if (seat->dpms_timer)
 		ev_timer_unref(seat->dpms_timer);
 
-	uterm_vt_deallocate(seat->vt);
 	uterm_input_unregister_key_cb(seat->input, seat_input_event, seat);
 	uterm_input_unregister_pointer_cb(seat->input, seat_pointer_event, seat);
 	uterm_input_unref(seat->input);
+	seat_close_tty(seat);
+	ev_eloop_rm_fd(seat->libseat_efd);
+	libseat_close_seat(seat->libseat);
 	kmscon_conf_free(seat->conf_ctx);
 	free(seat->name);
-	uterm_vt_master_unref(seat->vtm);
 	ev_eloop_unref(seat->eloop);
 	free(seat);
 }
@@ -976,7 +1199,7 @@ void kmscon_seat_startup(struct kmscon_seat *seat)
 	}
 
 	if (seat->conf->terminal_session) {
-		ret = kmscon_terminal_register(&s, seat, uterm_vt_get_num(seat->vt));
+		ret = kmscon_terminal_register(&s, seat, seat->tty_num);
 		if (ret == -EOPNOTSUPP)
 			log_notice("terminal support not compiled in");
 		else if (ret)
@@ -985,8 +1208,17 @@ void kmscon_seat_startup(struct kmscon_seat *seat)
 			kmscon_session_enable(s);
 	}
 
-	if (seat->conf->switchvt || uterm_vt_get_type(seat->vt) == UTERM_VT_FAKE)
-		uterm_vt_activate(seat->vt);
+	/*
+	 * Block until libseat enables our session. Device discovery
+	 * (uterm_monitor_scan) happens after this returns, and opening
+	 * devices via libseat requires an active session.
+	 */
+	while (!seat->awake) {
+		if (libseat_dispatch(seat->libseat, 5000) < 0) {
+			log_error("libseat dispatch failed while waiting for enable: %m");
+			break;
+		}
+	}
 }
 
 int kmscon_seat_add_display(struct kmscon_seat *seat, struct uterm_display *disp)
@@ -1082,6 +1314,14 @@ struct conf_ctx *kmscon_seat_get_conf(struct kmscon_seat *seat)
 		return NULL;
 
 	return seat->conf_ctx;
+}
+
+struct libseat *kmscon_seat_get_libseat(struct kmscon_seat *seat)
+{
+	if (!seat)
+		return NULL;
+
+	return seat->libseat;
 }
 
 void kmscon_seat_schedule(struct kmscon_seat *seat, unsigned int id)
@@ -1242,10 +1482,6 @@ int kmscon_session_set_foreground(struct kmscon_session *sess)
 
 	seat = sess->seat;
 	if (seat && seat->current_sess == sess && !seat->foreground) {
-		ret = uterm_vt_restore(seat->vt);
-		if (ret)
-			return ret;
-
 		ret = seat_go_foreground(seat, true);
 		if (ret)
 			return ret;
@@ -1326,10 +1562,13 @@ bool kmscon_session_is_enabled(struct kmscon_session *sess)
 
 void kmscon_session_bell(struct kmscon_session *sess)
 {
-	if (!sess || !sess->seat)
+	int ret;
+	if (!sess || !sess->seat || sess->seat->tty_fd <= 0)
 		return;
 
-	uterm_vt_bell(sess->seat->vt);
+	ret = write(sess->seat->tty_fd, "\a", 1);
+	if (ret != 1)
+		log_warning("cannot write bell to VT (%d): %m", sess->seat->tty_num);
 }
 
 void kmscon_session_set_leds(struct kmscon_session *sess, unsigned int scroll_lock,
@@ -1366,7 +1605,7 @@ void kmscon_session_notify_deactivated(struct kmscon_session *sess)
 		ret = seat_go_asleep(seat, false);
 		if (ret)
 			return;
-		uterm_vt_retry(seat->vt);
+		/* libseat handles VT switch acknowledgment */
 	} else if (sched == SCHEDULE_UNREGISTER) {
 		kmscon_session_unregister(sess);
 	} else {

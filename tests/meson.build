@@ -4,7 +4,6 @@
 
 foreach name, deps : {
   'output': [uterm_deps],
-  'vt': [uterm_deps],
   'input': [uterm_deps],
   'key': [],
 }

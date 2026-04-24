@@ -141,6 +141,7 @@ struct uterm_video {
 	bool use_original;
 	unsigned int desired_width;
 	unsigned int desired_height;
+	int preopen_fd; /* pre-opened fd from libseat, -1 if none */
 
 	const struct uterm_video_module *mod;
 	void *data;

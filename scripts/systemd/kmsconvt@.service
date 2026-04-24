@@ -38,6 +38,8 @@ IgnoreOnIsolate=yes
 ConditionPathExists=/dev/tty0
 
 [Service]
+User=root
+PAMName=kmscon
 ExecStart=kmscon --vt=%I --seats=seat0 --no-switchvt
 UtmpIdentifier=%I
 TTYPath=/dev/%I

@@ -30,6 +30,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <libseat.h>
 #include <limits.h>
 #include <linux/input-event-codes.h>
 #include <linux/input.h>
@@ -51,6 +52,7 @@
 #define NLONGS(n) (((n) + LONG_BIT - 1) / LONG_BIT)
 
 static void input_free_dev(struct uterm_input_dev *dev);
+static void input_sleep_dev(struct uterm_input_dev *dev);
 
 static void notify_event(struct uterm_input_dev *dev, uint16_t type, uint16_t code, int32_t value)
 {
@@ -81,7 +83,7 @@ static void input_data_dev(struct ev_fd *fd, int mask, void *data)
 
 	if (mask & (EV_HUP | EV_ERR)) {
 		log_debug("EOF on %s", dev->node);
-		input_free_dev(dev);
+		input_sleep_dev(dev);
 		return;
 	}
 
@@ -91,11 +93,11 @@ static void input_data_dev(struct ev_fd *fd, int mask, void *data)
 		if (len < 0) {
 			if (errno == EWOULDBLOCK)
 				break;
-			log_warn("reading from %s failed (%d): %m", dev->node, errno);
-			input_free_dev(dev);
+			log_warning("reading from %s failed (%d): %m", dev->node, errno);
+			input_sleep_dev(dev);
 		} else if (len == 0) {
 			log_debug("EOF on %s", dev->node);
-			input_free_dev(dev);
+			input_sleep_dev(dev);
 		} else if (len % sizeof(*ev)) {
 			log_warn("invalid input_event on %s", dev->node);
 		} else {
@@ -108,24 +110,38 @@ static void input_data_dev(struct ev_fd *fd, int mask, void *data)
 
 static int input_wake_up_dev(struct uterm_input_dev *dev)
 {
-	int ret;
+	int ret, fd;
 
 	if (dev->rfd >= 0)
 		return 0;
 
-	dev->rfd = open(dev->node, O_CLOEXEC | O_NONBLOCK | O_RDWR);
-	if (dev->rfd < 0) {
-		log_warn("cannot open device %s (%d): %m", dev->node, errno);
-		return -EFAULT;
+	if (dev->input->libseat) {
+		dev->device_id = libseat_open_device(dev->input->libseat, dev->node, &fd);
+		if (dev->device_id < 0) {
+			log_warning("cannot open device %s via libseat (%d): %m", dev->node, errno);
+			return -EFAULT;
+		}
+		dev->rfd = fd;
+	} else {
+		dev->rfd = open(dev->node, O_CLOEXEC | O_NONBLOCK | O_RDWR);
+		if (dev->rfd < 0) {
+			log_warning("cannot open device %s (%d): %m", dev->node, errno);
+			return -EFAULT;
+		}
+		dev->device_id = -1;
 	}
+
 	if (dev->capabilities & UTERM_DEVICE_HAS_KEYS)
 		uxkb_dev_wake_up(dev);
 
 	ret = ev_eloop_new_fd(dev->input->eloop, &dev->fd, dev->rfd, EV_READABLE, input_data_dev,
 			      dev);
 	if (ret) {
+		if (dev->input->libseat && dev->device_id >= 0)
+			libseat_close_device(dev->input->libseat, dev->device_id);
 		close(dev->rfd);
 		dev->rfd = -1;
+		dev->device_id = -1;
 		return ret;
 	}
 
@@ -141,8 +157,11 @@ static void input_sleep_dev(struct uterm_input_dev *dev)
 	ev_timer_update(dev->repeat_timer, NULL);
 	ev_eloop_rm_fd(dev->fd);
 	dev->fd = NULL;
+	if (dev->device_id >= 0)
+		libseat_close_device(dev->input->libseat, dev->device_id);
 	close(dev->rfd);
 	dev->rfd = -1;
+	dev->device_id = -1;
 }
 
 static int input_init_keyboard(struct uterm_input_dev *dev)
@@ -186,37 +205,28 @@ static void input_exit_keyboard(struct uterm_input_dev *dev)
 	free(dev->event.keysyms);
 }
 
-static int input_init_abs(struct uterm_input_dev *dev)
+static int input_init_abs(struct uterm_input_dev *dev, int fd)
 {
 	struct input_absinfo info;
-	int ret, fd;
-
-	fd = open(dev->node, O_NONBLOCK | O_CLOEXEC | O_RDONLY);
-	if (fd < 0)
-		return 0;
+	int ret;
 
 	ret = ioctl(fd, EVIOCGABS(ABS_X), &info);
 	if (ret < 0)
-		goto err_closefd;
+		return ret;
 
 	dev->pointer.min_x = info.minimum;
 	dev->pointer.max_x = info.maximum;
 
 	ret = ioctl(fd, EVIOCGABS(ABS_Y), &info);
 	if (ret < 0)
-		goto err_closefd;
+		return ret;
 
 	dev->pointer.min_y = info.minimum;
 	dev->pointer.max_y = info.maximum;
 
 	log_debug("ABSX min %d max %d ABSY min %d max %d\n", dev->pointer.min_x, dev->pointer.max_x,
 		  dev->pointer.min_y, dev->pointer.max_y);
-	close(fd);
 	return 0;
-
-err_closefd:
-	close(fd);
-	return ret;
 }
 
 static const char *pointer_kind_name(enum pointer_kind kind)
@@ -236,21 +246,28 @@ static const char *pointer_kind_name(enum pointer_kind kind)
 	}
 }
 
-static void input_new_dev(struct uterm_input *input, const char *node, const char *name,
-			  unsigned int capabilities)
+/*
+ * Create a new input device from a probing fd.
+ * The fd is NOT consumed here - the caller manages it. The device starts
+ * with rfd=-1 and will be woken up separately via input_wake_up_dev().
+ */
+static struct uterm_input_dev *input_new_dev(struct uterm_input *input, const char *node,
+					     int probe_fd, unsigned int capabilities)
 {
 	struct uterm_input_dev *dev;
+	char name[64] = {0};
 	int ret;
 
 	dev = malloc(sizeof(*dev));
 	if (!dev)
-		return;
+		return NULL;
 	memset(dev, 0, sizeof(*dev));
 	dev->input = input;
 	dev->rfd = -1;
+	dev->device_id = -1;
 	dev->capabilities = capabilities;
 	dev->pointer.kind = POINTER_NONE;
-	dev->pointer.pressed_button = BUTTON_NONE; /* No button pressed initially */
+	dev->pointer.pressed_button = BUTTON_NONE;
 
 	dev->node = strdup(node);
 	if (!dev->node)
@@ -262,7 +279,7 @@ static void input_new_dev(struct uterm_input *input, const char *node, const cha
 			goto err_node;
 	}
 	if (dev->capabilities & UTERM_DEVICE_HAS_ABS) {
-		ret = input_init_abs(dev);
+		ret = input_init_abs(dev, probe_fd);
 		if (ret)
 			goto err_kbd;
 		if (dev->capabilities & UTERM_DEVICE_HAS_TOUCH) {
@@ -276,17 +293,12 @@ static void input_new_dev(struct uterm_input *input, const char *node, const cha
 	if (dev->capabilities & UTERM_DEVICE_HAS_REL)
 		dev->pointer.kind = POINTER_MOUSE;
 
-	if (input->awake > 0) {
-		ret = input_wake_up_dev(dev);
-		if (ret)
-			goto err_kbd;
-	}
-
+	ioctl(probe_fd, EVIOCGNAME(sizeof(name) - 1), name);
 	log_info("Using device %s [%s] as %s%s\n", node, name,
 		 (dev->capabilities & UTERM_DEVICE_HAS_KEYS) ? "keyboard" : "",
 		 pointer_kind_name(dev->pointer.kind));
 	shl_dlist_link(&input->devices, &dev->list);
-	return;
+	return dev;
 
 err_kbd:
 	if (dev->capabilities & UTERM_DEVICE_HAS_KEYS)
@@ -295,6 +307,7 @@ err_node:
 	free(dev->node);
 err_free:
 	free(dev);
+	return NULL;
 }
 
 static void input_free_dev(struct uterm_input_dev *dev)
@@ -319,8 +332,8 @@ static void hide_pointer_timer(struct ev_timer *timer, uint64_t num, void *data)
 }
 
 SHL_EXPORT
-int uterm_input_new(struct uterm_input **out, struct ev_eloop *eloop, const char *model,
-		    const char *layout, const char *variant, const char *options,
+int uterm_input_new(struct uterm_input **out, struct ev_eloop *eloop, struct libseat *libseat,
+		    const char *model, const char *layout, const char *variant, const char *options,
 		    const char *locale, const char *keymap, const char *compose_file,
 		    size_t compose_file_len, unsigned int repeat_delay, unsigned int repeat_rate)
 {
@@ -345,9 +358,11 @@ int uterm_input_new(struct uterm_input **out, struct ev_eloop *eloop, const char
 	memset(input, 0, sizeof(*input));
 	input->ref = 1;
 	input->eloop = eloop;
+	input->libseat = libseat;
 	input->repeat_delay = repeat_delay;
 	input->repeat_rate = repeat_rate;
 	shl_dlist_init(&input->devices);
+	shl_dlist_init(&input->pending_devices);
 
 	ret = shl_hook_new(&input->key_hook);
 	if (ret)
@@ -411,6 +426,7 @@ SHL_EXPORT
 void uterm_input_unref(struct uterm_input *input)
 {
 	struct uterm_input_dev *dev;
+	struct uterm_input_pending *pend;
 
 	if (!input || !input->ref || --input->ref)
 		return;
@@ -420,6 +436,14 @@ void uterm_input_unref(struct uterm_input *input)
 	while (input->devices.next != &input->devices) {
 		dev = shl_dlist_entry(input->devices.next, struct uterm_input_dev, list);
 		input_free_dev(dev);
+	}
+
+	while (input->pending_devices.next != &input->pending_devices) {
+		pend = shl_dlist_entry(input->pending_devices.next, struct uterm_input_pending,
+				       list);
+		shl_dlist_unlink(&pend->list);
+		free(pend->node);
+		free(pend);
 	}
 
 	uxkb_desc_destroy(input);
@@ -509,40 +533,108 @@ err_ioctl:
 
 #define HAS_ALL(caps, flags) (((caps) & (flags)) == (flags))
 
-SHL_EXPORT
-void uterm_input_add_dev(struct uterm_input *input, const char *node, bool mouse)
+/*
+ * Probe a device via an already-opened fd and add it to the active device list
+ * if it has useful capabilities. Returns true if the device was added, false
+ * if it was rejected.
+ */
+static bool input_probe_and_add(struct uterm_input *input, const char *node, int fd, bool mouse)
 {
 	unsigned int capabilities;
-	int fd;
-	char name[64];
+	char name[64] = {0};
 
-	if (!input || !node)
-		return;
-
-	fd = open(node, O_NONBLOCK | O_CLOEXEC | O_RDONLY);
-	if (fd < 0)
-		return;
-
-	/* ignore error, the name is just for debugging */
 	ioctl(fd, EVIOCGNAME(sizeof(name) - 1), name);
-
 	capabilities = probe_device_capabilities(fd, input, name);
 
-	close(fd);
+	if (HAS_ALL(capabilities, UTERM_DEVICE_HAS_KEYS))
+		return !!input_new_dev(input, node, fd, capabilities);
 
-	if (HAS_ALL(capabilities, UTERM_DEVICE_HAS_KEYS)) {
-		input_new_dev(input, node, name, capabilities);
-		return;
-	}
 	if (HAS_ALL(capabilities, UTERM_DEVICE_HAS_REL | UTERM_DEVICE_HAS_MOUSE_BTN) ||
 	    HAS_ALL(capabilities, UTERM_DEVICE_HAS_ABS | UTERM_DEVICE_HAS_TOUCH) ||
 	    HAS_ALL(capabilities, UTERM_DEVICE_HAS_ABS | UTERM_DEVICE_HAS_MOUSE_BTN)) {
 		if (mouse)
-			input_new_dev(input, node, name, capabilities);
-		else
-			log_debug("ignoring pointer device %s [%s]", node, name);
+			return !!input_new_dev(input, node, fd, capabilities);
+		log_debug("ignoring pointer device %s [%s]", node, name);
 	} else {
 		log_debug("ignoring non-useful device %s [%s]", node, name);
+	}
+
+	return false;
+}
+
+/*
+ * Open an input device, probe it, and if useful, add it to the active list
+ * and register it with the event loop. The device is opened via libseat if
+ * available, otherwise directly.
+ */
+static void input_open_probe_activate(struct uterm_input *input, const char *node, bool mouse)
+{
+	int fd, device_id = -1, ret;
+	struct uterm_input_dev *dev;
+
+	if (input->libseat) {
+		device_id = libseat_open_device(input->libseat, node, &fd);
+		if (device_id < 0) {
+			log_warning("cannot open device %s via libseat: %m", node);
+			return;
+		}
+	} else {
+		fd = open(node, O_NONBLOCK | O_CLOEXEC | O_RDWR);
+		if (fd < 0) {
+			log_warning("cannot open device %s: %m", node);
+			return;
+		}
+	}
+
+	if (!input_probe_and_add(input, node, fd, mouse))
+		goto err_close;
+
+	/* Device was added at the head of the active list. Wire up its fd. */
+	dev = shl_dlist_entry(input->devices.next, struct uterm_input_dev, list);
+	dev->rfd = fd;
+	dev->device_id = device_id;
+	if (dev->capabilities & UTERM_DEVICE_HAS_KEYS)
+		uxkb_dev_wake_up(dev);
+
+	ret = ev_eloop_new_fd(input->eloop, &dev->fd, dev->rfd, EV_READABLE, input_data_dev, dev);
+	if (ret) {
+		input_free_dev(dev);
+		goto err_close;
+	}
+	return;
+
+err_close:
+	if (input->libseat && device_id >= 0)
+		libseat_close_device(input->libseat, device_id);
+	close(fd);
+}
+
+SHL_EXPORT
+void uterm_input_add_dev(struct uterm_input *input, const char *node, bool mouse)
+{
+	struct uterm_input_pending *pend;
+
+	if (!input || !node)
+		return;
+
+	pend = malloc(sizeof(*pend));
+	if (!pend)
+		return;
+	memset(pend, 0, sizeof(*pend));
+	pend->node = strdup(node);
+	if (!pend->node) {
+		free(pend);
+		return;
+	}
+	pend->mouse = mouse;
+	shl_dlist_link_tail(&input->pending_devices, &pend->list);
+
+	/* If already awake, probe and activate immediately */
+	if (input->awake > 0) {
+		shl_dlist_unlink(&pend->list);
+		input_open_probe_activate(input, node, mouse);
+		free(pend->node);
+		free(pend);
 	}
 }
 
@@ -551,16 +643,30 @@ void uterm_input_remove_dev(struct uterm_input *input, const char *node)
 {
 	struct shl_dlist *iter;
 	struct uterm_input_dev *dev;
+	struct uterm_input_pending *pend;
 
 	if (!input || !node)
 		return;
 
+	/* Check active devices */
 	shl_dlist_for_each(iter, &input->devices)
 	{
 		dev = shl_dlist_entry(iter, struct uterm_input_dev, list);
 		if (!strcmp(dev->node, node)) {
 			input_free_dev(dev);
-			break;
+			return;
+		}
+	}
+
+	/* Check pending devices */
+	shl_dlist_for_each(iter, &input->pending_devices)
+	{
+		pend = shl_dlist_entry(iter, struct uterm_input_pending, list);
+		if (!strcmp(pend->node, node)) {
+			shl_dlist_unlink(&pend->list);
+			free(pend->node);
+			free(pend);
+			return;
 		}
 	}
 }
@@ -630,6 +736,7 @@ void uterm_input_wake_up(struct uterm_input *input)
 {
 	struct shl_dlist *iter, *tmp;
 	struct uterm_input_dev *dev;
+	struct uterm_input_pending *pend;
 	int ret;
 
 	if (!input)
@@ -639,8 +746,19 @@ void uterm_input_wake_up(struct uterm_input *input)
 	if (input->awake != 1)
 		return;
 
-	log_debug("wakeing up");
+	log_debug("waking up");
 
+	/* Process pending devices: probe and add */
+	shl_dlist_for_each_safe(iter, tmp, &input->pending_devices)
+	{
+		pend = shl_dlist_entry(iter, struct uterm_input_pending, list);
+		shl_dlist_unlink(&pend->list);
+		input_open_probe_activate(input, pend->node, pend->mouse);
+		free(pend->node);
+		free(pend);
+	}
+
+	/* Wake up already-probed devices */
 	shl_dlist_for_each_safe(iter, tmp, &input->devices)
 	{
 		dev = shl_dlist_entry(iter, struct uterm_input_dev, list);

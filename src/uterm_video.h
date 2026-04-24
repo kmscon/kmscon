@@ -44,7 +44,7 @@
  * and default consoles on VT-1 to VT-6. You can switch between them with
  * ctrl-alt-F1-F12.
  * If VT support is not available you need other ways to switch between
- * applications. See uterm_vt for more.
+ * applications. Session management is handled via libseat.
  */
 
 #ifndef UTERM_UTERM_VIDEO_H
@@ -181,7 +181,7 @@ bool uterm_display_has_damage(struct uterm_display *disp);
 
 int uterm_video_new(struct uterm_video **out, struct ev_eloop *eloop, const char *node,
 		    const char *backend, unsigned int desired_width, unsigned int desired_height,
-		    bool use_original);
+		    bool use_original, int preopen_fd);
 void uterm_video_ref(struct uterm_video *video);
 void uterm_video_unref(struct uterm_video *video);
 

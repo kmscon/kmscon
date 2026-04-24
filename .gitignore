@@ -3,7 +3,7 @@
 *.o
 *.lo
 *.la
-kmscon
+/kmscon
 /test_*
 Makefile
 Makefile.in
