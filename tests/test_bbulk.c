@@ -160,6 +160,8 @@ int main(void)
 	assert(bb->reqs && bb->prev && bb->damages && bb->damage_rects);
 	unsigned int prev_cells = bb->cells;
 
+	bbulk_unset(&txt);
+
 	/* Second call with identical geometry should remain valid and fully damaged */
 	ret = bbulk_set(&txt);
 	assert(ret == 0);
