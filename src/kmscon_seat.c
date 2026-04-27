@@ -846,10 +846,11 @@ int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf, struct
 				  ret);
 	}
 
-	ret = uterm_input_new(
-		&seat->input, seat->eloop, seat->conf->xkb_model, seat->conf->xkb_layout,
-		seat->conf->xkb_variant, seat->conf->xkb_options, locale, keymap, compose_file,
-		compose_file_len, seat->conf->xkb_repeat_delay, seat->conf->xkb_repeat_rate);
+	ret = uterm_input_new(&seat->input, seat->eloop, seat->conf->xkb_model,
+			      seat->conf->xkb_layout, seat->conf->xkb_variant,
+			      seat->conf->xkb_options, locale, keymap, compose_file,
+			      compose_file_len, seat->conf->xkb_repeat_delay,
+			      seat->conf->xkb_repeat_rate, seat->conf->mouse);
 	free(keymap);
 
 	if (ret)
@@ -1035,12 +1036,12 @@ void kmscon_seat_refresh_display(struct kmscon_seat *seat, struct uterm_display 
 	}
 }
 
-int kmscon_seat_add_input(struct kmscon_seat *seat, const char *node, bool mouse)
+int kmscon_seat_add_input(struct kmscon_seat *seat, const char *node)
 {
 	if (!seat || !node)
 		return -EINVAL;
 
-	uterm_input_add_dev(seat->input, node, mouse);
+	uterm_input_add_dev(seat->input, node);
 	return 0;
 }
 

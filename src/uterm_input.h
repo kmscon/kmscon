@@ -92,11 +92,12 @@ typedef void (*uterm_input_pointer_cb)(struct uterm_input *input,
 int uterm_input_new(struct uterm_input **out, struct ev_eloop *eloop, const char *model,
 		    const char *layout, const char *variant, const char *options,
 		    const char *locale, const char *keymap, const char *compose_file,
-		    size_t compose_file_len, unsigned int repeat_delay, unsigned int repeat_rate);
+		    size_t compose_file_len, unsigned int repeat_delay, unsigned int repeat_rate,
+		    bool mouse_enabled);
 void uterm_input_ref(struct uterm_input *input);
 void uterm_input_unref(struct uterm_input *input);
 
-void uterm_input_add_dev(struct uterm_input *input, const char *node, bool mouse);
+void uterm_input_add_dev(struct uterm_input *input, const char *node);
 void uterm_input_remove_dev(struct uterm_input *input, const char *node);
 
 int uterm_input_register_key_cb(struct uterm_input *input, uterm_input_key_cb cb, void *data);
