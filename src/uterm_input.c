@@ -322,7 +322,8 @@ SHL_EXPORT
 int uterm_input_new(struct uterm_input **out, struct ev_eloop *eloop, const char *model,
 		    const char *layout, const char *variant, const char *options,
 		    const char *locale, const char *keymap, const char *compose_file,
-		    size_t compose_file_len, unsigned int repeat_delay, unsigned int repeat_rate)
+		    size_t compose_file_len, unsigned int repeat_delay, unsigned int repeat_rate,
+		    bool mouse_enabled)
 {
 	struct uterm_input *input;
 	int ret;
@@ -347,6 +348,7 @@ int uterm_input_new(struct uterm_input **out, struct ev_eloop *eloop, const char
 	input->eloop = eloop;
 	input->repeat_delay = repeat_delay;
 	input->repeat_rate = repeat_rate;
+	input->mouse_enabled = mouse_enabled;
 	shl_dlist_init(&input->devices);
 
 	ret = shl_hook_new(&input->key_hook);
@@ -510,7 +512,7 @@ err_ioctl:
 #define HAS_ALL(caps, flags) (((caps) & (flags)) == (flags))
 
 SHL_EXPORT
-void uterm_input_add_dev(struct uterm_input *input, const char *node, bool mouse)
+void uterm_input_add_dev(struct uterm_input *input, const char *node)
 {
 	unsigned int capabilities;
 	int fd;
@@ -537,7 +539,7 @@ void uterm_input_add_dev(struct uterm_input *input, const char *node, bool mouse
 	if (HAS_ALL(capabilities, UTERM_DEVICE_HAS_REL | UTERM_DEVICE_HAS_MOUSE_BTN) ||
 	    HAS_ALL(capabilities, UTERM_DEVICE_HAS_ABS | UTERM_DEVICE_HAS_TOUCH) ||
 	    HAS_ALL(capabilities, UTERM_DEVICE_HAS_ABS | UTERM_DEVICE_HAS_MOUSE_BTN)) {
-		if (mouse)
+		if (input->mouse_enabled)
 			input_new_dev(input, node, name, capabilities);
 		else
 			log_debug("ignoring pointer device %s [%s]", node, name);

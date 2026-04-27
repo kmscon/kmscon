@@ -133,7 +133,7 @@ static void monitor_event(struct uterm_monitor *mon, struct uterm_monitor_event 
 		ret = uterm_input_new(&input, eloop, input_conf.xkb_model, input_conf.xkb_layout,
 				      input_conf.xkb_variant, input_conf.xkb_options,
 				      input_conf.locale, keymap, compose_file, compose_file_len, 0,
-				      0);
+				      0, true);
 		if (ret)
 			return;
 		ret = uterm_input_register_key_cb(input, input_arrived, NULL);
@@ -145,7 +145,7 @@ static void monitor_event(struct uterm_monitor *mon, struct uterm_monitor_event 
 		uterm_input_unref(input);
 	} else if (ev->type == UTERM_MONITOR_NEW_DEV) {
 		if (ev->dev_type == UTERM_MONITOR_INPUT)
-			uterm_input_add_dev(input, ev->dev_node, true);
+			uterm_input_add_dev(input, ev->dev_node);
 	} else if (ev->type == UTERM_MONITOR_FREE_DEV) {
 		if (ev->dev_type == UTERM_MONITOR_INPUT)
 			uterm_input_remove_dev(input, ev->dev_node);

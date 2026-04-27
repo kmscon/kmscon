@@ -79,7 +79,7 @@ void kmscon_seat_startup(struct kmscon_seat *seat);
 int kmscon_seat_add_display(struct kmscon_seat *seat, struct uterm_display *disp);
 void kmscon_seat_remove_display(struct kmscon_seat *seat, struct uterm_display *disp);
 void kmscon_seat_refresh_display(struct kmscon_seat *seat, struct uterm_display *disp);
-int kmscon_seat_add_input(struct kmscon_seat *seat, const char *node, bool mouse);
+int kmscon_seat_add_input(struct kmscon_seat *seat, const char *node);
 void kmscon_seat_remove_input(struct kmscon_seat *seat, const char *node);
 
 const char *kmscon_seat_get_name(struct kmscon_seat *seat);
