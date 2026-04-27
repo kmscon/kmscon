@@ -139,7 +139,7 @@ int main(int argc, char **argv)
 			ev_eloop_run(eloop, 50);
 	}
 
-	uterm_vt_unref(vt);
+	uterm_vt_deallocate(vt);
 err_input:
 	uterm_input_unref(input);
 err_vtm:
