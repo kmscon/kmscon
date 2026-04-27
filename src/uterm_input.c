@@ -106,6 +106,32 @@ static void input_data_dev(struct ev_fd *fd, int mask, void *data)
 	}
 }
 
+static int input_wake_up_abs(struct uterm_input_dev *dev)
+{
+	struct input_absinfo info;
+	int ret;
+
+	if (dev->rfd <= 0)
+		return -EFAULT;
+	ret = ioctl(dev->rfd, EVIOCGABS(ABS_X), &info);
+	if (ret < 0)
+		return ret;
+
+	dev->pointer.min_x = info.minimum;
+	dev->pointer.max_x = info.maximum;
+
+	ret = ioctl(dev->rfd, EVIOCGABS(ABS_Y), &info);
+	if (ret < 0)
+		return ret;
+
+	dev->pointer.min_y = info.minimum;
+	dev->pointer.max_y = info.maximum;
+
+	log_debug("ABSX min %d max %d ABSY min %d max %d\n", dev->pointer.min_x, dev->pointer.max_x,
+		  dev->pointer.min_y, dev->pointer.max_y);
+	return ret;
+}
+
 static int input_wake_up_dev(struct uterm_input_dev *dev)
 {
 	int ret;
@@ -120,6 +146,9 @@ static int input_wake_up_dev(struct uterm_input_dev *dev)
 	}
 	if (dev->capabilities & UTERM_DEVICE_HAS_KEYS)
 		uxkb_dev_wake_up(dev);
+
+	if (dev->capabilities & UTERM_DEVICE_HAS_ABS)
+		input_wake_up_abs(dev);
 
 	ret = ev_eloop_new_fd(dev->input->eloop, &dev->fd, dev->rfd, EV_READABLE, input_data_dev,
 			      dev);
@@ -186,39 +215,6 @@ static void input_exit_keyboard(struct uterm_input_dev *dev)
 	free(dev->event.keysyms);
 }
 
-static int input_init_abs(struct uterm_input_dev *dev)
-{
-	struct input_absinfo info;
-	int ret, fd;
-
-	fd = open(dev->node, O_NONBLOCK | O_CLOEXEC | O_RDONLY);
-	if (fd < 0)
-		return 0;
-
-	ret = ioctl(fd, EVIOCGABS(ABS_X), &info);
-	if (ret < 0)
-		goto err_closefd;
-
-	dev->pointer.min_x = info.minimum;
-	dev->pointer.max_x = info.maximum;
-
-	ret = ioctl(fd, EVIOCGABS(ABS_Y), &info);
-	if (ret < 0)
-		goto err_closefd;
-
-	dev->pointer.min_y = info.minimum;
-	dev->pointer.max_y = info.maximum;
-
-	log_debug("ABSX min %d max %d ABSY min %d max %d\n", dev->pointer.min_x, dev->pointer.max_x,
-		  dev->pointer.min_y, dev->pointer.max_y);
-	close(fd);
-	return 0;
-
-err_closefd:
-	close(fd);
-	return ret;
-}
-
 static const char *pointer_kind_name(enum pointer_kind kind)
 {
 	switch (kind) {
@@ -236,6 +232,21 @@ static const char *pointer_kind_name(enum pointer_kind kind)
 	}
 }
 
+static enum pointer_kind input_pointer_kind(unsigned int capabilities)
+{
+	if (capabilities & UTERM_DEVICE_HAS_ABS) {
+		if (capabilities & UTERM_DEVICE_HAS_TOUCH) {
+			if (capabilities & UTERM_DEVICE_HAS_DIRECT)
+				return POINTER_TOUCHSCREEN;
+			return POINTER_TOUCHPAD;
+		}
+		return POINTER_VMOUSE;
+	}
+	if (capabilities & UTERM_DEVICE_HAS_REL)
+		return POINTER_MOUSE;
+	return POINTER_NONE;
+}
+
 static void input_new_dev(struct uterm_input *input, const char *node, const char *name,
 			  unsigned int capabilities)
 {
@@ -249,7 +260,6 @@ static void input_new_dev(struct uterm_input *input, const char *node, const cha
 	dev->input = input;
 	dev->rfd = -1;
 	dev->capabilities = capabilities;
-	dev->pointer.kind = POINTER_NONE;
 	dev->pointer.pressed_button = BUTTON_NONE; /* No button pressed initially */
 
 	dev->node = strdup(node);
@@ -261,27 +271,13 @@ static void input_new_dev(struct uterm_input *input, const char *node, const cha
 		if (ret)
 			goto err_node;
 	}
-	if (dev->capabilities & UTERM_DEVICE_HAS_ABS) {
-		ret = input_init_abs(dev);
-		if (ret)
-			goto err_kbd;
-		if (dev->capabilities & UTERM_DEVICE_HAS_TOUCH) {
-			if (dev->capabilities & UTERM_DEVICE_HAS_DIRECT)
-				dev->pointer.kind = POINTER_TOUCHSCREEN;
-			else
-				dev->pointer.kind = POINTER_TOUCHPAD;
-		} else
-			dev->pointer.kind = POINTER_VMOUSE;
-	}
-	if (dev->capabilities & UTERM_DEVICE_HAS_REL)
-		dev->pointer.kind = POINTER_MOUSE;
+	dev->pointer.kind = input_pointer_kind(dev->capabilities);
 
 	if (input->awake > 0) {
 		ret = input_wake_up_dev(dev);
 		if (ret)
 			goto err_kbd;
 	}
-
 	log_info("Using device %s [%s] as %s%s\n", node, name,
 		 (dev->capabilities & UTERM_DEVICE_HAS_KEYS) ? "keyboard" : "",
 		 pointer_kind_name(dev->pointer.kind));
