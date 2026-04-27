@@ -55,7 +55,6 @@
 #define LOG_SUBSYSTEM "vt"
 
 struct uterm_vt {
-	unsigned long ref;
 	struct shl_dlist list;
 	struct uterm_vt_master *vtm;
 	struct uterm_input *input;
@@ -839,7 +838,6 @@ int uterm_vt_allocate(struct uterm_vt_master *vtm, struct uterm_vt **out,
 	if (!vt)
 		return -ENOMEM;
 	memset(vt, 0, sizeof(*vt));
-	vt->ref = 1;
 	vt->vtm = vtm;
 	vt->cb = cb;
 	vt->data = data;
@@ -923,25 +921,6 @@ void uterm_vt_deallocate(struct uterm_vt *vt)
 	shl_dlist_unlink(&vt->list);
 	uterm_input_unref(vt->input);
 	vt->vtm = NULL;
-	uterm_vt_unref(vt);
-}
-
-SHL_EXPORT
-void uterm_vt_ref(struct uterm_vt *vt)
-{
-	if (!vt || !vt->ref)
-		return;
-
-	++vt->ref;
-}
-
-SHL_EXPORT
-void uterm_vt_unref(struct uterm_vt *vt)
-{
-	if (!vt || !vt->ref || --vt->ref)
-		return;
-
-	uterm_vt_deallocate(vt);
 	free(vt);
 }
 
@@ -1072,36 +1051,6 @@ void uterm_vt_master_unref(struct uterm_vt_master *vtm)
 
 	ev_eloop_unref(vtm->eloop);
 	free(vtm);
-}
-
-/* Calls uterm_vt_activate() on all allocated VTs on this master. Returns
- * number of VTs that returned -EINPROGRESS or a negative error code on failure.
- * See uterm_vt_activate() for information. */
-SHL_EXPORT
-int uterm_vt_master_activate_all(struct uterm_vt_master *vtm)
-{
-	struct uterm_vt *vt;
-	struct shl_dlist *iter;
-	int ret, res = 0;
-	unsigned int in_progress = 0;
-
-	if (!vtm)
-		return -EINVAL;
-
-	shl_dlist_for_each(iter, &vtm->vts)
-	{
-		vt = shl_dlist_entry(iter, struct uterm_vt, list);
-		ret = uterm_vt_activate(vt);
-		if (ret == -EINPROGRESS)
-			in_progress++;
-		else if (ret)
-			res = ret;
-	}
-
-	if (in_progress)
-		return in_progress;
-
-	return res;
 }
 
 /* Calls uterm_vt_deactivate() on all allocated VTs on this master. Returns
