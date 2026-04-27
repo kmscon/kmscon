@@ -91,6 +91,8 @@ START_TEST(test_split_command_string)
 		ck_assert_ptr_ne(list, TEST_INVALID_PTR);
 		check_assert_string_list_eq((const char **)list, expected_command_list);
 		ck_assert_uint_eq(n_list, n_expected);
+		free(list);
+		list = TEST_INVALID_PTR;
 	}
 
 	const char *empty_command_strings[] = {
@@ -109,6 +111,8 @@ START_TEST(test_split_command_string)
 		ck_assert_ptr_ne(list, TEST_INVALID_PTR);
 		ck_assert_ptr_eq(list[0], NULL);
 		ck_assert_uint_eq(n_list, 0);
+		free(list);
+		list = TEST_INVALID_PTR;
 	}
 
 	{
@@ -120,6 +124,7 @@ START_TEST(test_split_command_string)
 		ck_assert_ptr_ne(list, TEST_INVALID_PTR);
 		check_assert_string_list_eq((const char **)list, expected_command_list);
 		ck_assert_uint_eq(n_list, n_expected);
+		free(list);
 	}
 
 	{
@@ -129,6 +134,7 @@ START_TEST(test_split_command_string)
 		ck_assert_int_eq(ret, 0);
 		ck_assert_ptr_ne(list, TEST_INVALID_PTR);
 		check_assert_string_list_eq((const char **)list, expected_command_list);
+		free(list);
 	}
 
 	{
