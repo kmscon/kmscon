@@ -1555,6 +1555,25 @@ int uterm_drm_video_wake_up(struct uterm_video *video)
 void uterm_drm_video_sleep(struct uterm_video *video)
 {
 	struct uterm_drm_video *vdrm = video->data;
+	struct shl_dlist *iter;
+	struct uterm_display *disp;
+	drmModeAtomicReq *req;
+
+	if (vdrm->master && !vdrm->legacy) {
+		shl_dlist_for_each(iter, &video->displays)
+		{
+			disp = shl_dlist_entry(iter, struct uterm_display, list);
+			uterm_drm_display_wait_pflip(disp);
+		}
+
+		req = drmModeAtomicAlloc();
+		if (req) {
+			modeset_clear_cursor(req, vdrm->fd);
+			if (drmModeAtomicCommit(vdrm->fd, req, 0, NULL) < 0)
+				log_warn("cannot hide hardware cursor before VT switch");
+			drmModeAtomicFree(req);
+		}
+	}
 
 	drop_drm_master(vdrm);
 	ev_timer_drain(vdrm->vt_timer, NULL);
