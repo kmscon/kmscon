@@ -782,7 +782,7 @@ static const char *find_locale(void)
 }
 
 int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf, struct ev_eloop *eloop,
-		    struct uterm_vt_master *vtm, unsigned int vt_types, const char *seatname,
+		    struct uterm_vt_master *vtm, bool listen, const char *seatname,
 		    kmscon_seat_cb_t cb, void *data)
 {
 	struct kmscon_seat *seat;
@@ -886,12 +886,12 @@ int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf, struct
 		}
 	}
 
-	ret = uterm_vt_allocate(seat->vtm, &seat->vt, vt_types, seat->name, seat->input,
+	ret = uterm_vt_allocate(seat->vtm, &seat->vt, listen, seat->name, seat->input,
 				seat->conf->vt, seat_vt_event, seat);
 	if (ret)
 		goto err_input_cb;
 
-	if (seat->conf->session_control && uterm_vt_get_type(seat->vt) == UTERM_VT_REAL) {
+	if (seat->conf->session_control && uterm_vt_get_num(seat->vt) > 0) {
 		log_warning("session control cannot be configured on real VT, disabling session "
 			    "control");
 		seat->conf->session_control = false;
@@ -985,7 +985,7 @@ void kmscon_seat_startup(struct kmscon_seat *seat)
 			kmscon_session_enable(s);
 	}
 
-	if (seat->conf->switchvt || uterm_vt_get_type(seat->vt) == UTERM_VT_FAKE)
+	if (seat->conf->switchvt || uterm_vt_get_num(seat->vt) == 0)
 		uterm_vt_activate(seat->vt);
 }
 
