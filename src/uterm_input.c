@@ -106,7 +106,7 @@ static void input_data_dev(struct ev_fd *fd, int mask, void *data)
 	}
 }
 
-static int input_wake_up_abs(struct uterm_input_dev *dev)
+static int input_init_abs(struct uterm_input_dev *dev)
 {
 	struct input_absinfo info;
 	int ret;
@@ -132,6 +132,41 @@ static int input_wake_up_abs(struct uterm_input_dev *dev)
 	return ret;
 }
 
+static void input_close_dev(struct uterm_input_dev *dev)
+{
+	if (dev->input->close_cb)
+		dev->input->close_cb(dev->rfd, dev->fd_id, dev->input->data);
+	else
+		close(dev->rfd);
+
+	dev->rfd = -1;
+	dev->fd_id = -1;
+}
+
+static int input_open_dev(struct uterm_input_dev *dev)
+{
+	int ret;
+
+	if (dev->input->open_cb)
+		dev->rfd = dev->input->open_cb(dev->node, &dev->fd_id, dev->input->data);
+	else
+		dev->rfd = open(dev->node, O_CLOEXEC | O_NONBLOCK | O_RDWR);
+
+	if (dev->rfd < 0) {
+		log_warn("cannot open device %s (%d): %m", dev->node, errno);
+		return -EFAULT;
+	}
+
+	if (dev->capabilities & UTERM_DEVICE_HAS_ABS)
+		input_init_abs(dev);
+
+	ret = ev_eloop_new_fd(dev->input->eloop, &dev->fd, dev->rfd, EV_READABLE, input_data_dev,
+			      dev);
+	if (ret)
+		input_close_dev(dev);
+	return ret;
+}
+
 static int input_wake_up_dev(struct uterm_input_dev *dev)
 {
 	int ret;
@@ -139,24 +174,12 @@ static int input_wake_up_dev(struct uterm_input_dev *dev)
 	if (dev->rfd >= 0)
 		return 0;
 
-	dev->rfd = open(dev->node, O_CLOEXEC | O_NONBLOCK | O_RDWR);
-	if (dev->rfd < 0) {
-		log_warn("cannot open device %s (%d): %m", dev->node, errno);
-		return -EFAULT;
-	}
+	ret = input_open_dev(dev);
+	if (ret)
+		return ret;
+
 	if (dev->capabilities & UTERM_DEVICE_HAS_KEYS)
 		uxkb_dev_wake_up(dev);
-
-	if (dev->capabilities & UTERM_DEVICE_HAS_ABS)
-		input_wake_up_abs(dev);
-
-	ret = ev_eloop_new_fd(dev->input->eloop, &dev->fd, dev->rfd, EV_READABLE, input_data_dev,
-			      dev);
-	if (ret) {
-		close(dev->rfd);
-		dev->rfd = -1;
-		return ret;
-	}
 
 	return 0;
 }
@@ -170,8 +193,7 @@ static void input_sleep_dev(struct uterm_input_dev *dev)
 	ev_timer_update(dev->repeat_timer, NULL);
 	ev_eloop_rm_fd(dev->fd);
 	dev->fd = NULL;
-	close(dev->rfd);
-	dev->rfd = -1;
+	input_close_dev(dev);
 }
 
 static int input_init_keyboard(struct uterm_input_dev *dev)
@@ -245,187 +267,6 @@ static enum pointer_kind input_pointer_kind(unsigned int capabilities)
 	if (capabilities & UTERM_DEVICE_HAS_REL)
 		return POINTER_MOUSE;
 	return POINTER_NONE;
-}
-
-static void input_new_dev(struct uterm_input *input, const char *node, const char *name,
-			  unsigned int capabilities)
-{
-	struct uterm_input_dev *dev;
-	int ret;
-
-	dev = malloc(sizeof(*dev));
-	if (!dev)
-		return;
-	memset(dev, 0, sizeof(*dev));
-	dev->input = input;
-	dev->rfd = -1;
-	dev->capabilities = capabilities;
-	dev->pointer.pressed_button = BUTTON_NONE; /* No button pressed initially */
-
-	dev->node = strdup(node);
-	if (!dev->node)
-		goto err_free;
-
-	if (dev->capabilities & UTERM_DEVICE_HAS_KEYS) {
-		ret = input_init_keyboard(dev);
-		if (ret)
-			goto err_node;
-	}
-	dev->pointer.kind = input_pointer_kind(dev->capabilities);
-
-	if (input->awake > 0) {
-		ret = input_wake_up_dev(dev);
-		if (ret)
-			goto err_kbd;
-	}
-	log_info("Using device %s [%s] as %s%s\n", node, name,
-		 (dev->capabilities & UTERM_DEVICE_HAS_KEYS) ? "keyboard" : "",
-		 pointer_kind_name(dev->pointer.kind));
-	shl_dlist_link(&input->devices, &dev->list);
-	return;
-
-err_kbd:
-	if (dev->capabilities & UTERM_DEVICE_HAS_KEYS)
-		input_exit_keyboard(dev);
-err_node:
-	free(dev->node);
-err_free:
-	free(dev);
-}
-
-static void input_free_dev(struct uterm_input_dev *dev)
-{
-	log_debug("free device %s", dev->node);
-	input_sleep_dev(dev);
-	shl_dlist_unlink(&dev->list);
-	if (dev->capabilities & UTERM_DEVICE_HAS_KEYS)
-		input_exit_keyboard(dev);
-	free(dev->node);
-	free(dev);
-}
-
-static void hide_pointer_timer(struct ev_timer *timer, uint64_t num, void *data)
-{
-	struct uterm_input *input = data;
-	struct uterm_input_pointer_event pev;
-
-	pev.event = UTERM_HIDE_TIMEOUT;
-
-	shl_hook_call(input->pointer_hook, input, &pev);
-}
-
-SHL_EXPORT
-int uterm_input_new(struct uterm_input **out, struct ev_eloop *eloop, const char *model,
-		    const char *layout, const char *variant, const char *options,
-		    const char *locale, const char *keymap, const char *compose_file,
-		    size_t compose_file_len, unsigned int repeat_delay, unsigned int repeat_rate,
-		    bool mouse_enabled)
-{
-	struct uterm_input *input;
-	int ret;
-
-	if (!out || !eloop)
-		return -EINVAL;
-
-	if (!repeat_delay)
-		repeat_delay = 250;
-	if (repeat_delay >= 1000)
-		repeat_delay = 999;
-	if (!repeat_rate)
-		repeat_rate = 50;
-	if (repeat_rate >= 1000)
-		repeat_rate = 999;
-
-	input = malloc(sizeof(*input));
-	if (!input)
-		return -ENOMEM;
-	memset(input, 0, sizeof(*input));
-	input->ref = 1;
-	input->eloop = eloop;
-	input->repeat_delay = repeat_delay;
-	input->repeat_rate = repeat_rate;
-	input->mouse_enabled = mouse_enabled;
-	shl_dlist_init(&input->devices);
-
-	ret = shl_hook_new(&input->key_hook);
-	if (ret)
-		goto err_free;
-
-	ret = shl_hook_new(&input->pointer_hook);
-	if (ret)
-		goto err_hook;
-
-	ret = ev_eloop_new_timer(input->eloop, &input->hide_pointer, NULL, hide_pointer_timer,
-				 input);
-	if (ret)
-		goto err_hook_pointer;
-
-	/* xkbcommon won't use the XKB_DEFAULT_OPTIONS environment
-	 * variable if options is an empty string.
-	 * So if all variables are empty, use NULL instead.
-	 */
-	if (model && *model == 0 && layout && *layout == 0 && variant && *variant == 0 && options &&
-	    *options == 0) {
-		model = NULL;
-		layout = NULL;
-		variant = NULL;
-		options = NULL;
-	}
-
-	ret = uxkb_desc_init(input, model, layout, variant, options, locale, keymap, compose_file,
-			     compose_file_len);
-	if (ret)
-		goto err_hide_timer;
-
-	log_debug("new object %p", input);
-	ev_eloop_ref(input->eloop);
-	*out = input;
-	return 0;
-
-err_hide_timer:
-	ev_eloop_rm_timer(input->hide_pointer);
-
-err_hook_pointer:
-	shl_hook_free(input->pointer_hook);
-
-err_hook:
-	shl_hook_free(input->key_hook);
-
-err_free:
-	free(input);
-	return ret;
-}
-
-SHL_EXPORT
-void uterm_input_ref(struct uterm_input *input)
-{
-	if (!input || !input->ref)
-		return;
-
-	++input->ref;
-}
-
-SHL_EXPORT
-void uterm_input_unref(struct uterm_input *input)
-{
-	struct uterm_input_dev *dev;
-
-	if (!input || !input->ref || --input->ref)
-		return;
-
-	log_debug("free object %p", input);
-
-	while (input->devices.next != &input->devices) {
-		dev = shl_dlist_entry(input->devices.next, struct uterm_input_dev, list);
-		input_free_dev(dev);
-	}
-
-	uxkb_desc_destroy(input);
-	shl_hook_free(input->key_hook);
-	shl_hook_free(input->pointer_hook);
-	ev_eloop_rm_timer(input->hide_pointer);
-	ev_eloop_unref(input->eloop);
-	free(input);
 }
 
 /*
@@ -507,40 +348,244 @@ err_ioctl:
 
 #define HAS_ALL(caps, flags) (((caps) & (flags)) == (flags))
 
+/*
+ * Probe a device via an already-opened fd and add it to the active device list
+ * if it has useful capabilities.
+ */
+static bool input_can_use(struct uterm_input *input, unsigned int capabilities)
+{
+
+	if (HAS_ALL(capabilities, UTERM_DEVICE_HAS_KEYS))
+		return true;
+
+	if (HAS_ALL(capabilities, UTERM_DEVICE_HAS_REL | UTERM_DEVICE_HAS_MOUSE_BTN) ||
+	    HAS_ALL(capabilities, UTERM_DEVICE_HAS_ABS | UTERM_DEVICE_HAS_TOUCH) ||
+	    HAS_ALL(capabilities, UTERM_DEVICE_HAS_ABS | UTERM_DEVICE_HAS_MOUSE_BTN))
+		if (input->mouse_enabled)
+			return true;
+	return false;
+}
+
+static void input_new_dev(struct uterm_input *input, const char *node)
+{
+	struct uterm_input_dev *dev;
+	char name[64] = {0};
+	int ret;
+
+	dev = malloc(sizeof(*dev));
+	if (!dev)
+		return;
+	memset(dev, 0, sizeof(*dev));
+	dev->input = input;
+	dev->rfd = -1;
+
+	dev->node = strdup(node);
+	if (!dev->node)
+		goto err_free;
+
+	ret = input_open_dev(dev);
+	if (ret)
+		goto err_node;
+
+	ioctl(dev->rfd, EVIOCGNAME(sizeof(name) - 1), name);
+	dev->capabilities = probe_device_capabilities(dev->rfd, input, name);
+	if (!input_can_use(input, dev->capabilities)) {
+		log_debug("ignoring non-useful device %s [%s]", node, name);
+		goto err_close;
+	}
+
+	dev->pointer.pressed_button = BUTTON_NONE; /* No button pressed initially */
+
+	if (dev->capabilities & UTERM_DEVICE_HAS_KEYS) {
+		ret = input_init_keyboard(dev);
+		if (ret)
+			goto err_close;
+	}
+	dev->pointer.kind = input_pointer_kind(dev->capabilities);
+	if (dev->capabilities & UTERM_DEVICE_HAS_ABS)
+		input_init_abs(dev);
+
+	log_info("Using device %s [%s] as %s%s\n", node, name,
+		 (dev->capabilities & UTERM_DEVICE_HAS_KEYS) ? "keyboard" : "",
+		 pointer_kind_name(dev->pointer.kind));
+	shl_dlist_link(&input->devices, &dev->list);
+	return;
+
+err_close:
+	ev_eloop_rm_fd(dev->fd);
+	input_close_dev(dev);
+err_node:
+	free(dev->node);
+err_free:
+	free(dev);
+}
+
+static void input_free_dev(struct uterm_input_dev *dev)
+{
+	log_debug("free device %s", dev->node);
+	input_sleep_dev(dev);
+	shl_dlist_unlink(&dev->list);
+	if (dev->capabilities & UTERM_DEVICE_HAS_KEYS)
+		input_exit_keyboard(dev);
+	free(dev->node);
+	free(dev);
+}
+
+static void hide_pointer_timer(struct ev_timer *timer, uint64_t num, void *data)
+{
+	struct uterm_input *input = data;
+	struct uterm_input_pointer_event pev;
+
+	pev.event = UTERM_HIDE_TIMEOUT;
+
+	shl_hook_call(input->pointer_hook, input, &pev);
+}
+
+SHL_EXPORT
+int uterm_input_new(struct uterm_input **out, struct ev_eloop *eloop, const char *model,
+		    const char *layout, const char *variant, const char *options,
+		    const char *locale, const char *keymap, const char *compose_file,
+		    size_t compose_file_len, unsigned int repeat_delay, unsigned int repeat_rate,
+		    bool mouse_enabled)
+{
+	struct uterm_input *input;
+	int ret;
+
+	if (!out || !eloop)
+		return -EINVAL;
+
+	if (!repeat_delay)
+		repeat_delay = 250;
+	if (repeat_delay >= 1000)
+		repeat_delay = 999;
+	if (!repeat_rate)
+		repeat_rate = 50;
+	if (repeat_rate >= 1000)
+		repeat_rate = 999;
+
+	input = malloc(sizeof(*input));
+	if (!input)
+		return -ENOMEM;
+	memset(input, 0, sizeof(*input));
+	input->ref = 1;
+	input->eloop = eloop;
+	input->repeat_delay = repeat_delay;
+	input->repeat_rate = repeat_rate;
+	input->mouse_enabled = mouse_enabled;
+	shl_dlist_init(&input->devices);
+	shl_dlist_init(&input->pending_devices);
+
+	ret = shl_hook_new(&input->key_hook);
+	if (ret)
+		goto err_free;
+
+	ret = shl_hook_new(&input->pointer_hook);
+	if (ret)
+		goto err_hook;
+
+	ret = ev_eloop_new_timer(input->eloop, &input->hide_pointer, NULL, hide_pointer_timer,
+				 input);
+	if (ret)
+		goto err_hook_pointer;
+
+	/* xkbcommon won't use the XKB_DEFAULT_OPTIONS environment
+	 * variable if options is an empty string.
+	 * So if all variables are empty, use NULL instead.
+	 */
+	if (model && *model == 0 && layout && *layout == 0 && variant && *variant == 0 && options &&
+	    *options == 0) {
+		model = NULL;
+		layout = NULL;
+		variant = NULL;
+		options = NULL;
+	}
+
+	ret = uxkb_desc_init(input, model, layout, variant, options, locale, keymap, compose_file,
+			     compose_file_len);
+	if (ret)
+		goto err_hide_timer;
+
+	log_debug("new object %p", input);
+	ev_eloop_ref(input->eloop);
+	*out = input;
+	return 0;
+
+err_hide_timer:
+	ev_eloop_rm_timer(input->hide_pointer);
+
+err_hook_pointer:
+	shl_hook_free(input->pointer_hook);
+
+err_hook:
+	shl_hook_free(input->key_hook);
+
+err_free:
+	free(input);
+	return ret;
+}
+
+SHL_EXPORT
+void uterm_input_ref(struct uterm_input *input)
+{
+	if (!input || !input->ref)
+		return;
+
+	++input->ref;
+}
+
+SHL_EXPORT
+void uterm_input_unref(struct uterm_input *input)
+{
+	struct uterm_input_dev *dev;
+	struct uterm_input_pending *pend;
+
+	if (!input || !input->ref || --input->ref)
+		return;
+
+	log_debug("free object %p", input);
+
+	while (input->devices.next != &input->devices) {
+		dev = shl_dlist_entry(input->devices.next, struct uterm_input_dev, list);
+		input_free_dev(dev);
+	}
+
+	while (input->pending_devices.next != &input->pending_devices) {
+		pend = shl_dlist_entry(input->pending_devices.next, struct uterm_input_pending,
+				       list);
+		shl_dlist_unlink(&pend->list);
+		free(pend->node);
+		free(pend);
+	}
+
+	uxkb_desc_destroy(input);
+	shl_hook_free(input->key_hook);
+	shl_hook_free(input->pointer_hook);
+	ev_eloop_rm_timer(input->hide_pointer);
+	ev_eloop_unref(input->eloop);
+	free(input);
+}
+
 SHL_EXPORT
 void uterm_input_add_dev(struct uterm_input *input, const char *node)
 {
-	unsigned int capabilities;
-	int fd;
-	char name[64];
+	struct uterm_input_pending *pend;
 
 	if (!input || !node)
 		return;
 
-	fd = open(node, O_NONBLOCK | O_CLOEXEC | O_RDONLY);
-	if (fd < 0)
-		return;
-
-	/* ignore error, the name is just for debugging */
-	ioctl(fd, EVIOCGNAME(sizeof(name) - 1), name);
-
-	capabilities = probe_device_capabilities(fd, input, name);
-
-	close(fd);
-
-	if (HAS_ALL(capabilities, UTERM_DEVICE_HAS_KEYS)) {
-		input_new_dev(input, node, name, capabilities);
-		return;
-	}
-	if (HAS_ALL(capabilities, UTERM_DEVICE_HAS_REL | UTERM_DEVICE_HAS_MOUSE_BTN) ||
-	    HAS_ALL(capabilities, UTERM_DEVICE_HAS_ABS | UTERM_DEVICE_HAS_TOUCH) ||
-	    HAS_ALL(capabilities, UTERM_DEVICE_HAS_ABS | UTERM_DEVICE_HAS_MOUSE_BTN)) {
-		if (input->mouse_enabled)
-			input_new_dev(input, node, name, capabilities);
-		else
-			log_debug("ignoring pointer device %s [%s]", node, name);
-	} else {
-		log_debug("ignoring non-useful device %s [%s]", node, name);
+	if (input->awake > 0)
+		input_new_dev(input, node);
+	else {
+		pend = malloc(sizeof(*pend));
+		if (!pend)
+			return;
+		memset(pend, 0, sizeof(*pend));
+		pend->node = strdup(node);
+		if (!pend->node) {
+			free(pend);
+			return;
+		}
+		shl_dlist_link_tail(&input->pending_devices, &pend->list);
 	}
 }
 
@@ -549,16 +594,30 @@ void uterm_input_remove_dev(struct uterm_input *input, const char *node)
 {
 	struct shl_dlist *iter;
 	struct uterm_input_dev *dev;
+	struct uterm_input_pending *pend;
 
 	if (!input || !node)
 		return;
 
+	/* Check active devices */
 	shl_dlist_for_each(iter, &input->devices)
 	{
 		dev = shl_dlist_entry(iter, struct uterm_input_dev, list);
 		if (!strcmp(dev->node, node)) {
 			input_free_dev(dev);
-			break;
+			return;
+		}
+	}
+
+	/* Check pending devices */
+	shl_dlist_for_each(iter, &input->pending_devices)
+	{
+		pend = shl_dlist_entry(iter, struct uterm_input_pending, list);
+		if (!strcmp(pend->node, node)) {
+			shl_dlist_unlink(&pend->list);
+			free(pend->node);
+			free(pend);
+			return;
 		}
 	}
 }
@@ -602,6 +661,18 @@ void uterm_input_unregister_pointer_cb(struct uterm_input *input, uterm_input_po
 }
 
 SHL_EXPORT
+void uterm_input_set_device_ops(struct uterm_input *input, uterm_open_cb open_cb,
+				uterm_close_cb close_cb, void *data)
+{
+	if (!input)
+		return;
+
+	input->open_cb = open_cb;
+	input->close_cb = close_cb;
+	input->data = data;
+}
+
+SHL_EXPORT
 void uterm_input_sleep(struct uterm_input *input)
 {
 	struct shl_dlist *iter;
@@ -628,6 +699,7 @@ void uterm_input_wake_up(struct uterm_input *input)
 {
 	struct shl_dlist *iter, *tmp;
 	struct uterm_input_dev *dev;
+	struct uterm_input_pending *pend;
 	int ret;
 
 	if (!input)
@@ -637,8 +709,19 @@ void uterm_input_wake_up(struct uterm_input *input)
 	if (input->awake != 1)
 		return;
 
-	log_debug("wakeing up");
+	log_debug("waking up");
 
+	/* Process pending devices: probe and add */
+	shl_dlist_for_each_safe(iter, tmp, &input->pending_devices)
+	{
+		pend = shl_dlist_entry(iter, struct uterm_input_pending, list);
+		shl_dlist_unlink(&pend->list);
+		input_new_dev(input, pend->node);
+		free(pend->node);
+		free(pend);
+	}
+
+	/* Wake up already-probed devices */
 	shl_dlist_for_each_safe(iter, tmp, &input->devices)
 	{
 		dev = shl_dlist_entry(iter, struct uterm_input_dev, list);

@@ -89,6 +89,9 @@ typedef void (*uterm_input_key_cb)(struct uterm_input *input, struct uterm_input
 typedef void (*uterm_input_pointer_cb)(struct uterm_input *input,
 				       struct uterm_input_pointer_event *ev, void *data);
 
+typedef int (*uterm_open_cb)(const char *node, int *fd_id, void *data);
+typedef void (*uterm_close_cb)(int fd, int fd_id, void *data);
+
 int uterm_input_new(struct uterm_input **out, struct ev_eloop *eloop, const char *model,
 		    const char *layout, const char *variant, const char *options,
 		    const char *locale, const char *keymap, const char *compose_file,
@@ -107,6 +110,9 @@ int uterm_input_register_pointer_cb(struct uterm_input *input, uterm_input_point
 				    void *data);
 void uterm_input_unregister_pointer_cb(struct uterm_input *input, uterm_input_pointer_cb cb,
 				       void *data);
+
+void uterm_input_set_device_ops(struct uterm_input *input, uterm_open_cb open_cb,
+				uterm_close_cb close_cb, void *data);
 
 void uterm_input_sleep(struct uterm_input *input);
 void uterm_input_wake_up(struct uterm_input *input);

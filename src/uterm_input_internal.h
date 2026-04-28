@@ -90,6 +90,7 @@ struct uterm_input_dev {
 
 	unsigned int capabilities;
 	int rfd;
+	int fd_id; // for libseat or custom open_cb
 	char *node;
 	struct ev_fd *fd;
 
@@ -107,10 +108,20 @@ struct uterm_input_dev {
 	struct uterm_input_pointer pointer;
 };
 
+struct uterm_input_pending {
+	struct shl_dlist list;
+	char *node;
+};
+
 struct uterm_input {
 	unsigned long ref;
 	struct ev_eloop *eloop;
 	int awake;
+
+	uterm_open_cb open_cb;
+	uterm_close_cb close_cb;
+	void *data;
+
 	unsigned int repeat_rate;
 	unsigned int repeat_delay;
 
@@ -126,6 +137,7 @@ struct uterm_input {
 	struct ev_timer *hide_pointer;
 
 	struct shl_dlist devices;
+	struct shl_dlist pending_devices;
 };
 
 static inline bool input_bit_is_set(const unsigned long *array, int bit)
