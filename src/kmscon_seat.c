@@ -902,6 +902,7 @@ int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf, struct
 	return 0;
 
 err_input_cb:
+	ev_eloop_rm_timer(seat->dpms_timer);
 	uterm_input_unregister_key_cb(seat->input, seat_input_event, seat);
 	uterm_input_unregister_pointer_cb(seat->input, seat_pointer_event, seat);
 err_input:
@@ -943,9 +944,6 @@ void kmscon_seat_free(struct kmscon_seat *seat)
 		seat_remove_display(seat, d);
 	}
 
-	if (seat->dpms_timer)
-		ev_timer_unref(seat->dpms_timer);
-
 	uterm_vt_deallocate(seat->vt);
 	uterm_input_unregister_key_cb(seat->input, seat_input_event, seat);
 	uterm_input_unregister_pointer_cb(seat->input, seat_pointer_event, seat);
@@ -953,6 +951,7 @@ void kmscon_seat_free(struct kmscon_seat *seat)
 	kmscon_conf_free(seat->conf_ctx);
 	free(seat->name);
 	uterm_vt_master_unref(seat->vtm);
+	ev_eloop_rm_timer(seat->dpms_timer);
 	ev_eloop_unref(seat->eloop);
 	free(seat);
 }
