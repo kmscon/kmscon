@@ -10,6 +10,8 @@ option('multi_seat', type: 'feature', value: 'auto',
   description: 'Multi-seat support with systemd or elogind')
 option('elogind', type: 'feature', value: 'disabled',
   description: 'Prefer elogind over systemd')
+option('libseat', type: 'feature', value: 'auto',
+  description: 'Use libseat to integrate with systemd-logind, elogind, or seatd')
 
 # video backends
 option('video_fbdev', type: 'feature', value: 'auto',

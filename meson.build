@@ -72,6 +72,7 @@ else
 	multi_seat_dep = 'libsystemd'
 endif
 libsystemd_deps = dependency(multi_seat_dep, disabler: true, required: get_option('multi_seat'))
+libseat_deps = dependency('libseat', disabler: true, required: get_option('libseat'))
 libdrm_deps = dependency('libdrm', disabler: true, required: require_libdrm)
 gbm_deps = dependency('gbm', disabler: true, required: get_option('video_drm3d'))
 egl_deps = dependency('egl', disabler: true, required: get_option('video_drm3d'))
@@ -98,6 +99,7 @@ config = configuration_data()
 # Note: keep this in sync with the dependencies above
 foreach name, reqs : {
   'multi_seat': [libsystemd_deps],
+  'libseat': [libseat_deps],
   'video_fbdev': [],
   'video_drm2d': [libdrm_deps],
   'video_drm3d': [libdrm_deps, gbm_deps, egl_deps, glesv2_deps],
