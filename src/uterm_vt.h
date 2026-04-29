@@ -70,7 +70,7 @@ void uterm_vt_master_unref(struct uterm_vt_master *vtm);
 
 int uterm_vt_master_deactivate_all(struct uterm_vt_master *vtm);
 
-int uterm_vt_allocate(struct uterm_vt_master *vt, struct uterm_vt **out, unsigned int allowed_types,
+int uterm_vt_allocate(struct uterm_vt_master *vt, struct uterm_vt **out, bool listen,
 		      const char *seat, struct uterm_input *input, const char *vt_name,
 		      uterm_vt_cb cb, void *data);
 void uterm_vt_deallocate(struct uterm_vt *vt);

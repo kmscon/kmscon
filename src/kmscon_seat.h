@@ -71,7 +71,7 @@ typedef int (*kmscon_session_cb_t)(struct kmscon_session *session,
 				   struct kmscon_session_event *event, void *data);
 
 int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf, struct ev_eloop *eloop,
-		    struct uterm_vt_master *vtm, unsigned int vt_types, const char *seatname,
+		    struct uterm_vt_master *vtm, bool listen, const char *seatname,
 		    kmscon_seat_cb_t cb, void *data);
 void kmscon_seat_free(struct kmscon_seat *seat);
 void kmscon_seat_startup(struct kmscon_seat *seat);
