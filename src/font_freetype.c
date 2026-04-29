@@ -149,8 +149,9 @@ static int compute_font_size(struct ft_font *ftfont, struct kmscon_font_attr *at
 		int bitmap_index = bitmap_font_select_size(face, attr->height);
 
 		FT_Select_Size(face, bitmap_index);
-		attr->width = face->available_sizes[bitmap_index].width;
+		attr->width = font_get_width(face);
 		attr->height = face->available_sizes[bitmap_index].height;
+		log_debug("bitmap font size %dx%d", attr->width, attr->height);
 	} else {
 		if (FT_Set_Pixel_Sizes(face, 0, attr->height))
 			log_warn("Freetype failed to set size to %d", attr->height);
@@ -276,15 +277,28 @@ static bool glyph_is_wide(FT_GlyphSlot glyph, int width)
 	return real_width > (width * 6) / 5;
 }
 
-static void copy_mono(struct uterm_video_buffer *buf, FT_Bitmap *map, bool underline)
+static void copy_mono(struct uterm_video_buffer *buf, FT_GlyphSlot glyph, unsigned int ascender,
+		      bool underline)
 {
+	FT_Bitmap *map = &glyph->bitmap;
+	int top = ascender - glyph->bitmap_top;
+	int left = glyph->bitmap_left;
 	uint8_t *src = map->buffer;
 	uint8_t *dst = buf->data;
-	int i, j;
+	int i, j, w, h;
 
-	for (i = 0; i < buf->height; i++) {
-		for (j = 0; j < buf->width; j++)
-			dst[j] = !!(src[j / 8] & (1 << (7 - (j % 8)))) * 0xff;
+	if (top < 0)
+		top = 0;
+	if (left < 0)
+		left = 0;
+
+	w = min(buf->width - left, map->width);
+	h = min(buf->height - top, map->rows);
+
+	for (i = 0; i < h; i++) {
+		for (j = 0; j < w; j++)
+			dst[j + top * buf->stride + left] =
+				!!(src[j / 8] & (1 << (7 - (j % 8)))) * 0xff;
 
 		dst += buf->stride;
 		src += map->pitch;
@@ -387,7 +401,8 @@ static struct kmscon_glyph *render_glyph(FT_Face face, FT_UInt index, const uint
 	glyph->buf.stride = glyph->buf.width;
 
 	if (face->glyph->bitmap.pixel_mode == FT_PIXEL_MODE_MONO)
-		copy_mono(&glyph->buf, &face->glyph->bitmap, attr->underline);
+		copy_mono(&glyph->buf, face->glyph, face->size->metrics.ascender >> 6,
+			  attr->underline);
 	else
 		copy_glyph(&glyph->buf, face, &face->glyph->bitmap, attr->underline);
 
