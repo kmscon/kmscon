@@ -25,6 +25,7 @@ For video output at least one of the following is required:
 For font handling the following is required:
 - 8x16: The 8x16 font is a static built-in font which does not require external dependencies.
 - unifont: Static font without external dependencies.
+- freetype: lightweight font rendering, using only freetype2 and fontconfig.
 - pango: drawing text with pango Pango requires: glib, pango, fontconfig, freetype2 and more
 
 For multi-seat support you need the following packages:
@@ -71,6 +72,7 @@ explicitly enable it via command line:
 |`video_drm2d`| `auto` | Linux DRM software-rendering backend |
 |`video_drm3d`| `auto` | Linux DRM hardware-rendering backend |
 |`font_unifont`| `auto` | Static built-in non-scalable font (Unicode Unifont) |
+|`font_freetype`| `auto` | Freetype2 based scalable font renderer, also handle bitmap fonts |
 |`font_pango`| `auto` | Pango based scalable font renderer |
 |`renderer_bbulk`| `auto` | Simple 2D software-renderer (bulk-mode) |
 |`renderer_gltex`| `auto` | OpenGLESv2 accelerated renderer |
