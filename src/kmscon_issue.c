@@ -46,6 +46,38 @@
  */
 #define ISSUE_DEFAULT_PATH "/etc/issue:/etc/issue.d"
 
+/* Color escape codes */
+// clang-format off
+#define UL_COLOR_RESET		"[0m"
+#define UL_COLOR_BOLD		"[1m"
+#define UL_COLOR_HALFBRIGHT	"[2m"
+#define UL_COLOR_UNDERSCORE	"[4m"
+#define UL_COLOR_BLINK		"[5m"
+#define UL_COLOR_REVERSE	"[7m"
+
+/* Standard colors */
+#define UL_COLOR_BLACK		"[30m"
+#define UL_COLOR_RED		"[31m"
+#define UL_COLOR_GREEN		"[32m"
+#define UL_COLOR_BROWN		"[33m"
+#define UL_COLOR_BLUE		"[34m"
+#define UL_COLOR_MAGENTA	"[35m"
+#define UL_COLOR_CYAN		"[36m"
+#define UL_COLOR_GRAY		"[37m"
+
+/* Bold variants */
+#define UL_COLOR_DARK_GRAY	"[1;30m"
+#define UL_COLOR_BOLD_RED	"[1;31m"
+#define UL_COLOR_BOLD_GREEN	"[1;32m"
+#define UL_COLOR_BOLD_YELLOW	"[1;33m"
+#define UL_COLOR_BOLD_BLUE	"[1;34m"
+#define UL_COLOR_BOLD_MAGENTA	"[1;35m"
+#define UL_COLOR_BOLD_CYAN	"[1;36m"
+#define UL_COLOR_WHITE		"[1;37m"
+// clang-format on
+
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+
 static char *read_os_release_field(const char *field)
 {
 	FILE *fp;
@@ -226,6 +258,86 @@ static void write_literal(FILE *out, const char *buf, size_t len)
 	}
 }
 
+struct ul_color_name {
+	const char *name;
+	const char *seq;
+};
+
+/*
+ * qsort/bsearch buddy
+ */
+static int cmp_color_name(const void *a0, const void *b0)
+{
+	const struct ul_color_name *a = (const struct ul_color_name *)a0,
+				   *b = (const struct ul_color_name *)b0;
+	return strcmp(a->name, b->name);
+}
+
+/*
+ * Maintains human readable color names
+ */
+const char *color_sequence_from_colorname(const char *str)
+{
+	static const struct ul_color_name basic_schemes[] = {
+		{"black", UL_COLOR_BLACK},
+		{"blink", UL_COLOR_BLINK},
+		{"blue", UL_COLOR_BLUE},
+		{"bold", UL_COLOR_BOLD},
+		{"brown", UL_COLOR_BROWN},
+		{"cyan", UL_COLOR_CYAN},
+		{"darkgray", UL_COLOR_DARK_GRAY},
+		{"gray", UL_COLOR_GRAY},
+		{"green", UL_COLOR_GREEN},
+		{"halfbright", UL_COLOR_HALFBRIGHT},
+		{"lightblue", UL_COLOR_BOLD_BLUE},
+		{"lightcyan", UL_COLOR_BOLD_CYAN},
+		{"lightgray", UL_COLOR_GRAY},
+		{"lightgreen", UL_COLOR_BOLD_GREEN},
+		{"lightmagenta", UL_COLOR_BOLD_MAGENTA},
+		{"lightred", UL_COLOR_BOLD_RED},
+		{"magenta", UL_COLOR_MAGENTA},
+		{"red", UL_COLOR_RED},
+		{"reset", UL_COLOR_RESET},
+		{"reverse", UL_COLOR_REVERSE},
+		{"white", UL_COLOR_WHITE},
+		{"yellow", UL_COLOR_BOLD_YELLOW}};
+	struct ul_color_name key = {.name = str};
+	const struct ul_color_name *res;
+
+	if (!str)
+		return NULL;
+
+	res = bsearch(&key, basic_schemes, ARRAY_SIZE(basic_schemes), sizeof(struct ul_color_name),
+		      cmp_color_name);
+	return res ? res->seq : NULL;
+}
+
+static void expand_color(const char **ppos, const char *end, FILE *out)
+{
+	const char *pos = *ppos;
+	const char *color_escape = NULL;
+	char color_name[16]; // longest color name is 13 characters
+	char *cn = color_name;
+
+	fputs("\033", out);
+	if (pos >= end || *pos != '{')
+		return;
+
+	pos++;
+	while (pos < end && *pos != '}' && cn < color_name + sizeof(color_name) - 1)
+		*cn++ = *pos++;
+	*cn = '\0';
+	while (pos < end && *pos != '}')
+		pos++;
+	if (pos < end && *pos == '}') {
+		pos++;
+		color_escape = color_sequence_from_colorname(color_name);
+	}
+	if (color_escape)
+		fputs(color_escape, out);
+	*ppos = pos;
+}
+
 static void expand_issue(const char *raw, size_t raw_len, struct tsm_vte *vte,
 			 struct kmscon_pty *pty)
 {
@@ -266,7 +378,6 @@ static void expand_issue(const char *raw, size_t raw_len, struct tsm_vte *vte,
 		tty_short += 5;
 
 	escape_val['\\'] = "\\";
-	escape_val['e'] = "\033";
 	escape_val['s'] = uts.sysname;
 	escape_val['n'] = uts.nodename;
 	escape_val['r'] = uts.release;
@@ -294,6 +405,11 @@ static void expand_issue(const char *raw, size_t raw_len, struct tsm_vte *vte,
 		if (*pos == 'S') {
 			pos++;
 			expand_os_release(&pos, end, out);
+			continue;
+		}
+		if (*pos == 'e') {
+			pos++;
+			expand_color(&pos, end, out);
 			continue;
 		}
 
