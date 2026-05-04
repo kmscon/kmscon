@@ -54,7 +54,7 @@
 #include "text.h"
 #include "text_gltex_atlas.frag.bin.h"
 #include "text_gltex_atlas.vert.bin.h"
-#include "uterm_video.h"
+#include "video/video.h"
 
 #define LOG_SUBSYSTEM "text_gltex"
 

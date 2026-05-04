@@ -32,7 +32,7 @@
 #include <stdlib.h>
 #include "shl_log.h"
 #include "shl_module_interface.h"
-#include "uterm_video_internal.h"
+#include "video_internal.h"
 
 extern struct uterm_video_module drm3d_module;
 

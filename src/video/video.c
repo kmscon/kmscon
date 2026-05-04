@@ -41,8 +41,8 @@
 #include "shl_misc.h"
 #include "shl_module.h"
 #include "shl_register.h"
-#include "uterm_video.h"
-#include "uterm_video_internal.h"
+#include "video.h"
+#include "video_internal.h"
 
 #define LOG_SUBSYSTEM "video"
 

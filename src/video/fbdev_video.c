@@ -36,11 +36,11 @@
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <unistd.h>
+#include "fbdev_internal.h"
 #include "shl_log.h"
 #include "shl_misc.h"
-#include "uterm_fbdev_internal.h"
-#include "uterm_video.h"
-#include "uterm_video_internal.h"
+#include "video.h"
+#include "video_internal.h"
 
 #define LOG_SUBSYSTEM "video_fbdev"
 

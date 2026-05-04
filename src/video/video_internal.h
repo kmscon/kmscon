@@ -35,7 +35,7 @@
 #include "eloop.h"
 #include "shl_dlist.h"
 #include "shl_hook.h"
-#include "uterm_video.h"
+#include "video.h"
 
 /* backend-operations */
 

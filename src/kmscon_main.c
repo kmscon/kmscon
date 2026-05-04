@@ -42,8 +42,8 @@
 #include "shl_module.h"
 #include "text.h"
 #include "uterm_monitor.h"
-#include "uterm_video.h"
 #include "uterm_vt.h"
+#include "video/video.h"
 
 struct app_video {
 	struct shl_dlist list;

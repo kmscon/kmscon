@@ -38,7 +38,7 @@
 #include <stdlib.h>
 #include "font/font.h"
 #include "shl_module.h"
-#include "uterm_video.h"
+#include "video/video.h"
 
 /* text renderer */
 

@@ -38,13 +38,13 @@
 #include <unistd.h>
 #include <xf86drm.h>
 #include <xf86drmMode.h>
+#include "drm_shared_internal.h"
 #include "shl_dlist.h"
 #include "shl_log.h"
 #include "shl_misc.h"
 #include "shl_timer.h"
-#include "uterm_drm_shared_internal.h"
-#include "uterm_video.h"
-#include "uterm_video_internal.h"
+#include "video.h"
+#include "video_internal.h"
 
 #define LOG_SUBSYSTEM "drm_shared"
 

@@ -11,7 +11,7 @@
 
 /* ---- Stubs for external dependencies used by text_bbulk.c ---- */
 #include "../src/font/font.h"	/* for kmscon_font_* */
-#include "../src/uterm_video.h" /* for uterm_display_* prototypes */
+#include "../src/video/video.h" /* for uterm_display_* prototypes */
 unsigned int uterm_display_get_width(struct uterm_display *disp)
 {
 	(void)disp;

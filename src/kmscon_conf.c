@@ -37,7 +37,7 @@
 #include "shl_githead.h"
 #include "shl_log.h"
 #include "shl_misc.h"
-#include "uterm_video.h"
+#include "video/video.h"
 
 static void print_help()
 {

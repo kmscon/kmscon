@@ -48,7 +48,7 @@
 #include "shl_dlist.h"
 #include "shl_log.h"
 #include "text.h"
-#include "uterm_video.h"
+#include "video/video.h"
 
 #define LOG_SUBSYSTEM "terminal"
 

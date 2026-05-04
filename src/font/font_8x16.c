@@ -50,7 +50,6 @@
 #include "font.h"
 #include "font_8x16.data.bin.h"
 #include "shl_log.h"
-#include "uterm_video.h"
 
 #define LOG_SUBSYSTEM "font_8x16"
 

@@ -49,7 +49,7 @@ static void print_help();
 #include "eloop.h"
 #include "shl_log.h"
 #include "test_include.h"
-#include "uterm_video.h"
+#include "video/video.h"
 
 /* eloop object */
 static struct ev_eloop *eloop;

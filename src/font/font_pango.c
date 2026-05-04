@@ -53,7 +53,7 @@
 #include <string.h>
 #include "font.h"
 #include "shl_log.h"
-#include "uterm_video.h"
+#include "video/video.h"
 
 #define LOG_SUBSYSTEM "font_pango"
 

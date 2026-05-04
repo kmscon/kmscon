@@ -46,7 +46,7 @@
 #include "shl_lru.h"
 #include "shl_misc.h"
 #include "text.h"
-#include "uterm_video.h"
+#include "video/video.h"
 
 #define LOG_SUBSYSTEM "text_bbulk"
 

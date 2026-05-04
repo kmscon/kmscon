@@ -45,8 +45,8 @@
 #include <unistd.h>
 #include <xf86drm.h>
 #include <xf86drmMode.h>
-#include "uterm_drm_shared_internal.h"
-#include "uterm_video.h"
+#include "drm_shared_internal.h"
+#include "video.h"
 
 /* thanks khronos for breaking backwards compatibility.. */
 #if !defined(GL_UNPACK_ROW_LENGTH) && defined(GL_UNPACK_ROW_LENGTH_EXT)

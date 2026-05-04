@@ -37,8 +37,8 @@
 #include "conf.h"
 #include "eloop.h"
 #include "input/input.h"
-#include "uterm_video.h"
 #include "uterm_vt.h"
+#include "video/video.h"
 
 struct kmscon_seat;
 struct kmscon_session;

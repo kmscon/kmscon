@@ -44,17 +44,17 @@
 #include <unistd.h>
 #include <xf86drm.h>
 #include <xf86drmMode.h>
+#include "drm3d_blend.frag.bin.h"
+#include "drm3d_blend.vert.bin.h"
+#include "drm3d_internal.h"
+#include "drm_shared_internal.h"
 #include "eloop.h"
 #include "shl_gl.h"
 #include "shl_log.h"
-#include "uterm_drm3d_blend.frag.bin.h"
-#include "uterm_drm3d_blend.vert.bin.h"
-#include "uterm_drm3d_internal.h"
-#include "uterm_drm_shared_internal.h"
-#include "uterm_video.h"
-#include "uterm_video_internal.h"
+#include "video.h"
+#include "video_internal.h"
 
-#define LOG_SUBSYSTEM "uterm_drm3d_render"
+#define LOG_SUBSYSTEM "drm3d_render"
 
 static int init_shaders(struct uterm_video *video)
 {
@@ -71,10 +71,10 @@ static int init_shaders(struct uterm_video *video)
 
 	v3d->sinit = 1;
 
-	blend_vert = _binary_uterm_drm3d_blend_vert_start;
-	blend_vlen = _binary_uterm_drm3d_blend_vert_size;
-	blend_frag = _binary_uterm_drm3d_blend_frag_start;
-	blend_flen = _binary_uterm_drm3d_blend_frag_size;
+	blend_vert = _binary_drm3d_blend_vert_start;
+	blend_vlen = _binary_drm3d_blend_vert_size;
+	blend_frag = _binary_drm3d_blend_frag_start;
+	blend_flen = _binary_drm3d_blend_frag_size;
 
 	ret = gl_shader_new(&v3d->blend_shader, blend_vert, blend_vlen, blend_frag, blend_flen,
 			    blend_attr, 2);

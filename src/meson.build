@@ -82,6 +82,7 @@ eloop_deps = declare_dependency(
 
 subdir('font')
 subdir('input')
+subdir('video')
 
 #
 # libuterm
@@ -91,7 +92,6 @@ subdir('input')
 # abstractions and an input layer
 #
 uterm_srcs = [
-  'uterm_video.c',
   'uterm_monitor.c',
   'uterm_vt.c',
   'uterm_vt_fake.c',
@@ -104,28 +104,14 @@ uterm_dep = [
   shl_deps,
   eloop_deps,
   input_deps,
+  video_deps,
 ]
 
 if enable_multi_seat
   uterm_srcs += 'uterm_systemd.c'
   uterm_dep += libsystemd_deps
 endif
-if enable_video_fbdev
-  uterm_srcs += [
-    'uterm_fbdev_video.c',
-    'uterm_fbdev_render.c'
-  ]
-endif
-if enable_video_drm2d or enable_video_drm3d
-  uterm_srcs += 'uterm_drm_shared.c'
-  uterm_dep += libdrm_deps
-endif
-if enable_video_drm2d
-  uterm_srcs += [
-    'uterm_drm2d_video.c',
-    'uterm_drm2d_render.c'
-  ]
-endif
+
 uterm = static_library('uterm', uterm_srcs,
   dependencies: uterm_dep
 )
@@ -133,21 +119,6 @@ uterm_deps = declare_dependency(
   link_with: [uterm],
   dependencies: uterm_dep
 )
-
-if enable_video_drm3d
-  mod_drm3d = shared_module('mod-drm3d', [
-    'uterm_drm3d_video.c',
-    'uterm_drm3d_render.c',
-    'uterm_mod_drm3d.c',
-    embed_gen.process('uterm_drm3d_blend.vert', extra_args: shader_regex),
-    embed_gen.process('uterm_drm3d_blend.frag', extra_args: shader_regex),
-    ],
-    name_prefix: '',
-    dependencies: [uterm_deps, shl_deps, shl_gl_deps, libdrm_deps, egl_deps, gbm_deps, glesv2_deps],
-    install: true,
-    install_dir: moduledir,
-  )
-endif
 
 if enable_renderer_gltex
   mod_gltex = shared_module('mod-gltex', [

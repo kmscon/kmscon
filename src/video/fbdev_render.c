@@ -31,10 +31,10 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include "fbdev_internal.h"
 #include "shl_log.h"
-#include "uterm_fbdev_internal.h"
-#include "uterm_video.h"
-#include "uterm_video_internal.h"
+#include "video.h"
+#include "video_internal.h"
 
 #define LOG_SUBSYSTEM "fbdev_render"
 

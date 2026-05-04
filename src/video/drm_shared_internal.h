@@ -33,8 +33,8 @@
 #include <xf86drmMode.h>
 #include "eloop.h"
 #include "shl_timer.h"
-#include "uterm_video.h"
-#include "uterm_video_internal.h"
+#include "video.h"
+#include "video_internal.h"
 
 /* drm object */
 

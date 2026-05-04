@@ -1,5 +1,5 @@
 /*
- * uterm - Linux User-Space Terminal drm2d module
+ * uterm - Linux User-Space Terminal fbdev module
  *
  * Copyright (c) 2011-2013 David Herrmann <dh.herrmann@googlemail.com>
  *
@@ -25,32 +25,61 @@
 
 /* Internal definitions */
 
-#ifndef UTERM_DRM2D_INTERNAL_H
-#define UTERM_DRM2D_INTERNAL_H
+#ifndef UTERM_FBDEV_INTERNAL_H
+#define UTERM_FBDEV_INTERNAL_H
 
 #include <inttypes.h>
 #include <limits.h>
+#include <linux/fb.h>
 #include <stdbool.h>
 #include <stdlib.h>
-#include "uterm_drm_shared_internal.h"
-#include "uterm_video.h"
+#include "video.h"
 
-struct uterm_drm2d_rb {
-	uint32_t id;
-	uint32_t handle;
-	uint32_t stride;
-	uint64_t size;
-	void *map;
+struct fbdev_mode {
+	unsigned int width;
+	unsigned int height;
 };
 
-struct uterm_drm2d_display {
-	struct uterm_drm_display ddrm;
-	int current_rb;
-	struct uterm_drm2d_rb rb[2];
+struct fbdev_display {
+	int fd;
+	struct fb_fix_screeninfo finfo;
+	struct fb_var_screeninfo vinfo;
+	unsigned int rate;
+	const char *node;
+
+	unsigned int bufid;
+	size_t xres;
+	size_t yres;
+	size_t len;
+	uint8_t *map;
+	unsigned int stride;
+
+	bool xrgb32;
+	bool rgb24;
+	bool rgb16;
+	unsigned int Bpp;
+	unsigned int off_r;
+	unsigned int off_g;
+	unsigned int off_b;
+	unsigned int len_r;
+	unsigned int len_g;
+	unsigned int len_b;
+	int_fast32_t dither_r;
+	int_fast32_t dither_g;
+	int_fast32_t dither_b;
+
+	bool vblank_scheduled;
+	struct itimerspec vblank_spec;
+	struct ev_timer *vblank_timer;
 };
 
-int uterm_drm2d_display_fake_blendv(struct uterm_display *disp,
+struct fbdev_video {
+	char *node;
+	bool pending_intro;
+};
+
+int uterm_fbdev_display_fake_blendv(struct uterm_display *disp,
 				    const struct uterm_video_blend_req *req, size_t num);
-int uterm_drm2d_display_clear(struct uterm_display *disp, uint8_t r, uint8_t g, uint8_t b);
+int uterm_fbdev_display_clear(struct uterm_display *disp, uint8_t r, uint8_t g, uint8_t b);
 
-#endif /* UTERM_DRM2D_INTERNAL_H */
+#endif /* UTERM_FBDEV_INTERNAL_H */
