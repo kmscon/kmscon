@@ -144,14 +144,15 @@ static uint32_t *generate_ibeam_cursor(unsigned int font_height, unsigned int *w
 				       unsigned int *height, bool rotate)
 {
 	unsigned int h, w;
-	int x, y, ny, nx;
+	int i, x, y, ny, nx, thk;
 	bool *shape, near;
 	uint32_t white, outline;
 	uint32_t *pixels;
 
 	h = font_height > 8 ? font_height : 8;
 	h = min(h, UTERM_CURSOR_MAX_SIZE);
-	w = 2 * (h / 6) + 3;
+	thk = 1 + (h / 16);
+	w = 2 * (h / 6) + 3 * thk;
 
 	white = argb(255, 255, 255, 255);
 	outline = argb(220, 0, 0, 0);
@@ -170,24 +171,30 @@ static uint32_t *generate_ibeam_cursor(unsigned int font_height, unsigned int *w
 		unsigned tmp = w;
 		w = h;
 		h = tmp;
-		/* 1px vertical stem */
-		for (x = 1; x < w - 1; x++)
-			shape[x + (h / 2) * w] = true;
+		/* vertical stem */
+		for (x = thk; x < w - thk; x++)
+			for (i = 0; i < thk; i++)
+				shape[x + ((h - thk) / 2) * w + i * w] = true;
 
-		/* Top and bottom serifs, 1px tall */
-		for (y = 1; y < h - 1; y++) {
-			shape[1 + y * w] = true;
-			shape[w - 2 + y * w] = true;
+		/* Top and bottom serifs */
+		for (y = thk; y < h - thk; y++) {
+			for (i = 0; i < thk; i++) {
+				shape[i + thk + y * w] = true;
+				shape[w - i - 1 - thk + y * w] = true;
+			}
 		}
 	} else {
-		/* 1px vertical stem */
-		for (y = 1; y < h - 1; y++)
-			shape[w / 2 + y * w] = true;
+		/* vertical stem */
+		for (y = thk; y < h - thk; y++)
+			for (i = 0; i < thk; i++)
+				shape[(w - thk) / 2 + y * w + i] = true;
 
-		/* Top and bottom serifs, 1px tall */
-		for (x = 1; x < w - 1; x++) {
-			shape[w + x] = true;
-			shape[(h - 2) * w + x] = true;
+		/* Top and bottom serifs */
+		for (x = thk; x < w - thk; x++) {
+			for (i = 0; i < thk; i++) {
+				shape[w * (i + thk) + x] = true;
+				shape[(h - i - 1 - thk) * w + x] = true;
+			}
 		}
 	}
 
@@ -199,8 +206,8 @@ static uint32_t *generate_ibeam_cursor(unsigned int font_height, unsigned int *w
 				continue;
 			}
 			near = false;
-			for (ny = y - 1; ny <= y + 1 && !near; ny++) {
-				for (nx = x - 1; nx <= x + 1 && !near; nx++) {
+			for (ny = y - thk; ny <= y + thk && !near; ny++) {
+				for (nx = x - thk; nx <= x + thk && !near; nx++) {
 					if (ny >= 0 && ny < (int)h && nx >= 0 && nx < (int)w &&
 					    shape[ny * w + nx])
 						near = true;
