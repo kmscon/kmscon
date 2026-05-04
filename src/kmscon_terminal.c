@@ -39,6 +39,7 @@
 #include "conf.h"
 #include "eloop.h"
 #include "font/font.h"
+#include "input/input.h"
 #include "kmscon_conf.h"
 #include "kmscon_issue.h"
 #include "kmscon_seat.h"
@@ -47,7 +48,6 @@
 #include "shl_dlist.h"
 #include "shl_log.h"
 #include "text.h"
-#include "uterm_input.h"
 #include "uterm_video.h"
 
 #define LOG_SUBSYSTEM "terminal"

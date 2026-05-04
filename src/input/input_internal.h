@@ -34,9 +34,9 @@
 #include <stdlib.h>
 #include <xkbcommon/xkbcommon-keysyms.h>
 #include "eloop.h"
+#include "input.h"
 #include "shl_dlist.h"
 #include "shl_misc.h"
-#include "uterm_input.h"
 
 enum uterm_input_device_capability {
 	UTERM_DEVICE_HAS_KEYS = (1 << 0),

@@ -33,12 +33,12 @@
 #include <unistd.h>
 #include <xkbcommon/xkbcommon-compose.h>
 #include <xkbcommon/xkbcommon.h>
+#include "input.h"
+#include "input_fallback.xkb.bin.h"
+#include "input_internal.h"
 #include "shl_hook.h"
 #include "shl_log.h"
 #include "shl_misc.h"
-#include "uterm_input.h"
-#include "uterm_input_fallback.xkb.bin.h"
-#include "uterm_input_internal.h"
 
 #define LOG_SUBSYSTEM "uterm_uxkb"
 
@@ -83,7 +83,7 @@ int uxkb_desc_init(struct uterm_input *input, const char *model, const char *lay
 	};
 	const char *fallback;
 
-	fallback = _binary_uterm_input_fallback_xkb_start;
+	fallback = _binary_input_fallback_xkb_start;
 
 	input->ctx = xkb_context_new(0);
 	if (!input->ctx) {

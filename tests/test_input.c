@@ -38,9 +38,9 @@ static void print_help();
 #include <unistd.h>
 #include <xkbcommon/xkbcommon.h>
 #include "eloop.h"
+#include "input/input.h"
 #include "shl_log.h"
 #include "test_include.h"
-#include "uterm_input.h"
 #include "uterm_monitor.h"
 
 static struct ev_eloop *eloop;

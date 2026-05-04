@@ -30,15 +30,6 @@ shader_regex = [
   '--regex', '^[ \\t]*', '', # Indentation whitespace
   '--regex', '[\\r\\n]', '', # Newlines
 ]
-keymap_regex = [
-  '--regex', '\\s*(=,)\\s*',       '\\1', # Whitespace around assignments and commas
-  '--regex', '\\s*([\\]\\[])\\s*', '\\1', # Whitespace around []
-  '--regex', '\\s*([{}])\\s*',     '\\1', # Whitespace around {}
-  '--regex', '\\s*([()])\\s*',     '\\1', # Whitespace around ()
-  '--regex', '^\\s*',              '',    # Indentation whitespace
-  '--regex', '[\\r\\n]',           '',    # Newlines
-  '--zero_term',                          # append an ASCII 0 so it can be used as regular C-string
-]
 
 #
 # SHL - Static Helper Library
@@ -89,6 +80,9 @@ eloop_deps = declare_dependency(
   link_with: [eloop],
 )
 
+subdir('font')
+subdir('input')
+
 #
 # libuterm
 # The uterm library provides helpers to create terminals in user-space. They
@@ -102,16 +96,14 @@ uterm_srcs = [
   'uterm_vt.c',
   'uterm_vt_fake.c',
   'uterm_vt_real.c',
-  'uterm_input.c',
-  'uterm_input_uxkb.c',
-  'uterm_input_pointer.c',
-  embed_gen.process('uterm_input_fallback.xkb', extra_args: keymap_regex),
 ]
+
 uterm_dep = [
   libudev_deps,
   xkbcommon_deps,
   shl_deps,
   eloop_deps,
+  input_deps,
 ]
 
 if enable_multi_seat
@@ -156,8 +148,6 @@ if enable_video_drm3d
     install_dir: moduledir,
   )
 endif
-
-subdir('font')
 
 if enable_renderer_gltex
   mod_gltex = shared_module('mod-gltex', [

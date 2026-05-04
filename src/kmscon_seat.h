@@ -36,7 +36,7 @@
 #include <stdlib.h>
 #include "conf.h"
 #include "eloop.h"
-#include "uterm_input.h"
+#include "input/input.h"
 #include "uterm_video.h"
 #include "uterm_vt.h"
 

@@ -38,13 +38,13 @@
 #include <unistd.h>
 #include "conf.h"
 #include "eloop.h"
+#include "input/input.h"
 #include "kmscon_conf.h"
 #include "kmscon_dummy.h"
 #include "kmscon_seat.h"
 #include "kmscon_terminal.h"
 #include "shl_dlist.h"
 #include "shl_log.h"
-#include "uterm_input.h"
 #include "uterm_video.h"
 #include "uterm_vt.h"
 

@@ -1,8 +1,8 @@
 #ifndef UTERM_VT_INTERNAL_H
 #define UTERM_VT_INTERNAL_H
 
+#include <input/input.h>
 #include <shl_dlist.h>
-#include <uterm_input.h>
 #include <uterm_vt.h>
 
 struct uterm_vt_ops {

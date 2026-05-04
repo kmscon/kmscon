@@ -33,10 +33,10 @@
 #include <unistd.h>
 
 #include "eloop.h"
+#include "input/input.h"
 #include "shl_dlist.h"
 #include "shl_log.h"
 #include "shl_misc.h"
-#include "uterm_input.h"
 #include "uterm_vt.h"
 #include "uterm_vt_internal.h"
 
@@ -186,7 +186,6 @@ unsigned int uterm_vt_get_num(struct uterm_vt *vt)
 {
 	if (vt && vt->ops->get_num)
 		return vt->ops->get_num(vt);
-
 	return 0;
 }
 
