@@ -36,7 +36,7 @@
 #include <errno.h>
 #include <libtsm.h>
 #include <stdlib.h>
-#include "font.h"
+#include "font/font.h"
 #include "shl_module.h"
 #include "uterm_video.h"
 

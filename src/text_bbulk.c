@@ -41,7 +41,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-#include "font.h"
+#include "font/font.h"
 #include "shl_log.h"
 #include "shl_lru.h"
 #include "shl_misc.h"

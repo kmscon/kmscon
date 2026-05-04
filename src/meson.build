@@ -157,57 +157,7 @@ if enable_video_drm3d
   )
 endif
 
-#
-# Unifont Generator
-# This generates the unifont sources from raw hex-encoded font data.
-#
-genunifont = executable('genunifont', 'genunifont.c', dependencies: [zlib_deps], native: true)
-
-unifont_bin = custom_target('unifont-bin',
-  input: ['font_unifont_data.hex'],
-  output: ['font_unifont_data'],
-  command: [genunifont, '@OUTPUT@', '@INPUT@']
-)
-
-#
-# Kmscon Modules
-#
-if enable_font_unifont
-  mod_unifont = shared_module('mod-unifont', [
-      'font_unifont.c',
-      'kmscon_mod_unifont.c',
-      embed_gen.process(unifont_bin),
-    ],
-    name_prefix: '',
-    dependencies: [libtsm_deps, shl_deps, zlib_deps],
-    install: true,
-    install_dir: moduledir,
-  )
-endif
-
-if enable_font_freetype
-  mod_freetype = shared_module('mod-freetype', [
-      'font_freetype.c',
-      'kmscon_mod_freetype.c',
-    ],
-    name_prefix: '',
-    dependencies: [libtsm_deps, freetype_deps, fontconfig_deps, threads_deps, shl_deps],
-    install: true,
-    install_dir: moduledir,
-  )
-endif
-
-if enable_font_pango
-  mod_pango = shared_module('mod-pango', [
-      'font_pango.c',
-      'kmscon_mod_pango.c',
-    ],
-    name_prefix: '',
-    dependencies: [libtsm_deps, pango_deps, threads_deps, shl_deps],
-    install: true,
-    install_dir: moduledir,
-  )
-endif
+subdir('font')
 
 if enable_renderer_gltex
   mod_gltex = shared_module('mod-gltex', [
@@ -239,9 +189,6 @@ conf_deps = declare_dependency(
 
 kmscon_srcs = [
   'pty.c',
-  'font.c',
-  'font_8x16.c',
-   embed_gen.process('font_8x16.data'),
   'text.c',
   'text_bbulk.c',
   'kmscon_seat.c',
@@ -256,7 +203,7 @@ if enable_session_terminal
   kmscon_srcs += 'kmscon_terminal.c'
 endif
 kmscon = executable('kmscon', kmscon_srcs,
-  dependencies: [xkbcommon_deps, libtsm_deps, threads_deps, dl_deps, conf_deps, shl_deps, eloop_deps, uterm_deps],
+  dependencies: [xkbcommon_deps, libtsm_deps, threads_deps, dl_deps, conf_deps, shl_deps, eloop_deps, uterm_deps, font_deps],
   export_dynamic: true,
   install: true,
   install_dir: libexecdir,

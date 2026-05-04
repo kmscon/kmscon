@@ -45,7 +45,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-#include "font.h"
+#include "font/font.h"
 #include "shl_dlist.h"
 #include "shl_gl.h"
 #include "shl_hashtable.h"

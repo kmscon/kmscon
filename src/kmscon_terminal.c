@@ -38,7 +38,7 @@
 #include <string.h>
 #include "conf.h"
 #include "eloop.h"
-#include "font.h"
+#include "font/font.h"
 #include "kmscon_conf.h"
 #include "kmscon_issue.h"
 #include "kmscon_seat.h"
