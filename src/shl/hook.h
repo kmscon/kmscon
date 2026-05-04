@@ -37,7 +37,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include "shl_dlist.h"
+#include "dlist.h"
 
 struct shl_hook;
 struct shl_hook_entry;

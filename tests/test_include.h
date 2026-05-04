@@ -30,8 +30,8 @@
 #include <string.h>
 #include <sys/signalfd.h>
 #include "conf.h"
-#include "eloop.h"
-#include "shl_log.h"
+#include "shl/eloop.h"
+#include "shl/log.h"
 
 #define TEST_HELP                                                                                  \
 	"\t-h, --help                  [off]   Print this help and exit\n"                         \

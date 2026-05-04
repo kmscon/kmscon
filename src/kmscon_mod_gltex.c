@@ -30,8 +30,8 @@
 
 #include <errno.h>
 #include <stdlib.h>
-#include "shl_log.h"
-#include "shl_module_interface.h"
+#include "shl/log.h"
+#include "shl/module_interface.h"
 #include "text.h"
 
 #define LOG_SUBSYSTEM "mod_gltex"

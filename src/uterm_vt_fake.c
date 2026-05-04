@@ -48,8 +48,8 @@
 
 #include <string.h>
 
-#include "shl_log.h"
-#include "shl_misc.h"
+#include "shl/log.h"
+#include "shl/misc.h"
 #include "uterm_vt.h"
 #include "uterm_vt_internal.h"
 

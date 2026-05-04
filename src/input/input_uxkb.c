@@ -36,9 +36,9 @@
 #include "input.h"
 #include "input_fallback.xkb.bin.h"
 #include "input_internal.h"
-#include "shl_hook.h"
-#include "shl_log.h"
-#include "shl_misc.h"
+#include "shl/hook.h"
+#include "shl/log.h"
+#include "shl/misc.h"
 
 #define LOG_SUBSYSTEM "uterm_uxkb"
 

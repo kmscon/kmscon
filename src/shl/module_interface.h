@@ -32,10 +32,10 @@
 
 #include <stdbool.h>
 #include <stdlib.h>
-#include "shl_dlist.h"
-#include "shl_githead.h"
-#include "shl_misc.h"
-#include "shl_module.h"
+#include "dlist.h"
+#include "githead.h"
+#include "misc.h"
+#include "module.h"
 
 struct shl_module_info {
 	const char *githead;

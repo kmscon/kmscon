@@ -35,8 +35,8 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include "conf.h"
-#include "eloop.h"
 #include "input/input.h"
+#include "shl/eloop.h"
 #include "uterm_vt.h"
 #include "video/video.h"
 

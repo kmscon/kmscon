@@ -40,9 +40,9 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
-#include "shl_dlist.h"
-#include "shl_log.h"
-#include "shl_misc.h"
+#include "shl/dlist.h"
+#include "shl/log.h"
+#include "shl/misc.h"
 #include "uterm_monitor.h"
 #include "uterm_systemd_internal.h"
 

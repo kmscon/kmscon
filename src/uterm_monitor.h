@@ -32,10 +32,10 @@
 #ifndef UTERM_UTERM_MONITOR_H
 #define UTERM_UTERM_MONITOR_H
 
-#include <eloop.h>
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include "shl/eloop.h"
 
 struct uterm_monitor;
 struct uterm_monitor_seat;

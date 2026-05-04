@@ -26,9 +26,9 @@
 
 #include <errno.h>
 #include <string.h>
+#include "dlist.h"
 #include "htable.h"
-#include "shl_dlist.h"
-#include "shl_log.h"
+#include "log.h"
 
 struct shl_lru {
 	unsigned int max_size;

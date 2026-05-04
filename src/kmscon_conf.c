@@ -34,9 +34,9 @@
 #include <xkbcommon/xkbcommon-keysyms.h>
 #include "conf.h"
 #include "kmscon_conf.h"
-#include "shl_githead.h"
-#include "shl_log.h"
-#include "shl_misc.h"
+#include "shl/githead.h"
+#include "shl/log.h"
+#include "shl/misc.h"
 #include "video/video.h"
 
 static void print_help()

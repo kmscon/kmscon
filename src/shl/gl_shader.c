@@ -37,8 +37,8 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-#include "shl_gl.h"
-#include "shl_log.h"
+#include "gl.h"
+#include "log.h"
 
 #define LOG_SUBSYSTEM "gl_shader"
 

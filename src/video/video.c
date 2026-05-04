@@ -34,13 +34,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include "eloop.h"
-#include "shl_dlist.h"
-#include "shl_hook.h"
-#include "shl_log.h"
-#include "shl_misc.h"
-#include "shl_module.h"
-#include "shl_register.h"
+#include "shl/dlist.h"
+#include "shl/eloop.h"
+#include "shl/hook.h"
+#include "shl/log.h"
+#include "shl/misc.h"
+#include "shl/module.h"
+#include "shl/register.h"
 #include "video.h"
 #include "video_internal.h"
 

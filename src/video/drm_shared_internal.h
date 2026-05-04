@@ -31,8 +31,8 @@
 #include <stdlib.h>
 #include <xf86drm.h>
 #include <xf86drmMode.h>
-#include "eloop.h"
-#include "shl_timer.h"
+#include "shl/eloop.h"
+#include "shl/timer.h"
 #include "video.h"
 #include "video_internal.h"
 

@@ -33,7 +33,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
-#include "shl_module.h"
+#include "shl/module.h"
 #include "video/video.h"
 
 /* fonts */

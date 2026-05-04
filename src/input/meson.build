@@ -27,7 +27,7 @@ input_dep = [
 ]
 
 input = static_library('input', input_srcs,
-  dependencies: input_dep
+  dependencies: input_dep,
 )
 
 input_deps = declare_dependency(

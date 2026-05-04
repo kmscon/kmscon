@@ -49,7 +49,7 @@
 #include <string.h>
 #include "font.h"
 #include "font_8x16.data.bin.h"
-#include "shl_log.h"
+#include "shl/log.h"
 
 #define LOG_SUBSYSTEM "font_8x16"
 

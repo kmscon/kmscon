@@ -36,7 +36,7 @@
 
 #include <stdbool.h>
 #include <stdlib.h>
-#include "shl_misc.h"
+#include "shl/misc.h"
 
 struct conf_type;
 struct conf_option;

@@ -46,11 +46,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include "font/font.h"
-#include "shl_dlist.h"
-#include "shl_gl.h"
-#include "shl_hashtable.h"
-#include "shl_log.h"
-#include "shl_misc.h"
+#include "shl/dlist.h"
+#include "shl/gl.h"
+#include "shl/hashtable.h"
+#include "shl/log.h"
+#include "shl/misc.h"
 #include "text.h"
 #include "text_gltex_atlas.frag.bin.h"
 #include "text_gltex_atlas.vert.bin.h"

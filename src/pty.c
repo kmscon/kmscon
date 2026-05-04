@@ -37,11 +37,11 @@
 #include <termios.h>
 #include <time.h>
 #include <unistd.h>
-#include "eloop.h"
 #include "pty.h"
-#include "shl_log.h"
-#include "shl_misc.h"
-#include "shl_ring.h"
+#include "shl/eloop.h"
+#include "shl/log.h"
+#include "shl/misc.h"
+#include "shl/ring.h"
 
 #define LOG_SUBSYSTEM "pty"
 

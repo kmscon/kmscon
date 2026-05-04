@@ -35,9 +35,9 @@
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
-#include "shl_log.h"
-#include "shl_misc.h"
-#include "shl_register.h"
+#include "shl/log.h"
+#include "shl/misc.h"
+#include "shl/register.h"
 #include "text.h"
 #include "video/video.h"
 

@@ -32,9 +32,9 @@
 #include <limits.h>
 #include <stdbool.h>
 #include <stdlib.h>
-#include "eloop.h"
-#include "shl_dlist.h"
-#include "shl_hook.h"
+#include "shl/dlist.h"
+#include "shl/eloop.h"
+#include "shl/hook.h"
 #include "video.h"
 
 /* backend-operations */

@@ -15,7 +15,7 @@ font = static_library('input', font_srcs,
 
 font_deps = declare_dependency(
   link_with: [font],
-  dependencies: font_dep
+  dependencies: font_dep,
 )
 
 #

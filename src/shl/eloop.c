@@ -172,11 +172,11 @@
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
+#include "dlist.h"
 #include "eloop.h"
-#include "shl_dlist.h"
-#include "shl_hook.h"
-#include "shl_log.h"
-#include "shl_misc.h"
+#include "hook.h"
+#include "log.h"
+#include "misc.h"
 
 #define LOG_SUBSYSTEM "eloop"
 

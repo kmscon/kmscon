@@ -39,10 +39,10 @@
 #include <xf86drm.h>
 #include <xf86drmMode.h>
 #include "drm_shared_internal.h"
-#include "shl_dlist.h"
-#include "shl_log.h"
-#include "shl_misc.h"
-#include "shl_timer.h"
+#include "shl/dlist.h"
+#include "shl/log.h"
+#include "shl/misc.h"
+#include "shl/timer.h"
 #include "video.h"
 #include "video_internal.h"
 

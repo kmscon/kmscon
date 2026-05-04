@@ -30,12 +30,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
-#include "shl_dlist.h"
-#include "shl_githead.h"
-#include "shl_log.h"
-#include "shl_misc.h"
-#include "shl_module.h"
-#include "shl_module_interface.h"
+#include "dlist.h"
+#include "githead.h"
+#include "log.h"
+#include "misc.h"
+#include "module.h"
+#include "module_interface.h"
 
 #define LOG_SUBSYSTEM "module"
 

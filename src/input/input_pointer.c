@@ -1,10 +1,10 @@
 #include <linux/input-event-codes.h>
 #include <linux/input.h>
 #include <time.h>
-#include "eloop.h"
 #include "input.h"
 #include "input_internal.h"
-#include "shl_hook.h"
+#include "shl/eloop.h"
+#include "shl/hook.h"
 
 static void pointer_update_inactivity_timer(struct uterm_input_dev *dev)
 {

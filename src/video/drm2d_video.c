@@ -42,9 +42,9 @@
 #include <xf86drmMode.h>
 #include "drm2d_internal.h"
 #include "drm_shared_internal.h"
-#include "eloop.h"
-#include "shl_log.h"
-#include "shl_misc.h"
+#include "shl/eloop.h"
+#include "shl/log.h"
+#include "shl/misc.h"
 #include "video.h"
 #include "video_internal.h"
 

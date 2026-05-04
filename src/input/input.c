@@ -37,13 +37,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include "eloop.h"
 #include "input.h"
 #include "input_internal.h"
-#include "shl_dlist.h"
-#include "shl_hook.h"
-#include "shl_log.h"
-#include "shl_misc.h"
+#include "shl/dlist.h"
+#include "shl/eloop.h"
+#include "shl/hook.h"
+#include "shl/log.h"
+#include "shl/misc.h"
 
 #define LOG_SUBSYSTEM "uterm_input"
 

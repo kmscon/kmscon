@@ -19,9 +19,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/time.h>
-#include "shl_githead.h"
-#include "shl_log.h"
-#include "shl_misc.h"
+#include "githead.h"
+#include "log.h"
+#include "misc.h"
 
 /*
  * Locking

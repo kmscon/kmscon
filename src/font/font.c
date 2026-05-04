@@ -56,10 +56,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include "font.h"
-#include "shl_log.h"
-#include "shl_misc.h"
-#include "shl_module.h"
-#include "shl_register.h"
+#include "shl/log.h"
+#include "shl/misc.h"
+#include "shl/module.h"
+#include "shl/register.h"
 
 #define LOG_SUBSYSTEM "font"
 

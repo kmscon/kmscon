@@ -43,7 +43,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-#include "shl_dlist.h"
+#include "dlist.h"
 
 typedef void (*shl_register_destroy_cb)(void *data);
 

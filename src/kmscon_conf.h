@@ -36,7 +36,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include "conf.h"
-#include "shl_dlist.h"
+#include "shl/dlist.h"
 
 enum kmscon_conf_gpu_selection {
 	KMSCON_GPU_ALL,

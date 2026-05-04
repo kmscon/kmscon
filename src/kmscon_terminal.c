@@ -37,7 +37,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "conf.h"
-#include "eloop.h"
 #include "font/font.h"
 #include "input/input.h"
 #include "kmscon_conf.h"
@@ -45,8 +44,9 @@
 #include "kmscon_seat.h"
 #include "kmscon_terminal.h"
 #include "pty.h"
-#include "shl_dlist.h"
-#include "shl_log.h"
+#include "shl/dlist.h"
+#include "shl/eloop.h"
+#include "shl/log.h"
 #include "text.h"
 #include "video/video.h"
 

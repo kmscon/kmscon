@@ -42,9 +42,9 @@ static void print_help();
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include "eloop.h"
 #include "input/input.h"
-#include "shl_log.h"
+#include "shl/eloop.h"
+#include "shl/log.h"
 #include "test_include.h"
 #include "uterm_vt.h"
 

@@ -23,7 +23,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "shl_misc.h"
+#include "shl/misc.h"
 #include "test_common.h"
 
 #define check_assert_string_list_eq(X, Y)                                                          \

@@ -42,9 +42,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include "font/font.h"
-#include "shl_log.h"
-#include "shl_lru.h"
-#include "shl_misc.h"
+#include "shl/log.h"
+#include "shl/lru.h"
+#include "shl/misc.h"
 #include "text.h"
 #include "video/video.h"
 

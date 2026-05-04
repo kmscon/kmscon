@@ -66,11 +66,11 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "eloop.h"
 #include "input/input.h"
 #include "input/input_internal.h"
-#include "shl_log.h"
-#include "shl_misc.h"
+#include "shl/eloop.h"
+#include "shl/log.h"
+#include "shl/misc.h"
 #include "uterm_vt.h"
 #include "uterm_vt_internal.h"
 

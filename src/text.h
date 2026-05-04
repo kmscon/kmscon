@@ -37,7 +37,7 @@
 #include <libtsm.h>
 #include <stdlib.h>
 #include "font/font.h"
-#include "shl_module.h"
+#include "shl/module.h"
 #include "video/video.h"
 
 /* text renderer */

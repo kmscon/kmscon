@@ -50,10 +50,10 @@
 #ifndef UTERM_UTERM_VIDEO_H
 #define UTERM_UTERM_VIDEO_H
 
-#include <eloop.h>
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include "shl/eloop.h"
 
 struct uterm_mode;
 struct uterm_display;

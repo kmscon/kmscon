@@ -32,11 +32,11 @@
 #ifndef UTERM_UTERM_VT_H
 #define UTERM_UTERM_VT_H
 
-#include <eloop.h>
-#include <input/input.h>
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include "input/input.h"
+#include "shl/eloop.h"
 
 struct uterm_vt;
 struct uterm_vt_master;

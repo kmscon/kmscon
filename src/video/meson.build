@@ -31,7 +31,7 @@ if enable_video_drm2d
 endif
 
 video = static_library('video', video_srcs,
-  dependencies: video_dep
+  dependencies: video_dep,
 )
 
 video_deps = declare_dependency(

@@ -123,7 +123,7 @@ void uterm_display_set_cursor_offset(struct uterm_display *disp, int32_t x, int3
 	(void)x;
 	(void)y;
 }
-#include "shl_log.h"
+#include "shl/log.h"
 #undef log_warning
 #define log_warning(f, ...)
 /* Pull in the implementation so we can call bbulk_set directly */

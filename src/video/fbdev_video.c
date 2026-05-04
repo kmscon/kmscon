@@ -37,8 +37,8 @@
 #include <sys/mman.h>
 #include <unistd.h>
 #include "fbdev_internal.h"
-#include "shl_log.h"
-#include "shl_misc.h"
+#include "shl/log.h"
+#include "shl/misc.h"
 #include "video.h"
 #include "video_internal.h"
 

@@ -31,8 +31,8 @@
 #include <fontconfig/fontconfig.h>
 #include <stdlib.h>
 #include "font.h"
-#include "shl_log.h"
-#include "shl_module_interface.h"
+#include "shl/log.h"
+#include "shl/module_interface.h"
 
 #define LOG_SUBSYSTEM "mod_freetype"
 

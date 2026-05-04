@@ -32,7 +32,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "fbdev_internal.h"
-#include "shl_log.h"
+#include "shl/log.h"
 #include "video.h"
 #include "video_internal.h"
 

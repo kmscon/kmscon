@@ -39,8 +39,8 @@
 #include <unistd.h>
 #include <xkbcommon/xkbcommon.h>
 #include "conf.h"
-#include "shl_log.h"
-#include "shl_misc.h"
+#include "shl/log.h"
+#include "shl/misc.h"
 
 #define LOG_SUBSYSTEM "conf"
 

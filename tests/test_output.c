@@ -46,8 +46,8 @@ static void print_help();
 #include <string.h>
 #include <unistd.h>
 
-#include "eloop.h"
-#include "shl_log.h"
+#include "shl/eloop.h"
+#include "shl/log.h"
 #include "test_include.h"
 #include "video/video.h"
 

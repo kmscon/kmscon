@@ -30,8 +30,8 @@
 
 #include <errno.h>
 #include <stdlib.h>
-#include "shl_log.h"
-#include "shl_module_interface.h"
+#include "shl/log.h"
+#include "shl/module_interface.h"
 #include "video_internal.h"
 
 extern struct uterm_video_module drm3d_module;
