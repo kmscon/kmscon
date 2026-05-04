@@ -46,14 +46,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include "font/font.h"
+#include "gltex_atlas.frag.bin.h"
+#include "gltex_atlas.vert.bin.h"
 #include "shl/dlist.h"
 #include "shl/gl.h"
 #include "shl/hashtable.h"
 #include "shl/log.h"
 #include "shl/misc.h"
 #include "text.h"
-#include "text_gltex_atlas.frag.bin.h"
-#include "text_gltex_atlas.vert.bin.h"
 #include "video/video.h"
 
 #define LOG_SUBSYSTEM "text_gltex"
@@ -204,10 +204,10 @@ static int gltex_set(struct kmscon_text *txt)
 	if (ret)
 		return ret;
 
-	vert = _binary_text_gltex_atlas_vert_start;
-	vlen = _binary_text_gltex_atlas_vert_size;
-	frag = _binary_text_gltex_atlas_frag_start;
-	flen = _binary_text_gltex_atlas_frag_size;
+	vert = _binary_gltex_atlas_vert_start;
+	vlen = _binary_gltex_atlas_vert_size;
+	frag = _binary_gltex_atlas_frag_start;
+	flen = _binary_gltex_atlas_frag_size;
 	gl_clear_error();
 
 	ret = gl_shader_new(&gt->shader, vert, vlen, frag, flen, attr, 4);

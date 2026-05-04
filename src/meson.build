@@ -27,10 +27,10 @@ src_inc = [include_directories('.')]
 
 subdir('shl')
 
-
 subdir('font')
 subdir('input')
 subdir('video')
+subdir('render')
 
 #
 # libuterm
@@ -68,19 +68,7 @@ uterm_deps = declare_dependency(
   dependencies: uterm_dep
 )
 
-if enable_renderer_gltex
-  mod_gltex = shared_module('mod-gltex', [
-      'text_gltex.c',
-      'kmscon_mod_gltex.c',
-      embed_gen.process('text_gltex_atlas.vert', extra_args: shader_regex),
-      embed_gen.process('text_gltex_atlas.frag', extra_args: shader_regex),
-    ],
-    name_prefix: '',
-    dependencies: [libtsm_deps, glesv2_deps, shl_deps, shl_gl_deps],
-    install: true,
-    install_dir: moduledir,
-  )
-endif
+
 
 #
 # Binaries
@@ -98,8 +86,6 @@ conf_deps = declare_dependency(
 
 kmscon_srcs = [
   'pty.c',
-  'text.c',
-  'text_bbulk.c',
   'kmscon_seat.c',
   'kmscon_conf.c',
   'kmscon_issue.c',
@@ -112,7 +98,7 @@ if enable_session_terminal
   kmscon_srcs += 'kmscon_terminal.c'
 endif
 kmscon = executable('kmscon', kmscon_srcs,
-  dependencies: [xkbcommon_deps, libtsm_deps, threads_deps, dl_deps, conf_deps, shl_deps, eloop_deps, uterm_deps, font_deps],
+  dependencies: [xkbcommon_deps, libtsm_deps, threads_deps, dl_deps, conf_deps, shl_deps, eloop_deps, uterm_deps, render_deps, font_deps],
   export_dynamic: true,
   install: true,
   install_dir: libexecdir,

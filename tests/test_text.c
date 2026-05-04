@@ -7,7 +7,7 @@
 #include <errno.h>
 #include <stdint.h>
 #include <string.h>
-#include "../src/text.c" /* pull in kmscon_text_set without changing meson */
+#include "../src/render/text.c" /* pull in kmscon_text_set without changing meson */
 
 /* --- Stubs for external functions used by kmscon_text_set --- */
 void kmscon_font_ref(struct kmscon_font *font) {}

@@ -44,10 +44,10 @@
 #include "kmscon_seat.h"
 #include "kmscon_terminal.h"
 #include "pty.h"
+#include "render/text.h"
 #include "shl/dlist.h"
 #include "shl/eloop.h"
 #include "shl/log.h"
-#include "text.h"
 #include "video/video.h"
 
 #define LOG_SUBSYSTEM "terminal"

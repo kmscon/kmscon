@@ -7,7 +7,7 @@
 #include <errno.h>
 #include <stdint.h>
 #include <string.h>
-#include "text.h"
+#include "../src/render/text.h"
 
 /* ---- Stubs for external dependencies used by text_bbulk.c ---- */
 #include "../src/font/font.h"	/* for kmscon_font_* */
@@ -127,7 +127,7 @@ void uterm_display_set_cursor_offset(struct uterm_display *disp, int32_t x, int3
 #undef log_warning
 #define log_warning(f, ...)
 /* Pull in the implementation so we can call bbulk_set directly */
-#include "../src/text_bbulk.c"
+#include "../src/render/bbulk.c"
 
 /* Fake font objects with valid width/height for FONT_WIDTH/FONT_HEIGHT macros */
 static struct kmscon_font fake_font = {.attr = {.width = FAKE_CELL_W, .height = FAKE_CELL_H}};
