@@ -11,7 +11,6 @@ struct uterm_vt_ops {
 	int (*deactivate)(struct uterm_vt *vt);
 	void (*input)(struct uterm_vt *vt, struct uterm_input_key_event *ev);
 	void (*retry)(struct uterm_vt *vt);
-	unsigned int (*get_type)(struct uterm_vt *vt);
 	unsigned int (*get_num)(struct uterm_vt *vt);
 	void (*bell)(struct uterm_vt *vt);
 	int (*restore)(struct uterm_vt *vt);

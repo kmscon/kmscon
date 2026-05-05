@@ -56,11 +56,6 @@ struct uterm_vt_event {
 	unsigned int flags;
 };
 
-enum uterm_vt_type {
-	UTERM_VT_REAL = 0x01,
-	UTERM_VT_FAKE = 0x02,
-};
-
 typedef int (*uterm_vt_cb)(struct uterm_vt *vt, struct uterm_vt_event *ev, void *data);
 
 int uterm_vt_master_new(struct uterm_vt_master **out, struct ev_eloop *eloop);
@@ -77,7 +72,6 @@ void uterm_vt_deallocate(struct uterm_vt *vt);
 int uterm_vt_activate(struct uterm_vt *vt);
 int uterm_vt_deactivate(struct uterm_vt *vt);
 void uterm_vt_retry(struct uterm_vt *vt);
-unsigned int uterm_vt_get_type(struct uterm_vt *vt);
 unsigned int uterm_vt_get_num(struct uterm_vt *vt);
 void uterm_vt_bell(struct uterm_vt *vt);
 int uterm_vt_restore(struct uterm_vt *vt);
