@@ -287,6 +287,16 @@ font-name=Ubuntu Mono
       </varlistentry>
 
       <varlistentry>
+        <term><option>natural-scrolling</option></term>
+        <listitem>
+          <para>Invert the mouse wheel direction (natural scrolling).
+                When enabled, scrolling up with the wheel scrolls down and vice versa.
+                (default: off)
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
         <term><option>soft-cursor</option></term>
         <listitem>
           <para>Force software cursor, if hardware cursor is not working properly.

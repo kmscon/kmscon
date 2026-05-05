@@ -123,6 +123,8 @@ struct kmscon_conf_t {
 	unsigned int xkb_repeat_rate;
 	/* Enable mouse support */
 	bool mouse;
+	/* Natural scrolling (invert mouse wheel direction) */
+	bool natural_scrolling;
 	/* Force software cursor */
 	bool soft_cursor;
 	/* DPMS screen timeout in seconds (0 = disabled) */

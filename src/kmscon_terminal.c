@@ -871,8 +871,12 @@ static void forward_pointer_event(struct kmscon_terminal *term,
 {
 	unsigned int event;
 	unsigned int button;
+	int32_t wheel;
 
 	button = ev->button;
+	wheel = ev->wheel;
+	if (term->conf->natural_scrolling)
+		wheel = -wheel;
 
 	switch (ev->event) {
 	case UTERM_MOVED:
@@ -891,7 +895,7 @@ static void forward_pointer_event(struct kmscon_terminal *term,
 	case UTERM_WHEEL:
 		/* Convert wheel events to button 4 (scroll up) or 5 (scroll down) */
 		event = TSM_MOUSE_EVENT_PRESSED;
-		if (ev->wheel > 0)
+		if (wheel > 0)
 			button = 4; /* Scroll up */
 		else
 			button = 5; /* Scroll down */
@@ -1019,7 +1023,7 @@ static void pointer_event(struct uterm_input *input, struct uterm_input_pointer_
 		break;
 	case UTERM_WHEEL:
 		tsm_screen_selection_reset(term->console);
-		if (ev->wheel > 0)
+		if ((term->conf->natural_scrolling ? -ev->wheel : ev->wheel) > 0)
 			tsm_screen_sb_up(term->console, 3);
 		else
 			tsm_screen_sb_down(term->console, 3);

@@ -126,6 +126,8 @@ static void print_help()
 		"\t                                 Delay between two key repeats in ms\n"
 		"\t    --mouse                    [on]\n"
 		"\t                                 Enable mouse support\n"
+		"\t    --natural-scrolling        [off]\n"
+		"\t                                 Invert mouse wheel direction\n"
 		"\t    --soft-cursor              [off]\n"
 		"\t                                 Force software cursor\n"
 		"\t    --dpms-timeout <secs>      [600]\n"
@@ -783,6 +785,7 @@ int kmscon_conf_new(struct conf_ctx **out)
 		CONF_OPTION_UINT(0, "xkb-repeat-delay", &conf->xkb_repeat_delay, 250),
 		CONF_OPTION_UINT(0, "xkb-repeat-rate", &conf->xkb_repeat_rate, 50),
 		CONF_OPTION_BOOL(0, "mouse", &conf->mouse, true),
+		CONF_OPTION_BOOL(0, "natural-scrolling", &conf->natural_scrolling, false),
 		CONF_OPTION_BOOL(0, "soft-cursor", &conf->soft_cursor, false),
 		CONF_OPTION_UINT(0, "dpms-timeout", &conf->dpms_timeout, 600),
 
