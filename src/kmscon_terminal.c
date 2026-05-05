@@ -1023,7 +1023,7 @@ static void pointer_event(struct uterm_input *input, struct uterm_input_pointer_
 		break;
 	case UTERM_WHEEL:
 		tsm_screen_selection_reset(term->console);
-		if ((term->conf->natural_scrolling ? -ev->wheel : ev->wheel) > 0)
+		if (term->conf->natural_scrolling != (ev->wheel > 0))
 			tsm_screen_sb_up(term->console, 3);
 		else
 			tsm_screen_sb_down(term->console, 3);
