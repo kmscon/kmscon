@@ -100,7 +100,7 @@ static void real_delayed(struct ev_eloop *eloop, void *unused, void *data)
 	log_debug("enter VT %d %p during startup", vt->real_num, vt);
 	vt->real_delayed = false;
 	ev_eloop_unregister_idle_cb(eloop, real_delayed, vt, EV_NORMAL);
-	vt_call_activate(&vt->base, vt->real_num);
+	vt_call_activate(&vt->base);
 }
 
 static void real_sig_enter(struct ev_eloop *eloop, struct signalfd_siginfo *info, void *data)
@@ -130,7 +130,7 @@ static void real_sig_enter(struct ev_eloop *eloop, struct signalfd_siginfo *info
 	log_debug("enter VT %d %p due to VT signal", vt->real_num, vt);
 	ioctl(vt->real_fd, VT_RELDISP, VT_ACKACQ);
 	vt->real_target = -1;
-	vt_call_activate(&vt->base, vt->real_num);
+	vt_call_activate(&vt->base);
 }
 
 static void real_sig_leave(struct ev_eloop *eloop, struct signalfd_siginfo *info, void *data)
@@ -151,7 +151,7 @@ static void real_sig_leave(struct ev_eloop *eloop, struct signalfd_siginfo *info
 
 	log_debug("leaving VT %d %p due to VT signal", vt->real_num, vt);
 	active = vt->base.active;
-	ret = vt_call_deactivate(&vt->base, vt->real_target, false);
+	ret = vt_call_deactivate(&vt->base, false);
 	if (ret) {
 		ioctl(vt->real_fd, VT_RELDISP, 0);
 		log_debug("not leaving VT %d %p: %d", vt->real_num, vt, ret);
@@ -376,7 +376,7 @@ static void real_close(struct uterm_vt_real *vt)
 	} else if (vt->base.active) {
 		uterm_input_sleep(vt->base.input);
 	}
-	vt_call_deactivate(&vt->base, vt->real_target, true);
+	vt_call_deactivate(&vt->base, true);
 
 	ret = ioctl(vt->real_fd, KDSKBMODE, vt->real_kbmode);
 	if (ret && !vt->base.hup)

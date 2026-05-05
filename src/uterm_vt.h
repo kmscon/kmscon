@@ -54,7 +54,6 @@ enum uterm_vt_flags {
 struct uterm_vt_event {
 	unsigned int action;
 	unsigned int flags;
-	int target;
 };
 
 enum uterm_vt_type {

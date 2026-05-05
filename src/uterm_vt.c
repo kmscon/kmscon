@@ -42,14 +42,13 @@
 
 #define LOG_SUBSYSTEM "vt"
 
-static int vt_call(struct uterm_vt *vt, unsigned int event, int target, bool force)
+static int vt_call(struct uterm_vt *vt, unsigned int event, bool force)
 {
 	int ret;
 	struct uterm_vt_event ev;
 
 	memset(&ev, 0, sizeof(ev));
 	ev.action = event;
-	ev.target = target;
 	if (force)
 		ev.flags |= UTERM_VT_FORCE;
 
@@ -88,14 +87,14 @@ static int vt_call(struct uterm_vt *vt, unsigned int event, int target, bool for
 	return 0;
 }
 
-void vt_call_activate(struct uterm_vt *vt, int target)
+void vt_call_activate(struct uterm_vt *vt)
 {
-	vt_call(vt, UTERM_VT_ACTIVATE, target, false);
+	vt_call(vt, UTERM_VT_ACTIVATE, false);
 }
 
-int vt_call_deactivate(struct uterm_vt *vt, int target, bool force)
+int vt_call_deactivate(struct uterm_vt *vt, bool force)
 {
-	return vt_call(vt, UTERM_VT_DEACTIVATE, target, force);
+	return vt_call(vt, UTERM_VT_DEACTIVATE, force);
 }
 
 SHL_EXPORT

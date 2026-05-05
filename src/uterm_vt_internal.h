@@ -38,8 +38,8 @@ struct uterm_vt_master {
 	struct shl_dlist vts;
 };
 
-void vt_call_activate(struct uterm_vt *vt, int target);
-int vt_call_deactivate(struct uterm_vt *vt, int target, bool force);
+void vt_call_activate(struct uterm_vt *vt);
+int vt_call_deactivate(struct uterm_vt *vt, bool force);
 
 struct uterm_vt *uterm_vt_real_new(struct uterm_vt_master *vtm, struct uterm_input *input,
 				   const char *vt_name, uterm_vt_cb cb, void *data);

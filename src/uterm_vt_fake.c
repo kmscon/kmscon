@@ -56,14 +56,14 @@
 static int fake_activate(struct uterm_vt *vt)
 {
 	log_debug("activating fake VT due to user request");
-	vt_call_activate(vt, 0);
+	vt_call_activate(vt);
 	return 0;
 }
 
 static int fake_deactivate(struct uterm_vt *vt)
 {
 	log_debug("deactivating fake VT due to user request");
-	return vt_call_deactivate(vt, 0, false);
+	return vt_call_deactivate(vt, false);
 }
 
 static void fake_input(struct uterm_input *input, struct uterm_input_key_event *ev, void *data)
@@ -78,17 +78,17 @@ static void fake_input(struct uterm_input *input, struct uterm_input_key_event *
 		ev->handled = true;
 		if (vt->active) {
 			log_debug("deactivating fake VT due to user input");
-			vt_call_deactivate(vt, 0, false);
+			vt_call_deactivate(vt, false);
 		} else {
 			log_debug("activating fake VT due to user input");
-			vt_call_activate(vt, 0);
+			vt_call_activate(vt);
 		}
 	}
 }
 
 static void fake_destroy(struct uterm_vt *vt)
 {
-	vt_call_deactivate(vt, 0, true);
+	vt_call_deactivate(vt, true);
 	uterm_input_sleep(vt->input);
 }
 
