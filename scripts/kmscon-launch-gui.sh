@@ -17,6 +17,9 @@ tmux) printf '\033Ptmux;\033\033]setBackground\a\033\\' ;;
 *) printf '\033]setBackground\a' ;;
 esac
 
+# Give time for kmscon to release drm master. Handle old version of sleep
+sleep 0.2 || sleep 1
+
 "$@"
 
 # If the current tty has changed, wait until the user switches back.
