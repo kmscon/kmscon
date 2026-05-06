@@ -27,6 +27,7 @@
  * Virtual Terminals
  */
 
+#include <fcntl.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -138,6 +139,30 @@ void uterm_vt_deallocate(struct uterm_vt *vt)
 	uterm_input_unref(vt->input);
 	vt->vtm = NULL;
 	free(vt);
+}
+
+SHL_EXPORT
+int uterm_vt_open_device(struct uterm_vt *vt, const char *device, int *fd_id)
+{
+	if (!vt || !vt->vtm)
+		return -EINVAL;
+
+	if (vt->ops->open_device)
+		return vt->ops->open_device(vt, device, fd_id);
+
+	return open(device, O_RDWR | O_CLOEXEC | O_NONBLOCK);
+}
+
+SHL_EXPORT
+void uterm_vt_close_device(struct uterm_vt *vt, int fd, int fd_id)
+{
+	if (!vt || !vt->vtm)
+		return;
+
+	if (vt->ops->close_device)
+		vt->ops->close_device(vt, fd, fd_id);
+	else
+		close(fd);
 }
 
 SHL_EXPORT

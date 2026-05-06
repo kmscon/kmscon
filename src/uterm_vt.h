@@ -69,6 +69,9 @@ int uterm_vt_allocate(struct uterm_vt_master *vt, struct uterm_vt **out, bool li
 		      uterm_vt_cb cb, void *data);
 void uterm_vt_deallocate(struct uterm_vt *vt);
 
+int uterm_vt_open_device(struct uterm_vt *vt, const char *device, int *fd_id);
+void uterm_vt_close_device(struct uterm_vt *vt, int fd, int fd_id);
+
 int uterm_vt_activate(struct uterm_vt *vt);
 int uterm_vt_deactivate(struct uterm_vt *vt);
 void uterm_vt_retry(struct uterm_vt *vt);
