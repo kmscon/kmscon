@@ -76,6 +76,8 @@ static void print_help()
 		"\t    --vt <vt>               [auto]  Select which VT to run on\n"
 		"\t    --switchvt              [on]    Automatically switch to VT\n"
 		"\t    --seats <list,of,seats> [current] Select seats to run on\n"
+		"\t    --libseat               [on]    Use libseat for seat management,\n"
+		"\t                                    input and video devices\n"
 		"\n"
 		"Session Options:\n"
 		"\t    --session-max <max>         [50]  Maximum number of sessions\n"
@@ -758,6 +760,7 @@ int kmscon_conf_new(struct conf_ctx **out)
 		CONF_OPTION(0, 0, "vt", &conf_vt, aftercheck_vt, NULL, NULL, &conf->vt, NULL),
 		CONF_OPTION_BOOL(0, "switchvt", &conf->switchvt, true),
 		CONF_OPTION_STRING_LIST(0, "seats", &conf->seats, def_seats),
+		CONF_OPTION_BOOL(0, "libseat", &conf->libseat, true),
 
 		/* Session Options */
 		CONF_OPTION_UINT(0, "session-max", &conf->session_max, 50),

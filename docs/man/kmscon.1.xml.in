@@ -168,6 +168,16 @@
       </varlistentry>
 
       <varlistentry>
+        <term><option>--libseat</option></term>
+        <listitem>
+          <para>Use libseat for seat management, input and video devices.
+                This option is only available if KMSCON was compiled with
+                libseat support. Use --no-libseat to disable it.
+                (default: on)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
         <term><option>--seats {list,of,seats}</option></term>
         <listitem>
           <para>List of seats KMSCON will run on. Use `all' to make KMSCON run

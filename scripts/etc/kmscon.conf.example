@@ -11,6 +11,7 @@
 ### Seat options (Usually setup in command line)
 #vt=1
 #switchvt
+#libseat
 
 ### Session Options
 #session-max=6
