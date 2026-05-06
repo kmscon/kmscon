@@ -55,6 +55,11 @@ uterm_dep = [
   video_deps,
 ]
 
+if enable_libseat
+  uterm_srcs += 'uterm_vt_libseat.c'
+  uterm_dep += libseat_deps
+endif
+
 if enable_multi_seat
   uterm_srcs += 'uterm_systemd.c'
   uterm_dep += libsystemd_deps

@@ -46,5 +46,16 @@ struct uterm_vt *uterm_vt_real_new(struct uterm_vt_master *vtm, struct uterm_inp
 				   const char *vt_name, uterm_vt_cb cb, void *data);
 struct uterm_vt *uterm_vt_fake_new(struct uterm_vt_master *vtm, struct uterm_input *input,
 				   uterm_vt_cb cb, void *data);
+#ifdef BUILD_ENABLE_LIBSEAT
+struct uterm_vt *uterm_vt_libseat_new(struct uterm_vt_master *vtm, struct uterm_input *input,
+				      const char *vt_name, uterm_vt_cb cb, void *data);
+#else
+static inline struct uterm_vt *uterm_vt_libseat_new(struct uterm_vt_master *vtm,
+						    struct uterm_input *input, const char *vt_name,
+						    uterm_vt_cb cb, void *data)
+{
+	return NULL;
+}
+#endif /* BUILD_ENABLE_LIBSEAT */
 
 #endif /* UTERM_VT_INTERNAL_H */

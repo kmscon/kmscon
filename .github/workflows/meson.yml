@@ -27,7 +27,7 @@ jobs:
         echo github.event_name: ${{ github.event_name }}
 
     - name: Install dependencies on Ubuntu
-      run: sudo apt-get update && sudo apt-get install -y meson check libudev-dev libxkbcommon-dev libdrm-dev libgbm-dev libegl1-mesa-dev libgles-dev libpango1.0-dev libsystemd-dev jq
+      run: sudo apt-get update && sudo apt-get install -y meson check libudev-dev libxkbcommon-dev libdrm-dev libgbm-dev libegl1-mesa-dev libgles-dev libpango1.0-dev libsystemd-dev jq libseat-dev
 
     - name: Compile and install libtsm
       env:

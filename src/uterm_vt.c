@@ -110,7 +110,9 @@ int uterm_vt_allocate(struct uterm_vt_master *vtm, struct uterm_vt **out, bool l
 	if (!seat)
 		seat = "seat0";
 
-	if (!listen)
+	vt = uterm_vt_libseat_new(vtm, input, vt_name, cb, data);
+
+	if (!vt && !listen)
 		vt = uterm_vt_real_new(vtm, input, vt_name, cb, data);
 
 	if (!vt)
