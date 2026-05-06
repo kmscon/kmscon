@@ -424,7 +424,7 @@ static void page_flip_handler(struct uterm_display *disp)
 	}
 }
 
-static int video_init(struct uterm_video *video, const char *node)
+static int video_init(struct uterm_video *video, int fd)
 {
 	static const EGLint conf_att[] = {
 		EGL_SURFACE_TYPE,
@@ -459,7 +459,7 @@ static int video_init(struct uterm_video *video, const char *node)
 		return -ENOMEM;
 	memset(v3d, 0, sizeof(*v3d));
 
-	ret = uterm_drm_video_init(video, node, &drm_display_ops, page_flip_handler, v3d);
+	ret = uterm_drm_video_init(video, fd, &drm_display_ops, page_flip_handler, v3d);
 	if (ret)
 		goto err_free;
 	vdrm = video->data;
@@ -468,21 +468,21 @@ static int video_init(struct uterm_video *video, const char *node)
 
 	v3d->gbm = gbm_create_device(vdrm->fd);
 	if (!v3d->gbm) {
-		log_err("cannot create gbm device for %s (permission denied)", node);
+		log_err("cannot create gbm device for %s (permission denied)", vdrm->name);
 		ret = -EFAULT;
 		goto err_video;
 	}
 
 	v3d->disp = eglGetDisplay((EGLNativeDisplayType)v3d->gbm);
 	if (v3d->disp == EGL_NO_DISPLAY) {
-		log_err("cannot retrieve egl display for %s", node);
+		log_err("cannot retrieve egl display for %s", vdrm->name);
 		ret = -EFAULT;
 		goto err_gbm;
 	}
 
 	b = eglInitialize(v3d->disp, &major, &minor);
 	if (!b) {
-		log_err("cannot init egl display for %s", node);
+		log_err("cannot init egl display for %s", vdrm->name);
 		ret = -EFAULT;
 		goto err_gbm;
 	}

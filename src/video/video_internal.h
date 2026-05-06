@@ -61,7 +61,7 @@ struct display_ops {
 };
 
 struct video_ops {
-	int (*init)(struct uterm_video *video, const char *node);
+	int (*init)(struct uterm_video *video, int fd);
 	void (*destroy)(struct uterm_video *video);
 	int (*poll)(struct uterm_video *video);
 	void (*sleep)(struct uterm_video *video);

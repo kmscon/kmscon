@@ -78,6 +78,8 @@ struct kmscon_video {
 	struct uterm_video *video;
 	struct uterm_monitor_dev *udev;
 	char *node;
+	int fd;
+	int fd_id;
 	bool drm;
 	bool awake;
 };
@@ -1091,18 +1093,26 @@ static int seat_video_init(struct kmscon_video *vid)
 			height = 0;
 		}
 	}
-	ret = uterm_video_new(&vid->video, seat->eloop, vid->node, backend, width, height,
+
+	vid->fd = uterm_vt_open_device(seat->vt, vid->node, &vid->fd_id);
+	if (vid->fd < 0) {
+		log_error("cannot open video device %s on seat %s: %d", vid->node, seat->name,
+			  vid->fd);
+		return vid->fd;
+	}
+
+	ret = uterm_video_new(&vid->video, seat->eloop, vid->fd, backend, width, height,
 			      seat->conf->use_original_mode);
 	if (ret && backend == be_drm3d) {
 		log_info("cannot create drm3d device %s on seat %s (%d); trying drm2d mode",
 			 vid->node, seat->name, ret);
-		ret = uterm_video_new(&vid->video, seat->eloop, vid->node, be_drm2d, width, height,
+		ret = uterm_video_new(&vid->video, seat->eloop, vid->fd, be_drm2d, width, height,
 				      seat->conf->use_original_mode);
 	}
 	if (ret) {
 		log_error("cannot create video device %s on seat %s: %d", vid->node, seat->name,
 			  ret);
-		return ret;
+		goto err_close;
 	}
 
 	ret = uterm_video_register_cb(vid->video, kmscon_seat_video_event, vid);
@@ -1115,6 +1125,8 @@ static int seat_video_init(struct kmscon_video *vid)
 
 err_video:
 	uterm_video_unref(vid->video);
+err_close:
+	uterm_vt_close_device(seat->vt, vid->fd, vid->fd_id);
 	return ret;
 }
 
@@ -1170,15 +1182,17 @@ void kmscon_seat_remove_video(struct kmscon_seat *seat, void *data)
 	shl_dlist_unlink(&vid->list);
 	uterm_video_unregister_cb(vid->video, kmscon_seat_video_event, vid);
 
-	disp = uterm_video_get_displays(vid->video);
-	while (disp) {
-		d = seat_get_display(seat, disp);
-		if (d)
-			seat_remove_display(seat, d);
-		disp = uterm_display_next(disp);
+	if (vid->video) {
+		disp = uterm_video_get_displays(vid->video);
+		while (disp) {
+			d = seat_get_display(seat, disp);
+			if (d)
+				seat_remove_display(seat, d);
+			disp = uterm_display_next(disp);
+		}
+		uterm_video_unref(vid->video);
+		uterm_vt_close_device(seat->vt, vid->fd, vid->fd_id);
 	}
-
-	uterm_video_unref(vid->video);
 	free(vid->node);
 	free(vid);
 }

@@ -45,7 +45,6 @@ struct fbdev_display {
 	struct fb_fix_screeninfo finfo;
 	struct fb_var_screeninfo vinfo;
 	unsigned int rate;
-	const char *node;
 
 	unsigned int bufid;
 	size_t xres;
@@ -74,7 +73,7 @@ struct fbdev_display {
 };
 
 struct fbdev_video {
-	char *node;
+	int fd;
 	bool pending_intro;
 };
 

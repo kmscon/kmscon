@@ -40,6 +40,7 @@
 static void print_help();
 
 #include <errno.h>
+#include <fcntl.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -178,6 +179,7 @@ int main(int argc, char **argv)
 	const char *node;
 	const char *mode;
 	size_t onum;
+	int fd;
 
 	onum = sizeof(options) / sizeof(*options);
 	ret = test_prepare(options, onum, argc, argv, &eloop);
@@ -196,15 +198,19 @@ int main(int argc, char **argv)
 		node = output_conf.dev;
 
 	log_notice("Creating video object using %s...", node);
+	fd = open(node, O_RDWR | O_CLOEXEC | O_NONBLOCK);
+	if (fd < 0) {
+		log_err("cannot open video device %s: %d", node, errno);
+		goto err_fail;
+	}
 
-	ret = uterm_video_new(&video, eloop, node, mode, output_conf.desired_width,
+	ret = uterm_video_new(&video, eloop, fd, mode, output_conf.desired_width,
 			      output_conf.desired_height, false);
 	if (ret) {
 		if (!output_conf.fbdev) {
 			log_notice("cannot create drm device; trying drm2d mode");
-			ret = uterm_video_new(&video, eloop, node, "drm2d",
-					      output_conf.desired_width, output_conf.desired_height,
-					      false);
+			ret = uterm_video_new(&video, eloop, fd, "drm2d", output_conf.desired_width,
+					      output_conf.desired_height, false);
 			if (ret)
 				goto err_exit;
 		} else {

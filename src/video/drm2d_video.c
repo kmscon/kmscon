@@ -275,13 +275,13 @@ static void show_displays(struct uterm_video *video)
 	}
 }
 
-static int video_init(struct uterm_video *video, const char *node)
+static int video_init(struct uterm_video *video, int fd)
 {
 	int ret;
 	uint64_t has_dumb;
 	struct uterm_drm_video *vdrm;
 
-	ret = uterm_drm_video_init(video, node, &drm2d_display_ops, NULL, NULL);
+	ret = uterm_drm_video_init(video, fd, &drm2d_display_ops, NULL, NULL);
 	if (ret)
 		return ret;
 	vdrm = video->data;

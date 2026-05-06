@@ -144,12 +144,6 @@ static int display_activate_force(struct uterm_display *disp, bool force)
 	if (!force && (disp->flags & DISPLAY_ONLINE))
 		return 0;
 
-	dfb->fd = open(dfb->node, O_RDWR | O_CLOEXEC | O_NONBLOCK);
-	if (dfb->fd < 0) {
-		log_err("cannot open %s (%d): %m", dfb->node, errno);
-		return -EFAULT;
-	}
-
 	ret = refresh_info(disp);
 	if (ret)
 		goto err_close;
@@ -228,7 +222,7 @@ static int display_activate_force(struct uterm_display *disp, bool force)
 
 	if (vinfo->bits_per_pixel != 32 && vinfo->bits_per_pixel != 24 &&
 	    vinfo->bits_per_pixel != 16) {
-		log_error("device %s does not support 16/32 bpp but: %u", dfb->node,
+		log_error("device %s does not support 16/32 bpp but: %u", dfb->finfo.id,
 			  vinfo->bits_per_pixel);
 		ret = -EFAULT;
 		goto err_close;
@@ -237,23 +231,23 @@ static int display_activate_force(struct uterm_display *disp, bool force)
 	if (vinfo->xres_virtual < vinfo->xres ||
 	    (disp->flags & DISPLAY_DBUF && vinfo->yres_virtual < vinfo->yres * 2) ||
 	    vinfo->yres_virtual < vinfo->yres) {
-		log_warning("device %s has weird virtual buffer sizes (%d %d %d %d)", dfb->node,
+		log_warning("device %s has weird virtual buffer sizes (%d %d %d %d)", dfb->finfo.id,
 			    vinfo->xres, vinfo->xres_virtual, vinfo->yres, vinfo->yres_virtual);
 	}
 
 	if (finfo->visual != FB_VISUAL_TRUECOLOR) {
-		log_error("device %s does not support true-color", dfb->node);
+		log_error("device %s does not support true-color", dfb->finfo.id);
 		ret = -EFAULT;
 		goto err_close;
 	}
 
 	if (vinfo->red.length > 8 || vinfo->green.length > 8 || vinfo->blue.length > 8) {
-		log_error("device %s uses unusual color-ranges", dfb->node);
+		log_error("device %s uses unusual color-ranges", dfb->finfo.id);
 		ret = -EFAULT;
 		goto err_close;
 	}
 
-	log_info("activating display %s to %ux%u %u bpp", dfb->node, vinfo->xres, vinfo->yres,
+	log_info("activating display %s to %ux%u %u bpp", dfb->finfo.id, vinfo->xres, vinfo->yres,
 		 vinfo->bits_per_pixel);
 
 	/* calculate monitor rate, default is 60 Hz */
@@ -286,7 +280,7 @@ static int display_activate_force(struct uterm_display *disp, bool force)
 
 	dfb->map = mmap(0, len, PROT_READ | PROT_WRITE, MAP_SHARED, dfb->fd, 0);
 	if (dfb->map == MAP_FAILED) {
-		log_error("cannot mmap device %s (%d): %m", dfb->node, errno);
+		log_error("cannot mmap device %s (%d): %m", dfb->finfo.id, errno);
 		ret = -EFAULT;
 		goto err_close;
 	}
@@ -336,7 +330,7 @@ static void display_deactivate_force(struct uterm_display *disp, bool force)
 {
 	struct fbdev_display *dfb = disp->data;
 
-	log_info("deactivating device %s", dfb->node);
+	log_info("deactivating device %s", dfb->finfo.id);
 
 	if (dfb->map) {
 		memset(dfb->map, 0, dfb->len);
@@ -373,11 +367,11 @@ static int display_set_dpms(struct uterm_display *disp, int state)
 		return -EINVAL;
 	}
 
-	log_info("setting DPMS of device %p to %s", dfb->node, uterm_dpms_to_name(state));
+	log_info("setting DPMS of device %p to %s", dfb->finfo.id, uterm_dpms_to_name(state));
 
 	ret = ioctl(dfb->fd, FBIOBLANK, set);
 	if (ret) {
-		log_error("cannot set DPMS on %s (%d): %m", dfb->node, errno);
+		log_error("cannot set DPMS on %s (%d): %m", dfb->finfo.id, errno);
 		return -EFAULT;
 	}
 
@@ -404,7 +398,7 @@ static int display_swap(struct uterm_display *disp)
 
 	ret = ioctl(dfb->fd, FBIOPUT_VSCREENINFO, vinfo);
 	if (ret) {
-		log_warning("cannot swap buffers on %s (%d): %m", dfb->node, errno);
+		log_warning("cannot swap buffers on %s (%d): %m", dfb->finfo.id, errno);
 		return -EFAULT;
 	}
 
@@ -450,7 +444,7 @@ static void intro_idle_event(struct ev_eloop *eloop, void *unused, void *data)
 	}
 
 	dfb = disp->data;
-	dfb->node = vfb->node;
+	dfb->fd = vfb->fd;
 
 	ret = ev_eloop_add_timer(video->eloop, dfb->vblank_timer);
 	if (ret) {
@@ -469,12 +463,12 @@ static void intro_idle_event(struct ev_eloop *eloop, void *unused, void *data)
 	uterm_display_unref(disp);
 }
 
-static int video_init(struct uterm_video *video, const char *node)
+static int video_init(struct uterm_video *video, int fd)
 {
 	int ret;
 	struct fbdev_video *vfb;
 
-	log_info("new device on %s", node);
+	log_info("new device on %d", fd);
 
 	vfb = malloc(sizeof(*vfb));
 	if (!vfb)
@@ -482,38 +476,27 @@ static int video_init(struct uterm_video *video, const char *node)
 	memset(vfb, 0, sizeof(*vfb));
 	video->data = vfb;
 
-	vfb->node = strdup(node);
-	if (!vfb->node) {
-		ret = -ENOMEM;
-		goto err_free;
-	}
+	vfb->fd = fd;
 
 	ret = ev_eloop_register_idle_cb(video->eloop, intro_idle_event, video, EV_NORMAL);
 	if (ret) {
 		log_error("cannot register idle event: %d", ret);
-		goto err_node;
+		free(vfb);
+		return ret;
 	}
 	vfb->pending_intro = true;
-
 	return 0;
-
-err_node:
-	free(vfb->node);
-err_free:
-	free(vfb);
-	return ret;
 }
 
 static void video_destroy(struct uterm_video *video)
 {
 	struct fbdev_video *vfb = video->data;
 
-	log_info("free device on %s", vfb->node);
+	log_info("free device on %d", vfb->fd);
 
 	if (vfb->pending_intro)
 		ev_eloop_unregister_idle_cb(video->eloop, intro_idle_event, video, EV_NORMAL);
 
-	free(vfb->node);
 	free(vfb);
 }
 

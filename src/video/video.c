@@ -406,9 +406,8 @@ bool uterm_display_has_damage(struct uterm_display *disp)
 }
 
 SHL_EXPORT
-int uterm_video_new(struct uterm_video **out, struct ev_eloop *eloop, const char *node,
-		    const char *backend, unsigned int desired_width, unsigned int desired_height,
-		    bool use_original)
+int uterm_video_new(struct uterm_video **out, struct ev_eloop *eloop, int fd, const char *backend,
+		    unsigned int desired_width, unsigned int desired_height, bool use_original)
 {
 	struct shl_register_record *record;
 	const char *name = backend ? backend : "<default>";
@@ -446,7 +445,7 @@ int uterm_video_new(struct uterm_video **out, struct ev_eloop *eloop, const char
 	if (ret)
 		goto err_free;
 
-	ret = VIDEO_CALL(video->mod->ops.init, 0, video, node);
+	ret = VIDEO_CALL(video->mod->ops.init, 0, video, fd);
 	if (ret)
 		goto err_hook;
 

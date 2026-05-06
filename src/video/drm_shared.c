@@ -1225,14 +1225,11 @@ static void drop_drm_master(struct uterm_drm_video *vdrm)
 	vdrm->master = false;
 }
 
-int uterm_drm_video_init(struct uterm_video *video, const char *node,
-			 const struct display_ops *display_ops, uterm_drm_page_flip_t pflip,
-			 void *data)
+int uterm_drm_video_init(struct uterm_video *video, int fd, const struct display_ops *display_ops,
+			 uterm_drm_page_flip_t pflip, void *data)
 {
 	struct uterm_drm_video *vdrm;
 	int ret;
-
-	log_info("new drm device via %s", node);
 
 	vdrm = malloc(sizeof(*vdrm));
 	if (!vdrm)
@@ -1242,30 +1239,20 @@ int uterm_drm_video_init(struct uterm_video *video, const char *node,
 	vdrm->data = data;
 	vdrm->page_flip = pflip;
 	vdrm->display_ops = display_ops;
+	vdrm->fd = fd;
+	vdrm->name = drmGetPrimaryDeviceNameFromFd(fd);
 
-	vdrm->name = strdup(node);
-	if (!vdrm->name) {
-		ret = -ENOMEM;
-		goto err_free;
-	}
-	vdrm->fd = open(node, O_RDWR | O_CLOEXEC | O_NONBLOCK);
-	if (vdrm->fd < 0) {
-		log_err("cannot open drm device %s (%d): %m", node, errno);
-		ret = -EFAULT;
-		goto err_free_name;
-	}
-	/* TODO: fix the race-condition with DRM-Master-on-open */
-	drop_drm_master(vdrm);
+	log_info("new drm device via %s", vdrm->name);
 
 	ret = drmSetClientCap(vdrm->fd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1);
 	if (ret) {
-		log_err("Device %s doesn't support universal planes, using legacy", node);
+		log_err("Device %s doesn't support universal planes, using legacy", vdrm->name);
 		vdrm->legacy = true;
 	}
 
 	ret = drmSetClientCap(vdrm->fd, DRM_CLIENT_CAP_ATOMIC, 1);
 	if (ret) {
-		log_warn("Device %s doesn't support atomic modesetting, using legacy", node);
+		log_warn("Device %s doesn't support atomic modesetting, using legacy", vdrm->name);
 		vdrm->legacy = true;
 	}
 
@@ -1275,7 +1262,7 @@ int uterm_drm_video_init(struct uterm_video *video, const char *node,
 
 	ret = ev_eloop_new_fd(video->eloop, &vdrm->efd, vdrm->fd, EV_READABLE, io_event, video);
 	if (ret)
-		goto err_close;
+		goto err_free_name;
 
 	ret = shl_timer_new(&vdrm->timer);
 	if (ret)
@@ -1292,11 +1279,8 @@ err_timer:
 	shl_timer_free(vdrm->timer);
 err_fd:
 	ev_eloop_rm_fd(vdrm->efd);
-err_close:
-	close(vdrm->fd);
 err_free_name:
 	free(vdrm->name);
-err_free:
 	free(vdrm);
 	return ret;
 }

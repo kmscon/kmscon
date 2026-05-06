@@ -125,9 +125,8 @@ struct uterm_drm_video {
 	const struct display_ops *display_ops;
 };
 
-int uterm_drm_video_init(struct uterm_video *video, const char *node,
-			 const struct display_ops *display_ops, uterm_drm_page_flip_t pflip,
-			 void *data);
+int uterm_drm_video_init(struct uterm_video *video, int fd, const struct display_ops *display_ops,
+			 uterm_drm_page_flip_t pflip, void *data);
 void uterm_drm_video_destroy(struct uterm_video *video);
 int uterm_drm_video_hotplug(struct uterm_video *video, bool read_dpms, bool modeset);
 int uterm_drm_video_wake_up(struct uterm_video *video);
