@@ -482,7 +482,7 @@ static int seat_add_display(struct kmscon_seat *seat, struct uterm_display *disp
 {
 	struct kmscon_display *d;
 
-	log_debug("add display %p to seat %s", disp, seat->name);
+	log_debug("add display %s to seat %s", uterm_display_name(disp), seat->name);
 
 	d = malloc(sizeof(*d));
 	if (!d)
@@ -502,7 +502,7 @@ static void seat_remove_display(struct kmscon_seat *seat, struct kmscon_display 
 	struct shl_dlist *iter, *tmp;
 	struct kmscon_session *s;
 
-	log_debug("remove display %p from seat %s", d->disp, seat->name);
+	log_debug("remove display %s from seat %s", uterm_display_name(d->disp), seat->name);
 
 	shl_dlist_unlink(&d->list);
 
@@ -523,7 +523,7 @@ static void seat_refresh_display(struct kmscon_seat *seat, struct kmscon_display
 	struct shl_dlist *iter;
 	struct kmscon_session *s;
 
-	log_debug("refresh display %p from seat %s", d->disp, seat->name);
+	log_debug("refresh display %s from seat %s", uterm_display_name(d->disp), seat->name);
 
 	if (d->activated) {
 		shl_dlist_for_each(iter, &seat->sessions)
