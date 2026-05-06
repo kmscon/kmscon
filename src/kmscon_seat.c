@@ -78,6 +78,7 @@ struct kmscon_video {
 	struct uterm_video *video;
 	struct uterm_monitor_dev *udev;
 	char *node;
+	bool drm;
 	bool awake;
 };
 
@@ -121,6 +122,7 @@ struct kmscon_seat {
 const char be_drm3d[] = "drm3d";
 const char be_drm2d[] = "drm2d";
 const char be_fbdev[] = "fbdev";
+static int seat_video_init(struct kmscon_video *vid);
 
 static int session_call(struct kmscon_session *sess, unsigned int event, struct uterm_display *disp)
 {
@@ -199,9 +201,10 @@ static void activate_display(struct kmscon_display *d)
 
 static int seat_go_foreground(struct kmscon_seat *seat, bool force)
 {
-	struct shl_dlist *iter;
+	struct shl_dlist *iter, *tmp;
 	struct kmscon_video *vid;
 	struct kmscon_display *d;
+	int ret;
 
 	if (seat->foreground)
 		return 0;
@@ -210,10 +213,24 @@ static int seat_go_foreground(struct kmscon_seat *seat, bool force)
 
 	seat->foreground = true;
 
+	shl_dlist_for_each_safe(iter, tmp, &seat->videos)
+	{
+		vid = shl_dlist_entry(iter, struct kmscon_video, list);
+		if (!vid->video) {
+			ret = seat_video_init(vid);
+			if (ret) {
+				shl_dlist_unlink(&vid->list);
+				free(vid->node);
+				free(vid);
+			}
+		}
+	}
+
 	shl_dlist_for_each(iter, &seat->videos)
 	{
 		vid = shl_dlist_entry(iter, struct kmscon_video, list);
-		uterm_video_wake_up(vid->video);
+		if (!vid->awake)
+			uterm_video_wake_up(vid->video);
 	}
 
 	shl_dlist_for_each(iter, &seat->displays)
@@ -1048,12 +1065,64 @@ static bool kmscon_seat_gpu_is_ignored(struct kmscon_seat *seat, unsigned int ty
 	return false;
 }
 
+static int seat_video_init(struct kmscon_video *vid)
+{
+	struct kmscon_seat *seat = vid->seat;
+	unsigned int width = 0;
+	unsigned int height = 0;
+	const char *backend;
+	int ret;
+
+	if (vid->drm) {
+		if (seat->conf->hwaccel)
+			backend = be_drm3d;
+		else
+			backend = be_drm2d;
+	} else {
+		backend = be_fbdev;
+	}
+
+	if (seat->conf->mode != NULL) {
+		int items_parsed = sscanf(seat->conf->mode, "%ux%u", &width, &height);
+		if (items_parsed != 2) {
+			log_warning("The argument to --mode is not in the format <width>x<height>. "
+				    "Ignoring");
+			width = 0;
+			height = 0;
+		}
+	}
+	ret = uterm_video_new(&vid->video, seat->eloop, vid->node, backend, width, height,
+			      seat->conf->use_original_mode);
+	if (ret && backend == be_drm3d) {
+		log_info("cannot create drm3d device %s on seat %s (%d); trying drm2d mode",
+			 vid->node, seat->name, ret);
+		ret = uterm_video_new(&vid->video, seat->eloop, vid->node, be_drm2d, width, height,
+				      seat->conf->use_original_mode);
+	}
+	if (ret) {
+		log_error("cannot create video device %s on seat %s: %d", vid->node, seat->name,
+			  ret);
+		return ret;
+	}
+
+	ret = uterm_video_register_cb(vid->video, kmscon_seat_video_event, vid);
+	if (ret) {
+		log_error("cannot register video callback for device %s on seat %s: %d", vid->node,
+			  seat->name, ret);
+		goto err_video;
+	}
+	return uterm_video_wake_up(vid->video);
+
+err_video:
+	uterm_video_unref(vid->video);
+	return ret;
+}
+
 int kmscon_seat_add_video(struct kmscon_seat *seat, unsigned int type, unsigned int flags,
 			  const char *node, struct uterm_monitor_dev *udev)
 {
-	int ret;
-	const char *backend;
 	struct kmscon_video *vid;
+	int ret = -ENOMEM;
 
 	if (kmscon_seat_gpu_is_ignored(seat, type, flags & UTERM_MONITOR_DRM_BACKED,
 				       flags & UTERM_MONITOR_PRIMARY, flags & UTERM_MONITOR_AUX,
@@ -1063,75 +1132,26 @@ int kmscon_seat_add_video(struct kmscon_seat *seat, unsigned int type, unsigned 
 	log_debug("new video device %s on seat %s", node, seat->name);
 
 	vid = malloc(sizeof(*vid));
-	if (!vid) {
-		log_error("cannot allocate memory for video device %s on seat %s", node,
-			  seat->name);
+	if (!vid)
 		return -ENOMEM;
-	}
+
 	memset(vid, 0, sizeof(*vid));
 	vid->seat = seat;
 	vid->udev = udev;
+	vid->drm = (type == UTERM_MONITOR_DRM);
 
 	vid->node = strdup(node);
-	if (!vid->node) {
-		log_error("cannot copy video device name %s on seat %s", node, seat->name);
-		ret = -ENOMEM;
+	if (!vid->node)
 		goto err_free;
-	}
 
-	if (type == UTERM_MONITOR_DRM) {
-		if (seat->conf->hwaccel)
-			backend = be_drm3d;
-		else
-			backend = be_drm2d;
-	} else {
-		backend = be_fbdev;
-	}
-
-	unsigned int desired_width = 0;
-	unsigned int desired_height = 0;
-	if (seat->conf->mode != NULL) {
-		int items_parsed =
-			sscanf(seat->conf->mode, "%ux%u", &desired_width, &desired_height);
-		if (items_parsed != 2) {
-			log_warning("The argument to --mode is not in the format <width>x<height>. "
-				    "Ignoring");
-			desired_width = 0;
-			desired_height = 0;
-		}
-	}
-	ret = uterm_video_new(&vid->video, seat->eloop, node, backend, desired_width,
-			      desired_height, seat->conf->use_original_mode);
-	if (ret) {
-		if (backend == be_drm3d) {
-			log_info("cannot create drm3d device %s on seat %s (%d); trying drm2d mode",
-				 vid->node, seat->name, ret);
-			ret = uterm_video_new(&vid->video, seat->eloop, node, be_drm2d,
-					      desired_width, desired_height,
-					      seat->conf->use_original_mode);
-			if (ret)
-				goto err_node;
-		} else {
+	if (seat->awake) {
+		ret = seat_video_init(vid);
+		if (ret)
 			goto err_node;
-		}
 	}
-
-	ret = uterm_video_register_cb(vid->video, kmscon_seat_video_event, vid);
-	if (ret) {
-		log_error("cannot register video callback for device %s on seat %s: %d", vid->node,
-			  seat->name, ret);
-		goto err_video;
-	}
-
-	if (seat->awake)
-		uterm_video_wake_up(vid->video);
-
-	uterm_monitor_set_dev_data(vid->udev, vid);
 	shl_dlist_link(&seat->videos, &vid->list);
 	return 0;
 
-err_video:
-	uterm_video_unref(vid->video);
 err_node:
 	free(vid->node);
 err_free:
