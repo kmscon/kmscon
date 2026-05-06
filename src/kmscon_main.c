@@ -45,26 +45,15 @@
 #include "uterm_vt.h"
 #include "video/video.h"
 
-struct app_video {
-	struct shl_dlist list;
-	struct app_seat *seat;
-	struct uterm_monitor_dev *udev;
-
-	char *node;
-	struct uterm_video *video;
-};
-
 struct app_seat {
 	struct shl_dlist list;
 	struct kmscon_app *app;
 	struct uterm_monitor_seat *useat;
 
-	bool awake;
 	char *name;
 	struct kmscon_seat *seat;
 	struct conf_ctx *conf_ctx;
 	struct kmscon_conf_t *conf;
-	struct shl_dlist videos;
 };
 
 struct kmscon_app {
@@ -81,36 +70,12 @@ struct kmscon_app {
 	unsigned int running_seats;
 };
 
-const char be_drm3d[] = "drm3d";
-const char be_drm2d[] = "drm2d";
-const char be_fbdev[] = "fbdev";
-
 static int app_seat_event(struct kmscon_seat *s, unsigned int event, void *data)
 {
 	struct app_seat *seat = data;
 	struct kmscon_app *app = seat->app;
-	struct shl_dlist *iter;
-	struct app_video *vid;
 
 	switch (event) {
-	case KMSCON_SEAT_FOREGROUND:
-		seat->awake = true;
-
-		shl_dlist_for_each(iter, &seat->videos)
-		{
-			vid = shl_dlist_entry(iter, struct app_video, list);
-			uterm_video_wake_up(vid->video);
-		}
-		break;
-	case KMSCON_SEAT_BACKGROUND:
-		shl_dlist_for_each(iter, &seat->videos)
-		{
-			vid = shl_dlist_entry(iter, struct app_video, list);
-			uterm_video_sleep(vid->video);
-		}
-
-		seat->awake = false;
-		break;
 	case KMSCON_SEAT_SLEEP:
 		if (app->vt_exit_count > 0) {
 			log_debug("deactivating VT on exit, %d to go", app->vt_exit_count - 1);
@@ -198,7 +163,6 @@ static int app_seat_new(struct kmscon_app *app, const char *sname, struct uterm_
 	memset(seat, 0, sizeof(*seat));
 	seat->app = app;
 	seat->useat = useat;
-	shl_dlist_init(&seat->videos);
 
 	seat->name = strdup(sname);
 	if (!seat->name) {
@@ -245,187 +209,10 @@ static void app_seat_free(struct app_seat *seat)
 	free(seat);
 }
 
-static void app_seat_video_event(struct uterm_video *video, struct uterm_video_hotplug *ev,
-				 void *data)
-{
-	struct app_video *vid = data;
-
-	switch (ev->action) {
-	case UTERM_NEW:
-		if (!vid->seat->app->exiting)
-			kmscon_seat_add_display(vid->seat->seat, ev->display);
-		break;
-	case UTERM_GONE:
-		kmscon_seat_remove_display(vid->seat->seat, ev->display);
-		break;
-	case UTERM_REFRESH:
-		if (!vid->seat->app->exiting)
-			kmscon_seat_refresh_display(vid->seat->seat, ev->display);
-		break;
-	}
-}
-
-static bool app_seat_gpu_is_ignored(struct app_seat *seat, unsigned int type, bool drm_backed,
-				    bool primary, bool aux, const char *node)
-{
-	switch (type) {
-	case UTERM_MONITOR_FBDEV:
-		if (seat->conf->drm) {
-			if (drm_backed) {
-				log_info("ignoring video device %s on seat %s as it is a DRM-fbdev "
-					 "device",
-					 node, seat->name);
-				return true;
-			}
-		}
-		break;
-	case UTERM_MONITOR_DRM:
-		if (!seat->conf->drm) {
-			log_info("ignoring video device %s on seat %s as it is a DRM device", node,
-				 seat->name);
-			return true;
-		}
-		break;
-	default:
-		log_info("ignoring unknown video device %s on seat %s", node, seat->name);
-		return true;
-	}
-
-	if (seat->conf->gpus == KMSCON_GPU_PRIMARY && !primary) {
-		log_info("ignoring video device %s on seat %s as it is no primary GPU", node,
-			 seat->name);
-		return true;
-	}
-
-	if (seat->conf->gpus == KMSCON_GPU_AUX && !primary && !aux) {
-		log_info("ignoring video device %s on seat %s as it is neither a primary nor "
-			 "auxiliary GPU",
-			 node, seat->name);
-		return true;
-	}
-
-	return false;
-}
-
-static int app_seat_add_video(struct app_seat *seat, unsigned int type, unsigned int flags,
-			      const char *node, struct uterm_monitor_dev *udev)
-{
-	int ret;
-	const char *backend;
-	struct app_video *vid;
-
-	if (seat->app->exiting)
-		return -EBUSY;
-
-	if (app_seat_gpu_is_ignored(seat, type, flags & UTERM_MONITOR_DRM_BACKED,
-				    flags & UTERM_MONITOR_PRIMARY, flags & UTERM_MONITOR_AUX, node))
-		return -ERANGE;
-
-	log_debug("new video device %s on seat %s", node, seat->name);
-
-	vid = malloc(sizeof(*vid));
-	if (!vid) {
-		log_error("cannot allocate memory for video device %s on seat %s", node,
-			  seat->name);
-		return -ENOMEM;
-	}
-	memset(vid, 0, sizeof(*vid));
-	vid->seat = seat;
-	vid->udev = udev;
-
-	vid->node = strdup(node);
-	if (!vid->node) {
-		log_error("cannot copy video device name %s on seat %s", node, seat->name);
-		ret = -ENOMEM;
-		goto err_free;
-	}
-
-	if (type == UTERM_MONITOR_DRM) {
-		if (seat->conf->hwaccel)
-			backend = be_drm3d;
-		else
-			backend = be_drm2d;
-	} else {
-		backend = be_fbdev;
-	}
-
-	unsigned int desired_width = 0;
-	unsigned int desired_height = 0;
-	if (seat->conf->mode != NULL) {
-		int items_parsed =
-			sscanf(seat->conf->mode, "%ux%u", &desired_width, &desired_height);
-		if (items_parsed != 2) {
-			log_warning("The argument to --mode is not in the format <width>x<height>. "
-				    "Ignoring");
-			desired_width = 0;
-			desired_height = 0;
-		}
-	}
-	ret = uterm_video_new(&vid->video, seat->app->eloop, node, backend, desired_width,
-			      desired_height, seat->conf->use_original_mode);
-	if (ret) {
-		if (backend == be_drm3d) {
-			log_info("cannot create drm3d device %s on seat %s (%d); trying drm2d mode",
-				 vid->node, seat->name, ret);
-			ret = uterm_video_new(&vid->video, seat->app->eloop, node, be_drm2d,
-					      desired_width, desired_height,
-					      seat->conf->use_original_mode);
-			if (ret)
-				goto err_node;
-		} else {
-			goto err_node;
-		}
-	}
-
-	ret = uterm_video_register_cb(vid->video, app_seat_video_event, vid);
-	if (ret) {
-		log_error("cannot register video callback for device %s on seat %s: %d", vid->node,
-			  seat->name, ret);
-		goto err_video;
-	}
-
-	if (seat->awake)
-		uterm_video_wake_up(vid->video);
-
-	uterm_monitor_set_dev_data(vid->udev, vid);
-	shl_dlist_link(&seat->videos, &vid->list);
-	return 0;
-
-err_video:
-	uterm_video_unref(vid->video);
-err_node:
-	free(vid->node);
-err_free:
-	free(vid);
-	return ret;
-}
-
-static void app_seat_remove_video(struct app_seat *seat, struct app_video *vid)
-{
-	struct uterm_display *disp;
-
-	log_debug("free video device %s on seat %s", vid->node, seat->name);
-
-	shl_dlist_unlink(&vid->list);
-	uterm_monitor_set_dev_data(vid->udev, NULL);
-	uterm_video_unregister_cb(vid->video, app_seat_video_event, vid);
-
-	disp = uterm_video_get_displays(vid->video);
-	while (disp) {
-		kmscon_seat_remove_display(seat->seat, disp);
-		disp = uterm_display_next(disp);
-	}
-
-	uterm_video_unref(vid->video);
-	free(vid->node);
-	free(vid);
-}
-
 static void app_monitor_event(struct uterm_monitor *mon, struct uterm_monitor_event *ev, void *data)
 {
 	struct kmscon_app *app = data;
 	struct app_seat *seat;
-	struct app_video *vid;
 	int ret;
 
 	switch (ev->type) {
@@ -446,8 +233,8 @@ static void app_monitor_event(struct uterm_monitor *mon, struct uterm_monitor_ev
 		switch (ev->dev_type) {
 		case UTERM_MONITOR_DRM:
 		case UTERM_MONITOR_FBDEV:
-			ret = app_seat_add_video(seat, ev->dev_type, ev->dev_flags, ev->dev_node,
-						 ev->dev);
+			ret = kmscon_seat_add_video(seat->seat, ev->dev_type, ev->dev_flags,
+						    ev->dev_node, ev->dev);
 			if (ret)
 				return;
 			break;
@@ -466,7 +253,7 @@ static void app_monitor_event(struct uterm_monitor *mon, struct uterm_monitor_ev
 		case UTERM_MONITOR_DRM:
 		case UTERM_MONITOR_FBDEV:
 			if (ev->dev_data)
-				app_seat_remove_video(seat, ev->dev_data);
+				kmscon_seat_remove_video(seat->seat, ev->dev_data);
 			break;
 		case UTERM_MONITOR_INPUT:
 			log_debug("free input device %s on seat %s", ev->dev_node, seat->name);
@@ -482,13 +269,10 @@ static void app_monitor_event(struct uterm_monitor *mon, struct uterm_monitor_ev
 		switch (ev->dev_type) {
 		case UTERM_MONITOR_DRM:
 		case UTERM_MONITOR_FBDEV:
-			vid = ev->dev_data;
-			if (!vid)
+			if (!ev->dev_data)
 				return;
 
-			log_debug("video hotplug event on device %s on seat %s", vid->node,
-				  seat->name);
-			uterm_video_poll(vid->video);
+			kmscon_seat_poll_video(ev->dev_data);
 			break;
 		}
 		break;

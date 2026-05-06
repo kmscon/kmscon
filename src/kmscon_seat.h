@@ -37,17 +37,17 @@
 #include "conf.h"
 #include "input/input.h"
 #include "shl/eloop.h"
+#include "uterm_monitor.h"
 #include "uterm_vt.h"
 #include "video/video.h"
 
 struct kmscon_seat;
 struct kmscon_session;
+struct kmscon_video;
 
 enum kmscon_seat_event {
 	KMSCON_SEAT_WAKE_UP,
 	KMSCON_SEAT_SLEEP,
-	KMSCON_SEAT_BACKGROUND,
-	KMSCON_SEAT_FOREGROUND,
 	KMSCON_SEAT_HUP,
 };
 
@@ -76,9 +76,11 @@ int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf, struct
 void kmscon_seat_free(struct kmscon_seat *seat);
 void kmscon_seat_startup(struct kmscon_seat *seat);
 
-int kmscon_seat_add_display(struct kmscon_seat *seat, struct uterm_display *disp);
-void kmscon_seat_remove_display(struct kmscon_seat *seat, struct uterm_display *disp);
-void kmscon_seat_refresh_display(struct kmscon_seat *seat, struct uterm_display *disp);
+int kmscon_seat_add_video(struct kmscon_seat *seat, unsigned int type, unsigned int flags,
+			  const char *node, struct uterm_monitor_dev *udev);
+void kmscon_seat_remove_video(struct kmscon_seat *seat, void *data);
+void kmscon_seat_poll_video(void *data);
+
 int kmscon_seat_add_input(struct kmscon_seat *seat, const char *node);
 void kmscon_seat_remove_input(struct kmscon_seat *seat, const char *node);
 
