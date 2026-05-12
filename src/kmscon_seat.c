@@ -1156,6 +1156,8 @@ int kmscon_seat_add_video(struct kmscon_seat *seat, unsigned int type, unsigned 
 	if (!vid->node)
 		goto err_free;
 
+	uterm_monitor_set_dev_data(udev, vid);
+
 	if (seat->awake) {
 		ret = seat_video_init(vid);
 		if (ret)
