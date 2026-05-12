@@ -34,16 +34,12 @@
 
 #include <inttypes.h>
 #include <stdbool.h>
-#include <stdlib.h>
 #include "shl/eloop.h"
 
 struct uterm_monitor;
-struct uterm_monitor_seat;
 struct uterm_monitor_dev;
 
 enum uterm_monitor_event_type {
-	UTERM_MONITOR_NEW_SEAT,
-	UTERM_MONITOR_FREE_SEAT,
 	UTERM_MONITOR_NEW_DEV,
 	UTERM_MONITOR_FREE_DEV,
 	UTERM_MONITOR_HOTPLUG_DEV,
@@ -64,9 +60,7 @@ enum uterm_monitor_dev_flag {
 struct uterm_monitor_event {
 	unsigned int type;
 
-	struct uterm_monitor_seat *seat;
 	const char *seat_name;
-	void *seat_data;
 
 	struct uterm_monitor_dev *dev;
 	unsigned int dev_type;
@@ -79,12 +73,10 @@ typedef void (*uterm_monitor_cb)(struct uterm_monitor *mon, struct uterm_monitor
 				 void *data);
 
 int uterm_monitor_new(struct uterm_monitor **out, struct ev_eloop *eloop, uterm_monitor_cb cb,
-		      bool vt, void *data);
+		      const char *seat_name, void *data);
 void uterm_monitor_ref(struct uterm_monitor *mon);
 void uterm_monitor_unref(struct uterm_monitor *mon);
 void uterm_monitor_scan(struct uterm_monitor *mon);
 
-void uterm_monitor_set_seat_data(struct uterm_monitor_seat *seat, void *data);
 void uterm_monitor_set_dev_data(struct uterm_monitor_dev *dev, void *data);
-
 #endif /* UTERM_UTERM_MONITOR_H */

@@ -37,7 +37,6 @@
 #include "shl/githead.h"
 #include "shl/log.h"
 #include "shl/misc.h"
-#include "video/video.h"
 
 static void print_help()
 {

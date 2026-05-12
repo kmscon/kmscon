@@ -102,48 +102,48 @@ static void input_arrived(struct uterm_input *input, struct uterm_input_key_even
 	print_modifiers(ev->mods);
 }
 
-static void monitor_event(struct uterm_monitor *mon, struct uterm_monitor_event *ev, void *data)
+static void setup_input(struct uterm_monitor *mon)
 {
-	int ret;
 	char *keymap, *compose_file;
 	size_t compose_file_len;
+	int ret;
 
-	if (ev->type == UTERM_MONITOR_NEW_SEAT) {
-		if (strcmp(ev->seat_name, "seat0"))
-			return;
-
-		keymap = NULL;
-		if (input_conf.xkb_keymap && *input_conf.xkb_keymap) {
-			ret = shl_read_file(input_conf.xkb_keymap, &keymap, NULL);
-			if (ret)
-				log_error("cannot read keymap file %s: %d", input_conf.xkb_keymap,
-					  ret);
-		}
-
-		compose_file = NULL;
-		compose_file_len = 0;
-		if (input_conf.xkb_compose_file && *input_conf.xkb_compose_file) {
-			ret = shl_read_file(input_conf.xkb_compose_file, &compose_file,
-					    &compose_file_len);
-			if (ret)
-				log_error("cannot read compose file %s: %d",
-					  input_conf.xkb_compose_file, ret);
-		}
-
-		ret = uterm_input_new(&input, eloop, input_conf.xkb_model, input_conf.xkb_layout,
-				      input_conf.xkb_variant, input_conf.xkb_options,
-				      input_conf.locale, keymap, compose_file, compose_file_len, 0,
-				      0, true);
+	keymap = NULL;
+	if (input_conf.xkb_keymap && *input_conf.xkb_keymap) {
+		ret = shl_read_file(input_conf.xkb_keymap, &keymap, NULL);
 		if (ret)
-			return;
-		ret = uterm_input_register_key_cb(input, input_arrived, NULL);
+			log_error("cannot read keymap file %s: %d", input_conf.xkb_keymap, ret);
+	}
+
+	compose_file = NULL;
+	compose_file_len = 0;
+	if (input_conf.xkb_compose_file && *input_conf.xkb_compose_file) {
+		ret = shl_read_file(input_conf.xkb_compose_file, &compose_file, &compose_file_len);
 		if (ret)
-			return;
-		uterm_input_wake_up(input);
-	} else if (ev->type == UTERM_MONITOR_FREE_SEAT) {
-		uterm_input_unregister_key_cb(input, input_arrived, NULL);
-		uterm_input_unref(input);
-	} else if (ev->type == UTERM_MONITOR_NEW_DEV) {
+			log_error("cannot read compose file %s: %d", input_conf.xkb_compose_file,
+				  ret);
+	}
+
+	ret = uterm_input_new(&input, eloop, input_conf.xkb_model, input_conf.xkb_layout,
+			      input_conf.xkb_variant, input_conf.xkb_options, input_conf.locale,
+			      keymap, compose_file, compose_file_len, 0, 0, true);
+	if (ret)
+		return;
+	ret = uterm_input_register_key_cb(input, input_arrived, NULL);
+	if (ret)
+		return;
+	uterm_input_wake_up(input);
+}
+
+static void free_input(struct uterm_monitor *mon)
+{
+	uterm_input_unregister_key_cb(input, input_arrived, NULL);
+	uterm_input_unref(input);
+}
+
+static void monitor_event(struct uterm_monitor *mon, struct uterm_monitor_event *ev, void *data)
+{
+	if (ev->type == UTERM_MONITOR_NEW_DEV) {
 		if (ev->dev_type == UTERM_MONITOR_INPUT)
 			uterm_input_add_dev(input, ev->dev_node);
 	} else if (ev->type == UTERM_MONITOR_FREE_DEV) {
@@ -221,13 +221,15 @@ int main(int argc, char **argv)
 		goto err_exit;
 	}
 
-	ret = uterm_monitor_new(&mon, eloop, monitor_event, true, NULL);
+	ret = uterm_monitor_new(&mon, eloop, monitor_event, "seat0", NULL);
 	if (ret)
 		goto err_exit;
 
 	ret = ev_eloop_register_signal_cb(eloop, SIGQUIT, sig_quit, NULL);
 	if (ret)
 		goto err_mon;
+
+	setup_input(mon);
 
 	ret = system("stty -echo");
 	if (ret)
@@ -239,6 +241,8 @@ int main(int argc, char **argv)
 	ret = system("stty echo");
 	if (ret)
 		goto err_signal;
+
+	free_input(mon);
 
 err_signal:
 	ev_eloop_unregister_signal_cb(eloop, SIGQUIT, sig_quit, NULL);

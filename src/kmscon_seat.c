@@ -1179,6 +1179,9 @@ void kmscon_seat_remove_video(struct kmscon_seat *seat, void *data)
 	struct uterm_display *disp;
 	struct kmscon_display *d;
 
+	if (!seat || !vid)
+		return;
+
 	log_debug("free video device %s on seat %s", vid->node, seat->name);
 
 	shl_dlist_unlink(&vid->list);

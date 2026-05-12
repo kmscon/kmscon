@@ -34,24 +34,12 @@
 #include "kmscon_conf.h"
 #include "kmscon_seat.h"
 #include "render/text.h"
-#include "shl/dlist.h"
 #include "shl/eloop.h"
 #include "shl/log.h"
 #include "shl/module.h"
 #include "uterm_monitor.h"
 #include "uterm_vt.h"
 #include "video/video.h"
-
-struct app_seat {
-	struct shl_dlist list;
-	struct kmscon_app *app;
-	struct uterm_monitor_seat *useat;
-
-	char *name;
-	struct kmscon_seat *seat;
-	struct conf_ctx *conf_ctx;
-	struct kmscon_conf_t *conf;
-};
 
 struct kmscon_app {
 	struct conf_ctx *conf_ctx;
@@ -63,14 +51,16 @@ struct kmscon_app {
 
 	struct uterm_vt_master *vtm;
 	struct uterm_monitor *mon;
-	struct shl_dlist seats;
-	unsigned int running_seats;
+
+	struct conf_ctx *seat_ctx;
+	struct kmscon_conf_t *seat_conf;
+	struct kmscon_seat *seat;
+	const char *seat_name;
 };
 
 static int app_seat_event(struct kmscon_seat *s, unsigned int event, void *data)
 {
-	struct app_seat *seat = data;
-	struct kmscon_app *app = seat->app;
+	struct kmscon_app *app = data;
 
 	switch (event) {
 	case KMSCON_SEAT_SLEEP:
@@ -85,143 +75,77 @@ static int app_seat_event(struct kmscon_seat *s, unsigned int event, void *data)
 			return -EBUSY;
 		break;
 	case KMSCON_SEAT_HUP:
-		kmscon_seat_free(seat->seat);
-		seat->seat = NULL;
-		--app->running_seats;
-		if (!app->running_seats) {
-			log_debug("seat HUP on %s in default-mode; exiting...", seat->name);
-			ev_eloop_exit(app->eloop);
-		} else {
-			log_debug("seat HUP on %s in default-mode; %u more running seats",
-				  seat->name, app->running_seats);
-		}
+		kmscon_seat_free(app->seat);
+		app->seat = NULL;
+		log_debug("seat HUP in default-mode; exiting...");
+		ev_eloop_exit(app->eloop);
 		break;
 	}
-
 	return 0;
 }
 
-static int app_seat_new(struct kmscon_app *app, const char *sname, struct uterm_monitor_seat *useat)
+static int setup_seat(struct kmscon_app *app, struct uterm_monitor *umon)
 {
-	struct app_seat *seat;
 	int ret;
 
 	if (app->exiting)
 		return -EBUSY;
 
-	log_debug("new seat %s", sname);
+	log_debug("Using seat");
 
-	seat = malloc(sizeof(*seat));
-	if (!seat) {
-		log_error("cannot allocate memory for seat %s", sname);
-		return -ENOMEM;
-	}
-	memset(seat, 0, sizeof(*seat));
-	seat->app = app;
-	seat->useat = useat;
-
-	seat->name = strdup(sname);
-	if (!seat->name) {
-		log_error("cannot copy seat name on seat %s", sname);
-		ret = -ENOMEM;
-		goto err_free;
-	}
-
-	ret = kmscon_seat_new(&seat->seat, app->conf_ctx, app->eloop, app->vtm, sname,
-			      app_seat_event, seat);
+	ret = kmscon_seat_new(&app->seat, app->conf_ctx, app->eloop, app->vtm, app->seat_name,
+			      app_seat_event, app);
 	if (ret) {
-		if (ret == -ERANGE)
-			log_debug("ignoring seat %s as it already has a seat manager", sname);
-		else
-			log_error("cannot create seat object on seat %s: %d", sname, ret);
-		goto err_name;
+		log_error("cannot create seat object: %d", ret);
+		return ret;
 	}
-	seat->conf_ctx = kmscon_seat_get_conf(seat->seat);
-	seat->conf = conf_ctx_get_mem(seat->conf_ctx);
+	app->seat_ctx = kmscon_seat_get_conf(app->seat);
+	app->seat_conf = conf_ctx_get_mem(app->seat_ctx);
 
-	uterm_monitor_set_seat_data(seat->useat, seat);
-	shl_dlist_link(&app->seats, &seat->list);
-	++app->running_seats;
-
-	kmscon_seat_startup(seat->seat);
-
+	kmscon_seat_startup(app->seat);
 	return 0;
-
-err_name:
-	free(seat->name);
-err_free:
-	free(seat);
-	return ret;
 }
 
-static void app_seat_free(struct app_seat *seat)
+static void destroy_seat(struct kmscon_app *app)
 {
-	log_debug("free seat %s", seat->name);
-
-	shl_dlist_unlink(&seat->list);
-	uterm_monitor_set_seat_data(seat->useat, NULL);
-	kmscon_seat_free(seat->seat);
-	free(seat->name);
-	free(seat);
+	kmscon_seat_free(app->seat);
+	app->seat = NULL;
 }
 
 static void app_monitor_event(struct uterm_monitor *mon, struct uterm_monitor_event *ev, void *data)
 {
 	struct kmscon_app *app = data;
-	struct app_seat *seat;
 	int ret;
 
 	switch (ev->type) {
-	case UTERM_MONITOR_NEW_SEAT:
-		ret = app_seat_new(app, ev->seat_name, ev->seat);
-		if (ret)
-			return;
-		break;
-	case UTERM_MONITOR_FREE_SEAT:
-		if (ev->seat_data)
-			app_seat_free(ev->seat_data);
-		break;
 	case UTERM_MONITOR_NEW_DEV:
-		seat = ev->seat_data;
-		if (!seat)
-			return;
-
 		switch (ev->dev_type) {
 		case UTERM_MONITOR_DRM:
 		case UTERM_MONITOR_FBDEV:
-			ret = kmscon_seat_add_video(seat->seat, ev->dev_type, ev->dev_flags,
+			ret = kmscon_seat_add_video(app->seat, ev->dev_type, ev->dev_flags,
 						    ev->dev_node, ev->dev);
 			if (ret)
 				return;
 			break;
 		case UTERM_MONITOR_INPUT:
-			log_debug("new input device %s on seat %s", ev->dev_node, seat->name);
-			kmscon_seat_add_input(seat->seat, ev->dev_node);
+			log_debug("new input device %s on seat %s", ev->dev_node, app->seat_name);
+			kmscon_seat_add_input(app->seat, ev->dev_node);
 			break;
 		}
 		break;
 	case UTERM_MONITOR_FREE_DEV:
-		seat = ev->seat_data;
-		if (!seat)
-			return;
-
 		switch (ev->dev_type) {
 		case UTERM_MONITOR_DRM:
 		case UTERM_MONITOR_FBDEV:
-			if (ev->dev_data)
-				kmscon_seat_remove_video(seat->seat, ev->dev_data);
+			kmscon_seat_remove_video(app->seat, ev->dev_data);
 			break;
 		case UTERM_MONITOR_INPUT:
-			log_debug("free input device %s on seat %s", ev->dev_node, seat->name);
-			kmscon_seat_remove_input(seat->seat, ev->dev_node);
+			log_debug("free input device %s on seat %s", ev->dev_node, app->seat_name);
+			kmscon_seat_remove_input(app->seat, ev->dev_node);
 			break;
 		}
 		break;
 	case UTERM_MONITOR_HOTPLUG_DEV:
-		seat = ev->seat_data;
-		if (!seat)
-			return;
-
 		switch (ev->dev_type) {
 		case UTERM_MONITOR_DRM:
 		case UTERM_MONITOR_FBDEV:
@@ -258,9 +182,6 @@ static void destroy_app(struct kmscon_app *app)
 static int setup_app(struct kmscon_app *app)
 {
 	int ret;
-	bool use_vt = (app->conf->vt != 0);
-
-	shl_dlist_init(&app->seats);
 
 	ret = ev_eloop_new(&app->eloop);
 	if (ret) {
@@ -292,14 +213,11 @@ static int setup_app(struct kmscon_app *app)
 		goto err_app;
 	}
 
-	ret = uterm_monitor_new(&app->mon, app->eloop, app_monitor_event, use_vt, app);
+	ret = uterm_monitor_new(&app->mon, app->eloop, app_monitor_event, app->seat_name, app);
 	if (ret) {
 		log_error("cannot create device monitor: %d", ret);
 		goto err_app;
 	}
-
-	log_debug("scanning for devices...");
-	uterm_monitor_scan(app->mon);
 
 	return 0;
 
@@ -340,15 +258,20 @@ int main(int argc, char **argv)
 	memset(&app, 0, sizeof(app));
 	app.conf_ctx = conf_ctx;
 	app.conf = conf;
+	app.seat_name = "seat0";
 
 	ret = setup_app(&app);
 	if (ret)
 		goto err_unload;
 
-	if (!app.running_seats)
-		log_notice("no running seats; exiting\n");
-	else
-		ev_eloop_run(app.eloop, -1);
+	ret = setup_seat(&app, app.mon);
+	if (ret)
+		goto err_unload_app;
+
+	log_debug("scanning for devices...");
+	uterm_monitor_scan(app.mon);
+
+	ev_eloop_run(app.eloop, -1);
 
 	app.exiting = true;
 
@@ -371,6 +294,8 @@ int main(int argc, char **argv)
 
 	ret = 0;
 
+	destroy_seat(&app);
+err_unload_app:
 	destroy_app(&app);
 err_unload:
 	kmscon_text_unregister(kmscon_text_bbulk_ops.name);
