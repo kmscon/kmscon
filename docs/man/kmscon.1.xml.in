@@ -124,14 +124,6 @@
           <para>Specify path to config directory. (default: @CONFIG_DIR@)</para>
         </listitem>
       </varlistentry>
-
-      <varlistentry>
-        <term><option>--listen</option></term>
-        <listitem>
-          <para>Run KMSCON in listen-mode. See section below for more
-                information. (default: off)</para>
-        </listitem>
-      </varlistentry>
     </variablelist>
 
     <para>Seat Options:</para>
@@ -172,22 +164,6 @@
                 This option is only available if KMSCON was compiled with
                 libseat support. Use --no-libseat to disable it.
                 (default: on)</para>
-        </listitem>
-      </varlistentry>
-
-      <varlistentry>
-        <term><option>--seats {list,of,seats}</option></term>
-        <listitem>
-          <para>List of seats KMSCON will run on. Use `all' to make KMSCON run
-                on all seats. Use `all,' to make KMSCON run on a seat called
-                `all' (empty entries are ignored). Use `current' to make kmscon
-                run on the current seat. (default: current)</para>
-
-          <para>If KMSCON runs on multiple seats, all seats are independent of
-                each other. You can either run a different KMSCON process on
-                each seat or make a single KMSCON process run on multiple seats.
-                In the latter case, global state can be shared to reduce memory
-                consumption (like glyph-caches).</para>
         </listitem>
       </varlistentry>
     </variablelist>
@@ -875,13 +851,11 @@
           Systems simultaneously. You can even use the linux-console on all the
           other virtual terminals.</para>
 
-    <para>By default, KMSCON runs on
-          <emphasis>seat0</emphasis> but you can change the seat via the
-          <option>--seats</option> option. For seats without virtual terminals,
+    <para>By default, KMSCON runs on the current seat. (Often it is 
+          <emphasis>seat0</emphasis>). For seats without virtual terminals,
           KMSCON will automatically activate itself and run exclusively on that
           seat. If the virtual terminal or the seat that kmscon
-          runs on is gone, KMSCON will automatically exit. See the
-          <emphasis>Listener-Mode</emphasis> to avoid this.</para>
+          runs on is gone, KMSCON will automatically exit.</para>
 
     <para>KMSCON spawns
           <citerefentry><refentrytitle>login</refentrytitle><manvolnum>1</manvolnum></citerefentry>
@@ -907,17 +881,6 @@
           default KMSCON uses all graphics devices but you can make it use only
           primary or auxiliary devices with the <option>--gpus</option>
           option.</para>
-  </refsect1>
-
-  <refsect1>
-    <title>Listener Mode</title>
-    <para>If started in listen-mode (<option>--listen</option>), KMSCON will run
-          as system daemon and provide a system console on each seat that shows
-          up if that seat does not have virtual terminals. On seats with virtual
-          terminals you should run KMSCON in default mode.</para>
-
-    <para>Several options are exclusively limited to listen-mode, other than
-          these, KMSCON behaves the same way as in default-mode.</para>
   </refsect1>
 
   <refsect1>

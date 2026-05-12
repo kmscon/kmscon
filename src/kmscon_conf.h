@@ -65,16 +65,12 @@ struct kmscon_conf_t {
 	bool silent;
 	/* config directory name */
 	char *configdir;
-	/* listen mode */
-	bool listen;
 
 	/* Seat Options */
 	/* VT number to run on */
 	char *vt;
 	/* enter new VT directly */
 	bool switchvt;
-	/* seats */
-	char **seats;
 	/* use libseat */
 	bool libseat;
 
@@ -197,21 +193,5 @@ int kmscon_conf_new(struct conf_ctx **out);
 void kmscon_conf_free(struct conf_ctx *ctx);
 int kmscon_conf_load_main(struct conf_ctx *ctx, int argc, char **argv);
 int kmscon_conf_load_seat(struct conf_ctx *ctx, const struct conf_ctx *main, const char *seat);
-
-static inline bool kmscon_conf_is_current_seat(struct kmscon_conf_t *conf)
-{
-	return conf && shl_string_list_is(conf->seats, "current");
-}
-
-static inline bool kmscon_conf_is_all_seats(struct kmscon_conf_t *conf)
-{
-	return conf && shl_string_list_is(conf->seats, "all");
-}
-
-static inline bool kmscon_conf_is_single_seat(struct kmscon_conf_t *conf)
-{
-	return conf && !kmscon_conf_is_all_seats(conf) &&
-	       shl_string_list_count(conf->seats, true) == 1;
-}
 
 #endif /* KMSCON_MAIN_H */

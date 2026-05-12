@@ -127,13 +127,6 @@ font-name=Ubuntu Mono
       </varlistentry>
 
       <varlistentry>
-        <term><option>listen</option></term>
-        <listitem>
-          <para>Listen for new seats and spawn sessions accordingly. (default: off)</para>
-        </listitem>
-      </varlistentry>
-
-      <varlistentry>
         <term><option>vt</option></term>
         <listitem>
           <para>Select which VT to run on. (default: auto)</para>
@@ -151,13 +144,6 @@ font-name=Ubuntu Mono
         <term><option>libseat</option></term>
         <listitem>
           <para>Use libseat for seat management. (default: on)</para>
-        </listitem>
-      </varlistentry>
-
-      <varlistentry>
-        <term><option>seats</option></term>
-        <listitem>
-          <para>Select seats to run on. (default: current)</para>
         </listitem>
       </varlistentry>
 

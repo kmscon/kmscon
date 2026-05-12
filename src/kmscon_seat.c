@@ -825,8 +825,8 @@ static const char *find_locale(void)
 }
 
 int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf, struct ev_eloop *eloop,
-		    struct uterm_vt_master *vtm, bool listen, const char *seatname,
-		    kmscon_seat_cb_t cb, void *data)
+		    struct uterm_vt_master *vtm, const char *seatname, kmscon_seat_cb_t cb,
+		    void *data)
 {
 	struct kmscon_seat *seat;
 	int ret;
@@ -930,7 +930,7 @@ int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf, struct
 		}
 	}
 
-	ret = uterm_vt_allocate(seat->vtm, &seat->vt, listen, seat->conf->libseat, seat->input,
+	ret = uterm_vt_allocate(seat->vtm, &seat->vt, seat->conf->libseat, seat->input,
 				seat->conf->vt, seat_vt_event, seat);
 	if (ret)
 		goto err_input_cb;

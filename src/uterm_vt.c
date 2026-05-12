@@ -99,7 +99,7 @@ int vt_call_deactivate(struct uterm_vt *vt, bool force)
 }
 
 SHL_EXPORT
-int uterm_vt_allocate(struct uterm_vt_master *vtm, struct uterm_vt **out, bool listen, bool libseat,
+int uterm_vt_allocate(struct uterm_vt_master *vtm, struct uterm_vt **out, bool libseat,
 		      struct uterm_input *input, const char *vt_name, uterm_vt_cb cb, void *data)
 {
 	struct uterm_vt *vt = NULL;
@@ -110,7 +110,7 @@ int uterm_vt_allocate(struct uterm_vt_master *vtm, struct uterm_vt **out, bool l
 	if (libseat)
 		vt = uterm_vt_libseat_new(vtm, input, vt_name, cb, data);
 
-	if (!vt && !listen)
+	if (!vt)
 		vt = uterm_vt_real_new(vtm, input, vt_name, cb, data);
 
 	if (!vt)

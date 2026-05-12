@@ -69,13 +69,10 @@ static void print_help()
 		"\t    --silent                [off]   Suppress notices and warnings\n"
 		"\t-c, --configdir </foo/bar>  [" BUILD_CONFIG_DIR "]\n"
 		"\t                                    Path to config directory\n"
-		"\t    --listen                [off]   Listen for new seats and spawn\n"
-		"\t                                    sessions accordingly (daemon mode)\n"
 		"\n"
 		"Seat Options:\n"
 		"\t    --vt <vt>               [auto]  Select which VT to run on\n"
 		"\t    --switchvt              [on]    Automatically switch to VT\n"
-		"\t    --seats <list,of,seats> [current] Select seats to run on\n"
 		"\t    --libseat               [on]    Use libseat for seat management,\n"
 		"\t                                    input and video devices\n"
 		"\n"
@@ -638,41 +635,11 @@ static int aftercheck_drm(struct conf_option *opt, int argc, char **argv, int id
 	return 0;
 }
 
-static int aftercheck_vt(struct conf_option *opt, int argc, char **argv, int idx)
-{
-	struct kmscon_conf_t *conf = KMSCON_CONF_FROM_FIELD(opt->mem, vt);
-
-	if (!conf->vt || conf->seat_config)
-		return 0;
-
-	if (!kmscon_conf_is_single_seat(conf)) {
-		log_error("you cannot use global --vt if --seats contains not exactly one seat, "
-			  "ignoring --vt");
-		free(conf->vt);
-		conf->vt = NULL;
-		return -EFAULT;
-	}
-
-	return 0;
-}
-
-static int aftercheck_listen(struct conf_option *opt, int argc, char **argv, int idx)
-{
-	struct kmscon_conf_t *conf = KMSCON_CONF_FROM_FIELD(opt->mem, listen);
-
-	if (conf->listen)
-		return 0;
-
-	return 0;
-}
-
 /*
  * Default Values
  * We use static default values to avoid allocating memory for these. This
  * speeds up config-parser considerably.
  */
-
-static char *def_seats[] = {"current", NULL};
 
 static struct conf_grab def_grab_scroll_up = CONF_SINGLE_GRAB(SHL_SHIFT_MASK, XKB_KEY_Up);
 
@@ -753,13 +720,10 @@ int kmscon_conf_new(struct conf_ctx **out)
 				      false),
 		CONF_OPTION_BOOL(0, "silent", &conf->silent, false),
 		CONF_OPTION_STRING('c', "configdir", &conf->configdir, BUILD_CONFIG_DIR),
-		CONF_OPTION_BOOL_FULL(0, "listen", aftercheck_listen, NULL, NULL, &conf->listen,
-				      false),
 
 		/* Seat Options */
-		CONF_OPTION(0, 0, "vt", &conf_vt, aftercheck_vt, NULL, NULL, &conf->vt, NULL),
+		CONF_OPTION(0, 0, "vt", &conf_vt, NULL, NULL, NULL, &conf->vt, NULL),
 		CONF_OPTION_BOOL(0, "switchvt", &conf->switchvt, true),
-		CONF_OPTION_STRING_LIST(0, "seats", &conf->seats, def_seats),
 		CONF_OPTION_BOOL(0, "libseat", &conf->libseat, true),
 
 		/* Session Options */

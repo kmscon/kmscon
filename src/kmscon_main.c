@@ -27,19 +27,16 @@
 #include <paths.h>
 #include <signal.h>
 #include <stdbool.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/signalfd.h>
 #include "conf.h"
-#include "input/input.h"
 #include "kmscon_conf.h"
 #include "kmscon_seat.h"
 #include "render/text.h"
 #include "shl/dlist.h"
 #include "shl/eloop.h"
 #include "shl/log.h"
-#include "shl/misc.h"
 #include "shl/module.h"
 #include "uterm_monitor.h"
 #include "uterm_vt.h"
@@ -90,29 +87,14 @@ static int app_seat_event(struct kmscon_seat *s, unsigned int event, void *data)
 	case KMSCON_SEAT_HUP:
 		kmscon_seat_free(seat->seat);
 		seat->seat = NULL;
-
-		if (!app->conf->listen) {
-			--app->running_seats;
-			if (!app->running_seats) {
-				log_debug("seat HUP on %s in default-mode; exiting...", seat->name);
-				ev_eloop_exit(app->eloop);
-			} else {
-				log_debug("seat HUP on %s in default-mode; %u more running seats",
-					  seat->name, app->running_seats);
-			}
+		--app->running_seats;
+		if (!app->running_seats) {
+			log_debug("seat HUP on %s in default-mode; exiting...", seat->name);
+			ev_eloop_exit(app->eloop);
 		} else {
-			/* Seat HUP here means that we are running in
-			 * listen-mode on a modular-VT like kmscon-fake-VTs. But
-			 * this is an invalid setup. In listen-mode we
-			 * exclusively run as seat-VT-master without a
-			 * controlling VT and we effectively prevent other
-			 * setups during startup. Hence, we can safely drop the
-			 * seat here and ignore it.
-			 * You can destroy and recreate the seat to make kmscon
-			 * pick it up again in listen-mode. */
-			log_warning("seat HUP on %s in listen-mode; dropping seat...", seat->name);
+			log_debug("seat HUP on %s in default-mode; %u more running seats",
+				  seat->name, app->running_seats);
 		}
-
 		break;
 	}
 
@@ -123,35 +105,9 @@ static int app_seat_new(struct kmscon_app *app, const char *sname, struct uterm_
 {
 	struct app_seat *seat;
 	int ret;
-	unsigned int i;
-	bool found;
-	char *cseat;
 
 	if (app->exiting)
 		return -EBUSY;
-
-	found = false;
-	if (kmscon_conf_is_all_seats(app->conf)) {
-		found = true;
-	} else if (kmscon_conf_is_current_seat(app->conf)) {
-		cseat = getenv("XDG_SEAT");
-		if (!cseat)
-			cseat = "seat0";
-		if (!strcmp(cseat, sname))
-			found = true;
-	} else {
-		for (i = 0; app->conf->seats[i]; ++i) {
-			if (!strcmp(app->conf->seats[i], sname)) {
-				found = true;
-				break;
-			}
-		}
-	}
-
-	if (!found) {
-		log_info("ignoring new seat %s as not specified in seat-list", sname);
-		return -ERANGE;
-	}
 
 	log_debug("new seat %s", sname);
 
@@ -171,8 +127,8 @@ static int app_seat_new(struct kmscon_app *app, const char *sname, struct uterm_
 		goto err_free;
 	}
 
-	ret = kmscon_seat_new(&seat->seat, app->conf_ctx, app->eloop, app->vtm, app->conf->listen,
-			      sname, app_seat_event, seat);
+	ret = kmscon_seat_new(&seat->seat, app->conf_ctx, app->eloop, app->vtm, sname,
+			      app_seat_event, seat);
 	if (ret) {
 		if (ret == -ERANGE)
 			log_debug("ignoring seat %s as it already has a seat manager", sname);
@@ -389,12 +345,10 @@ int main(int argc, char **argv)
 	if (ret)
 		goto err_unload;
 
-	if (!app.conf->listen && !app.running_seats) {
+	if (!app.running_seats)
 		log_notice("no running seats; exiting\n");
-	} else {
-		log_debug("%u running seats after startup", app.running_seats);
+	else
 		ev_eloop_run(app.eloop, -1);
-	}
 
 	app.exiting = true;
 
