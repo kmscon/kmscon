@@ -31,9 +31,6 @@ For font handling the following is required:
 Seat:
 - libseat: Kmscon can take a seat with [libseat](https://sr.ht/~kennylevinsen/seatd/). In this case you must have either systemd-logind, elogind, or seatd configured. It allows to run kmscon as a regular user, and configure which GPU/input device are allowed for kmscon. The drawback is that kmscon-launch-gui won't work to launch another GUI that uses libseat, as the seat is already in use.
 
-For multi-seat support you need the following packages:
-- systemd or elogind
-
 On Debian-based system, to install the systemd service files in the right location, you need to install systemd-dev.
 ```bash
 sudo apt install systemd-dev
@@ -70,7 +67,6 @@ explicitly enable it via command line:
 | option | default | description |
 |:------|:-------:|:-----------|
 |`extra_debug`| `false` | Additional debug outputs |
-|`multi_seat`| `auto` | This requires the systemd-logind library to provide multi-seat support for kmscon |
 |`libseat`| `auto` | Use libseat to get access to device (DRM and inputs) |
 |`video_fbdev`| `auto` | Linux fbdev video backend |
 |`video_drm2d`| `auto` | Linux DRM software-rendering backend |

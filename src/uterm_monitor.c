@@ -44,7 +44,6 @@
 #include "shl/log.h"
 #include "shl/misc.h"
 #include "uterm_monitor.h"
-#include "uterm_systemd_internal.h"
 
 #define LOG_SUBSYSTEM "monitor"
 
@@ -58,7 +57,6 @@ struct uterm_monitor_dev {
 };
 
 struct uterm_monitor_seat {
-	struct shl_dlist list;
 	struct uterm_monitor *mon;
 	char *name;
 	void *data;
@@ -71,126 +69,14 @@ struct uterm_monitor {
 	uterm_monitor_cb cb;
 	void *data;
 
-	struct uterm_sd *sd;
-	struct ev_fd *sd_mon_fd;
-
 	struct udev *udev;
 	struct udev_monitor *umon;
 	struct ev_fd *umon_fd;
 
-	struct shl_dlist seats;
+	struct uterm_monitor_seat *seat;
 };
 
-static void monitor_new_seat(struct uterm_monitor *mon, const char *name);
 static void monitor_free_seat(struct uterm_monitor_seat *seat);
-
-static void monitor_refresh_seats(struct uterm_monitor *mon)
-{
-	char **seats;
-	int num, i;
-	struct shl_dlist *iter, *tmp;
-	struct uterm_monitor_seat *seat;
-
-	/* Use only seat0 if multi-seat support is not available */
-	if (!mon->sd) {
-		if (shl_dlist_empty(&mon->seats))
-			monitor_new_seat(mon, "seat0");
-		return;
-	}
-
-	num = uterm_sd_get_seats(mon->sd, &seats);
-	if (num < 0) {
-		/* if it can't read the systemd socket, remove it from the pollfd */
-		ev_eloop_rm_fd(mon->sd_mon_fd);
-		log_warn("cannot read seat information from systemd: %d", num);
-		return;
-	}
-
-	/* Remove all seats that are no longer present */
-	shl_dlist_for_each_safe(iter, tmp, &mon->seats)
-	{
-		seat = shl_dlist_entry(iter, struct uterm_monitor_seat, list);
-		for (i = 0; i < num; ++i) {
-			if (!strcmp(seats[i], seat->name))
-				break;
-		}
-
-		if (i < num) {
-			free(seats[i]);
-			seats[i] = NULL;
-		} else {
-			monitor_free_seat(seat);
-		}
-	}
-
-	/* Add all new seats */
-	for (i = 0; i < num; ++i) {
-		if (seats[i]) {
-			monitor_new_seat(mon, seats[i]);
-			free(seats[i]);
-		}
-	}
-
-	free(seats);
-}
-
-static void monitor_sd_event(struct ev_fd *fd, int mask, void *data)
-{
-	struct uterm_monitor *mon = data;
-
-	if (mask & (EV_HUP | EV_ERR)) {
-		log_warn("systemd login monitor closed unexpectedly");
-		return;
-	}
-
-	if (mon->sd) {
-		uterm_sd_flush(mon->sd);
-		ev_eloop_flush_fd(mon->eloop, mon->sd_mon_fd);
-	}
-	monitor_refresh_seats(mon);
-}
-
-static void monitor_sd_poll(struct uterm_monitor *mon)
-{
-	monitor_sd_event(mon->sd_mon_fd, EV_READABLE, mon);
-}
-
-static int monitor_sd_init(struct uterm_monitor *mon)
-{
-	int ret, sfd;
-
-	ret = uterm_sd_new(&mon->sd);
-	if (ret == -EOPNOTSUPP)
-		return 0;
-	else if (ret)
-		return ret;
-
-	sfd = uterm_sd_get_fd(mon->sd);
-	if (sfd < 0) {
-		log_err("cannot get systemd login monitor fd");
-		ret = -EFAULT;
-		goto err_sd;
-	}
-
-	ret = ev_eloop_new_fd(mon->eloop, &mon->sd_mon_fd, sfd, EV_READABLE, monitor_sd_event, mon);
-	if (ret)
-		goto err_sd;
-
-	return 0;
-
-err_sd:
-	uterm_sd_free(mon->sd);
-	return ret;
-}
-
-static void monitor_sd_deinit(struct uterm_monitor *mon)
-{
-	if (!mon->sd)
-		return;
-
-	ev_eloop_rm_fd(mon->sd_mon_fd);
-	uterm_sd_free(mon->sd);
-}
 
 static void seat_new_dev(struct uterm_monitor_seat *seat, unsigned int type, unsigned int flags,
 			 const char *node)
@@ -259,23 +145,18 @@ static struct uterm_monitor_dev *monitor_find_dev(struct uterm_monitor *mon,
 						  struct udev_device *dev)
 {
 	const char *node;
-	struct shl_dlist *iter, *iter2;
-	struct uterm_monitor_seat *seat;
+	struct shl_dlist *iter;
 	struct uterm_monitor_dev *sdev;
 
 	node = udev_device_get_devnode(dev);
-	if (!node)
+	if (!node || !mon->seat)
 		return NULL;
 
-	shl_dlist_for_each(iter, &mon->seats)
+	shl_dlist_for_each(iter, &mon->seat->devices)
 	{
-		seat = shl_dlist_entry(iter, struct uterm_monitor_seat, list);
-		shl_dlist_for_each(iter2, &seat->devices)
-		{
-			sdev = shl_dlist_entry(iter2, struct uterm_monitor_dev, list);
-			if (!strcmp(node, sdev->node))
-				return sdev;
-		}
+		sdev = shl_dlist_entry(iter, struct uterm_monitor_dev, list);
+		if (!strcmp(node, sdev->node))
+			return sdev;
 	}
 
 	return NULL;
@@ -297,7 +178,7 @@ static void monitor_new_seat(struct uterm_monitor *mon, const char *name)
 	if (!seat->name)
 		goto err_free;
 
-	shl_dlist_link(&mon->seats, &seat->list);
+	mon->seat = seat;
 
 	memset(&ev, 0, sizeof(ev));
 	ev.type = UTERM_MONITOR_NEW_SEAT;
@@ -324,8 +205,7 @@ static void monitor_free_seat(struct uterm_monitor_seat *seat)
 		dev = shl_dlist_entry(seat->devices.next, struct uterm_monitor_dev, list);
 		seat_free_dev(dev);
 	}
-
-	shl_dlist_unlink(&seat->list);
+	seat->mon->seat = NULL;
 
 	memset(&ev, 0, sizeof(ev));
 	ev.type = UTERM_MONITOR_FREE_SEAT;
@@ -554,8 +434,6 @@ static unsigned int get_drm_flags(struct uterm_monitor *mon, struct udev_device 
 static void monitor_udev_add(struct uterm_monitor *mon, struct udev_device *dev)
 {
 	const char *sname, *subs, *node, *name, *sysname;
-	struct shl_dlist *iter;
-	struct uterm_monitor_seat *seat;
 	unsigned int type, flags;
 	int id;
 	struct udev_device *p;
@@ -582,10 +460,6 @@ static void monitor_udev_add(struct uterm_monitor *mon, struct udev_device *dev)
 	}
 
 	if (!strcmp(subs, "drm")) {
-		if (mon->sd && udev_device_has_tag(dev, "seat") != 1) {
-			log_debug("adding non-seat'ed device %s", name);
-			return;
-		}
 		id = get_card_id(dev);
 		if (id < 0) {
 			log_debug("adding drm sub-device %s", name);
@@ -595,10 +469,6 @@ static void monitor_udev_add(struct uterm_monitor *mon, struct udev_device *dev)
 		type = UTERM_MONITOR_DRM;
 		flags = get_drm_flags(mon, dev, node);
 	} else if (!strcmp(subs, "graphics")) {
-		if (mon->sd && udev_device_has_tag(dev, "seat") != 1) {
-			log_debug("adding non-seat'ed device %s", name);
-			return;
-		}
 		id = get_fb_id(dev);
 		if (id < 0) {
 			log_debug("adding fbdev sub-device %s", name);
@@ -618,10 +488,6 @@ static void monitor_udev_add(struct uterm_monitor *mon, struct udev_device *dev)
 			log_debug("adding device without parent %s", name);
 			return;
 		}
-		if (mon->sd && udev_device_has_tag(p, "seat") != 1) {
-			log_debug("adding non-seat'ed device %s", name);
-			return;
-		}
 		sname = udev_device_get_property_value(p, "ID_SEAT");
 		type = UTERM_MONITOR_INPUT;
 		flags = 0;
@@ -634,19 +500,16 @@ static void monitor_udev_add(struct uterm_monitor *mon, struct udev_device *dev)
 		sname = "seat0";
 
 	/* find correct seat */
-	shl_dlist_for_each(iter, &mon->seats)
-	{
-		seat = shl_dlist_entry(iter, struct uterm_monitor_seat, list);
-		if (!strcmp(sname, seat->name))
-			break;
-	}
-
-	if (iter == &mon->seats) {
-		log_debug("adding device for unknown seat %s (%s)", sname, name);
+	if (!mon->seat) {
+		log_debug("adding device, but no seat found");
 		return;
 	}
 
-	seat_new_dev(seat, type, flags, node);
+	if (strcmp(sname, mon->seat->name)) {
+		log_debug("adding device for unknown seat %s (%s)", sname, name);
+		return;
+	}
+	seat_new_dev(mon->seat, type, flags, node);
 }
 
 static void monitor_udev_remove(struct uterm_monitor *mon, struct udev_device *dev)
@@ -712,16 +575,6 @@ static void monitor_udev_event(struct ev_fd *fd, int mask, void *data)
 		return;
 	}
 
-	/*
-	 * If there is a pending sd_event in the current epoll-queue and our
-	 * udev event is called first, we must make sure to first execute the
-	 * sd_event. Otherwise, our udev event might introduce new seats that
-	 * will be initialized later and we loose devices.
-	 * monitor_sd_event() flushes the sd-fd so we will never refresh seat
-	 * values twice in a single epoll-loop.
-	 */
-	monitor_sd_poll(mon);
-
 	while (true) {
 		/* we use non-blocking udev monitor so ignore errors */
 		dev = udev_monitor_receive_device(mon->umon);
@@ -760,20 +613,12 @@ int uterm_monitor_new(struct uterm_monitor **out, struct ev_eloop *eloop, uterm_
 	mon->eloop = eloop;
 	mon->cb = cb;
 	mon->data = data;
-	shl_dlist_init(&mon->seats);
-
-	/* Monitor seats if VT is disabled */
-	if (!vt) {
-		ret = monitor_sd_init(mon);
-		if (ret)
-			goto err_free;
-	}
 
 	mon->udev = udev_new();
 	if (!mon->udev) {
 		log_err("cannot create udev object");
 		ret = -EFAULT;
-		goto err_sd;
+		goto err_free;
 	}
 
 	mon->umon = udev_monitor_new_from_netlink(mon->udev, "udev");
@@ -849,8 +694,6 @@ err_umon:
 	udev_monitor_unref(mon->umon);
 err_udev:
 	udev_unref(mon->udev);
-err_sd:
-	monitor_sd_deinit(mon);
 err_free:
 	free(mon);
 	return ret;
@@ -868,20 +711,15 @@ void uterm_monitor_ref(struct uterm_monitor *mon)
 SHL_EXPORT
 void uterm_monitor_unref(struct uterm_monitor *mon)
 {
-	struct uterm_monitor_seat *seat;
-
 	if (!mon || !mon->ref || --mon->ref)
 		return;
 
-	while (mon->seats.next != &mon->seats) {
-		seat = shl_dlist_entry(mon->seats.next, struct uterm_monitor_seat, list);
-		monitor_free_seat(seat);
-	}
+	if (mon->seat)
+		monitor_free_seat(mon->seat);
 
 	ev_eloop_rm_fd(mon->umon_fd);
 	udev_monitor_unref(mon->umon);
 	udev_unref(mon->udev);
-	monitor_sd_deinit(mon);
 	ev_eloop_unref(mon->eloop);
 	free(mon);
 }
@@ -898,7 +736,8 @@ void uterm_monitor_scan(struct uterm_monitor *mon)
 	if (!mon)
 		return;
 
-	monitor_refresh_seats(mon);
+	if (!mon->seat)
+		monitor_new_seat(mon, "seat0");
 
 	e = udev_enumerate_new(mon->udev);
 	if (!e) {

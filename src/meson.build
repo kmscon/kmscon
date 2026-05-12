@@ -60,11 +60,6 @@ if enable_libseat
   uterm_dep += libseat_deps
 endif
 
-if enable_multi_seat
-  uterm_srcs += 'uterm_systemd.c'
-  uterm_dep += libsystemd_deps
-endif
-
 uterm = static_library('uterm', uterm_srcs,
   dependencies: uterm_dep
 )
@@ -72,8 +67,6 @@ uterm_deps = declare_dependency(
   link_with: [uterm],
   dependencies: uterm_dep
 )
-
-
 
 #
 # Binaries

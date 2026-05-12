@@ -67,12 +67,6 @@ python = find_program('python3')
 require_glesv2 = get_option('video_drm3d').enabled() or get_option('renderer_gltex').enabled()
 require_libdrm = get_option('video_drm2d').enabled() or get_option('video_drm3d').enabled()
 
-if get_option('elogind').enabled()
-	multi_seat_dep = 'libelogind'
-else
-	multi_seat_dep = 'libsystemd'
-endif
-libsystemd_deps = dependency(multi_seat_dep, disabler: true, required: get_option('multi_seat'))
 libseat_deps = dependency('libseat', disabler: true, required: get_option('libseat'))
 libdrm_deps = dependency('libdrm', disabler: true, required: require_libdrm)
 gbm_deps = dependency('gbm', disabler: true, required: get_option('video_drm3d'))
@@ -100,7 +94,6 @@ sections = {
 config = configuration_data()
 # Note: keep this in sync with the dependencies above
 foreach name, reqs : {
-  'multi_seat': [libsystemd_deps],
   'libseat': [libseat_deps],
   'video_fbdev': [],
   'video_drm2d': [libdrm_deps],

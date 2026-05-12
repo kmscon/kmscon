@@ -5,11 +5,7 @@ option('tests', type: 'boolean', value: true,
 option('docs', type: 'feature', value: 'auto',
   description: 'Build documentation')
 
-# multi-seat
-option('multi_seat', type: 'feature', value: 'auto',
-  description: 'Multi-seat support with systemd or elogind')
-option('elogind', type: 'feature', value: 'disabled',
-  description: 'Prefer elogind over systemd')
+# seat management
 option('libseat', type: 'feature', value: 'auto',
   description: 'Use libseat to integrate with systemd-logind, elogind, or seatd')
 

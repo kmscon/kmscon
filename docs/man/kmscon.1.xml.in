@@ -62,11 +62,9 @@
           on virtual terminals.
           Compared to the Linux console, KMSCON provides a rich set of enhanced
           features including full internationalized keyboard support, full UTF-8
-          input/font support, hardware-accelerated rendering, multi-seat
-          support and more.</para>
+          input/font support, hardware-accelerated rendering, seat support and
+          more.</para>
 
-    <para>When run in listener mode, KMSCON watches the system for new seats and
-          automatically provides a system console on it.</para>
   </refsect1>
 
   <refsect1>
