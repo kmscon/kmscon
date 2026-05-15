@@ -46,7 +46,6 @@ struct kmscon_app {
 	bool exiting;
 
 	struct ev_eloop *eloop;
-	unsigned int vt_exit_count;
 
 	struct uterm_monitor *mon;
 
@@ -61,13 +60,6 @@ static int app_seat_event(struct kmscon_seat *s, unsigned int event, void *data)
 	struct kmscon_app *app = data;
 
 	switch (event) {
-	case KMSCON_SEAT_SLEEP:
-		if (app->vt_exit_count > 0) {
-			log_debug("deactivating VT on exit, %d to go", app->vt_exit_count - 1);
-			if (!--app->vt_exit_count)
-				ev_eloop_exit(app->eloop);
-		}
-		break;
 	case KMSCON_SEAT_WAKE_UP:
 		if (app->exiting)
 			return -EBUSY;

@@ -265,7 +265,7 @@ static int seat_go_background(struct kmscon_seat *seat, bool force)
 
 static int seat_go_asleep(struct kmscon_seat *seat, bool force)
 {
-	int ret, err = 0;
+	int err = 0;
 
 	if (!seat->awake)
 		return 0;
@@ -278,16 +278,6 @@ static int seat_go_asleep(struct kmscon_seat *seat, bool force)
 			return -EBUSY;
 		}
 	}
-
-	if (seat->cb) {
-		ret = seat->cb(seat, KMSCON_SEAT_SLEEP, seat->data);
-		if (ret) {
-			log_warning("cannot put seat %s asleep: %d", seat->name, ret);
-			if (!force)
-				return ret;
-		}
-	}
-
 	seat->awake = false;
 	uterm_input_sleep(seat->input);
 
