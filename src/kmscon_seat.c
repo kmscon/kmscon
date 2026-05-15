@@ -930,8 +930,8 @@ int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf, struct
 		}
 	}
 
-	ret = uterm_vt_allocate(seat->vtm, &seat->vt, listen, seat->conf->libseat, seat->name,
-				seat->input, seat->conf->vt, seat_vt_event, seat);
+	ret = uterm_vt_allocate(seat->vtm, &seat->vt, listen, seat->conf->libseat, seat->input,
+				seat->conf->vt, seat_vt_event, seat);
 	if (ret)
 		goto err_input_cb;
 

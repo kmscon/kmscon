@@ -100,15 +100,12 @@ int vt_call_deactivate(struct uterm_vt *vt, bool force)
 
 SHL_EXPORT
 int uterm_vt_allocate(struct uterm_vt_master *vtm, struct uterm_vt **out, bool listen, bool libseat,
-		      const char *seat, struct uterm_input *input, const char *vt_name,
-		      uterm_vt_cb cb, void *data)
+		      struct uterm_input *input, const char *vt_name, uterm_vt_cb cb, void *data)
 {
 	struct uterm_vt *vt = NULL;
 
 	if (!vtm || !out)
 		return -EINVAL;
-	if (!seat)
-		seat = "seat0";
 
 	if (libseat)
 		vt = uterm_vt_libseat_new(vtm, input, vt_name, cb, data);
