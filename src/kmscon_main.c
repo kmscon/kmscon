@@ -37,7 +37,6 @@
 #include "shl/eloop.h"
 #include "shl/log.h"
 #include "shl/module.h"
-#include "uterm_monitor.h"
 #include "video/video.h"
 
 struct kmscon_app {
@@ -46,8 +45,6 @@ struct kmscon_app {
 	bool exiting;
 
 	struct ev_eloop *eloop;
-
-	struct uterm_monitor *mon;
 
 	struct conf_ctx *seat_ctx;
 	struct kmscon_conf_t *seat_conf;
@@ -73,7 +70,7 @@ static int app_seat_event(struct kmscon_seat *s, unsigned int event, void *data)
 	return 0;
 }
 
-static int setup_seat(struct kmscon_app *app, struct uterm_monitor *umon)
+static int setup_seat(struct kmscon_app *app)
 {
 	int ret;
 
@@ -99,53 +96,6 @@ static void destroy_seat(struct kmscon_app *app)
 	app->seat = NULL;
 }
 
-static void app_monitor_event(struct uterm_monitor *mon, struct uterm_monitor_event *ev, void *data)
-{
-	struct kmscon_app *app = data;
-	int ret;
-
-	switch (ev->type) {
-	case UTERM_MONITOR_NEW_DEV:
-		switch (ev->dev_type) {
-		case UTERM_MONITOR_DRM:
-		case UTERM_MONITOR_FBDEV:
-			ret = kmscon_seat_add_video(app->seat, ev->dev_type, ev->dev_flags,
-						    ev->dev_node, ev->dev);
-			if (ret)
-				return;
-			break;
-		case UTERM_MONITOR_INPUT:
-			log_debug("new input device %s", ev->dev_node);
-			kmscon_seat_add_input(app->seat, ev->dev_node);
-			break;
-		}
-		break;
-	case UTERM_MONITOR_FREE_DEV:
-		switch (ev->dev_type) {
-		case UTERM_MONITOR_DRM:
-		case UTERM_MONITOR_FBDEV:
-			kmscon_seat_remove_video(app->seat, ev->dev_data);
-			break;
-		case UTERM_MONITOR_INPUT:
-			log_debug("free input device %s", ev->dev_node);
-			kmscon_seat_remove_input(app->seat, ev->dev_node);
-			break;
-		}
-		break;
-	case UTERM_MONITOR_HOTPLUG_DEV:
-		switch (ev->dev_type) {
-		case UTERM_MONITOR_DRM:
-		case UTERM_MONITOR_FBDEV:
-			if (!ev->dev_data)
-				return;
-
-			kmscon_seat_poll_video(ev->dev_data);
-			break;
-		}
-		break;
-	}
-}
-
 static void app_sig_generic(struct ev_eloop *eloop, struct signalfd_siginfo *info, void *data)
 {
 	struct kmscon_app *app = data;
@@ -158,7 +108,6 @@ static void app_sig_ignore(struct ev_eloop *eloop, struct signalfd_siginfo *info
 
 static void destroy_app(struct kmscon_app *app)
 {
-	uterm_monitor_unref(app->mon);
 	ev_eloop_unregister_signal_cb(app->eloop, SIGPIPE, app_sig_ignore, app);
 	ev_eloop_unregister_signal_cb(app->eloop, SIGINT, app_sig_generic, app);
 	ev_eloop_unregister_signal_cb(app->eloop, SIGTERM, app_sig_generic, app);
@@ -190,12 +139,6 @@ static int setup_app(struct kmscon_app *app)
 	ret = ev_eloop_register_signal_cb(app->eloop, SIGPIPE, app_sig_ignore, app);
 	if (ret) {
 		log_error("cannot register SIGPIPE signal handler: %d", ret);
-		goto err_app;
-	}
-
-	ret = uterm_monitor_new(&app->mon, app->eloop, app_monitor_event, "seat0", app);
-	if (ret) {
-		log_error("cannot create device monitor: %d", ret);
 		goto err_app;
 	}
 
@@ -243,12 +186,9 @@ int main(int argc, char **argv)
 	if (ret)
 		goto err_unload;
 
-	ret = setup_seat(&app, app.mon);
+	ret = setup_seat(&app);
 	if (ret)
 		goto err_unload_app;
-
-	log_debug("scanning for devices...");
-	uterm_monitor_scan(app.mon);
 
 	ev_eloop_run(app.eloop, -1);
 

@@ -45,6 +45,7 @@
 #include "shl/dlist.h"
 #include "shl/eloop.h"
 #include "shl/log.h"
+#include "uterm_monitor.h"
 #include "uterm_vt.h"
 #include "video/video.h"
 
@@ -94,6 +95,8 @@ struct kmscon_seat {
 	struct ev_eloop *eloop;
 	struct conf_ctx *conf_ctx;
 	struct kmscon_conf_t *conf;
+
+	struct uterm_monitor *mon;
 
 	char *name;
 	struct uterm_input *input;
@@ -850,6 +853,54 @@ static int kmscon_seat_set_keymap(struct kmscon_seat *seat)
 	return ret;
 }
 
+static void seat_monitor_event(struct uterm_monitor *mon, struct uterm_monitor_event *ev,
+			       void *data)
+{
+	struct kmscon_seat *seat = data;
+	int ret;
+
+	switch (ev->type) {
+	case UTERM_MONITOR_NEW_DEV:
+		switch (ev->dev_type) {
+		case UTERM_MONITOR_DRM:
+		case UTERM_MONITOR_FBDEV:
+			ret = kmscon_seat_add_video(seat, ev->dev_type, ev->dev_flags, ev->dev_node,
+						    ev->dev);
+			if (ret)
+				return;
+			break;
+		case UTERM_MONITOR_INPUT:
+			log_debug("new input device %s", ev->dev_node);
+			kmscon_seat_add_input(seat, ev->dev_node);
+			break;
+		}
+		break;
+	case UTERM_MONITOR_FREE_DEV:
+		switch (ev->dev_type) {
+		case UTERM_MONITOR_DRM:
+		case UTERM_MONITOR_FBDEV:
+			kmscon_seat_remove_video(seat, ev->dev_data);
+			break;
+		case UTERM_MONITOR_INPUT:
+			log_debug("free input device %s", ev->dev_node);
+			kmscon_seat_remove_input(seat, ev->dev_node);
+			break;
+		}
+		break;
+	case UTERM_MONITOR_HOTPLUG_DEV:
+		switch (ev->dev_type) {
+		case UTERM_MONITOR_DRM:
+		case UTERM_MONITOR_FBDEV:
+			if (!ev->dev_data)
+				return;
+
+			kmscon_seat_poll_video(ev->dev_data);
+			break;
+		}
+		break;
+	}
+}
+
 int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf,
 		    struct kmscon_conf_t *conf, struct ev_eloop *eloop, kmscon_seat_cb_t cb,
 		    void *data)
@@ -914,9 +965,15 @@ int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf,
 	if (ret)
 		goto err_conf;
 
+	ret = uterm_monitor_new(&seat->mon, seat->eloop, seat_monitor_event, seat->name, seat);
+	if (ret) {
+		log_error("cannot create device monitor: %d", ret);
+		goto err_conf;
+	}
+
 	ret = uterm_input_register_key_cb(seat->input, seat_input_event, seat);
 	if (ret)
-		goto err_conf;
+		goto err_mon;
 
 	/* Register pointer event handler for DPMS management */
 	ret = uterm_input_register_pointer_cb(seat->input, seat_pointer_event, seat);
@@ -954,6 +1011,8 @@ int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf,
 	*out = seat;
 	return 0;
 
+err_mon:
+	uterm_monitor_unref(seat->mon);
 err_conf:
 	kmscon_conf_free(seat->conf_ctx);
 err_name:
@@ -995,6 +1054,7 @@ void kmscon_seat_free(struct kmscon_seat *seat)
 	}
 
 	uterm_vt_deallocate(seat->vt);
+	uterm_monitor_unref(seat->mon);
 	uterm_input_unregister_key_cb(seat->input, seat_input_event, seat);
 	uterm_input_unregister_pointer_cb(seat->input, seat_pointer_event, seat);
 	uterm_input_unref(seat->input);
@@ -1245,6 +1305,9 @@ void kmscon_seat_startup(struct kmscon_seat *seat)
 
 	if (seat->conf->switchvt || uterm_vt_get_num(seat->vt) == 0)
 		uterm_vt_activate(seat->vt);
+
+	log_debug("scanning for devices...");
+	uterm_monitor_scan(seat->mon);
 }
 
 int kmscon_seat_add_input(struct kmscon_seat *seat, const char *node)
