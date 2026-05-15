@@ -34,7 +34,6 @@
 #include <unistd.h>
 
 #include "input/input.h"
-#include "shl/dlist.h"
 #include "shl/eloop.h"
 #include "shl/log.h"
 #include "shl/misc.h"
@@ -99,52 +98,49 @@ int vt_call_deactivate(struct uterm_vt *vt, bool force)
 }
 
 SHL_EXPORT
-int uterm_vt_allocate(struct uterm_vt_master *vtm, struct uterm_vt **out, bool libseat,
-		      struct uterm_input *input, const char *vt_name, uterm_vt_cb cb, void *data)
+struct uterm_vt *uterm_vt_allocate(struct ev_eloop *eloop, bool libseat, struct uterm_input *input,
+				   const char *vt_name, uterm_vt_cb cb, void *data)
 {
 	struct uterm_vt *vt = NULL;
 
-	if (!vtm || !out)
-		return -EINVAL;
+	if (!eloop)
+		return NULL;
 
 	if (libseat)
-		vt = uterm_vt_libseat_new(vtm, input, vt_name, cb, data);
+		vt = uterm_vt_libseat_new(eloop, input, vt_name, cb, data);
 
 	if (!vt)
-		vt = uterm_vt_real_new(vtm, input, vt_name, cb, data);
+		vt = uterm_vt_real_new(eloop, input, vt_name, cb, data);
 
 	if (!vt)
-		vt = uterm_vt_fake_new(vtm, input, cb, data);
+		vt = uterm_vt_fake_new(eloop, input, cb, data);
 
 	if (!vt)
-		return -EFAULT;
+		return NULL;
 
 	uterm_input_ref(input);
-	shl_dlist_link(&vtm->vts, &vt->list);
-
-	*out = vt;
-	return 0;
+	ev_eloop_ref(eloop);
+	return vt;
 }
 
 SHL_EXPORT
 void uterm_vt_deallocate(struct uterm_vt *vt)
 {
-	if (!vt || !vt->vtm)
+	if (!vt)
 		return;
 
 	if (vt->ops->destroy)
 		vt->ops->destroy(vt);
 
-	shl_dlist_unlink(&vt->list);
 	uterm_input_unref(vt->input);
-	vt->vtm = NULL;
+	ev_eloop_unref(vt->eloop);
 	free(vt);
 }
 
 SHL_EXPORT
 int uterm_vt_open_device(struct uterm_vt *vt, const char *device, int *fd_id)
 {
-	if (!vt || !vt->vtm)
+	if (!vt)
 		return -EINVAL;
 
 	if (vt->ops->open_device)
@@ -156,7 +152,7 @@ int uterm_vt_open_device(struct uterm_vt *vt, const char *device, int *fd_id)
 SHL_EXPORT
 void uterm_vt_close_device(struct uterm_vt *vt, int fd, int fd_id)
 {
-	if (!vt || !vt->vtm)
+	if (!vt)
 		return;
 
 	if (vt->ops->close_device)
@@ -168,7 +164,7 @@ void uterm_vt_close_device(struct uterm_vt *vt, int fd, int fd_id)
 SHL_EXPORT
 int uterm_vt_activate(struct uterm_vt *vt)
 {
-	if (!vt || !vt->vtm)
+	if (!vt)
 		return -EINVAL;
 
 	return vt->ops->activate(vt);
@@ -177,7 +173,7 @@ int uterm_vt_activate(struct uterm_vt *vt)
 SHL_EXPORT
 int uterm_vt_deactivate(struct uterm_vt *vt)
 {
-	if (!vt || !vt->vtm)
+	if (!vt)
 		return -EINVAL;
 
 	return vt->ops->deactivate(vt);
@@ -186,7 +182,7 @@ int uterm_vt_deactivate(struct uterm_vt *vt)
 SHL_EXPORT
 int uterm_vt_restore(struct uterm_vt *vt)
 {
-	if (!vt || !vt->vtm)
+	if (!vt)
 		return -EINVAL;
 
 	if (vt->ops->restore)
@@ -198,7 +194,7 @@ int uterm_vt_restore(struct uterm_vt *vt)
 SHL_EXPORT
 void uterm_vt_retry(struct uterm_vt *vt)
 {
-	if (!vt || !vt->vtm)
+	if (!vt)
 		return;
 
 	if (vt->ops->retry)
@@ -218,83 +214,4 @@ void uterm_vt_bell(struct uterm_vt *vt)
 {
 	if (vt && vt->ops->bell)
 		vt->ops->bell(vt);
-}
-
-SHL_EXPORT
-int uterm_vt_master_new(struct uterm_vt_master **out, struct ev_eloop *eloop)
-{
-	struct uterm_vt_master *vtm;
-
-	if (!out || !eloop)
-		return -EINVAL;
-
-	vtm = malloc(sizeof(*vtm));
-	if (!vtm)
-		return -ENOMEM;
-	memset(vtm, 0, sizeof(*vtm));
-	vtm->ref = 1;
-	vtm->eloop = eloop;
-	shl_dlist_init(&vtm->vts);
-
-	ev_eloop_ref(vtm->eloop);
-	*out = vtm;
-	return 0;
-}
-
-SHL_EXPORT
-void uterm_vt_master_ref(struct uterm_vt_master *vtm)
-{
-	if (!vtm || !vtm->ref)
-		return;
-
-	++vtm->ref;
-}
-
-/* Drops a reference to the VT-master. If the reference drops to 0, all
- * allocated VTs are deallocated and the VT-master is destroyed. */
-SHL_EXPORT
-void uterm_vt_master_unref(struct uterm_vt_master *vtm)
-{
-	struct uterm_vt *vt;
-
-	if (!vtm || !vtm->ref || --vtm->ref)
-		return;
-
-	while (vtm->vts.next != &vtm->vts) {
-		vt = shl_dlist_entry(vtm->vts.next, struct uterm_vt, list);
-		uterm_vt_deallocate(vt);
-	}
-
-	ev_eloop_unref(vtm->eloop);
-	free(vtm);
-}
-
-/* Calls uterm_vt_deactivate() on all allocated VTs on this master. Returns
- * number of VTs that returned -EINPROGRESS or a negative error code on failure.
- * See uterm_vt_deactivate() for information. */
-SHL_EXPORT
-int uterm_vt_master_deactivate_all(struct uterm_vt_master *vtm)
-{
-	struct uterm_vt *vt;
-	struct shl_dlist *iter;
-	int ret, res = 0;
-	unsigned int in_progress = 0;
-
-	if (!vtm)
-		return -EINVAL;
-
-	shl_dlist_for_each(iter, &vtm->vts)
-	{
-		vt = shl_dlist_entry(iter, struct uterm_vt, list);
-		ret = uterm_vt_deactivate(vt);
-		if (ret == -EINPROGRESS)
-			in_progress++;
-		else if (ret)
-			res = ret;
-	}
-
-	if (in_progress)
-		return in_progress;
-
-	return res;
 }

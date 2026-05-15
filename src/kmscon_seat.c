@@ -92,7 +92,6 @@ enum kmscon_async_schedule {
 
 struct kmscon_seat {
 	struct ev_eloop *eloop;
-	struct uterm_vt_master *vtm;
 	struct conf_ctx *conf_ctx;
 	struct kmscon_conf_t *conf;
 
@@ -825,8 +824,7 @@ static const char *find_locale(void)
 }
 
 int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf, struct ev_eloop *eloop,
-		    struct uterm_vt_master *vtm, const char *seatname, kmscon_seat_cb_t cb,
-		    void *data)
+		    const char *seatname, kmscon_seat_cb_t cb, void *data)
 {
 	struct kmscon_seat *seat;
 	int ret;
@@ -834,7 +832,7 @@ int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf, struct
 	char *keymap, *compose_file;
 	size_t compose_file_len;
 
-	if (!out || !eloop || !vtm || !seatname)
+	if (!out || !eloop || !seatname)
 		return -EINVAL;
 
 	seat = malloc(sizeof(*seat));
@@ -842,7 +840,6 @@ int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf, struct
 		return -ENOMEM;
 	memset(seat, 0, sizeof(*seat));
 	seat->eloop = eloop;
-	seat->vtm = vtm;
 	seat->cb = cb;
 	seat->data = data;
 	shl_dlist_init(&seat->displays);
@@ -930,10 +927,12 @@ int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf, struct
 		}
 	}
 
-	ret = uterm_vt_allocate(seat->vtm, &seat->vt, seat->conf->libseat, seat->input,
-				seat->conf->vt, seat_vt_event, seat);
-	if (ret)
+	seat->vt = uterm_vt_allocate(seat->eloop, seat->conf->libseat, seat->input, seat->conf->vt,
+				     seat_vt_event, seat);
+	if (!seat->vt) {
+		ret = -ENOMEM;
 		goto err_input_cb;
+	}
 
 	if (seat->conf->session_control && uterm_vt_get_num(seat->vt) > 0) {
 		log_warning("session control cannot be configured on real VT, disabling session "
@@ -942,7 +941,6 @@ int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf, struct
 	}
 
 	ev_eloop_ref(seat->eloop);
-	uterm_vt_master_ref(seat->vtm);
 	*out = seat;
 	return 0;
 
@@ -994,7 +992,6 @@ void kmscon_seat_free(struct kmscon_seat *seat)
 	uterm_input_unref(seat->input);
 	kmscon_conf_free(seat->conf_ctx);
 	free(seat->name);
-	uterm_vt_master_unref(seat->vtm);
 	ev_eloop_rm_timer(seat->dpms_timer);
 	ev_eloop_unref(seat->eloop);
 	free(seat);

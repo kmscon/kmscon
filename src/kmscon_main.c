@@ -38,7 +38,6 @@
 #include "shl/log.h"
 #include "shl/module.h"
 #include "uterm_monitor.h"
-#include "uterm_vt.h"
 #include "video/video.h"
 
 struct kmscon_app {
@@ -49,7 +48,6 @@ struct kmscon_app {
 	struct ev_eloop *eloop;
 	unsigned int vt_exit_count;
 
-	struct uterm_vt_master *vtm;
 	struct uterm_monitor *mon;
 
 	struct conf_ctx *seat_ctx;
@@ -93,8 +91,8 @@ static int setup_seat(struct kmscon_app *app, struct uterm_monitor *umon)
 
 	log_debug("Using seat");
 
-	ret = kmscon_seat_new(&app->seat, app->conf_ctx, app->eloop, app->vtm, app->seat_name,
-			      app_seat_event, app);
+	ret = kmscon_seat_new(&app->seat, app->conf_ctx, app->eloop, app->seat_name, app_seat_event,
+			      app);
 	if (ret) {
 		log_error("cannot create seat object: %d", ret);
 		return ret;
@@ -172,7 +170,6 @@ static void app_sig_ignore(struct ev_eloop *eloop, struct signalfd_siginfo *info
 static void destroy_app(struct kmscon_app *app)
 {
 	uterm_monitor_unref(app->mon);
-	uterm_vt_master_unref(app->vtm);
 	ev_eloop_unregister_signal_cb(app->eloop, SIGPIPE, app_sig_ignore, app);
 	ev_eloop_unregister_signal_cb(app->eloop, SIGINT, app_sig_generic, app);
 	ev_eloop_unregister_signal_cb(app->eloop, SIGTERM, app_sig_generic, app);
@@ -204,12 +201,6 @@ static int setup_app(struct kmscon_app *app)
 	ret = ev_eloop_register_signal_cb(app->eloop, SIGPIPE, app_sig_ignore, app);
 	if (ret) {
 		log_error("cannot register SIGPIPE signal handler: %d", ret);
-		goto err_app;
-	}
-
-	ret = uterm_vt_master_new(&app->vtm, app->eloop);
-	if (ret) {
-		log_error("cannot create VT master: %d", ret);
 		goto err_app;
 	}
 
@@ -274,23 +265,6 @@ int main(int argc, char **argv)
 	ev_eloop_run(app.eloop, -1);
 
 	app.exiting = true;
-
-	if (app.conf->switchvt) {
-		/* The VT subsystem needs to acknowledge the VT-leave so if it
-		 * returns -EINPROGRESS we need to wait for the VT-leave SIGUSR2
-		 * signal to arrive. Therefore, we use a separate eloop object
-		 * which is used by the VT system only. Therefore, waiting on
-		 * this eloop allows us to safely wait 50ms for the SIGUSR2 to
-		 * arrive.
-		 * We use a timeout of 100ms to avoid hanging on exit. */
-		log_debug("deactivating VTs during shutdown");
-		ret = uterm_vt_master_deactivate_all(app.vtm);
-		if (ret > 0) {
-			log_debug("waiting for %d VTs to deactivate", ret);
-			app.vt_exit_count = ret;
-			ev_eloop_run(app.eloop, 50);
-		}
-	}
 
 	ret = 0;
 

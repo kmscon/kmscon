@@ -3,6 +3,7 @@
 
 #include "input/input.h"
 #include "shl/dlist.h"
+#include "shl/eloop.h"
 #include "uterm_vt.h"
 
 struct uterm_vt_ops {
@@ -19,8 +20,7 @@ struct uterm_vt_ops {
 };
 
 struct uterm_vt {
-	struct shl_dlist list;
-	struct uterm_vt_master *vtm;
+	struct ev_eloop *eloop;
 	struct uterm_input *input;
 
 	uterm_vt_cb cb;
@@ -32,25 +32,18 @@ struct uterm_vt {
 	const struct uterm_vt_ops *ops;
 };
 
-struct uterm_vt_master {
-	unsigned long ref;
-	struct ev_eloop *eloop;
-
-	struct shl_dlist vts;
-};
-
 void vt_call_activate(struct uterm_vt *vt);
 int vt_call_deactivate(struct uterm_vt *vt, bool force);
 
-struct uterm_vt *uterm_vt_real_new(struct uterm_vt_master *vtm, struct uterm_input *input,
+struct uterm_vt *uterm_vt_real_new(struct ev_eloop *eloop, struct uterm_input *input,
 				   const char *vt_name, uterm_vt_cb cb, void *data);
-struct uterm_vt *uterm_vt_fake_new(struct uterm_vt_master *vtm, struct uterm_input *input,
+struct uterm_vt *uterm_vt_fake_new(struct ev_eloop *eloop, struct uterm_input *input,
 				   uterm_vt_cb cb, void *data);
 #ifdef BUILD_ENABLE_LIBSEAT
-struct uterm_vt *uterm_vt_libseat_new(struct uterm_vt_master *vtm, struct uterm_input *input,
+struct uterm_vt *uterm_vt_libseat_new(struct ev_eloop *eloop, struct uterm_input *input,
 				      const char *vt_name, uterm_vt_cb cb, void *data);
 #else
-static inline struct uterm_vt *uterm_vt_libseat_new(struct uterm_vt_master *vtm,
+static inline struct uterm_vt *uterm_vt_libseat_new(struct ev_eloop *eloop,
 						    struct uterm_input *input, const char *vt_name,
 						    uterm_vt_cb cb, void *data)
 {

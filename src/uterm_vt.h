@@ -34,12 +34,10 @@
 
 #include <inttypes.h>
 #include <stdbool.h>
-#include <stdlib.h>
 #include "input/input.h"
 #include "shl/eloop.h"
 
 struct uterm_vt;
-struct uterm_vt_master;
 
 enum uterm_vt_action {
 	UTERM_VT_ACTIVATE,
@@ -58,14 +56,8 @@ struct uterm_vt_event {
 
 typedef int (*uterm_vt_cb)(struct uterm_vt *vt, struct uterm_vt_event *ev, void *data);
 
-int uterm_vt_master_new(struct uterm_vt_master **out, struct ev_eloop *eloop);
-void uterm_vt_master_ref(struct uterm_vt_master *vtm);
-void uterm_vt_master_unref(struct uterm_vt_master *vtm);
-
-int uterm_vt_master_deactivate_all(struct uterm_vt_master *vtm);
-
-int uterm_vt_allocate(struct uterm_vt_master *vt, struct uterm_vt **out, bool libseat,
-		      struct uterm_input *input, const char *vt_name, uterm_vt_cb cb, void *data);
+struct uterm_vt *uterm_vt_allocate(struct ev_eloop *eloop, bool libseat, struct uterm_input *input,
+				   const char *vt_name, uterm_vt_cb cb, void *data);
 void uterm_vt_deallocate(struct uterm_vt *vt);
 
 int uterm_vt_open_device(struct uterm_vt *vt, const char *device, int *fd_id);

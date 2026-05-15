@@ -312,7 +312,7 @@ static void vt_libseat_close(int fd, int fd_id, void *data)
 	close(fd);
 }
 
-struct uterm_vt *uterm_vt_libseat_new(struct uterm_vt_master *vtm, struct uterm_input *input,
+struct uterm_vt *uterm_vt_libseat_new(struct ev_eloop *eloop, struct uterm_input *input,
 				      const char *vt_name, uterm_vt_cb cb, void *data)
 {
 	struct uterm_vt_libseat *vt;
@@ -323,7 +323,7 @@ struct uterm_vt *uterm_vt_libseat_new(struct uterm_vt_master *vtm, struct uterm_
 	if (!vt)
 		return NULL;
 	memset(vt, 0, sizeof(*vt));
-	vt->base.vtm = vtm;
+	vt->base.eloop = eloop;
 	vt->base.input = input;
 	vt->base.cb = cb;
 	vt->base.data = data;
@@ -361,7 +361,7 @@ struct uterm_vt *uterm_vt_libseat_new(struct uterm_vt_master *vtm, struct uterm_
 	log_notice("libseat seat opened successfully");
 
 	libseat_fd = libseat_get_fd(vt->libseat);
-	ret = ev_eloop_new_fd(vt->base.vtm->eloop, &vt->libseat_efd, libseat_fd, EV_READABLE,
+	ret = ev_eloop_new_fd(vt->base.eloop, &vt->libseat_efd, libseat_fd, EV_READABLE,
 			      vt_libseat_event, vt);
 	if (ret) {
 		log_error("cannot register libseat fd with eloop: %d", ret);

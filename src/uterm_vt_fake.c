@@ -98,7 +98,7 @@ static const struct uterm_vt_ops fake_ops = {
 	.deactivate = fake_deactivate,
 };
 
-struct uterm_vt *uterm_vt_fake_new(struct uterm_vt_master *vtm, struct uterm_input *input,
+struct uterm_vt *uterm_vt_fake_new(struct ev_eloop *eloop, struct uterm_input *input,
 				   uterm_vt_cb cb, void *data)
 {
 	struct uterm_vt *vt;
@@ -108,7 +108,7 @@ struct uterm_vt *uterm_vt_fake_new(struct uterm_vt_master *vtm, struct uterm_inp
 	if (!vt)
 		return NULL;
 	memset(vt, 0, sizeof(*vt));
-	vt->vtm = vtm;
+	vt->eloop = eloop;
 	vt->input = input;
 	vt->cb = cb;
 	vt->data = data;

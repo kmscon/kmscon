@@ -120,7 +120,7 @@ static void real_sig_enter(struct ev_eloop *eloop, struct signalfd_siginfo *info
 
 	if (vt->real_delayed) {
 		vt->real_delayed = false;
-		ev_eloop_unregister_idle_cb(vt->base.vtm->eloop, real_delayed, vt, EV_NORMAL);
+		ev_eloop_unregister_idle_cb(vt->base.eloop, real_delayed, vt, EV_NORMAL);
 	} else if (vt->base.active) {
 		log_warning("activating VT %d even though it's already active", vt->real_num);
 	} else {
@@ -160,7 +160,7 @@ static void real_sig_leave(struct ev_eloop *eloop, struct signalfd_siginfo *info
 
 	if (vt->real_delayed) {
 		vt->real_delayed = false;
-		ev_eloop_unregister_idle_cb(vt->base.vtm->eloop, real_delayed, vt, EV_NORMAL);
+		ev_eloop_unregister_idle_cb(vt->base.eloop, real_delayed, vt, EV_NORMAL);
 		uterm_input_sleep(vt->base.input);
 	} else if (!active) {
 		log_warning("deactivating VT %d even though it's not active", vt->real_num);
@@ -271,7 +271,7 @@ static int real_open(struct uterm_vt_real *vt, const char *vt_name)
 	if (ret)
 		return ret;
 
-	ret = ev_eloop_new_fd(vt->base.vtm->eloop, &vt->real_efd, vt->real_fd, EV_READABLE,
+	ret = ev_eloop_new_fd(vt->base.eloop, &vt->real_efd, vt->real_fd, EV_READABLE,
 			      real_vt_input, vt);
 	if (ret)
 		goto err_fd;
@@ -329,7 +329,7 @@ static int real_open(struct uterm_vt_real *vt, const char *vt_name)
 		log_warning("cannot set VT KBMODE to K_OFF (%d): %m", errno);
 
 	if (vts.v_active == vt->real_num) {
-		ret = ev_eloop_register_idle_cb(vt->base.vtm->eloop, real_delayed, vt, EV_NORMAL);
+		ret = ev_eloop_register_idle_cb(vt->base.eloop, real_delayed, vt, EV_NORMAL);
 		if (ret) {
 			log_error("cannot register idle cb for VT switch");
 			goto err_kbdmode;
@@ -371,7 +371,7 @@ static void real_close(struct uterm_vt_real *vt)
 
 	if (vt->real_delayed) {
 		vt->real_delayed = false;
-		ev_eloop_unregister_idle_cb(vt->base.vtm->eloop, real_delayed, vt, EV_NORMAL);
+		ev_eloop_unregister_idle_cb(vt->base.eloop, real_delayed, vt, EV_NORMAL);
 		uterm_input_sleep(vt->base.input);
 	} else if (vt->base.active) {
 		uterm_input_sleep(vt->base.input);
@@ -582,8 +582,8 @@ static void real_destroy(struct uterm_vt *base)
 
 	real_close(vt);
 
-	ev_eloop_unregister_signal_cb(vt->base.vtm->eloop, SIGUSR1, real_sig_enter, vt);
-	ev_eloop_unregister_signal_cb(vt->base.vtm->eloop, SIGUSR2, real_sig_leave, vt);
+	ev_eloop_unregister_signal_cb(vt->base.eloop, SIGUSR1, real_sig_enter, vt);
+	ev_eloop_unregister_signal_cb(vt->base.eloop, SIGUSR2, real_sig_leave, vt);
 }
 
 static unsigned int real_get_num(struct uterm_vt *base)
@@ -652,7 +652,7 @@ static char *seat_find_vt(void)
 	return vt;
 }
 
-struct uterm_vt *uterm_vt_real_new(struct uterm_vt_master *vtm, struct uterm_input *input,
+struct uterm_vt *uterm_vt_real_new(struct ev_eloop *eloop, struct uterm_input *input,
 				   const char *vt_name, uterm_vt_cb cb, void *data)
 {
 	struct uterm_vt_real *vt;
@@ -670,17 +670,17 @@ struct uterm_vt *uterm_vt_real_new(struct uterm_vt_master *vtm, struct uterm_inp
 	if (!vt)
 		return NULL;
 	memset(vt, 0, sizeof(*vt));
-	vt->base.vtm = vtm;
+	vt->base.eloop = eloop;
 	vt->base.input = input;
 	vt->base.cb = cb;
 	vt->base.data = data;
 	vt->base.ops = &real_ops;
 
-	ret = ev_eloop_register_signal_cb(vtm->eloop, SIGUSR1, real_sig_enter, vt);
+	ret = ev_eloop_register_signal_cb(eloop, SIGUSR1, real_sig_enter, vt);
 	if (ret)
 		goto err_free;
 
-	ret = ev_eloop_register_signal_cb(vtm->eloop, SIGUSR2, real_sig_leave, vt);
+	ret = ev_eloop_register_signal_cb(eloop, SIGUSR2, real_sig_leave, vt);
 	if (ret)
 		goto err_sig1;
 
@@ -700,9 +700,9 @@ err_input:
 	uterm_input_unregister_key_cb(input, real_input, vt);
 
 err_sig2:
-	ev_eloop_unregister_signal_cb(vtm->eloop, SIGUSR2, real_sig_leave, vt);
+	ev_eloop_unregister_signal_cb(eloop, SIGUSR2, real_sig_leave, vt);
 err_sig1:
-	ev_eloop_unregister_signal_cb(vtm->eloop, SIGUSR1, real_sig_enter, vt);
+	ev_eloop_unregister_signal_cb(eloop, SIGUSR1, real_sig_enter, vt);
 err_free:
 	free(vt);
 	free(vt_path);

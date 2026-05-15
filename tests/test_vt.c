@@ -97,7 +97,6 @@ int main(int argc, char **argv)
 {
 	int ret;
 	struct ev_eloop *eloop;
-	struct uterm_vt_master *vtm;
 	struct uterm_input *input;
 	struct uterm_vt *vt;
 	size_t onum;
@@ -107,16 +106,12 @@ int main(int argc, char **argv)
 	if (ret)
 		goto err_fail;
 
-	ret = uterm_vt_master_new(&vtm, eloop);
+	ret = uterm_input_new(&input, eloop, "", "", "", "", "C", "", "", 0, 0, 0, true);
 	if (ret)
 		goto err_exit;
 
-	ret = uterm_input_new(&input, eloop, "", "", "", "", "C", "", "", 0, 0, 0, true);
-	if (ret)
-		goto err_vtm;
-
-	ret = uterm_vt_allocate(vtm, &vt, false, input, vtpath, NULL, NULL);
-	if (ret)
+	vt = uterm_vt_allocate(eloop, false, input, vtpath, NULL, NULL);
+	if (!vt)
 		goto err_input;
 
 	if (switchvt) {
@@ -141,8 +136,6 @@ int main(int argc, char **argv)
 	uterm_vt_deallocate(vt);
 err_input:
 	uterm_input_unref(input);
-err_vtm:
-	uterm_vt_master_unref(vtm);
 err_exit:
 	test_exit(options, onum, eloop);
 err_fail:
