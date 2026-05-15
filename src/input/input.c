@@ -442,11 +442,7 @@ static void hide_pointer_timer(struct ev_timer *timer, uint64_t num, void *data)
 }
 
 SHL_EXPORT
-int uterm_input_new(struct uterm_input **out, struct ev_eloop *eloop, const char *model,
-		    const char *layout, const char *variant, const char *options,
-		    const char *locale, const char *keymap, const char *compose_file,
-		    size_t compose_file_len, unsigned int repeat_delay, unsigned int repeat_rate,
-		    bool mouse_enabled)
+int uterm_input_new(struct uterm_input **out, struct ev_eloop *eloop)
 {
 	struct uterm_input *input;
 	int ret;
@@ -454,24 +450,12 @@ int uterm_input_new(struct uterm_input **out, struct ev_eloop *eloop, const char
 	if (!out || !eloop)
 		return -EINVAL;
 
-	if (!repeat_delay)
-		repeat_delay = 250;
-	if (repeat_delay >= 1000)
-		repeat_delay = 999;
-	if (!repeat_rate)
-		repeat_rate = 50;
-	if (repeat_rate >= 1000)
-		repeat_rate = 999;
-
 	input = malloc(sizeof(*input));
 	if (!input)
 		return -ENOMEM;
 	memset(input, 0, sizeof(*input));
 	input->ref = 1;
 	input->eloop = eloop;
-	input->repeat_delay = repeat_delay;
-	input->repeat_rate = repeat_rate;
-	input->mouse_enabled = mouse_enabled;
 	shl_dlist_init(&input->devices);
 	shl_dlist_init(&input->pending_devices);
 
@@ -488,6 +472,27 @@ int uterm_input_new(struct uterm_input **out, struct ev_eloop *eloop, const char
 	if (ret)
 		goto err_hook_pointer;
 
+	log_debug("new input %p", input);
+	ev_eloop_ref(input->eloop);
+	*out = input;
+	return 0;
+
+err_hook_pointer:
+	shl_hook_free(input->pointer_hook);
+
+err_hook:
+	shl_hook_free(input->key_hook);
+
+err_free:
+	free(input);
+	return ret;
+}
+
+SHL_EXPORT
+int uterm_input_set_keymap(struct uterm_input *input, const char *model, const char *layout,
+			   const char *variant, const char *options, const char *locale,
+			   const char *keymap, const char *compose_file, size_t compose_file_len)
+{
 	/* xkbcommon won't use the XKB_DEFAULT_OPTIONS environment
 	 * variable if options is an empty string.
 	 * So if all variables are empty, use NULL instead.
@@ -500,28 +505,26 @@ int uterm_input_new(struct uterm_input **out, struct ev_eloop *eloop, const char
 		options = NULL;
 	}
 
-	ret = uxkb_desc_init(input, model, layout, variant, options, locale, keymap, compose_file,
-			     compose_file_len);
-	if (ret)
-		goto err_hide_timer;
+	return uxkb_desc_init(input, model, layout, variant, options, locale, keymap, compose_file,
+			      compose_file_len);
+}
 
-	log_debug("new object %p", input);
-	ev_eloop_ref(input->eloop);
-	*out = input;
-	return 0;
+SHL_EXPORT
+void uterm_input_set_conf(struct uterm_input *input, unsigned int repeat_delay,
+			  unsigned int repeat_rate, bool mouse_enabled)
+{
+	if (!repeat_delay)
+		repeat_delay = 250;
+	if (repeat_delay >= 1000)
+		repeat_delay = 999;
+	if (!repeat_rate)
+		repeat_rate = 50;
+	if (repeat_rate >= 1000)
+		repeat_rate = 999;
 
-err_hide_timer:
-	ev_eloop_rm_timer(input->hide_pointer);
-
-err_hook_pointer:
-	shl_hook_free(input->pointer_hook);
-
-err_hook:
-	shl_hook_free(input->key_hook);
-
-err_free:
-	free(input);
-	return ret;
+	input->repeat_delay = repeat_delay;
+	input->repeat_rate = repeat_rate;
+	input->mouse_enabled = mouse_enabled;
 }
 
 SHL_EXPORT

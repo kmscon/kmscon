@@ -813,48 +813,12 @@ static const char *find_locale(void)
 	return locale;
 }
 
-int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf, struct ev_eloop *eloop,
-		    const char *seatname, kmscon_seat_cb_t cb, void *data)
+static int kmscon_seat_set_keymap(struct kmscon_seat *seat)
 {
-	struct kmscon_seat *seat;
-	int ret;
 	const char *locale;
 	char *keymap, *compose_file;
 	size_t compose_file_len;
-
-	if (!out || !eloop || !seatname)
-		return -EINVAL;
-
-	seat = malloc(sizeof(*seat));
-	if (!seat)
-		return -ENOMEM;
-	memset(seat, 0, sizeof(*seat));
-	seat->eloop = eloop;
-	seat->cb = cb;
-	seat->data = data;
-	shl_dlist_init(&seat->displays);
-	shl_dlist_init(&seat->videos);
-	shl_dlist_init(&seat->sessions);
-
-	seat->name = strdup(seatname);
-	if (!seat->name) {
-		log_error("cannot copy string");
-		ret = -ENOMEM;
-		goto err_free;
-	}
-
-	ret = kmscon_conf_new(&seat->conf_ctx);
-	if (ret) {
-		log_error("cannot create seat configuration object: %d", ret);
-		goto err_name;
-	}
-	seat->conf = conf_ctx_get_mem(seat->conf_ctx);
-
-	ret = kmscon_conf_load_seat(seat->conf_ctx, main_conf, seat->name);
-	if (ret) {
-		log_error("cannot parse seat configuration on seat %s: %d", seat->name, ret);
-		goto err_conf;
-	}
+	int ret;
 
 	locale = find_locale();
 
@@ -876,20 +840,83 @@ int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf, struct
 			log_error("cannot read compose file %s: %d", seat->conf->xkb_compose_file,
 				  ret);
 	}
+	ret = uterm_input_set_keymap(seat->input, seat->conf->xkb_model, seat->conf->xkb_layout,
+				     seat->conf->xkb_variant, seat->conf->xkb_options, locale,
+				     keymap, compose_file, compose_file_len);
+	if (ret)
+		log_error("cannot set keymap: %d", ret);
 
-	ret = uterm_input_new(&seat->input, seat->eloop, seat->conf->xkb_model,
-			      seat->conf->xkb_layout, seat->conf->xkb_variant,
-			      seat->conf->xkb_options, locale, keymap, compose_file,
-			      compose_file_len, seat->conf->xkb_repeat_delay,
-			      seat->conf->xkb_repeat_rate, seat->conf->mouse);
 	free(keymap);
+	return ret;
+}
 
+int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf,
+		    struct kmscon_conf_t *conf, struct ev_eloop *eloop, kmscon_seat_cb_t cb,
+		    void *data)
+{
+	struct kmscon_seat *seat;
+	const char *seatname;
+	int ret;
+
+	if (!out || !eloop)
+		return -EINVAL;
+
+	seat = malloc(sizeof(*seat));
+	if (!seat)
+		return -ENOMEM;
+	memset(seat, 0, sizeof(*seat));
+	seat->eloop = eloop;
+	seat->cb = cb;
+	seat->data = data;
+	shl_dlist_init(&seat->displays);
+	shl_dlist_init(&seat->videos);
+	shl_dlist_init(&seat->sessions);
+
+	ret = uterm_input_new(&seat->input, seat->eloop);
+	if (ret)
+		goto err_free;
+
+	seat->vt = uterm_vt_allocate(seat->eloop, conf->libseat, seat->input, conf->vt,
+				     seat_vt_event, seat);
+	if (!seat->vt) {
+		ret = -ENOMEM;
+		goto err_input;
+	}
+	seatname = uterm_vt_get_name(seat->vt);
+	if (!seatname) {
+		log_error("No name for the seat");
+		ret = -EINVAL;
+		goto err_vt;
+	}
+	seat->name = strdup(seatname);
+	if (!seat->name) {
+		ret = -ENOMEM;
+		goto err_vt;
+	}
+
+	ret = kmscon_conf_new(&seat->conf_ctx);
+	if (ret) {
+		log_error("cannot create seat configuration object: %d", ret);
+		goto err_name;
+	}
+	seat->conf = conf_ctx_get_mem(seat->conf_ctx);
+
+	ret = kmscon_conf_load_seat(seat->conf_ctx, main_conf, seat->name);
+	if (ret) {
+		log_error("cannot parse seat configuration on seat %s: %d", seat->name, ret);
+		goto err_conf;
+	}
+
+	uterm_input_set_conf(seat->input, seat->conf->xkb_repeat_delay, seat->conf->xkb_repeat_rate,
+			     seat->conf->mouse);
+
+	ret = kmscon_seat_set_keymap(seat);
 	if (ret)
 		goto err_conf;
 
 	ret = uterm_input_register_key_cb(seat->input, seat_input_event, seat);
 	if (ret)
-		goto err_input;
+		goto err_conf;
 
 	/* Register pointer event handler for DPMS management */
 	ret = uterm_input_register_pointer_cb(seat->input, seat_pointer_event, seat);
@@ -917,13 +944,6 @@ int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf, struct
 		}
 	}
 
-	seat->vt = uterm_vt_allocate(seat->eloop, seat->conf->libseat, seat->input, seat->conf->vt,
-				     seat_vt_event, seat);
-	if (!seat->vt) {
-		ret = -ENOMEM;
-		goto err_input_cb;
-	}
-
 	if (seat->conf->session_control && uterm_vt_get_num(seat->vt) > 0) {
 		log_warning("session control cannot be configured on real VT, disabling session "
 			    "control");
@@ -934,16 +954,14 @@ int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf, struct
 	*out = seat;
 	return 0;
 
-err_input_cb:
-	ev_eloop_rm_timer(seat->dpms_timer);
-	uterm_input_unregister_key_cb(seat->input, seat_input_event, seat);
-	uterm_input_unregister_pointer_cb(seat->input, seat_pointer_event, seat);
-err_input:
-	uterm_input_unref(seat->input);
 err_conf:
 	kmscon_conf_free(seat->conf_ctx);
 err_name:
 	free(seat->name);
+err_vt:
+	uterm_vt_deallocate(seat->vt);
+err_input:
+	uterm_input_unref(seat->input);
 err_free:
 	free(seat);
 	return ret;

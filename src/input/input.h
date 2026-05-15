@@ -92,11 +92,12 @@ typedef void (*uterm_input_pointer_cb)(struct uterm_input *input,
 typedef int (*uterm_open_cb)(const char *node, int *fd_id, void *data);
 typedef void (*uterm_close_cb)(int fd, int fd_id, void *data);
 
-int uterm_input_new(struct uterm_input **out, struct ev_eloop *eloop, const char *model,
-		    const char *layout, const char *variant, const char *options,
-		    const char *locale, const char *keymap, const char *compose_file,
-		    size_t compose_file_len, unsigned int repeat_delay, unsigned int repeat_rate,
-		    bool mouse_enabled);
+int uterm_input_new(struct uterm_input **out, struct ev_eloop *eloop);
+int uterm_input_set_keymap(struct uterm_input *input, const char *model, const char *layout,
+			   const char *variant, const char *options, const char *locale,
+			   const char *keymap, const char *compose_file, size_t compose_file_len);
+void uterm_input_set_conf(struct uterm_input *input, unsigned int repeat_delay,
+			  unsigned int repeat_rate, bool mouse_enabled);
 void uterm_input_ref(struct uterm_input *input);
 void uterm_input_unref(struct uterm_input *input);
 

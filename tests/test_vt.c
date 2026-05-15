@@ -106,7 +106,7 @@ int main(int argc, char **argv)
 	if (ret)
 		goto err_fail;
 
-	ret = uterm_input_new(&input, eloop, "", "", "", "", "C", "", "", 0, 0, 0, true);
+	ret = uterm_input_new(&input, eloop);
 	if (ret)
 		goto err_exit;
 

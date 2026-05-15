@@ -124,11 +124,16 @@ static void setup_input(struct uterm_monitor *mon)
 				  ret);
 	}
 
-	ret = uterm_input_new(&input, eloop, input_conf.xkb_model, input_conf.xkb_layout,
-			      input_conf.xkb_variant, input_conf.xkb_options, input_conf.locale,
-			      keymap, compose_file, compose_file_len, 0, 0, true);
+	ret = uterm_input_new(&input, eloop);
 	if (ret)
 		return;
+	ret = uterm_input_set_keymap(input, input_conf.xkb_model, input_conf.xkb_layout,
+				     input_conf.xkb_variant, input_conf.xkb_options,
+				     input_conf.locale, input_conf.xkb_keymap,
+				     input_conf.xkb_compose_file, compose_file_len);
+	if (ret)
+		return;
+	uterm_input_set_conf(input, 250, 50, true);
 	ret = uterm_input_register_key_cb(input, input_arrived, NULL);
 	if (ret)
 		return;

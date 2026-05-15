@@ -52,7 +52,6 @@ struct kmscon_app {
 	struct conf_ctx *seat_ctx;
 	struct kmscon_conf_t *seat_conf;
 	struct kmscon_seat *seat;
-	const char *seat_name;
 };
 
 static int app_seat_event(struct kmscon_seat *s, unsigned int event, void *data)
@@ -81,9 +80,7 @@ static int setup_seat(struct kmscon_app *app, struct uterm_monitor *umon)
 	if (app->exiting)
 		return -EBUSY;
 
-	log_debug("Using seat");
-
-	ret = kmscon_seat_new(&app->seat, app->conf_ctx, app->eloop, app->seat_name, app_seat_event,
+	ret = kmscon_seat_new(&app->seat, app->conf_ctx, app->conf, app->eloop, app_seat_event,
 			      app);
 	if (ret) {
 		log_error("cannot create seat object: %d", ret);
@@ -118,7 +115,7 @@ static void app_monitor_event(struct uterm_monitor *mon, struct uterm_monitor_ev
 				return;
 			break;
 		case UTERM_MONITOR_INPUT:
-			log_debug("new input device %s on seat %s", ev->dev_node, app->seat_name);
+			log_debug("new input device %s", ev->dev_node);
 			kmscon_seat_add_input(app->seat, ev->dev_node);
 			break;
 		}
@@ -130,7 +127,7 @@ static void app_monitor_event(struct uterm_monitor *mon, struct uterm_monitor_ev
 			kmscon_seat_remove_video(app->seat, ev->dev_data);
 			break;
 		case UTERM_MONITOR_INPUT:
-			log_debug("free input device %s on seat %s", ev->dev_node, app->seat_name);
+			log_debug("free input device %s", ev->dev_node);
 			kmscon_seat_remove_input(app->seat, ev->dev_node);
 			break;
 		}
@@ -196,7 +193,7 @@ static int setup_app(struct kmscon_app *app)
 		goto err_app;
 	}
 
-	ret = uterm_monitor_new(&app->mon, app->eloop, app_monitor_event, app->seat_name, app);
+	ret = uterm_monitor_new(&app->mon, app->eloop, app_monitor_event, "seat0", app);
 	if (ret) {
 		log_error("cannot create device monitor: %d", ret);
 		goto err_app;
@@ -241,7 +238,6 @@ int main(int argc, char **argv)
 	memset(&app, 0, sizeof(app));
 	app.conf_ctx = conf_ctx;
 	app.conf = conf;
-	app.seat_name = "seat0";
 
 	ret = setup_app(&app);
 	if (ret)
