@@ -965,7 +965,7 @@ int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf,
 	if (ret)
 		goto err_conf;
 
-	ret = uterm_monitor_new(&seat->mon, seat->eloop, seat_monitor_event, seat->name, seat);
+	ret = uterm_monitor_new(&seat->mon, seat->eloop, seat_monitor_event, seat);
 	if (ret) {
 		log_error("cannot create device monitor: %d", ret);
 		goto err_conf;
@@ -1249,6 +1249,7 @@ void kmscon_seat_remove_video(struct kmscon_seat *seat, void *data)
 
 	log_debug("free video device %s on seat %s", vid->node, seat->name);
 
+	uterm_monitor_set_dev_data(vid->udev, NULL);
 	shl_dlist_unlink(&vid->list);
 	uterm_video_unregister_cb(vid->video, kmscon_seat_video_event, vid);
 
@@ -1307,7 +1308,7 @@ void kmscon_seat_startup(struct kmscon_seat *seat)
 		uterm_vt_activate(seat->vt);
 
 	log_debug("scanning for devices...");
-	uterm_monitor_scan(seat->mon);
+	uterm_monitor_scan(seat->mon, seat->name);
 }
 
 int kmscon_seat_add_input(struct kmscon_seat *seat, const char *node)

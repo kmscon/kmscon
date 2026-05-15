@@ -520,7 +520,7 @@ static void monitor_udev_event(struct ev_fd *fd, int mask, void *data)
 
 SHL_EXPORT
 int uterm_monitor_new(struct uterm_monitor **out, struct ev_eloop *eloop, uterm_monitor_cb cb,
-		      const char *seat_name, void *data)
+		      void *data)
 {
 	struct uterm_monitor *mon;
 	int ret, ufd, set;
@@ -537,18 +537,12 @@ int uterm_monitor_new(struct uterm_monitor **out, struct ev_eloop *eloop, uterm_
 	mon->cb = cb;
 	mon->data = data;
 	shl_dlist_init(&mon->devices);
-	mon->seat_name = strdup(seat_name);
-	if (!mon->seat_name) {
-		log_err("cannot copy seat name");
-		ret = -EFAULT;
-		goto err_free;
-	}
 
 	mon->udev = udev_new();
 	if (!mon->udev) {
 		log_err("cannot create udev object");
 		ret = -EFAULT;
-		goto err_seat_name;
+		goto err_free;
 	}
 
 	mon->umon = udev_monitor_new_from_netlink(mon->udev, "udev");
@@ -624,8 +618,6 @@ err_umon:
 	udev_monitor_unref(mon->umon);
 err_udev:
 	udev_unref(mon->udev);
-err_seat_name:
-	free(mon->seat_name);
 err_free:
 	free(mon);
 	return ret;
@@ -665,7 +657,7 @@ void uterm_monitor_unref(struct uterm_monitor *mon)
 }
 
 SHL_EXPORT
-void uterm_monitor_scan(struct uterm_monitor *mon)
+void uterm_monitor_scan(struct uterm_monitor *mon, const char *seat_name)
 {
 	struct udev_enumerate *e;
 	struct udev_list_entry *entry;
@@ -675,6 +667,8 @@ void uterm_monitor_scan(struct uterm_monitor *mon)
 
 	if (!mon)
 		return;
+
+	mon->seat_name = strdup(seat_name);
 
 	e = udev_enumerate_new(mon->udev);
 	if (!e) {
