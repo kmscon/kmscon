@@ -203,6 +203,12 @@ static unsigned int vt_libseat_get_num(struct uterm_vt *base)
 	return vt->tty_num;
 }
 
+static const char *vt_libseat_get_name(struct uterm_vt *base)
+{
+	struct uterm_vt_libseat *vt = to_libseat(base);
+
+	return libseat_seat_name(vt->libseat);
+}
 static int vt_libseat_open_device(struct uterm_vt *base, const char *node, int *fd_id)
 {
 	struct uterm_vt_libseat *vt = to_libseat(base);
@@ -234,6 +240,7 @@ static const struct uterm_vt_ops vt_libseat_ops = {
 	.deactivate = vt_libseat_deactivate,
 	.bell = vt_libseat_bell,
 	.get_num = vt_libseat_get_num,
+	.get_name = vt_libseat_get_name,
 	.open_device = vt_libseat_open_device,
 	.close_device = vt_libseat_close_device,
 };

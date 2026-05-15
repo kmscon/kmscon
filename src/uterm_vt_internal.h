@@ -14,6 +14,7 @@ struct uterm_vt_ops {
 	void (*retry)(struct uterm_vt *vt);
 	unsigned int (*get_num)(struct uterm_vt *vt);
 	void (*bell)(struct uterm_vt *vt);
+	const char *(*get_name)(struct uterm_vt *vt);
 	int (*restore)(struct uterm_vt *vt);
 	int (*open_device)(struct uterm_vt *vt, const char *device, int *fd_id);
 	void (*close_device)(struct uterm_vt *vt, int fd, int fd_id);

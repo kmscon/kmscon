@@ -215,3 +215,11 @@ void uterm_vt_bell(struct uterm_vt *vt)
 	if (vt && vt->ops->bell)
 		vt->ops->bell(vt);
 }
+
+SHL_EXPORT
+const char *uterm_vt_get_name(struct uterm_vt *vt)
+{
+	if (vt && vt->ops->get_name)
+		return vt->ops->get_name(vt);
+	return "seat0";
+}
