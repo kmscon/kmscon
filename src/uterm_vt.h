@@ -39,25 +39,18 @@
 
 struct uterm_vt;
 
-enum uterm_vt_action {
-	UTERM_VT_ACTIVATE,
-	UTERM_VT_DEACTIVATE,
-	UTERM_VT_HUP,
-};
+typedef void (*uterm_vt_activate_cb)(struct uterm_vt *vt, void *data);
+typedef int (*uterm_vt_deactivate_cb)(struct uterm_vt *vt, bool force, void *data);
+typedef void (*uterm_vt_hup_cb)(struct uterm_vt *vt, void *data);
 
-enum uterm_vt_flags {
-	UTERM_VT_FORCE = 0x01,
+struct uterm_vt_cb {
+	uterm_vt_activate_cb activate;
+	uterm_vt_deactivate_cb deactivate;
+	uterm_vt_hup_cb hup;
 };
-
-struct uterm_vt_event {
-	unsigned int action;
-	unsigned int flags;
-};
-
-typedef int (*uterm_vt_cb)(struct uterm_vt *vt, struct uterm_vt_event *ev, void *data);
 
 struct uterm_vt *uterm_vt_allocate(struct ev_eloop *eloop, bool libseat, struct uterm_input *input,
-				   const char *vt_name, uterm_vt_cb cb, void *data);
+				   const char *vt_name, struct uterm_vt_cb *cb, void *data);
 void uterm_vt_deallocate(struct uterm_vt *vt);
 
 int uterm_vt_open_device(struct uterm_vt *vt, const char *device, int *fd_id);

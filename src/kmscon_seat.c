@@ -569,38 +569,46 @@ static void seat_refresh_display(struct kmscon_seat *seat, struct kmscon_display
 	}
 }
 
-static int seat_vt_event(struct uterm_vt *vt, struct uterm_vt_event *ev, void *data)
+static void seat_vt_activate(struct uterm_vt *vt, void *data)
+{
+	struct kmscon_seat *seat = data;
+
+	if (seat_go_awake(seat))
+		return;
+	seat_run(seat);
+}
+
+static int seat_vt_deactivate(struct uterm_vt *vt, bool force, void *data)
 {
 	struct kmscon_seat *seat = data;
 	int ret;
 
-	switch (ev->action) {
-	case UTERM_VT_ACTIVATE:
-		ret = seat_go_awake(seat);
-		if (ret)
-			return ret;
-		seat_run(seat);
-		break;
-	case UTERM_VT_DEACTIVATE:
-		seat->async_schedule = SCHEDULE_VT;
-		ret = seat_pause(seat, false);
-		if (ret)
-			return ret;
-		ret = seat_go_background(seat, false);
-		if (ret)
-			return ret;
-		ret = seat_go_asleep(seat, false);
-		if (ret)
-			return ret;
-		break;
-	case UTERM_VT_HUP:
-		if (seat->cb)
-			seat->cb(seat, KMSCON_SEAT_HUP, seat->data);
-		break;
-	}
-
+	seat->async_schedule = SCHEDULE_VT;
+	ret = seat_pause(seat, false);
+	if (ret)
+		return ret;
+	ret = seat_go_background(seat, false);
+	if (ret)
+		return ret;
+	ret = seat_go_asleep(seat, false);
+	if (ret)
+		return ret;
 	return 0;
 }
+
+static void seat_vt_hup(struct uterm_vt *vt, void *data)
+{
+	struct kmscon_seat *seat = data;
+
+	if (seat->cb)
+		seat->cb(seat, KMSCON_SEAT_HUP, seat->data);
+}
+
+struct uterm_vt_cb seat_vt_cb = {
+	.activate = seat_vt_activate,
+	.deactivate = seat_vt_deactivate,
+	.hup = seat_vt_hup,
+};
 
 static void seat_trigger_reboot(struct kmscon_seat *seat)
 {
@@ -927,8 +935,8 @@ int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf,
 	if (ret)
 		goto err_free;
 
-	seat->vt = uterm_vt_allocate(seat->eloop, conf->libseat, seat->input, conf->vt,
-				     seat_vt_event, seat);
+	seat->vt = uterm_vt_allocate(seat->eloop, conf->libseat, seat->input, conf->vt, &seat_vt_cb,
+				     seat);
 	if (!seat->vt) {
 		ret = -ENOMEM;
 		goto err_input;

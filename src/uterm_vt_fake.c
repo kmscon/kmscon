@@ -56,14 +56,14 @@
 static int fake_activate(struct uterm_vt *vt)
 {
 	log_debug("activating fake VT due to user request");
-	vt_call_activate(vt);
+	vt_cb_activate(vt);
 	return 0;
 }
 
 static int fake_deactivate(struct uterm_vt *vt)
 {
 	log_debug("deactivating fake VT due to user request");
-	return vt_call_deactivate(vt, false);
+	return vt_cb_deactivate(vt, false);
 }
 
 static void fake_input(struct uterm_input *input, struct uterm_input_key_event *ev, void *data)
@@ -78,17 +78,17 @@ static void fake_input(struct uterm_input *input, struct uterm_input_key_event *
 		ev->handled = true;
 		if (vt->active) {
 			log_debug("deactivating fake VT due to user input");
-			vt_call_deactivate(vt, false);
+			vt_cb_deactivate(vt, false);
 		} else {
 			log_debug("activating fake VT due to user input");
-			vt_call_activate(vt);
+			vt_cb_activate(vt);
 		}
 	}
 }
 
 static void fake_destroy(struct uterm_vt *vt)
 {
-	vt_call_deactivate(vt, true);
+	vt_cb_deactivate(vt, true);
 	uterm_input_sleep(vt->input);
 }
 
@@ -98,8 +98,7 @@ static const struct uterm_vt_ops fake_ops = {
 	.deactivate = fake_deactivate,
 };
 
-struct uterm_vt *uterm_vt_fake_new(struct ev_eloop *eloop, struct uterm_input *input,
-				   uterm_vt_cb cb, void *data)
+struct uterm_vt *uterm_vt_fake_new(struct ev_eloop *eloop, struct uterm_input *input)
 {
 	struct uterm_vt *vt;
 	int ret;
@@ -110,8 +109,6 @@ struct uterm_vt *uterm_vt_fake_new(struct ev_eloop *eloop, struct uterm_input *i
 	memset(vt, 0, sizeof(*vt));
 	vt->eloop = eloop;
 	vt->input = input;
-	vt->cb = cb;
-	vt->data = data;
 	vt->ops = &fake_ops;
 
 	ret = uterm_input_register_key_cb(input, fake_input, vt);

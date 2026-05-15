@@ -100,7 +100,7 @@ static void real_delayed(struct ev_eloop *eloop, void *unused, void *data)
 	log_debug("enter VT %d %p during startup", vt->real_num, vt);
 	vt->real_delayed = false;
 	ev_eloop_unregister_idle_cb(eloop, real_delayed, vt, EV_NORMAL);
-	vt_call_activate(&vt->base);
+	vt_cb_activate(&vt->base);
 }
 
 static void real_sig_enter(struct ev_eloop *eloop, struct signalfd_siginfo *info, void *data)
@@ -130,7 +130,7 @@ static void real_sig_enter(struct ev_eloop *eloop, struct signalfd_siginfo *info
 	log_debug("enter VT %d %p due to VT signal", vt->real_num, vt);
 	ioctl(vt->real_fd, VT_RELDISP, VT_ACKACQ);
 	vt->real_target = -1;
-	vt_call_activate(&vt->base);
+	vt_cb_activate(&vt->base);
 }
 
 static void real_sig_leave(struct ev_eloop *eloop, struct signalfd_siginfo *info, void *data)
@@ -151,7 +151,7 @@ static void real_sig_leave(struct ev_eloop *eloop, struct signalfd_siginfo *info
 
 	log_debug("leaving VT %d %p due to VT signal", vt->real_num, vt);
 	active = vt->base.active;
-	ret = vt_call_deactivate(&vt->base, false);
+	ret = vt_cb_deactivate(&vt->base, false);
 	if (ret) {
 		ioctl(vt->real_fd, VT_RELDISP, 0);
 		log_debug("not leaving VT %d %p: %d", vt->real_num, vt, ret);
@@ -175,7 +175,6 @@ static void real_sig_leave(struct ev_eloop *eloop, struct signalfd_siginfo *info
 static void real_vt_input(struct ev_fd *fd, int mask, void *data)
 {
 	struct uterm_vt_real *vt = data;
-	struct uterm_vt_event ev;
 
 	/* we ignore input from the VT because we get it from evdev */
 	if (mask & EV_READABLE)
@@ -185,11 +184,7 @@ static void real_vt_input(struct ev_fd *fd, int mask, void *data)
 		log_debug("HUP on VT %d", vt->real_num);
 		ev_fd_disable(fd);
 		vt->base.hup = true;
-		if (vt->base.cb) {
-			memset(&ev, 0, sizeof(ev));
-			ev.action = UTERM_VT_HUP;
-			vt->base.cb(&vt->base, &ev, vt->base.data);
-		}
+		vt_cb_hup(&vt->base);
 	}
 }
 
@@ -376,7 +371,7 @@ static void real_close(struct uterm_vt_real *vt)
 	} else if (vt->base.active) {
 		uterm_input_sleep(vt->base.input);
 	}
-	vt_call_deactivate(&vt->base, true);
+	vt_cb_deactivate(&vt->base, true);
 
 	ret = ioctl(vt->real_fd, KDSKBMODE, vt->real_kbmode);
 	if (ret && !vt->base.hup)
@@ -653,7 +648,7 @@ static char *seat_find_vt(void)
 }
 
 struct uterm_vt *uterm_vt_real_new(struct ev_eloop *eloop, struct uterm_input *input,
-				   const char *vt_name, uterm_vt_cb cb, void *data)
+				   const char *vt_name)
 {
 	struct uterm_vt_real *vt;
 	char *vt_path = NULL;
@@ -672,8 +667,6 @@ struct uterm_vt *uterm_vt_real_new(struct ev_eloop *eloop, struct uterm_input *i
 	memset(vt, 0, sizeof(*vt));
 	vt->base.eloop = eloop;
 	vt->base.input = input;
-	vt->base.cb = cb;
-	vt->base.data = data;
 	vt->base.ops = &real_ops;
 
 	ret = ev_eloop_register_signal_cb(eloop, SIGUSR1, real_sig_enter, vt);

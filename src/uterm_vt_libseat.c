@@ -135,7 +135,7 @@ static void vt_libseat_enable(struct libseat *libseat, void *data)
 	log_debug("libseat: seat enabled");
 
 	tty_activate(vt);
-	vt_call_activate(&vt->base);
+	vt_cb_activate(&vt->base);
 }
 
 static void vt_libseat_disable(struct libseat *libseat, void *data)
@@ -144,7 +144,7 @@ static void vt_libseat_disable(struct libseat *libseat, void *data)
 
 	log_debug("libseat: seat disabled");
 
-	vt_call_deactivate(&vt->base, false);
+	vt_cb_deactivate(&vt->base, false);
 	tty_deactivate(vt);
 }
 
@@ -290,7 +290,7 @@ static void vt_libseat_input(struct uterm_input *input, struct uterm_input_key_e
 		return;
 
 	log_debug("switching to VT %d via libseat", id);
-	vt_call_deactivate(&vt->base, false);
+	vt_cb_deactivate(&vt->base, false);
 	libseat_switch_session(vt->libseat, id);
 }
 
@@ -320,7 +320,7 @@ static void vt_libseat_close(int fd, int fd_id, void *data)
 }
 
 struct uterm_vt *uterm_vt_libseat_new(struct ev_eloop *eloop, struct uterm_input *input,
-				      const char *vt_name, uterm_vt_cb cb, void *data)
+				      const char *vt_name)
 {
 	struct uterm_vt_libseat *vt;
 	int libseat_fd;
@@ -332,8 +332,6 @@ struct uterm_vt *uterm_vt_libseat_new(struct ev_eloop *eloop, struct uterm_input
 	memset(vt, 0, sizeof(*vt));
 	vt->base.eloop = eloop;
 	vt->base.input = input;
-	vt->base.cb = cb;
-	vt->base.data = data;
 	vt->base.ops = &vt_libseat_ops;
 
 	if (vt_name) {

@@ -42,64 +42,36 @@
 
 #define LOG_SUBSYSTEM "vt"
 
-static int vt_call(struct uterm_vt *vt, unsigned int event, bool force)
+void vt_cb_activate(struct uterm_vt *vt)
 {
-	int ret;
-	struct uterm_vt_event ev;
+	if (vt->active)
+		return;
 
-	memset(&ev, 0, sizeof(ev));
-	ev.action = event;
-	if (force)
-		ev.flags |= UTERM_VT_FORCE;
+	vt->active = true;
+	if (vt->cb.activate)
+		vt->cb.activate(vt, vt->data);
+}
 
-	switch (event) {
-	case UTERM_VT_ACTIVATE:
-		if (vt->active)
-			return 0;
-		if (!vt->cb)
-			break;
+int vt_cb_deactivate(struct uterm_vt *vt, bool force)
+{
+	if (!vt->active)
+		return 0;
 
-		ret = vt->cb(vt, &ev, vt->data);
-		if (ret)
-			log_warning("vt event handler returned %d instead of 0 on activation", ret);
-		break;
-	case UTERM_VT_DEACTIVATE:
-		if (!vt->active)
-			return 0;
-		if (!vt->cb)
-			break;
-
-		ret = vt->cb(vt, &ev, vt->data);
-		if (ret) {
-			if (force)
-				log_warning("vt event handler returned %d instead of 0 on forced "
-					    "deactivation",
-					    ret);
-			else
-				return ret;
-		}
-		break;
-	default:
-		return -EINVAL;
-	}
-
-	vt->active = !vt->active;
+	vt->active = false;
+	if (vt->cb.deactivate)
+		return vt->cb.deactivate(vt, force, vt->data);
 	return 0;
 }
 
-void vt_call_activate(struct uterm_vt *vt)
+void vt_cb_hup(struct uterm_vt *vt)
 {
-	vt_call(vt, UTERM_VT_ACTIVATE, false);
-}
-
-int vt_call_deactivate(struct uterm_vt *vt, bool force)
-{
-	return vt_call(vt, UTERM_VT_DEACTIVATE, force);
+	if (vt->cb.hup)
+		vt->cb.hup(vt, vt->data);
 }
 
 SHL_EXPORT
 struct uterm_vt *uterm_vt_allocate(struct ev_eloop *eloop, bool libseat, struct uterm_input *input,
-				   const char *vt_name, uterm_vt_cb cb, void *data)
+				   const char *vt_name, struct uterm_vt_cb *cb, void *data)
 {
 	struct uterm_vt *vt = NULL;
 
@@ -107,16 +79,19 @@ struct uterm_vt *uterm_vt_allocate(struct ev_eloop *eloop, bool libseat, struct 
 		return NULL;
 
 	if (libseat)
-		vt = uterm_vt_libseat_new(eloop, input, vt_name, cb, data);
+		vt = uterm_vt_libseat_new(eloop, input, vt_name);
 
 	if (!vt)
-		vt = uterm_vt_real_new(eloop, input, vt_name, cb, data);
+		vt = uterm_vt_real_new(eloop, input, vt_name);
 
 	if (!vt)
-		vt = uterm_vt_fake_new(eloop, input, cb, data);
+		vt = uterm_vt_fake_new(eloop, input);
 
 	if (!vt)
 		return NULL;
+
+	vt->cb = *cb;
+	vt->data = data;
 
 	uterm_input_ref(input);
 	ev_eloop_ref(eloop);
