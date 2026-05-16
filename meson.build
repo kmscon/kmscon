@@ -33,6 +33,7 @@ add_project_arguments(
 #
 prefix = get_option('prefix')
 bindir = get_option('bindir')
+datadir= get_option('datadir')
 sysconfdir = get_option('sysconfdir') / meson.project_name()
 libexecdir = get_option('libexecdir') / meson.project_name()
 mandir = get_option('mandir')
@@ -82,6 +83,7 @@ freetype_deps = dependency('freetype2', disabler: true, required: get_option('fo
 fontconfig_deps = dependency('fontconfig', disabler: true, required: get_option('font_freetype'))
 xsltproc = find_program('xsltproc', native: true, disabler: true, required: get_option('docs'))
 check_deps = dependency('check', disabler: true, required: get_option('tests'))
+tic = find_program('tic', required: false)
 
 #
 # Handle feature options
@@ -234,4 +236,18 @@ if enable_libseat
     install_dir: get_option('sysconfdir') / 'pam.d',
     rename: 'kmscon',
   )
+endif
+
+# Terminfo
+terminfo_src = files('scripts/terminfo/kmscon.ti')
+
+if tic.found()
+    # Schedule the script to run during 'meson install'
+    meson.add_install_script(
+        'scripts/terminfo/build_terminfo.py',
+        prefix / datadir,
+        terminfo_src
+    )
+else
+    warning('The "tic" compiler was not found. Terminfo will not be installed.')
 endif
