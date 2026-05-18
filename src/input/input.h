@@ -101,8 +101,8 @@ void uterm_input_set_conf(struct uterm_input *input, unsigned int repeat_delay,
 void uterm_input_ref(struct uterm_input *input);
 void uterm_input_unref(struct uterm_input *input);
 
-void uterm_input_add_dev(struct uterm_input *input, const char *node);
-void uterm_input_remove_dev(struct uterm_input *input, const char *node);
+void *uterm_input_add_dev(struct uterm_input *input, const char *node);
+void uterm_input_remove_dev(struct uterm_input *input, void *data);
 
 int uterm_input_register_key_cb(struct uterm_input *input, uterm_input_key_cb cb, void *data);
 void uterm_input_unregister_key_cb(struct uterm_input *input, uterm_input_key_cb cb, void *data);

@@ -861,6 +861,26 @@ static int kmscon_seat_set_keymap(struct kmscon_seat *seat)
 	return ret;
 }
 
+static void kmscon_seat_add_input(struct kmscon_seat *seat, struct uterm_monitor_dev *udev,
+				  const char *node)
+{
+	void *data;
+
+	if (!seat || !node)
+		return;
+
+	data = uterm_input_add_dev(seat->input, node);
+	uterm_monitor_set_dev_data(udev, data);
+}
+
+static void kmscon_seat_remove_input(struct kmscon_seat *seat, void *data)
+{
+	if (!seat || !data)
+		return;
+
+	uterm_input_remove_dev(seat->input, data);
+}
+
 static void seat_monitor_event(struct uterm_monitor *mon, struct uterm_monitor_event *ev,
 			       void *data)
 {
@@ -879,7 +899,7 @@ static void seat_monitor_event(struct uterm_monitor *mon, struct uterm_monitor_e
 			break;
 		case UTERM_MONITOR_INPUT:
 			log_debug("new input device %s", ev->dev_node);
-			kmscon_seat_add_input(seat, ev->dev_node);
+			kmscon_seat_add_input(seat, ev->dev, ev->dev_node);
 			break;
 		}
 		break;
@@ -891,7 +911,7 @@ static void seat_monitor_event(struct uterm_monitor *mon, struct uterm_monitor_e
 			break;
 		case UTERM_MONITOR_INPUT:
 			log_debug("free input device %s", ev->dev_node);
-			kmscon_seat_remove_input(seat, ev->dev_node);
+			kmscon_seat_remove_input(seat, ev->dev_data);
 			break;
 		}
 		break;
@@ -1317,23 +1337,6 @@ void kmscon_seat_startup(struct kmscon_seat *seat)
 
 	log_debug("scanning for devices...");
 	uterm_monitor_scan(seat->mon, seat->name);
-}
-
-int kmscon_seat_add_input(struct kmscon_seat *seat, const char *node)
-{
-	if (!seat || !node)
-		return -EINVAL;
-
-	uterm_input_add_dev(seat->input, node);
-	return 0;
-}
-
-void kmscon_seat_remove_input(struct kmscon_seat *seat, const char *node)
-{
-	if (!seat || !node)
-		return;
-
-	uterm_input_remove_dev(seat->input, node);
 }
 
 const char *kmscon_seat_get_name(struct kmscon_seat *seat)

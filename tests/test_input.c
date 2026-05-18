@@ -148,12 +148,16 @@ static void free_input(struct uterm_monitor *mon)
 
 static void monitor_event(struct uterm_monitor *mon, struct uterm_monitor_event *ev, void *data)
 {
+	void *dev_data;
+
 	if (ev->type == UTERM_MONITOR_NEW_DEV) {
-		if (ev->dev_type == UTERM_MONITOR_INPUT)
-			uterm_input_add_dev(input, ev->dev_node);
+		if (ev->dev_type == UTERM_MONITOR_INPUT) {
+			dev_data = uterm_input_add_dev(input, ev->dev_node);
+			uterm_monitor_set_dev_data(ev->dev, dev_data);
+		}
 	} else if (ev->type == UTERM_MONITOR_FREE_DEV) {
 		if (ev->dev_type == UTERM_MONITOR_INPUT)
-			uterm_input_remove_dev(input, ev->dev_node);
+			uterm_input_remove_dev(input, ev->dev_data);
 	}
 }
 

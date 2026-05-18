@@ -186,7 +186,7 @@ static int input_wake_up_dev(struct uterm_input_dev *dev)
 
 static void input_sleep_dev(struct uterm_input_dev *dev)
 {
-	if (dev->rfd < 0)
+	if (dev->rfd < 0 || !dev->initialized)
 		return;
 
 	dev->repeating = false;
@@ -366,31 +366,31 @@ static bool input_can_use(struct uterm_input *input, unsigned int capabilities)
 	return false;
 }
 
-static void input_new_dev(struct uterm_input *input, const char *node)
+static void input_free_dev(struct uterm_input_dev *dev)
 {
-	struct uterm_input_dev *dev;
+	log_debug("free device %s", dev->node);
+	input_sleep_dev(dev);
+	shl_dlist_unlink(&dev->list);
+	if (dev->capabilities & UTERM_DEVICE_HAS_KEYS)
+		input_exit_keyboard(dev);
+	free(dev->node);
+	free(dev);
+}
+
+static int input_init_dev(struct uterm_input *input, struct uterm_input_dev *dev)
+{
 	char name[64] = {0};
 	int ret;
 
-	dev = malloc(sizeof(*dev));
-	if (!dev)
-		return;
-	memset(dev, 0, sizeof(*dev));
-	dev->input = input;
-	dev->rfd = -1;
-
-	dev->node = strdup(node);
-	if (!dev->node)
-		goto err_free;
-
 	ret = input_open_dev(dev);
 	if (ret)
-		goto err_node;
+		goto err;
 
 	ioctl(dev->rfd, EVIOCGNAME(sizeof(name) - 1), name);
 	dev->capabilities = probe_device_capabilities(dev->rfd, input, name);
 	if (!input_can_use(input, dev->capabilities)) {
-		log_debug("ignoring non-useful device %s [%s]", node, name);
+		ret = -ENOTSUP;
+		log_debug("ignoring non-useful device %s [%s]", dev->node, name);
 		goto err_close;
 	}
 
@@ -405,30 +405,45 @@ static void input_new_dev(struct uterm_input *input, const char *node)
 	if (dev->capabilities & UTERM_DEVICE_HAS_ABS)
 		input_init_abs(dev);
 
-	log_info("Using device %s [%s] as %s%s\n", node, name,
+	dev->initialized = true;
+
+	log_info("Using device %s [%s] as %s%s\n", dev->node, name,
 		 (dev->capabilities & UTERM_DEVICE_HAS_KEYS) ? "keyboard" : "",
 		 pointer_kind_name(dev->pointer.kind));
-	shl_dlist_link(&input->devices, &dev->list);
-	return;
+
+	return 0;
 
 err_close:
 	ev_eloop_rm_fd(dev->fd);
 	input_close_dev(dev);
-err_node:
+err:
+	shl_dlist_unlink(&dev->list);
 	free(dev->node);
-err_free:
 	free(dev);
+	return ret;
 }
 
-static void input_free_dev(struct uterm_input_dev *dev)
+static struct uterm_input_dev *input_new_dev(struct uterm_input *input, const char *node)
 {
-	log_debug("free device %s", dev->node);
-	input_sleep_dev(dev);
-	shl_dlist_unlink(&dev->list);
-	if (dev->capabilities & UTERM_DEVICE_HAS_KEYS)
-		input_exit_keyboard(dev);
-	free(dev->node);
+	struct uterm_input_dev *dev;
+
+	dev = malloc(sizeof(*dev));
+	if (!dev)
+		return NULL;
+	memset(dev, 0, sizeof(*dev));
+	dev->input = input;
+	dev->rfd = -1;
+
+	dev->node = strdup(node);
+	if (!dev->node)
+		goto err_free;
+
+	shl_dlist_link(&input->devices, &dev->list);
+	return dev;
+
+err_free:
 	free(dev);
+	return NULL;
 }
 
 static void hide_pointer_timer(struct ev_timer *timer, uint64_t num, void *data)
@@ -457,7 +472,6 @@ int uterm_input_new(struct uterm_input **out, struct ev_eloop *eloop)
 	input->ref = 1;
 	input->eloop = eloop;
 	shl_dlist_init(&input->devices);
-	shl_dlist_init(&input->pending_devices);
 
 	ret = shl_hook_new(&input->key_hook);
 	if (ret)
@@ -540,7 +554,6 @@ SHL_EXPORT
 void uterm_input_unref(struct uterm_input *input)
 {
 	struct uterm_input_dev *dev;
-	struct uterm_input_pending *pend;
 
 	if (!input || !input->ref || --input->ref)
 		return;
@@ -552,14 +565,6 @@ void uterm_input_unref(struct uterm_input *input)
 		input_free_dev(dev);
 	}
 
-	while (input->pending_devices.next != &input->pending_devices) {
-		pend = shl_dlist_entry(input->pending_devices.next, struct uterm_input_pending,
-				       list);
-		shl_dlist_unlink(&pend->list);
-		free(pend->node);
-		free(pend);
-	}
-
 	uxkb_desc_destroy(input);
 	shl_hook_free(input->key_hook);
 	shl_hook_free(input->pointer_hook);
@@ -569,57 +574,38 @@ void uterm_input_unref(struct uterm_input *input)
 }
 
 SHL_EXPORT
-void uterm_input_add_dev(struct uterm_input *input, const char *node)
+void *uterm_input_add_dev(struct uterm_input *input, const char *node)
 {
-	struct uterm_input_pending *pend;
+	struct uterm_input_dev *dev;
 
 	if (!input || !node)
-		return;
+		return NULL;
 
-	if (input->awake > 0)
-		input_new_dev(input, node);
-	else {
-		pend = malloc(sizeof(*pend));
-		if (!pend)
-			return;
-		memset(pend, 0, sizeof(*pend));
-		pend->node = strdup(node);
-		if (!pend->node) {
-			free(pend);
-			return;
-		}
-		shl_dlist_link_tail(&input->pending_devices, &pend->list);
+	dev = input_new_dev(input, node);
+	if (!dev)
+		return NULL;
+
+	if (input->awake > 0) {
+		if (input_init_dev(input, dev))
+			return NULL;
 	}
+	return dev;
 }
 
 SHL_EXPORT
-void uterm_input_remove_dev(struct uterm_input *input, const char *node)
+void uterm_input_remove_dev(struct uterm_input *input, void *data)
 {
 	struct shl_dlist *iter;
 	struct uterm_input_dev *dev;
-	struct uterm_input_pending *pend;
 
-	if (!input || !node)
+	if (!input || !data)
 		return;
 
-	/* Check active devices */
 	shl_dlist_for_each(iter, &input->devices)
 	{
 		dev = shl_dlist_entry(iter, struct uterm_input_dev, list);
-		if (!strcmp(dev->node, node)) {
+		if (dev == data) {
 			input_free_dev(dev);
-			return;
-		}
-	}
-
-	/* Check pending devices */
-	shl_dlist_for_each(iter, &input->pending_devices)
-	{
-		pend = shl_dlist_entry(iter, struct uterm_input_pending, list);
-		if (!strcmp(pend->node, node)) {
-			shl_dlist_unlink(&pend->list);
-			free(pend->node);
-			free(pend);
 			return;
 		}
 	}
@@ -702,7 +688,6 @@ void uterm_input_wake_up(struct uterm_input *input)
 {
 	struct shl_dlist *iter, *tmp;
 	struct uterm_input_dev *dev;
-	struct uterm_input_pending *pend;
 	int ret;
 
 	if (!input)
@@ -714,20 +699,17 @@ void uterm_input_wake_up(struct uterm_input *input)
 
 	log_debug("waking up");
 
-	/* Process pending devices: probe and add */
-	shl_dlist_for_each_safe(iter, tmp, &input->pending_devices)
-	{
-		pend = shl_dlist_entry(iter, struct uterm_input_pending, list);
-		shl_dlist_unlink(&pend->list);
-		input_new_dev(input, pend->node);
-		free(pend->node);
-		free(pend);
-	}
-
 	/* Wake up already-probed devices */
 	shl_dlist_for_each_safe(iter, tmp, &input->devices)
 	{
 		dev = shl_dlist_entry(iter, struct uterm_input_dev, list);
+
+		if (!dev->initialized) {
+			ret = input_init_dev(input, dev);
+			if (ret)
+				continue;
+		}
+
 		ret = input_wake_up_dev(dev);
 		if (ret)
 			input_free_dev(dev);

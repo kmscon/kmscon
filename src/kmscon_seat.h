@@ -81,9 +81,6 @@ int kmscon_seat_add_video(struct kmscon_seat *seat, unsigned int type, unsigned 
 void kmscon_seat_remove_video(struct kmscon_seat *seat, void *data);
 void kmscon_seat_poll_video(void *data);
 
-int kmscon_seat_add_input(struct kmscon_seat *seat, const char *node);
-void kmscon_seat_remove_input(struct kmscon_seat *seat, const char *node);
-
 const char *kmscon_seat_get_name(struct kmscon_seat *seat);
 struct uterm_input *kmscon_seat_get_input(struct kmscon_seat *seat);
 struct ev_eloop *kmscon_seat_get_eloop(struct kmscon_seat *seat);
