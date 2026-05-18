@@ -254,7 +254,7 @@
         <listitem>
           <para>Specify the <varname>$TERM</varname> environment variable
                 that is set on new terminal sessions.
-                (default: linux)</para>
+                (default: kmscon)</para>
         </listitem>
       </varlistentry>
 

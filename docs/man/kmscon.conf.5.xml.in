@@ -61,7 +61,7 @@ session-max=6
 session-control
 
 ### Terminal Options ###
-term=linux
+term=kmscon
 
 ### Input Options ###
 xkb-model=pc102
@@ -192,7 +192,7 @@ font-name=Ubuntu Mono
       <varlistentry>
         <term><option>term</option></term>
         <listitem>
-          <para>Value of the TERM environment variable for the child process. (default: linux)</para>
+          <para>Value of the TERM environment variable for the child process. (default: kmscon)</para>
         </listitem>
       </varlistentry>
 
