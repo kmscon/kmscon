@@ -39,12 +39,6 @@
 struct uterm_monitor;
 struct uterm_monitor_dev;
 
-enum uterm_monitor_event_type {
-	UTERM_MONITOR_NEW_DEV,
-	UTERM_MONITOR_FREE_DEV,
-	UTERM_MONITOR_HOTPLUG_DEV,
-};
-
 enum uterm_monitor_dev_type {
 	UTERM_MONITOR_DRM,
 	UTERM_MONITOR_FBDEV,
@@ -57,23 +51,20 @@ enum uterm_monitor_dev_flag {
 	UTERM_MONITOR_AUX = 0x04,
 };
 
-struct uterm_monitor_event {
-	unsigned int type;
+typedef void (*uterm_new_dev_cb)(const char *node, enum uterm_monitor_dev_type type,
+				 enum uterm_monitor_dev_flag flags, void *data,
+				 struct uterm_monitor_dev *dev);
+typedef void (*uterm_free_dev_cb)(void *data, enum uterm_monitor_dev_type type, void *dev_data);
+typedef void (*uterm_hotplug_dev_cb)(void *data, enum uterm_monitor_dev_type type, void *dev_data);
 
-	const char *seat_name;
-
-	struct uterm_monitor_dev *dev;
-	unsigned int dev_type;
-	unsigned int dev_flags;
-	const char *dev_node;
-	void *dev_data;
+struct uterm_monitor_cb {
+	uterm_new_dev_cb new_dev;
+	uterm_free_dev_cb free_dev;
+	uterm_hotplug_dev_cb hotplug_dev;
 };
 
-typedef void (*uterm_monitor_cb)(struct uterm_monitor *mon, struct uterm_monitor_event *event,
-				 void *data);
-
-int uterm_monitor_new(struct uterm_monitor **out, struct ev_eloop *eloop, uterm_monitor_cb cb,
-		      void *data);
+int uterm_monitor_new(struct uterm_monitor **out, struct ev_eloop *eloop,
+		      struct uterm_monitor_cb *cb, void *data);
 void uterm_monitor_ref(struct uterm_monitor *mon);
 void uterm_monitor_unref(struct uterm_monitor *mon);
 void uterm_monitor_scan(struct uterm_monitor *mon, const char *seat_name);

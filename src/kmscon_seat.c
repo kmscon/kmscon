@@ -127,6 +127,11 @@ const char be_drm3d[] = "drm3d";
 const char be_drm2d[] = "drm2d";
 const char be_fbdev[] = "fbdev";
 static int seat_video_init(struct kmscon_video *vid);
+static int kmscon_seat_add_video(struct kmscon_seat *seat, enum uterm_monitor_dev_type type,
+				 enum uterm_monitor_dev_flag flags, const char *node,
+				 struct uterm_monitor_dev *udev);
+static void kmscon_seat_remove_video(struct kmscon_seat *seat, void *data);
+static void kmscon_seat_poll_video(void *data);
 
 static int session_call(struct kmscon_session *sess, unsigned int event, struct uterm_display *disp)
 {
@@ -881,53 +886,50 @@ static void kmscon_seat_remove_input(struct kmscon_seat *seat, void *data)
 	uterm_input_remove_dev(seat->input, data);
 }
 
-static void seat_monitor_event(struct uterm_monitor *mon, struct uterm_monitor_event *ev,
-			       void *data)
+static void seat_monitor_new_dev(const char *node, enum uterm_monitor_dev_type type,
+				 enum uterm_monitor_dev_flag flags, void *data,
+				 struct uterm_monitor_dev *udev)
 {
 	struct kmscon_seat *seat = data;
-	int ret;
 
-	switch (ev->type) {
-	case UTERM_MONITOR_NEW_DEV:
-		switch (ev->dev_type) {
-		case UTERM_MONITOR_DRM:
-		case UTERM_MONITOR_FBDEV:
-			ret = kmscon_seat_add_video(seat, ev->dev_type, ev->dev_flags, ev->dev_node,
-						    ev->dev);
-			if (ret)
-				return;
-			break;
-		case UTERM_MONITOR_INPUT:
-			log_debug("new input device %s", ev->dev_node);
-			kmscon_seat_add_input(seat, ev->dev, ev->dev_node);
-			break;
-		}
+	switch (type) {
+	case UTERM_MONITOR_DRM:
+	case UTERM_MONITOR_FBDEV:
+		kmscon_seat_add_video(seat, type, flags, node, udev);
 		break;
-	case UTERM_MONITOR_FREE_DEV:
-		switch (ev->dev_type) {
-		case UTERM_MONITOR_DRM:
-		case UTERM_MONITOR_FBDEV:
-			kmscon_seat_remove_video(seat, ev->dev_data);
-			break;
-		case UTERM_MONITOR_INPUT:
-			log_debug("free input device %s", ev->dev_node);
-			kmscon_seat_remove_input(seat, ev->dev_data);
-			break;
-		}
-		break;
-	case UTERM_MONITOR_HOTPLUG_DEV:
-		switch (ev->dev_type) {
-		case UTERM_MONITOR_DRM:
-		case UTERM_MONITOR_FBDEV:
-			if (!ev->dev_data)
-				return;
-
-			kmscon_seat_poll_video(ev->dev_data);
-			break;
-		}
+	case UTERM_MONITOR_INPUT:
+		log_debug("new input device %s", node);
+		kmscon_seat_add_input(seat, udev, node);
 		break;
 	}
 }
+
+static void seat_monitor_free_dev(void *data, enum uterm_monitor_dev_type type, void *dev_data)
+{
+	struct kmscon_seat *seat = data;
+
+	switch (type) {
+	case UTERM_MONITOR_DRM:
+	case UTERM_MONITOR_FBDEV:
+		kmscon_seat_remove_video(seat, dev_data);
+		break;
+	case UTERM_MONITOR_INPUT:
+		kmscon_seat_remove_input(seat, dev_data);
+		break;
+	}
+}
+
+static void seat_monitor_hotplug_dev(void *data, enum uterm_monitor_dev_type type, void *dev_data)
+{
+	if (type == UTERM_MONITOR_DRM || type == UTERM_MONITOR_FBDEV)
+		kmscon_seat_poll_video(dev_data);
+}
+
+static struct uterm_monitor_cb seat_monitor_cb = {
+	.new_dev = seat_monitor_new_dev,
+	.free_dev = seat_monitor_free_dev,
+	.hotplug_dev = seat_monitor_hotplug_dev,
+};
 
 int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf,
 		    struct kmscon_conf_t *conf, struct ev_eloop *eloop, kmscon_seat_cb_t cb,
@@ -993,7 +995,7 @@ int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf,
 	if (ret)
 		goto err_conf;
 
-	ret = uterm_monitor_new(&seat->mon, seat->eloop, seat_monitor_event, seat);
+	ret = uterm_monitor_new(&seat->mon, seat->eloop, &seat_monitor_cb, seat);
 	if (ret) {
 		log_error("cannot create device monitor: %d", ret);
 		goto err_conf;
@@ -1223,8 +1225,9 @@ err_close:
 	return ret;
 }
 
-int kmscon_seat_add_video(struct kmscon_seat *seat, unsigned int type, unsigned int flags,
-			  const char *node, struct uterm_monitor_dev *udev)
+static int kmscon_seat_add_video(struct kmscon_seat *seat, enum uterm_monitor_dev_type type,
+				 enum uterm_monitor_dev_flag flags, const char *node,
+				 struct uterm_monitor_dev *udev)
 {
 	struct kmscon_video *vid;
 	int ret = -ENOMEM;
@@ -1266,7 +1269,7 @@ err_free:
 	return ret;
 }
 
-void kmscon_seat_remove_video(struct kmscon_seat *seat, void *data)
+static void kmscon_seat_remove_video(struct kmscon_seat *seat, void *data)
 {
 	struct kmscon_video *vid = data;
 	struct uterm_display *disp;
@@ -1296,7 +1299,7 @@ void kmscon_seat_remove_video(struct kmscon_seat *seat, void *data)
 	free(vid);
 }
 
-void kmscon_seat_poll_video(void *data)
+static void kmscon_seat_poll_video(void *data)
 {
 	struct kmscon_video *vid = data;
 

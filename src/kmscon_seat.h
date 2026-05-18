@@ -76,11 +76,6 @@ int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf,
 void kmscon_seat_free(struct kmscon_seat *seat);
 void kmscon_seat_startup(struct kmscon_seat *seat);
 
-int kmscon_seat_add_video(struct kmscon_seat *seat, unsigned int type, unsigned int flags,
-			  const char *node, struct uterm_monitor_dev *udev);
-void kmscon_seat_remove_video(struct kmscon_seat *seat, void *data);
-void kmscon_seat_poll_video(void *data);
-
 const char *kmscon_seat_get_name(struct kmscon_seat *seat);
 struct uterm_input *kmscon_seat_get_input(struct kmscon_seat *seat);
 struct ev_eloop *kmscon_seat_get_eloop(struct kmscon_seat *seat);

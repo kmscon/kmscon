@@ -146,20 +146,28 @@ static void free_input(struct uterm_monitor *mon)
 	uterm_input_unref(input);
 }
 
-static void monitor_event(struct uterm_monitor *mon, struct uterm_monitor_event *ev, void *data)
+static void monitor_new_dev(const char *node, enum uterm_monitor_dev_type type,
+			    enum uterm_monitor_dev_flag flags, void *data,
+			    struct uterm_monitor_dev *udev)
 {
 	void *dev_data;
 
-	if (ev->type == UTERM_MONITOR_NEW_DEV) {
-		if (ev->dev_type == UTERM_MONITOR_INPUT) {
-			dev_data = uterm_input_add_dev(input, ev->dev_node);
-			uterm_monitor_set_dev_data(ev->dev, dev_data);
-		}
-	} else if (ev->type == UTERM_MONITOR_FREE_DEV) {
-		if (ev->dev_type == UTERM_MONITOR_INPUT)
-			uterm_input_remove_dev(input, ev->dev_data);
+	if (type == UTERM_MONITOR_INPUT) {
+		dev_data = uterm_input_add_dev(input, node);
+		uterm_monitor_set_dev_data(udev, dev_data);
 	}
 }
+
+static void monitor_free_dev(void *data, enum uterm_monitor_dev_type type, void *dev_data)
+{
+	if (type == UTERM_MONITOR_INPUT)
+		uterm_input_remove_dev(input, dev_data);
+}
+
+static struct uterm_monitor_cb monitor_cb = {
+	.new_dev = monitor_new_dev,
+	.free_dev = monitor_free_dev,
+};
 
 static void print_help()
 {
@@ -230,7 +238,7 @@ int main(int argc, char **argv)
 		goto err_exit;
 	}
 
-	ret = uterm_monitor_new(&mon, eloop, monitor_event, NULL);
+	ret = uterm_monitor_new(&mon, eloop, &monitor_cb, NULL);
 	if (ret)
 		goto err_exit;
 

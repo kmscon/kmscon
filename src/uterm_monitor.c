@@ -59,7 +59,7 @@ struct uterm_monitor_dev {
 struct uterm_monitor {
 	unsigned long ref;
 	struct ev_eloop *eloop;
-	uterm_monitor_cb cb;
+	struct uterm_monitor_cb cb;
 	void *data;
 
 	struct udev *udev;
@@ -74,7 +74,6 @@ static void mon_new_dev(struct uterm_monitor *mon, unsigned int type, unsigned i
 			const char *node)
 {
 	struct uterm_monitor_dev *dev;
-	struct uterm_monitor_event ev;
 
 	dev = malloc(sizeof(*dev));
 	if (!dev)
@@ -90,15 +89,7 @@ static void mon_new_dev(struct uterm_monitor *mon, unsigned int type, unsigned i
 
 	shl_dlist_link(&mon->devices, &dev->list);
 
-	memset(&ev, 0, sizeof(ev));
-	ev.type = UTERM_MONITOR_NEW_DEV;
-	ev.seat_name = mon->seat_name;
-	ev.dev = dev;
-	ev.dev_type = dev->type;
-	ev.dev_flags = dev->flags;
-	ev.dev_node = dev->node;
-	ev.dev_data = dev->data;
-	mon->cb(mon, &ev, mon->data);
+	mon->cb.new_dev(node, type, flags, mon->data, dev);
 
 	log_debug("new device %s on %s", node, mon->seat_name);
 	return;
@@ -109,22 +100,11 @@ err_free:
 
 static void mon_free_dev(struct uterm_monitor_dev *dev)
 {
-	struct uterm_monitor_event ev;
-
 	log_debug("free device %s on %s", dev->node, dev->mon->seat_name);
 
 	shl_dlist_unlink(&dev->list);
 
-	memset(&ev, 0, sizeof(ev));
-	ev.type = UTERM_MONITOR_FREE_DEV;
-
-	ev.seat_name = dev->mon->seat_name;
-	ev.dev = dev;
-	ev.dev_type = dev->type;
-	ev.dev_flags = dev->flags;
-	ev.dev_node = dev->node;
-	ev.dev_data = dev->data;
-	dev->mon->cb(dev->mon, &ev, dev->mon->data);
+	dev->mon->cb.free_dev(dev->mon->data, dev->type, dev->data);
 
 	free(dev->node);
 	free(dev);
@@ -454,7 +434,6 @@ static void monitor_udev_change(struct uterm_monitor *mon, struct udev_device *d
 {
 	const char *sname, *val;
 	struct uterm_monitor_dev *sdev;
-	struct uterm_monitor_event ev;
 
 	sdev = monitor_find_dev(mon, dev);
 	if (sdev) {
@@ -470,16 +449,8 @@ static void monitor_udev_change(struct uterm_monitor *mon, struct udev_device *d
 
 		/* DRM devices send hotplug events; catch them here */
 		val = udev_device_get_property_value(dev, "HOTPLUG");
-		if (val && !strcmp(val, "1")) {
-			memset(&ev, 0, sizeof(ev));
-			ev.type = UTERM_MONITOR_HOTPLUG_DEV;
-			ev.seat_name = sdev->mon->seat_name;
-			ev.dev = sdev;
-			ev.dev_type = sdev->type;
-			ev.dev_node = sdev->node;
-			ev.dev_data = sdev->data;
-			sdev->mon->cb(sdev->mon, &ev, sdev->mon->data);
-		}
+		if (val && !strcmp(val, "1"))
+			sdev->mon->cb.hotplug_dev(sdev->mon->data, sdev->type, sdev->data);
 	} else {
 		/* Unknown device; maybe it switched into a known seat? Try
 		 * adding it as new device. If that fails, we ignore it */
@@ -519,8 +490,8 @@ static void monitor_udev_event(struct ev_fd *fd, int mask, void *data)
 }
 
 SHL_EXPORT
-int uterm_monitor_new(struct uterm_monitor **out, struct ev_eloop *eloop, uterm_monitor_cb cb,
-		      void *data)
+int uterm_monitor_new(struct uterm_monitor **out, struct ev_eloop *eloop,
+		      struct uterm_monitor_cb *cb, void *data)
 {
 	struct uterm_monitor *mon;
 	int ret, ufd, set;
@@ -534,7 +505,7 @@ int uterm_monitor_new(struct uterm_monitor **out, struct ev_eloop *eloop, uterm_
 	memset(mon, 0, sizeof(*mon));
 	mon->ref = 1;
 	mon->eloop = eloop;
-	mon->cb = cb;
+	mon->cb = *cb;
 	mon->data = data;
 	shl_dlist_init(&mon->devices);
 
