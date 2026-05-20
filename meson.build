@@ -174,7 +174,6 @@ summary({
 #
 # Putting code together
 #
-subdir('external')
 subdir('src')
 
 if get_option('tests')

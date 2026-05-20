@@ -12,6 +12,9 @@ githead = vcs_tag(
   fallback: 'v' + meson.project_version(),
 )
 
+# htable
+subdir('htable')
+
 shl_srcs = [
   'log.c',
   'module.c',
