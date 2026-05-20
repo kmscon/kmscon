@@ -42,7 +42,7 @@
 
 #define LOG_SUBSYSTEM "drm2d_render"
 
-int drm2d_display_fake_blendv(struct display *disp, const struct video_blend_req *req, size_t num)
+int drm2d_display_blendv(struct display *disp, const struct video_blend_req *req, size_t num)
 {
 	unsigned int tmp;
 	uint8_t *dst;

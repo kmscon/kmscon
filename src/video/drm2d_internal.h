@@ -49,7 +49,7 @@ struct drm2d_display {
 	struct drm2d_rb rb[2];
 };
 
-int drm2d_display_fake_blendv(struct display *disp, const struct video_blend_req *req, size_t num);
+int drm2d_display_blendv(struct display *disp, const struct video_blend_req *req, size_t num);
 int drm2d_display_clear(struct display *disp, uint8_t r, uint8_t g, uint8_t b);
 
 #endif /* DRM2D_INTERNAL_H */

@@ -77,7 +77,7 @@ struct fbdev_video {
 	bool pending_intro;
 };
 
-int fbdev_display_fake_blendv(struct display *disp, const struct video_blend_req *req, size_t num);
+int fbdev_display_blendv(struct display *disp, const struct video_blend_req *req, size_t num);
 int fbdev_display_clear(struct display *disp, uint8_t r, uint8_t g, uint8_t b);
 
 #endif /* FBDEV_INTERNAL_H */

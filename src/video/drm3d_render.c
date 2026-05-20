@@ -241,7 +241,7 @@ static int display_blend(struct display *disp, const struct video_buffer *buf, u
 	return 0;
 }
 
-int drm3d_display_fake_blendv(struct display *disp, const struct video_blend_req *req, size_t num)
+int drm3d_display_blendv(struct display *disp, const struct video_blend_req *req, size_t num)
 {
 	int ret;
 	unsigned int i;

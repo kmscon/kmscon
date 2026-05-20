@@ -168,7 +168,7 @@ int display_show_cursor(struct display *disp, int32_t x, int32_t y);
 int display_hide_cursor(struct display *disp);
 void display_set_cursor_offset(struct display *disp, int32_t x, int32_t y);
 
-int display_fake_blendv(struct display *disp, const struct video_blend_req *req, size_t num);
+int display_blendv(struct display *disp, const struct video_blend_req *req, size_t num);
 void display_set_damage(struct display *disp, size_t n_rect, struct video_rect *damages);
 bool display_has_damage(struct display *disp);
 

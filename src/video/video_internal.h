@@ -46,7 +46,7 @@ struct display_ops {
 	int (*use)(struct display *disp);
 	int (*swap)(struct display *disp);
 	bool (*is_swapping)(struct display *disp);
-	int (*fake_blendv)(struct display *disp, const struct video_blend_req *req, size_t num);
+	int (*blendv)(struct display *disp, const struct video_blend_req *req, size_t num);
 	int (*clear)(struct display *disp, uint8_t r, uint8_t g, uint8_t b);
 	void (*set_damage)(struct display *disp, size_t n_rect, struct video_rect *damages);
 	bool (*has_damage)(struct display *disp);

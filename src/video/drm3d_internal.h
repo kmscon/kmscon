@@ -86,7 +86,7 @@ struct drm3d_video {
 
 int drm3d_display_use(struct display *disp);
 void drm3d_deinit_shaders(struct video *video);
-int drm3d_display_fake_blendv(struct display *disp, const struct video_blend_req *req, size_t num);
+int drm3d_display_blendv(struct display *disp, const struct video_blend_req *req, size_t num);
 int drm3d_display_clear(struct display *disp, uint8_t r, uint8_t g, uint8_t b);
 
 #endif /* DRM3D_INTERNAL_H */

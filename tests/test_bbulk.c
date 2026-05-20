@@ -102,7 +102,7 @@ int display_clear(struct display *disp, uint8_t r, uint8_t g, uint8_t b)
 	(void)b;
 	return 0;
 }
-int display_fake_blendv(struct display *disp, const struct video_blend_req *req, size_t num)
+int display_blendv(struct display *disp, const struct video_blend_req *req, size_t num)
 {
 	(void)disp;
 	(void)req;
