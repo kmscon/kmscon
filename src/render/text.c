@@ -244,7 +244,7 @@ void kmscon_text_unref(struct kmscon_text *text)
  *
  * Returns: 0 on success, negative error code on failure.
  */
-int kmscon_text_set(struct kmscon_text *txt, struct kmscon_font *font, struct uterm_display *disp)
+int kmscon_text_set(struct kmscon_text *txt, struct kmscon_font *font, struct display *disp)
 {
 	int ret;
 
@@ -266,7 +266,7 @@ int kmscon_text_set(struct kmscon_text *txt, struct kmscon_font *font, struct ut
 	}
 
 	kmscon_font_ref(txt->font);
-	uterm_display_ref(txt->disp);
+	display_ref(txt->disp);
 
 	return 0;
 }
@@ -289,7 +289,7 @@ void kmscon_text_unset(struct kmscon_text *txt)
 		txt->ops->unset(txt);
 
 	kmscon_font_unref(txt->font);
-	uterm_display_unref(txt->disp);
+	display_unref(txt->disp);
 	txt->font = NULL;
 	txt->disp = NULL;
 	txt->cols = 0;

@@ -1,5 +1,5 @@
 /*
- * uterm - Linux User-Space Terminal
+ * Kmscon - DRM Shared Internal
  *
  * Copyright (c) 2011-2013 David Herrmann <dh.herrmann@googlemail.com>
  *
@@ -25,8 +25,8 @@
 
 /* Internal definitions */
 
-#ifndef UTERM_DRM_SHARED_INTERNAL_H
-#define UTERM_DRM_SHARED_INTERNAL_H
+#ifndef DRM_SHARED_INTERNAL_H
+#define DRM_SHARED_INTERNAL_H
 
 #include <stdlib.h>
 #include <xf86drm.h>
@@ -46,7 +46,7 @@ struct drm_object {
 
 /* drm display */
 
-struct uterm_drm_cursor {
+struct drm_cursor {
 	uint32_t bo_handle;
 	uint32_t fb_id;
 	uint32_t width;
@@ -64,7 +64,7 @@ struct uterm_drm_cursor {
 	int32_t off_y;
 };
 
-struct uterm_drm_display {
+struct drm_display {
 	struct drm_object connector;
 	struct drm_object crtc;
 	struct drm_object plane;
@@ -83,39 +83,38 @@ struct uterm_drm_display {
 	/* For legacy modesetting */
 	uint32_t fb_id;
 
-	struct uterm_drm_cursor cursor;
+	struct drm_cursor cursor;
 
-	int (*prepare_modeset)(struct uterm_display *disp, drmModeAtomicReqPtr rec);
-	void (*done_modeset)(struct uterm_display *disp, int status);
+	int (*prepare_modeset)(struct display *disp, drmModeAtomicReqPtr rec);
+	void (*done_modeset)(struct display *disp, int status);
 };
 
-int uterm_drm_display_set_dpms(struct uterm_display *disp, int state);
+int drm_display_set_dpms(struct display *disp, enum display_dpms dpms);
 
-int uterm_drm_display_setup_cursor(struct uterm_display *disp, const uint32_t *pixels,
-				   unsigned int width, unsigned int height, int hot_x, int hot_y);
-void uterm_drm_display_destroy_cursor(struct uterm_display *disp);
-int uterm_drm_display_show_cursor(struct uterm_display *disp, int32_t x, int32_t y);
-int uterm_drm_display_hide_cursor(struct uterm_display *disp);
-void uterm_drm_display_set_cursor_offset(struct uterm_display *disp, int32_t x, int32_t y);
-int uterm_drm_display_wait_pflip(struct uterm_display *disp);
-int uterm_drm_prepare_commit(int fd, struct uterm_drm_display *ddrm, drmModeAtomicReq *req,
-			     uint32_t fb, uint32_t width, uint32_t height, bool cursor_hotspot);
-int uterm_drm_display_swap(struct uterm_display *disp, uint32_t fb);
-bool uterm_drm_is_swapping(struct uterm_display *disp);
-void uterm_drm_display_free_properties(struct uterm_display *disp);
-void uterm_drm_display_set_damage(struct uterm_display *disp, size_t n_rect,
-				  struct uterm_video_rect *damages);
-bool uterm_drm_display_has_damage(struct uterm_display *disp);
+int drm_display_setup_cursor(struct display *disp, const uint32_t *pixels, unsigned int width,
+			     unsigned int height, int hot_x, int hot_y);
+void drm_display_destroy_cursor(struct display *disp);
+int drm_display_show_cursor(struct display *disp, int32_t x, int32_t y);
+int drm_display_hide_cursor(struct display *disp);
+void drm_display_set_cursor_offset(struct display *disp, int32_t x, int32_t y);
+int drm_display_wait_pflip(struct display *disp);
+int drm_prepare_commit(int fd, struct drm_display *ddrm, drmModeAtomicReq *req, uint32_t fb,
+		       uint32_t width, uint32_t height, bool cursor_hotspot);
+int drm_display_swap(struct display *disp, uint32_t fb);
+bool drm_is_swapping(struct display *disp);
+void drm_display_free_properties(struct display *disp);
+void drm_display_set_damage(struct display *disp, size_t n_rect, struct video_rect *damages);
+bool drm_display_has_damage(struct display *disp);
 
 /* drm video */
 
-typedef void (*uterm_drm_page_flip_t)(struct uterm_display *disp);
+typedef void (*drm_page_flip_t)(struct display *disp);
 
-struct uterm_drm_video {
+struct drm_video {
 	char *name;
 	int fd;
 	struct ev_fd *efd;
-	uterm_drm_page_flip_t page_flip;
+	drm_page_flip_t page_flip;
 	void *data;
 	struct shl_timer *timer;
 	struct ev_timer *vt_timer;
@@ -125,21 +124,21 @@ struct uterm_drm_video {
 	const struct display_ops *display_ops;
 };
 
-int uterm_drm_video_init(struct uterm_video *video, int fd, const struct display_ops *display_ops,
-			 uterm_drm_page_flip_t pflip, void *data);
-void uterm_drm_video_destroy(struct uterm_video *video);
-int uterm_drm_video_hotplug(struct uterm_video *video, bool read_dpms, bool modeset);
-int uterm_drm_video_wake_up(struct uterm_video *video);
-void uterm_drm_video_sleep(struct uterm_video *video);
-int uterm_drm_video_poll(struct uterm_video *video);
-int uterm_drm_video_wait_pflip(struct uterm_video *video, unsigned int *mtimeout);
-void uterm_drm_video_arm_vt_timer(struct uterm_video *video);
+int drm_video_init(struct video *video, int fd, const struct display_ops *display_ops,
+		   drm_page_flip_t pflip, void *data);
+void drm_video_destroy(struct video *video);
+int drm_video_hotplug(struct video *video, bool read_dpms, bool modeset);
+int drm_video_wake_up(struct video *video);
+void drm_video_sleep(struct video *video);
+int drm_video_poll(struct video *video);
+int drm_video_wait_pflip(struct video *video, unsigned int *mtimeout);
+void drm_video_arm_vt_timer(struct video *video);
 
-static inline void *uterm_drm_video_get_data(struct uterm_video *video)
+static inline void *drm_video_get_data(struct video *video)
 {
-	struct uterm_drm_video *v = video->data;
+	struct drm_video *v = video->data;
 
 	return v->data;
 }
 
-#endif /* UTERM_DRM_SHARED_INTERNAL_H */
+#endif /* DRM_SHARED_INTERNAL_H */

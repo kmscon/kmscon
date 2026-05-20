@@ -1,5 +1,5 @@
 /*
- * uterm - Linux User-Space Terminal drm2d module
+ * Kmscon - DRM2D Video backend
  *
  * Copyright (c) 2011-2013 David Herrmann <dh.herrmann@googlemail.com>
  *
@@ -27,7 +27,6 @@
  * DRM Video backend using dumb buffer objects
  */
 
-#include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
 #include <libdrm/drm_fourcc.h>
@@ -42,15 +41,13 @@
 #include <xf86drmMode.h>
 #include "drm2d_internal.h"
 #include "drm_shared_internal.h"
-#include "shl/eloop.h"
 #include "shl/log.h"
-#include "shl/misc.h"
 #include "video.h"
 #include "video_internal.h"
 
 #define LOG_SUBSYSTEM "video_drm2d"
 
-static int drm_addfb2(int fd, uint32_t width, uint32_t height, struct uterm_drm2d_rb *rb)
+static int drm_addfb2(int fd, uint32_t width, uint32_t height, struct drm2d_rb *rb)
 {
 	uint32_t handles[4] = {rb->handle, 0, 0, 0};
 	uint32_t pitches[4] = {rb->stride, 0, 0, 0};
@@ -60,7 +57,7 @@ static int drm_addfb2(int fd, uint32_t width, uint32_t height, struct uterm_drm2
 			     &rb->id, 0);
 }
 
-static int init_rb(int fd, uint32_t width, uint32_t height, struct uterm_drm2d_rb *rb)
+static int init_rb(int fd, uint32_t width, uint32_t height, struct drm2d_rb *rb)
 {
 	uint64_t mmap_offset;
 	int ret, r;
@@ -105,7 +102,7 @@ err_buf:
 	return ret;
 }
 
-static void destroy_rb(int fd, struct uterm_drm2d_rb *rb)
+static void destroy_rb(int fd, struct drm2d_rb *rb)
 {
 	int ret;
 
@@ -120,10 +117,10 @@ static void destroy_rb(int fd, struct uterm_drm2d_rb *rb)
 	rb->size = 0;
 }
 
-static int display_allocfb(struct uterm_display *disp)
+static int display_allocfb(struct display *disp)
 {
-	struct uterm_drm_video *vdrm = disp->video->data;
-	struct uterm_drm2d_display *d2d = disp->data;
+	struct drm_video *vdrm = disp->video->data;
+	struct drm2d_display *d2d = disp->data;
 	int ret;
 
 	disp->width = d2d->ddrm.current_mode->hdisplay;
@@ -145,19 +142,19 @@ free_rb0:
 	return 0;
 }
 
-static void display_freefb(struct uterm_display *disp)
+static void display_freefb(struct display *disp)
 {
-	struct uterm_drm_video *vdrm = disp->video->data;
-	struct uterm_drm2d_display *d2d = disp->data;
+	struct drm_video *vdrm = disp->video->data;
+	struct drm2d_display *d2d = disp->data;
 
 	destroy_rb(vdrm->fd, &d2d->rb[0]);
 	destroy_rb(vdrm->fd, &d2d->rb[1]);
 }
 
-static int display_prepare_modeset(struct uterm_display *disp, drmModeAtomicReqPtr req)
+static int display_prepare_modeset(struct display *disp, drmModeAtomicReqPtr req)
 {
-	struct uterm_drm_video *vdrm = disp->video->data;
-	struct uterm_drm2d_display *d2d = disp->data;
+	struct drm_video *vdrm = disp->video->data;
+	struct drm2d_display *d2d = disp->data;
 	int rb, ret;
 
 	if (!d2d->rb[0].size) {
@@ -167,16 +164,16 @@ static int display_prepare_modeset(struct uterm_display *disp, drmModeAtomicReqP
 	}
 	rb = d2d->current_rb ^ 1;
 
-	ret = uterm_drm_prepare_commit(vdrm->fd, &d2d->ddrm, req, d2d->rb[rb].id, disp->width,
-				       disp->height, vdrm->cursor_hotspot);
+	ret = drm_prepare_commit(vdrm->fd, &d2d->ddrm, req, d2d->rb[rb].id, disp->width,
+				 disp->height, vdrm->cursor_hotspot);
 	if (ret)
 		return ret;
 	return 0;
 }
 
-static void display_done_modeset(struct uterm_display *disp, int status)
+static void display_done_modeset(struct display *disp, int status)
 {
-	struct uterm_drm2d_display *d2d = disp->data;
+	struct drm2d_display *d2d = disp->data;
 	if (status) {
 		display_freefb(disp);
 	} else {
@@ -184,9 +181,9 @@ static void display_done_modeset(struct uterm_display *disp, int status)
 	}
 }
 
-static int display_init(struct uterm_display *disp)
+static int drm2d_display_init(struct display *disp)
 {
-	struct uterm_drm2d_display *d2d;
+	struct drm2d_display *d2d;
 
 	d2d = malloc(sizeof(*d2d));
 	if (!d2d)
@@ -201,23 +198,23 @@ static int display_init(struct uterm_display *disp)
 	return 0;
 }
 
-static void display_destroy(struct uterm_display *disp)
+static void drm2d_display_destroy(struct display *disp)
 {
-	struct uterm_drm2d_display *d2d = disp->data;
+	struct drm2d_display *d2d = disp->data;
 
 	display_freefb(disp);
-	uterm_drm_display_free_properties(disp);
+	drm_display_free_properties(disp);
 	free(d2d);
 }
 
-static int display_swap(struct uterm_display *disp)
+static int drm2d_display_swap(struct display *disp)
 {
-	struct uterm_drm2d_display *d2d = disp->data;
+	struct drm2d_display *d2d = disp->data;
 	int ret;
 	int rb;
 
 	rb = d2d->current_rb ^ 1;
-	ret = uterm_drm_display_swap(disp, d2d->rb[rb].id);
+	ret = drm_display_swap(disp, d2d->rb[rb].id);
 	if (ret)
 		return ret;
 
@@ -226,28 +223,28 @@ static int display_swap(struct uterm_display *disp)
 }
 
 static const struct display_ops drm2d_display_ops = {
-	.init = display_init,
-	.destroy = display_destroy,
-	.set_dpms = uterm_drm_display_set_dpms,
+	.init = drm2d_display_init,
+	.destroy = drm2d_display_destroy,
+	.set_dpms = drm_display_set_dpms,
 	.use = NULL,
-	.swap = display_swap,
-	.is_swapping = uterm_drm_is_swapping,
-	.fake_blendv = uterm_drm2d_display_fake_blendv,
-	.clear = uterm_drm2d_display_clear,
-	.set_damage = uterm_drm_display_set_damage,
-	.has_damage = uterm_drm_display_has_damage,
-	.setup_cursor = uterm_drm_display_setup_cursor,
-	.destroy_cursor = uterm_drm_display_destroy_cursor,
-	.show_cursor = uterm_drm_display_show_cursor,
-	.hide_cursor = uterm_drm_display_hide_cursor,
-	.set_cursor_offset = uterm_drm_display_set_cursor_offset,
+	.swap = drm2d_display_swap,
+	.is_swapping = drm_is_swapping,
+	.fake_blendv = drm2d_display_fake_blendv,
+	.clear = drm2d_display_clear,
+	.set_damage = drm_display_set_damage,
+	.has_damage = drm_display_has_damage,
+	.setup_cursor = drm_display_setup_cursor,
+	.destroy_cursor = drm_display_destroy_cursor,
+	.show_cursor = drm_display_show_cursor,
+	.hide_cursor = drm_display_hide_cursor,
+	.set_cursor_offset = drm_display_set_cursor_offset,
 };
 
-static void show_displays(struct uterm_video *video)
+static void show_displays(struct video *video)
 {
-	struct uterm_display *iter;
-	struct uterm_drm2d_display *d2d;
-	struct uterm_drm2d_rb *rb;
+	struct display *iter;
+	struct drm2d_display *d2d;
+	struct drm2d_rb *rb;
 	struct shl_dlist *i;
 
 	if (!video_is_awake(video))
@@ -255,11 +252,11 @@ static void show_displays(struct uterm_video *video)
 
 	shl_dlist_for_each(i, &video->displays)
 	{
-		iter = shl_dlist_entry(i, struct uterm_display, list);
+		iter = shl_dlist_entry(i, struct display, list);
 
 		if (!display_is_online(iter))
 			continue;
-		if (iter->dpms != UTERM_DPMS_ON)
+		if (iter->dpms != DPMS_ON)
 			continue;
 
 		/* We use double-buffering so there might be no free back-buffer
@@ -271,17 +268,17 @@ static void show_displays(struct uterm_video *video)
 		d2d = iter->data;
 		rb = &d2d->rb[d2d->current_rb];
 		memset(rb->map, 0, rb->size);
-		uterm_drm_display_wait_pflip(iter);
+		drm_display_wait_pflip(iter);
 	}
 }
 
-static int video_init(struct uterm_video *video, int fd)
+static int drm2d_video_init(struct video *video, int fd)
 {
 	int ret;
 	uint64_t has_dumb;
-	struct uterm_drm_video *vdrm;
+	struct drm_video *vdrm;
 
-	ret = uterm_drm_video_init(video, fd, &drm2d_display_ops, NULL, NULL);
+	ret = drm_video_init(video, fd, &drm2d_display_ops, NULL, NULL);
 	if (ret)
 		return ret;
 	vdrm = video->data;
@@ -290,37 +287,37 @@ static int video_init(struct uterm_video *video, int fd)
 
 	if (drmGetCap(vdrm->fd, DRM_CAP_DUMB_BUFFER, &has_dumb) < 0 || !has_dumb) {
 		log_err("driver does not support dumb buffers");
-		uterm_drm_video_destroy(video);
+		drm_video_destroy(video);
 		return -EOPNOTSUPP;
 	}
 
 	return 0;
 }
 
-static void video_destroy(struct uterm_video *video)
+static void drm2d_video_destroy(struct video *video)
 {
 	log_info("free drm video device %p", video);
-	uterm_drm_video_destroy(video);
+	drm_video_destroy(video);
 }
 
-static int video_poll(struct uterm_video *video)
+static int drm2d_video_poll(struct video *video)
 {
-	return uterm_drm_video_poll(video);
+	return drm_video_poll(video);
 }
 
-static void video_sleep(struct uterm_video *video)
+static void drm2d_video_sleep(struct video *video)
 {
 	show_displays(video);
-	uterm_drm_video_sleep(video);
+	drm_video_sleep(video);
 }
 
-static int video_wake_up(struct uterm_video *video)
+static int drm2d_video_wake_up(struct video *video)
 {
 	int ret;
 
-	ret = uterm_drm_video_wake_up(video);
+	ret = drm_video_wake_up(video);
 	if (ret) {
-		uterm_drm_video_arm_vt_timer(video);
+		drm_video_arm_vt_timer(video);
 		return ret;
 	}
 
@@ -328,15 +325,15 @@ static int video_wake_up(struct uterm_video *video)
 	return 0;
 }
 
-struct uterm_video_module drm2d_module = {
+struct video_module drm2d_module = {
 	.name = "drm2d",
 	.owner = NULL,
 	.ops =
 		{
-			.init = video_init,
-			.destroy = video_destroy,
-			.poll = video_poll,
-			.sleep = video_sleep,
-			.wake_up = video_wake_up,
+			.init = drm2d_video_init,
+			.destroy = drm2d_video_destroy,
+			.poll = drm2d_video_poll,
+			.sleep = drm2d_video_sleep,
+			.wake_up = drm2d_video_wake_up,
 		},
 };

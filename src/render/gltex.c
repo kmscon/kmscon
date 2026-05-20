@@ -178,7 +178,7 @@ static void compute_advance_and_offset(struct kmscon_text *txt)
 		gt->off_x = (float)2.0 * off_y / gt->sh;
 		gt->off_y = (float)2.0 * off_x / gt->sw;
 	}
-	uterm_display_set_cursor_offset(txt->disp, off_x, off_y);
+	display_set_cursor_offset(txt->disp, off_x, off_y);
 }
 
 static int gltex_set(struct kmscon_text *txt)
@@ -190,10 +190,10 @@ static int gltex_set(struct kmscon_text *txt)
 	GLint s;
 	const char *ext;
 
-	if (!uterm_display_has_opengl(txt->disp))
+	if (!display_has_opengl(txt->disp))
 		return -EINVAL;
 
-	ret = uterm_display_use(txt->disp);
+	ret = display_use(txt->disp);
 	if (ret < 0)
 		return ret;
 
@@ -226,8 +226,8 @@ static int gltex_set(struct kmscon_text *txt)
 		goto err_shader;
 	}
 
-	gt->sw = uterm_display_get_width(txt->disp);
-	gt->sh = uterm_display_get_height(txt->disp);
+	gt->sw = display_get_width(txt->disp);
+	gt->sh = display_get_height(txt->disp);
 
 	if (txt->orientation == OR_NORMAL || txt->orientation == OR_UPSIDE_DOWN) {
 		txt->max_cols = gt->sw / FONT_WIDTH(txt);
@@ -275,7 +275,7 @@ static void gltex_unset(struct kmscon_text *txt)
 	struct atlas *atlas;
 	bool gl = true;
 
-	ret = uterm_display_use(txt->disp);
+	ret = display_use(txt->disp);
 	if (ret) {
 		gl = false;
 		log_warning("cannot activate OpenGL-CTX during destruction");
@@ -553,7 +553,7 @@ static int gltex_prepare(struct kmscon_text *txt, struct tsm_screen_attr *attr)
 	struct shl_dlist *iter;
 	int ret;
 
-	ret = uterm_display_use(txt->disp);
+	ret = display_use(txt->disp);
 	if (ret)
 		return ret;
 

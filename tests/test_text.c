@@ -12,8 +12,8 @@
 /* --- Stubs for external functions used by kmscon_text_set --- */
 void kmscon_font_ref(struct kmscon_font *font) {}
 void kmscon_font_unref(struct kmscon_font *font) {}
-void uterm_display_ref(struct uterm_display *disp) {}
-void uterm_display_unref(struct uterm_display *disp) {}
+void display_ref(struct display *disp) {}
+void display_unref(struct display *disp) {}
 
 static int dummy_set_calls;
 static int dummy_unset_calls;
@@ -40,7 +40,7 @@ int main(void)
 {
 	struct kmscon_text txt;
 	struct kmscon_font fake_font;
-	struct uterm_display *fake_disp = (struct uterm_display *)0x1;
+	struct display *fake_disp = (struct display *)0x1;
 	int ret;
 
 	memset(&txt, 0, sizeof(txt));

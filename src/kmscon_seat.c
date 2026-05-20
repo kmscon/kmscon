@@ -69,14 +69,14 @@ struct kmscon_session {
 struct kmscon_display {
 	struct shl_dlist list;
 	struct kmscon_seat *seat;
-	struct uterm_display *disp;
+	struct display *disp;
 	bool activated;
 };
 
 struct kmscon_video {
 	struct shl_dlist list;
 	struct kmscon_seat *seat;
-	struct uterm_video *video;
+	struct video *video;
 	struct uterm_monitor_dev *udev;
 	char *node;
 	int fd;
@@ -133,7 +133,7 @@ static int kmscon_seat_add_video(struct kmscon_seat *seat, enum uterm_monitor_de
 static void kmscon_seat_remove_video(struct kmscon_seat *seat, void *data);
 static void kmscon_seat_poll_video(void *data);
 
-static int session_call(struct kmscon_session *sess, unsigned int event, struct uterm_display *disp)
+static int session_call(struct kmscon_session *sess, unsigned int event, struct display *disp)
 {
 	struct kmscon_session_event ev;
 
@@ -158,17 +158,17 @@ static int session_call_deactivate(struct kmscon_session *sess)
 	return session_call(sess, KMSCON_SESSION_DEACTIVATE, NULL);
 }
 
-static void session_call_display_new(struct kmscon_session *sess, struct uterm_display *disp)
+static void session_call_display_new(struct kmscon_session *sess, struct display *disp)
 {
 	session_call(sess, KMSCON_SESSION_DISPLAY_NEW, disp);
 }
 
-static void session_call_display_gone(struct kmscon_session *sess, struct uterm_display *disp)
+static void session_call_display_gone(struct kmscon_session *sess, struct display *disp)
 {
 	session_call(sess, KMSCON_SESSION_DISPLAY_GONE, disp);
 }
 
-static void session_call_display_refresh(struct kmscon_session *sess, struct uterm_display *disp)
+static void session_call_display_refresh(struct kmscon_session *sess, struct display *disp)
 {
 	session_call(sess, KMSCON_SESSION_DISPLAY_REFRESH, disp);
 }
@@ -190,10 +190,10 @@ static void activate_display(struct kmscon_display *d)
 	 * unless the user specifies not to, in which case we use the default mode,
 	 * but we should also allow the user to specify different modes in the
 	 * configuration files. */
-	if (uterm_display_get_state(d->disp) == UTERM_DISPLAY_ACTIVE) {
+	if (display_get_state(d->disp) == DISPLAY_ACTIVE) {
 		d->activated = true;
 
-		ret = uterm_display_set_dpms(d->disp, UTERM_DPMS_ON);
+		ret = display_set_dpms(d->disp, DPMS_ON);
 		if (ret)
 			log_warning("cannot set DPMS state to on for display: %d", ret);
 
@@ -239,7 +239,7 @@ static int seat_go_foreground(struct kmscon_seat *seat, bool force)
 	{
 		vid = shl_dlist_entry(iter, struct kmscon_video, list);
 		if (!vid->awake)
-			uterm_video_wake_up(vid->video);
+			video_wake_up(vid->video);
 	}
 
 	shl_dlist_for_each(iter, &seat->displays)
@@ -264,7 +264,7 @@ static int seat_go_background(struct kmscon_seat *seat, bool force)
 	shl_dlist_for_each(iter, &seat->videos)
 	{
 		vid = shl_dlist_entry(iter, struct kmscon_video, list);
-		uterm_video_sleep(vid->video);
+		video_sleep(vid->video);
 	}
 
 	seat->foreground = false;
@@ -505,11 +505,11 @@ static void seat_prev(struct kmscon_seat *seat)
 	seat_switch(seat);
 }
 
-static void seat_add_display(struct kmscon_seat *seat, struct uterm_display *disp)
+static void seat_add_display(struct kmscon_seat *seat, struct display *disp)
 {
 	struct kmscon_display *d;
 
-	log_debug("add display %s to seat %s", uterm_display_name(disp), seat->name);
+	log_debug("add display %s to seat %s", display_name(disp), seat->name);
 
 	d = malloc(sizeof(*d));
 	if (!d)
@@ -518,7 +518,7 @@ static void seat_add_display(struct kmscon_seat *seat, struct uterm_display *dis
 	d->disp = disp;
 	d->seat = seat;
 
-	uterm_display_ref(d->disp);
+	display_ref(d->disp);
 	shl_dlist_link(&seat->displays, &d->list);
 	activate_display(d);
 }
@@ -528,7 +528,7 @@ static void seat_remove_display(struct kmscon_seat *seat, struct kmscon_display 
 	struct shl_dlist *iter, *tmp;
 	struct kmscon_session *s;
 
-	log_debug("remove display %s from seat %s", uterm_display_name(d->disp), seat->name);
+	log_debug("remove display %s from seat %s", display_name(d->disp), seat->name);
 
 	shl_dlist_unlink(&d->list);
 
@@ -540,11 +540,11 @@ static void seat_remove_display(struct kmscon_seat *seat, struct kmscon_display 
 		}
 	}
 
-	uterm_display_unref(d->disp);
+	display_unref(d->disp);
 	free(d);
 }
 
-static struct kmscon_display *seat_get_display(struct kmscon_seat *seat, struct uterm_display *disp)
+static struct kmscon_display *seat_get_display(struct kmscon_seat *seat, struct display *disp)
 {
 	struct shl_dlist *iter;
 	struct kmscon_display *d;
@@ -563,7 +563,7 @@ static void seat_refresh_display(struct kmscon_seat *seat, struct kmscon_display
 	struct shl_dlist *iter;
 	struct kmscon_session *s;
 
-	log_debug("refresh display %s from seat %s", uterm_display_name(d->disp), seat->name);
+	log_debug("refresh display %s from seat %s", display_name(d->disp), seat->name);
 
 	if (d->activated) {
 		shl_dlist_for_each(iter, &seat->sessions)
@@ -670,7 +670,7 @@ static void seat_dpms_timeout(struct ev_timer *timer, uint64_t num, void *data)
 		/* Only set DPMS on activated displays */
 		if (!d->activated)
 			continue;
-		ret = uterm_display_set_dpms(d->disp, UTERM_DPMS_OFF);
+		ret = display_set_dpms(d->disp, DPMS_OFF);
 		if (ret)
 			log_warning("cannot set DPMS to OFF for display: %d", ret);
 	}
@@ -698,7 +698,7 @@ static void seat_dpms_reset_timer(struct kmscon_seat *seat)
 			/* Only set DPMS on activated displays */
 			if (!d->activated)
 				continue;
-			ret = uterm_display_set_dpms(d->disp, UTERM_DPMS_ON);
+			ret = display_set_dpms(d->disp, DPMS_ON);
 			if (ret)
 				log_warning("cannot set DPMS to ON for display: %d", ret);
 		}
@@ -1093,15 +1093,14 @@ void kmscon_seat_free(struct kmscon_seat *seat)
 	free(seat);
 }
 
-static void kmscon_seat_video_event(struct uterm_video *video, struct uterm_video_hotplug *ev,
-				    void *data)
+static void kmscon_seat_video_event(struct video *video, struct video_hotplug *ev, void *data)
 {
 	struct kmscon_video *vid = data;
 	struct kmscon_display *d;
 
 	log_debug("video event %d on video device %s on seat %s", ev->action, vid->node,
 		  vid->seat->name);
-	if (ev->action == UTERM_NEW)
+	if (ev->action == VIDEO_NEW)
 		return seat_add_display(vid->seat, ev->display);
 
 	d = seat_get_display(vid->seat, ev->display);
@@ -1109,10 +1108,10 @@ static void kmscon_seat_video_event(struct uterm_video *video, struct uterm_vide
 		return;
 
 	switch (ev->action) {
-	case UTERM_GONE:
+	case VIDEO_GONE:
 		seat_remove_display(vid->seat, d);
 		break;
-	case UTERM_REFRESH:
+	case VIDEO_REFRESH:
 		seat_refresh_display(vid->seat, d);
 		break;
 	}
@@ -1194,13 +1193,13 @@ static int seat_video_init(struct kmscon_video *vid)
 		return vid->fd;
 	}
 
-	ret = uterm_video_new(&vid->video, seat->eloop, vid->fd, backend, width, height,
-			      seat->conf->use_original_mode);
+	ret = video_new(&vid->video, seat->eloop, vid->fd, backend, width, height,
+			seat->conf->use_original_mode);
 	if (ret && backend == be_drm3d) {
 		log_info("cannot create drm3d device %s on seat %s (%d); trying drm2d mode",
 			 vid->node, seat->name, ret);
-		ret = uterm_video_new(&vid->video, seat->eloop, vid->fd, be_drm2d, width, height,
-				      seat->conf->use_original_mode);
+		ret = video_new(&vid->video, seat->eloop, vid->fd, be_drm2d, width, height,
+				seat->conf->use_original_mode);
 	}
 	if (ret) {
 		log_error("cannot create video device %s on seat %s: %d", vid->node, seat->name,
@@ -1208,16 +1207,16 @@ static int seat_video_init(struct kmscon_video *vid)
 		goto err_close;
 	}
 
-	ret = uterm_video_register_cb(vid->video, kmscon_seat_video_event, vid);
+	ret = video_register_cb(vid->video, kmscon_seat_video_event, vid);
 	if (ret) {
 		log_error("cannot register video callback for device %s on seat %s: %d", vid->node,
 			  seat->name, ret);
 		goto err_video;
 	}
-	return uterm_video_wake_up(vid->video);
+	return video_wake_up(vid->video);
 
 err_video:
-	uterm_video_unref(vid->video);
+	video_unref(vid->video);
 err_close:
 	uterm_vt_close_device(seat->vt, vid->fd, vid->fd_id);
 	return ret;
@@ -1270,7 +1269,7 @@ err_free:
 static void kmscon_seat_remove_video(struct kmscon_seat *seat, void *data)
 {
 	struct kmscon_video *vid = data;
-	struct uterm_display *disp;
+	struct display *disp;
 	struct kmscon_display *d;
 
 	if (!seat || !vid)
@@ -1280,17 +1279,17 @@ static void kmscon_seat_remove_video(struct kmscon_seat *seat, void *data)
 
 	uterm_monitor_set_dev_data(vid->udev, NULL);
 	shl_dlist_unlink(&vid->list);
-	uterm_video_unregister_cb(vid->video, kmscon_seat_video_event, vid);
+	video_unregister_cb(vid->video, kmscon_seat_video_event, vid);
 
 	if (vid->video) {
-		disp = uterm_video_get_displays(vid->video);
+		disp = video_get_displays(vid->video);
 		while (disp) {
 			d = seat_get_display(seat, disp);
 			if (d)
 				seat_remove_display(seat, d);
-			disp = uterm_display_next(disp);
+			disp = display_next(disp);
 		}
-		uterm_video_unref(vid->video);
+		video_unref(vid->video);
 		uterm_vt_close_device(seat->vt, vid->fd, vid->fd_id);
 	}
 	free(vid->node);
@@ -1302,7 +1301,7 @@ static void kmscon_seat_poll_video(void *data)
 	struct kmscon_video *vid = data;
 
 	log_debug("poll video device %s on seat %s", vid->node, vid->seat->name);
-	uterm_video_poll(vid->video);
+	video_poll(vid->video);
 }
 
 void kmscon_seat_startup(struct kmscon_seat *seat)

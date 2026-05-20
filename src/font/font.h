@@ -66,7 +66,7 @@ bool kmscon_font_attr_match(const struct kmscon_font_attr *a1, const struct kmsc
 
 struct kmscon_glyph {
 	bool double_width;
-	struct uterm_video_buffer buf; // Must be last
+	struct video_buffer buf; // Must be last
 };
 
 static inline unsigned int kmscon_glyph_cwidth(const struct kmscon_glyph *glyph)

@@ -1,5 +1,5 @@
 /*
- * uterm - Linux User-Space Terminal fbdev module
+ * Kmscon - FBDEV Video backend
  *
  * Copyright (c) 2011-2013 David Herrmann <dh.herrmann@googlemail.com>
  *
@@ -48,7 +48,7 @@ static int clamp_value(int val, int low, int up)
 		return val;
 }
 
-static uint_fast32_t xrgb32_to_device(struct uterm_display *disp, uint32_t pixel)
+static uint_fast32_t xrgb32_to_device(struct display *disp, uint32_t pixel)
 {
 	uint8_t r, g, b, nr, ng, nb;
 	int i;
@@ -114,8 +114,7 @@ static void write_24bit(uint8_t *dst, uint_fast32_t value)
 #endif
 }
 
-int uterm_fbdev_display_fake_blendv(struct uterm_display *disp,
-				    const struct uterm_video_blend_req *req, size_t num)
+int fbdev_display_fake_blendv(struct display *disp, const struct video_blend_req *req, size_t num)
 {
 	unsigned int tmp;
 	uint8_t *dst;
@@ -268,7 +267,7 @@ int uterm_fbdev_display_fake_blendv(struct uterm_display *disp,
 	return 0;
 }
 
-int uterm_fbdev_display_clear(struct uterm_display *disp, uint8_t r, uint8_t g, uint8_t b)
+int fbdev_display_clear(struct display *disp, uint8_t r, uint8_t g, uint8_t b)
 {
 	unsigned int i;
 	uint8_t *dst;

@@ -1,5 +1,5 @@
 /*
- * uterm - Linux User-Space Terminal drm2d module
+ * Kmscon - DRM2D Video backend
  *
  * Copyright (c) 2011-2013 David Herrmann <dh.herrmann@googlemail.com>
  *
@@ -25,8 +25,8 @@
 
 /* Internal definitions */
 
-#ifndef UTERM_DRM2D_INTERNAL_H
-#define UTERM_DRM2D_INTERNAL_H
+#ifndef DRM2D_INTERNAL_H
+#define DRM2D_INTERNAL_H
 
 #include <inttypes.h>
 #include <limits.h>
@@ -35,7 +35,7 @@
 #include "drm_shared_internal.h"
 #include "video.h"
 
-struct uterm_drm2d_rb {
+struct drm2d_rb {
 	uint32_t id;
 	uint32_t handle;
 	uint32_t stride;
@@ -43,14 +43,13 @@ struct uterm_drm2d_rb {
 	void *map;
 };
 
-struct uterm_drm2d_display {
-	struct uterm_drm_display ddrm;
+struct drm2d_display {
+	struct drm_display ddrm;
 	int current_rb;
-	struct uterm_drm2d_rb rb[2];
+	struct drm2d_rb rb[2];
 };
 
-int uterm_drm2d_display_fake_blendv(struct uterm_display *disp,
-				    const struct uterm_video_blend_req *req, size_t num);
-int uterm_drm2d_display_clear(struct uterm_display *disp, uint8_t r, uint8_t g, uint8_t b);
+int drm2d_display_fake_blendv(struct display *disp, const struct video_blend_req *req, size_t num);
+int drm2d_display_clear(struct display *disp, uint8_t r, uint8_t g, uint8_t b);
 
-#endif /* UTERM_DRM2D_INTERNAL_H */
+#endif /* DRM2D_INTERNAL_H */

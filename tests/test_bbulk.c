@@ -11,13 +11,13 @@
 
 /* ---- Stubs for external dependencies used by text_bbulk.c ---- */
 #include "../src/font/font.h"	/* for kmscon_font_* */
-#include "../src/video/video.h" /* for uterm_display_* prototypes */
-unsigned int uterm_display_get_width(struct uterm_display *disp)
+#include "../src/video/video.h" /* for display_* prototypes */
+unsigned int display_get_width(struct display *disp)
 {
 	(void)disp;
 	return 640;
 }
-unsigned int uterm_display_get_height(struct uterm_display *disp)
+unsigned int display_get_height(struct display *disp)
 {
 	(void)disp;
 	return 480;
@@ -79,22 +79,22 @@ int kmscon_rotate_glyph(struct kmscon_glyph *vb, const struct kmscon_glyph *glyp
 }
 
 /* Stub uterm display APIs used by text_bbulk.c */
-bool uterm_display_need_redraw(struct uterm_display *disp)
+bool display_need_redraw(struct display *disp)
 {
 	(void)disp;
 	return false;
 }
-bool uterm_display_has_damage(struct uterm_display *disp)
+bool display_has_damage(struct display *disp)
 {
 	(void)disp;
 	return false;
 }
-bool uterm_display_supports_damage(struct uterm_display *disp)
+bool display_supports_damage(struct display *disp)
 {
 	(void)disp;
 	return true;
 }
-int uterm_display_clear(struct uterm_display *disp, uint8_t r, uint8_t g, uint8_t b)
+int display_clear(struct display *disp, uint8_t r, uint8_t g, uint8_t b)
 {
 	(void)disp;
 	(void)r;
@@ -102,22 +102,20 @@ int uterm_display_clear(struct uterm_display *disp, uint8_t r, uint8_t g, uint8_
 	(void)b;
 	return 0;
 }
-int uterm_display_fake_blendv(struct uterm_display *disp, const struct uterm_video_blend_req *req,
-			      size_t num)
+int display_fake_blendv(struct display *disp, const struct video_blend_req *req, size_t num)
 {
 	(void)disp;
 	(void)req;
 	(void)num;
 	return 0;
 }
-void uterm_display_set_damage(struct uterm_display *disp, size_t n_rect,
-			      struct uterm_video_rect *damages)
+void display_set_damage(struct display *disp, size_t n_rect, struct video_rect *damages)
 {
 	(void)disp;
 	(void)n_rect;
 	(void)damages;
 }
-void uterm_display_set_cursor_offset(struct uterm_display *disp, int32_t x, int32_t y)
+void display_set_cursor_offset(struct display *disp, int32_t x, int32_t y)
 {
 	(void)disp;
 	(void)x;
@@ -136,7 +134,7 @@ static void init_fake_txt(struct kmscon_text *txt)
 {
 	memset(txt, 0, sizeof(*txt));
 	txt->ops = &kmscon_text_bbulk_ops;
-	txt->disp = (struct uterm_display *)0x1; /* non-null stub */
+	txt->disp = (struct display *)0x1; /* non-null stub */
 	txt->font = &fake_font;
 	txt->orientation = OR_NORMAL;
 	txt->ref = 1;

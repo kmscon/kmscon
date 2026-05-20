@@ -55,7 +55,7 @@
 struct screen {
 	struct shl_dlist list;
 	struct kmscon_terminal *term;
-	struct uterm_display *disp;
+	struct display *disp;
 	struct kmscon_text *txt;
 
 	bool swapping;
@@ -150,7 +150,7 @@ static uint32_t *generate_ibeam_cursor(unsigned int font_height, unsigned int *w
 	uint32_t *pixels;
 
 	h = font_height > 8 ? font_height : 8;
-	h = min(h, UTERM_CURSOR_MAX_SIZE);
+	h = min(h, VIDEO_CURSOR_MAX_SIZE);
 	thk = 1 + (h / 16);
 	w = 2 * (h / 6) + 3 * thk;
 
@@ -236,15 +236,15 @@ static void setup_hw_cursor(struct screen *scr)
 	if (!pixels)
 		return;
 
-	ret = uterm_display_setup_cursor(scr->disp, pixels, beam_w, beam_h, beam_w / 2, beam_h / 2);
+	ret = display_setup_cursor(scr->disp, pixels, beam_w, beam_h, beam_w / 2, beam_h / 2);
 	free(pixels);
 
 	if (ret) {
 		log_debug("HW cursor not available for display %s, using software",
-			  uterm_display_name(scr->disp));
+			  display_name(scr->disp));
 		scr->hw_cursor = false;
 	} else {
-		log_debug("HW cursor enabled for display %s", uterm_display_name(scr->disp));
+		log_debug("HW cursor enabled for display %s", display_name(scr->disp));
 		scr->hw_cursor = true;
 	}
 }
@@ -254,7 +254,7 @@ static void refresh_hw_cursor(struct screen *scr)
 	if (!scr->hw_cursor)
 		return;
 
-	uterm_display_destroy_cursor(scr->disp);
+	display_destroy_cursor(scr->disp);
 	setup_hw_cursor(scr);
 }
 
@@ -262,21 +262,20 @@ static void disable_screen(struct screen *scr)
 {
 	int ret;
 
-	log_debug("Disabling screen %s", uterm_display_name(scr->disp));
+	log_debug("Disabling screen %s", display_name(scr->disp));
 	if (scr->swapping)
 		scr->pending = true;
 	else {
-		log_info("Disabling screen %s", uterm_display_name(scr->disp));
+		log_info("Disabling screen %s", display_name(scr->disp));
 		scr->pending = false;
-		uterm_display_clear(scr->disp, 0, 0, 0);
-		ret = uterm_display_swap(scr->disp);
+		display_clear(scr->disp, 0, 0, 0);
+		ret = display_swap(scr->disp);
 		if (ret) {
 			if (ret != -EBUSY)
-				log_warning("cannot swap display [%s] %d",
-					    uterm_display_name(scr->disp), ret);
+				log_warning("cannot swap display [%s] %d", display_name(scr->disp),
+					    ret);
 			else {
-				log_debug("display [%s] is swapping",
-					  uterm_display_name(scr->disp));
+				log_debug("display [%s] is swapping", display_name(scr->disp));
 				scr->pending = true;
 			}
 		}
@@ -308,11 +307,10 @@ static void do_redraw_screen(struct screen *scr)
 	draw_pointer(scr);
 	kmscon_text_render(scr->txt);
 
-	ret = uterm_display_swap(scr->disp);
+	ret = display_swap(scr->disp);
 	if (ret) {
 		if (ret != -EBUSY)
-			log_warning("cannot swap display [%s] %d", uterm_display_name(scr->disp),
-				    ret);
+			log_warning("cannot swap display [%s] %d", display_name(scr->disp), ret);
 		return;
 	}
 
@@ -353,7 +351,7 @@ static bool has_kms_display(struct kmscon_terminal *term)
 	shl_dlist_for_each(iter, &term->screens)
 	{
 		scr = shl_dlist_entry(iter, struct screen, list);
-		if (uterm_display_is_drm(scr->disp))
+		if (display_is_drm(scr->disp))
 			return true;
 	}
 	return false;
@@ -382,11 +380,11 @@ static void update_pointer_max_all(struct kmscon_terminal *term)
 			continue;
 
 		if (scr->txt->orientation == OR_NORMAL || scr->txt->orientation == OR_UPSIDE_DOWN) {
-			sw = uterm_display_get_width(scr->disp);
-			sh = uterm_display_get_height(scr->disp);
+			sw = display_get_width(scr->disp);
+			sh = display_get_height(scr->disp);
 		} else {
-			sw = uterm_display_get_height(scr->disp);
-			sh = uterm_display_get_width(scr->disp);
+			sw = display_get_height(scr->disp);
+			sh = display_get_width(scr->disp);
 		}
 		if (!sw || !sh)
 			continue;
@@ -411,17 +409,17 @@ static void redraw_all_text(struct kmscon_terminal *term)
 	shl_dlist_for_each(iter, &term->screens)
 	{
 		scr = shl_dlist_entry(iter, struct screen, list);
-		if (uterm_display_is_swapping(scr->disp))
+		if (display_is_swapping(scr->disp))
 			scr->swapping = true;
 		redraw_screen(scr);
 	}
 }
 
-static void display_event(struct uterm_display *disp, struct uterm_display_event *ev, void *data)
+static void display_event(struct display *disp, struct display_event *ev, void *data)
 {
 	struct screen *scr = data;
 
-	if (ev->action != UTERM_PAGE_FLIP)
+	if (ev->action != DISPLAY_PAGE_FLIP)
 		return;
 
 	scr->swapping = false;
@@ -535,7 +533,7 @@ static bool terminal_update_size_largest(struct kmscon_terminal *term)
 		if (rows != term->min_rows || cols != term->min_cols)
 			disable_screen(scr);
 		else if (!scr->enabled) {
-			log_info("Enabling screen %s", uterm_display_name(scr->disp));
+			log_info("Enabling screen %s", display_name(scr->disp));
 			scr->enabled = true;
 		}
 	}
@@ -650,7 +648,7 @@ static void rotate_ccw_all(struct kmscon_terminal *term)
 	update_pointer_max_all(term);
 }
 
-static int add_display(struct kmscon_terminal *term, struct uterm_display *disp)
+static int add_display(struct kmscon_terminal *term, struct display *disp)
 {
 	struct shl_dlist *iter;
 	struct screen *scr;
@@ -675,13 +673,13 @@ static int add_display(struct kmscon_terminal *term, struct uterm_display *disp)
 	scr->disp = disp;
 	scr->enabled = true;
 
-	ret = uterm_display_register_cb(scr->disp, display_event, scr);
+	ret = display_register_cb(scr->disp, display_event, scr);
 	if (ret) {
 		log_error("cannot register display callback: %d", ret);
 		goto err_free;
 	}
 
-	opengl = uterm_display_has_opengl(scr->disp);
+	opengl = display_has_opengl(scr->disp);
 	if (opengl)
 		be = "gltex";
 	else
@@ -702,7 +700,7 @@ static int add_display(struct kmscon_terminal *term, struct uterm_display *disp)
 	shl_dlist_link(&term->screens, &scr->list);
 
 	log_notice("Display [%s] with backend [%s] text renderer [%s] font engine [%s]\n",
-		   uterm_display_name(disp), uterm_display_backend_name(disp), scr->txt->ops->name,
+		   display_name(disp), display_backend_name(disp), scr->txt->ops->name,
 		   term->font->ops->name);
 
 	log_debug("added display %p to terminal %p", disp, term);
@@ -713,14 +711,14 @@ static int add_display(struct kmscon_terminal *term, struct uterm_display *disp)
 	terminal_update_size_notify(term);
 	kmscon_text_resize(scr->txt, term->min_cols, term->min_rows);
 	update_pointer_max_all(term);
-	uterm_display_ref(scr->disp);
+	display_ref(scr->disp);
 	do_redraw_screen(scr);
 	return 0;
 
 err_text:
 	kmscon_text_unref(scr->txt);
 err_cb:
-	uterm_display_unregister_cb(scr->disp, display_event, scr);
+	display_unregister_cb(scr->disp, display_event, scr);
 err_free:
 	free(scr);
 	return ret;
@@ -732,11 +730,11 @@ static void free_screen(struct screen *scr, bool update)
 
 	log_debug("destroying terminal screen %p", scr);
 	if (scr->hw_cursor)
-		uterm_display_destroy_cursor(scr->disp);
+		display_destroy_cursor(scr->disp);
 	shl_dlist_unlink(&scr->list);
 	kmscon_text_unref(scr->txt);
-	uterm_display_unregister_cb(scr->disp, display_event, scr);
-	uterm_display_unref(scr->disp);
+	display_unregister_cb(scr->disp, display_event, scr);
+	display_unref(scr->disp);
 	free(scr);
 
 	if (!update)
@@ -746,7 +744,7 @@ static void free_screen(struct screen *scr, bool update)
 	terminal_update_size_notify(term);
 }
 
-static void rm_display(struct kmscon_terminal *term, struct uterm_display *disp)
+static void rm_display(struct kmscon_terminal *term, struct display *disp)
 {
 	struct shl_dlist *iter;
 	struct screen *scr;
@@ -948,16 +946,16 @@ static void text_show_cursor(struct kmscon_text *txt, int32_t x, int32_t y)
 	switch (txt->orientation) {
 	default:
 	case OR_NORMAL:
-		uterm_display_show_cursor(txt->disp, x, y);
+		display_show_cursor(txt->disp, x, y);
 		break;
 	case OR_UPSIDE_DOWN:
-		uterm_display_show_cursor(txt->disp, sw - x, sh - y);
+		display_show_cursor(txt->disp, sw - x, sh - y);
 		break;
 	case OR_RIGHT:
-		uterm_display_show_cursor(txt->disp, sh - y, x);
+		display_show_cursor(txt->disp, sh - y, x);
 		break;
 	case OR_LEFT:
-		uterm_display_show_cursor(txt->disp, y, sw - x);
+		display_show_cursor(txt->disp, y, sw - x);
 		break;
 	}
 }
@@ -984,7 +982,7 @@ static void hw_cursor_hide(struct kmscon_terminal *term)
 	{
 		scr = shl_dlist_entry(iter, struct screen, list);
 		if (scr->hw_cursor)
-			uterm_display_hide_cursor(scr->disp);
+			display_hide_cursor(scr->disp);
 	}
 }
 

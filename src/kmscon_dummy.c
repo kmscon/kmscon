@@ -40,7 +40,7 @@
 
 struct display {
 	struct shl_dlist list;
-	struct uterm_display *disp;
+	struct display *disp;
 };
 
 struct kmscon_dummy {
@@ -51,8 +51,8 @@ struct kmscon_dummy {
 
 static void dummy_redraw(struct kmscon_dummy *dummy, struct display *d)
 {
-	uterm_display_clear(d->disp, 0, 0, 0);
-	uterm_display_swap(d->disp);
+	display_clear(d->disp, 0, 0, 0);
+	display_swap(d->disp);
 }
 
 static int dummy_session_event(struct kmscon_session *session, struct kmscon_session_event *ev,

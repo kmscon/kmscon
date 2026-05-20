@@ -1,5 +1,5 @@
 /*
- * uterm - Linux User-Space Terminal fbdev module
+ * Kmscon - FBDEV Video backend
  *
  * Copyright (c) 2011-2013 David Herrmann <dh.herrmann@googlemail.com>
  *
@@ -38,7 +38,6 @@
 #include <unistd.h>
 #include "fbdev_internal.h"
 #include "shl/log.h"
-#include "shl/misc.h"
 #include "video.h"
 #include "video_internal.h"
 
@@ -71,14 +70,14 @@ static void display_set_vblank_timer(struct fbdev_display *fbdev, unsigned int m
 
 static void display_vblank_timer_event(struct ev_timer *timer, uint64_t expirations, void *data)
 {
-	struct uterm_display *disp = data;
+	struct display *disp = data;
 	struct fbdev_display *fbdev = disp->data;
 
 	fbdev->vblank_scheduled = false;
-	DISPLAY_CB(disp, UTERM_PAGE_FLIP);
+	DISPLAY_CB(disp, DISPLAY_PAGE_FLIP);
 }
 
-static int display_init(struct uterm_display *disp)
+static int display_init(struct display *disp)
 {
 	struct fbdev_display *fbdev;
 	int ret;
@@ -88,7 +87,7 @@ static int display_init(struct uterm_display *disp)
 		return -ENOMEM;
 	memset(fbdev, 0, sizeof(*fbdev));
 	disp->data = fbdev;
-	disp->dpms = UTERM_DPMS_UNKNOWN;
+	disp->dpms = DPMS_UNKNOWN;
 
 	fbdev->vblank_spec.it_value.tv_nsec = 15 * 1000 * 1000;
 	ret = ev_timer_new(&fbdev->vblank_timer, NULL, display_vblank_timer_event, disp);
@@ -102,7 +101,7 @@ err_free:
 	return ret;
 }
 
-static void display_destroy(struct uterm_display *disp)
+static void display_destroy(struct display *disp)
 {
 	struct fbdev_display *fbdev = disp->data;
 	ev_eloop_rm_timer(fbdev->vblank_timer);
@@ -110,7 +109,7 @@ static void display_destroy(struct uterm_display *disp)
 	free(disp->data);
 }
 
-static int refresh_info(struct uterm_display *disp)
+static int refresh_info(struct display *disp)
 {
 	int ret;
 	struct fbdev_display *dfb = disp->data;
@@ -130,7 +129,7 @@ static int refresh_info(struct uterm_display *disp)
 	return 0;
 }
 
-static int display_activate_force(struct uterm_display *disp, bool force)
+static int display_activate_force(struct display *disp, bool force)
 {
 	static const char depths[] = {32, 24, 16, 0};
 	struct fbdev_display *dfb = disp->data;
@@ -326,7 +325,7 @@ err_close:
 	return ret;
 }
 
-static void display_deactivate_force(struct uterm_display *disp, bool force)
+static void display_deactivate_force(struct display *disp, bool force)
 {
 	struct fbdev_display *dfb = disp->data;
 
@@ -345,29 +344,29 @@ static void display_deactivate_force(struct uterm_display *disp, bool force)
 	}
 }
 
-static int display_set_dpms(struct uterm_display *disp, int state)
+static int fb_display_set_dpms(struct display *disp, enum display_dpms dpms)
 {
 	int set, ret;
 	struct fbdev_display *dfb = disp->data;
 
-	switch (state) {
-	case UTERM_DPMS_ON:
+	switch (dpms) {
+	case DPMS_ON:
 		set = FB_BLANK_UNBLANK;
 		break;
-	case UTERM_DPMS_STANDBY:
+	case DPMS_STANDBY:
 		set = FB_BLANK_NORMAL;
 		break;
-	case UTERM_DPMS_SUSPEND:
+	case DPMS_SUSPEND:
 		set = FB_BLANK_NORMAL;
 		break;
-	case UTERM_DPMS_OFF:
+	case DPMS_OFF:
 		set = FB_BLANK_POWERDOWN;
 		break;
 	default:
 		return -EINVAL;
 	}
 
-	log_info("setting DPMS of device %p to %s", dfb->finfo.id, uterm_dpms_to_name(state));
+	log_info("setting DPMS of device %p to %s", dfb->finfo.id, dpms_to_name(dpms));
 
 	ret = ioctl(dfb->fd, FBIOBLANK, set);
 	if (ret) {
@@ -375,11 +374,11 @@ static int display_set_dpms(struct uterm_display *disp, int state)
 		return -EFAULT;
 	}
 
-	disp->dpms = state;
+	disp->dpms = dpms;
 	return 0;
 }
 
-static int display_swap(struct uterm_display *disp)
+static int fb_display_swap(struct display *disp)
 {
 	struct fbdev_display *dfb = disp->data;
 	struct fb_var_screeninfo *vinfo;
@@ -406,7 +405,7 @@ static int display_swap(struct uterm_display *disp)
 	return display_schedule_vblank_timer(dfb);
 }
 
-static bool display_is_swapping(struct uterm_display *disp)
+static bool fb_display_is_swapping(struct display *disp)
 {
 	struct fbdev_display *fbdev = disp->data;
 
@@ -416,21 +415,21 @@ static bool display_is_swapping(struct uterm_display *disp)
 static const struct display_ops fbdev_display_ops = {
 	.init = display_init,
 	.destroy = display_destroy,
-	.set_dpms = display_set_dpms,
+	.set_dpms = fb_display_set_dpms,
 	.use = NULL,
-	.swap = display_swap,
-	.is_swapping = display_is_swapping,
-	.fake_blendv = uterm_fbdev_display_fake_blendv,
-	.clear = uterm_fbdev_display_clear,
+	.swap = fb_display_swap,
+	.is_swapping = fb_display_is_swapping,
+	.fake_blendv = fbdev_display_fake_blendv,
+	.clear = fbdev_display_clear,
 	.set_damage = NULL,
 	.has_damage = NULL,
 };
 
 static void intro_idle_event(struct ev_eloop *eloop, void *unused, void *data)
 {
-	struct uterm_video *video = data;
+	struct video *video = data;
 	struct fbdev_video *vfb = video->data;
-	struct uterm_display *disp;
+	struct display *disp;
 	struct fbdev_display *dfb;
 	int ret;
 
@@ -452,18 +451,18 @@ static void intro_idle_event(struct ev_eloop *eloop, void *unused, void *data)
 		return;
 	}
 
-	ret = uterm_display_bind(disp);
+	ret = display_bind(disp);
 	if (ret) {
 		log_error("cannot bind fbdev display: %d", ret);
-		uterm_display_unref(disp);
+		display_unref(disp);
 		ev_eloop_rm_timer(dfb->vblank_timer);
 		return;
 	}
-	uterm_display_ready(disp);
-	uterm_display_unref(disp);
+	display_ready(disp);
+	display_unref(disp);
 }
 
-static int video_init(struct uterm_video *video, int fd)
+static int fb_video_init(struct video *video, int fd)
 {
 	int ret;
 	struct fbdev_video *vfb;
@@ -488,7 +487,7 @@ static int video_init(struct uterm_video *video, int fd)
 	return 0;
 }
 
-static void video_destroy(struct uterm_video *video)
+static void fb_video_destroy(struct video *video)
 {
 	struct fbdev_video *vfb = video->data;
 
@@ -500,14 +499,14 @@ static void video_destroy(struct uterm_video *video)
 	free(vfb);
 }
 
-static void video_sleep(struct uterm_video *video)
+static void fb_video_sleep(struct video *video)
 {
-	struct uterm_display *iter;
+	struct display *iter;
 	struct shl_dlist *i;
 
 	shl_dlist_for_each(i, &video->displays)
 	{
-		iter = shl_dlist_entry(i, struct uterm_display, list);
+		iter = shl_dlist_entry(i, struct display, list);
 
 		if (!display_is_online(iter))
 			continue;
@@ -516,16 +515,16 @@ static void video_sleep(struct uterm_video *video)
 	}
 }
 
-static int video_wake_up(struct uterm_video *video)
+static int fb_video_wake_up(struct video *video)
 {
-	struct uterm_display *iter;
+	struct display *iter;
 	struct shl_dlist *i;
 	int ret;
 
 	video->flags |= VIDEO_AWAKE;
 	shl_dlist_for_each(i, &video->displays)
 	{
-		iter = shl_dlist_entry(i, struct uterm_display, list);
+		iter = shl_dlist_entry(i, struct display, list);
 
 		if (!display_is_online(iter)) {
 			ret = display_activate_force(iter, false);
@@ -537,19 +536,19 @@ static int video_wake_up(struct uterm_video *video)
 		if (ret)
 			return ret;
 
-		if (iter->dpms != UTERM_DPMS_UNKNOWN)
+		if (iter->dpms != DPMS_UNKNOWN)
 			display_set_dpms(iter, iter->dpms);
 	}
 
 	return 0;
 }
 
-struct uterm_video_module fbdev_module = {.name = "fbdev",
-					  .owner = NULL,
-					  .ops = {
-						  .init = video_init,
-						  .destroy = video_destroy,
-						  .poll = NULL,
-						  .sleep = video_sleep,
-						  .wake_up = video_wake_up,
-					  }};
+struct video_module fbdev_module = {.name = "fbdev",
+				    .owner = NULL,
+				    .ops = {
+					    .init = fb_video_init,
+					    .destroy = fb_video_destroy,
+					    .poll = NULL,
+					    .sleep = fb_video_sleep,
+					    .wake_up = fb_video_wake_up,
+				    }};

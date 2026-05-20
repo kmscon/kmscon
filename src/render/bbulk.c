@@ -63,7 +63,7 @@ struct bbcell {
 };
 
 struct bbulk {
-	struct uterm_video_blend_req *reqs;
+	struct video_blend_req *reqs;
 	unsigned int req_len;
 	unsigned int req_total_len;
 	struct tsm_screen_attr attr;
@@ -73,7 +73,7 @@ struct bbulk {
 	unsigned int sw;
 	unsigned int sh;
 	bool *damages;
-	struct uterm_video_rect *damage_rects;
+	struct video_rect *damage_rects;
 	unsigned int damage_rect_len;
 	uint8_t redraw;
 	unsigned int off_x;
@@ -117,7 +117,7 @@ static void compute_border(struct kmscon_text *txt)
 		bb->off_x = (bb->sw - txt->rows * FONT_HEIGHT(txt)) / 2;
 		bb->off_y = (bb->sh - txt->cols * FONT_WIDTH(txt)) / 2;
 	}
-	uterm_display_set_cursor_offset(txt->disp, bb->off_x, bb->off_y);
+	display_set_cursor_offset(txt->disp, bb->off_x, bb->off_y);
 }
 
 static int bbulk_set(struct kmscon_text *txt)
@@ -128,8 +128,8 @@ static int bbulk_set(struct kmscon_text *txt)
 
 	memset(bb, 0, sizeof(*bb));
 
-	bb->sw = uterm_display_get_width(txt->disp);
-	bb->sh = uterm_display_get_height(txt->disp);
+	bb->sw = display_get_width(txt->disp);
+	bb->sh = display_get_height(txt->disp);
 
 	if (!bb->sw || !bb->sh)
 		return -EINVAL;
@@ -227,7 +227,7 @@ static int bbulk_rotate(struct kmscon_text *txt, enum Orientation orientation)
 static struct kmscon_glyph *bbulk_rotate_glyph(struct kmscon_glyph *glyph,
 					       enum Orientation orientation)
 {
-	struct uterm_video_buffer *buf = &glyph->buf;
+	struct video_buffer *buf = &glyph->buf;
 	struct kmscon_glyph *rglyph;
 	int width, height, i, j;
 	uint8_t *dst, *src;
@@ -355,7 +355,7 @@ static void set_coordinate(struct kmscon_text *txt, unsigned int *x, unsigned in
 	*y += bb->off_y;
 }
 
-static void set_color(struct uterm_video_blend_req *req, const struct tsm_screen_attr *attr)
+static void set_color(struct video_blend_req *req, const struct tsm_screen_attr *attr)
 {
 	if (attr->inverse) {
 		req->fr = attr->br;
@@ -380,7 +380,7 @@ static int bbulk_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, 
 {
 	struct bbulk *bb = txt->data;
 	struct kmscon_glyph *glyph;
-	struct uterm_video_blend_req *req;
+	struct video_blend_req *req;
 	struct bbcell *prev;
 	unsigned int offset = posx + posy * txt->cols;
 	bool last_col = (posx == txt->cols - 1);
@@ -510,7 +510,7 @@ static unsigned int clamp(unsigned int val, unsigned int min, unsigned int max)
  * non-rotated screen.
  */
 static void set_pointer_coordinate(struct bbulk *bb, struct kmscon_text *txt,
-				   struct uterm_video_blend_req *req, unsigned int pointer_x,
+				   struct video_blend_req *req, unsigned int pointer_x,
 				   unsigned int pointer_y)
 {
 	unsigned int hf_w, hf_h, x, y;
@@ -556,7 +556,7 @@ static int bbulk_draw_pointer(struct kmscon_text *txt, unsigned int pointer_x,
 			      unsigned int pointer_y)
 {
 	struct bbulk *bb = txt->data;
-	struct uterm_video_blend_req *req;
+	struct video_blend_req *req;
 	struct kmscon_glyph *bb_glyph;
 	uint32_t ch = 'I';
 	uint64_t id = ch;
@@ -586,17 +586,17 @@ static int bbulk_draw_pointer(struct kmscon_text *txt, unsigned int pointer_x,
 	return 0;
 }
 
-static void add_damage(struct bbulk *bb, struct uterm_video_rect *r)
+static void add_damage(struct bbulk *bb, struct video_rect *r)
 {
-	struct uterm_video_rect *out = &bb->damage_rects[bb->damage_rect_len];
+	struct video_rect *out = &bb->damage_rects[bb->damage_rect_len];
 
 	*out = *r;
 	bb->damage_rect_len++;
 }
 
-static void merge_damage(struct bbulk *bb, struct uterm_video_rect *r)
+static void merge_damage(struct bbulk *bb, struct video_rect *r)
 {
-	struct uterm_video_rect *out = &bb->damage_rects[bb->damage_rect_len - 1];
+	struct video_rect *out = &bb->damage_rects[bb->damage_rect_len - 1];
 
 	out->x1 = min(out->x1, r->x1);
 	out->x2 = max(out->x2, r->x2);
@@ -612,7 +612,7 @@ static void bbulk_compute_damage(struct kmscon_text *txt)
 {
 	struct bbulk *bb = txt->data;
 	int posx, posy, off;
-	struct uterm_video_rect r;
+	struct video_rect r;
 	unsigned int x1 = 0, y1 = 0;
 	unsigned int fw, fh;
 	int prev;
@@ -652,11 +652,11 @@ static int bbulk_render(struct kmscon_text *txt)
 	struct bbulk *bb = txt->data;
 	int ret;
 
-	ret = uterm_display_fake_blendv(txt->disp, bb->reqs, bb->req_len);
+	ret = display_fake_blendv(txt->disp, bb->reqs, bb->req_len);
 	// log_debug("bbulk, redraw %d cells", bb->req_len);
-	if (uterm_display_supports_damage(txt->disp)) {
+	if (display_supports_damage(txt->disp)) {
 		bbulk_compute_damage(txt);
-		uterm_display_set_damage(txt->disp, bb->damage_rect_len, bb->damage_rects);
+		display_set_damage(txt->disp, bb->damage_rect_len, bb->damage_rects);
 	}
 	return ret;
 }
@@ -677,16 +677,16 @@ static int bbulk_prepare(struct kmscon_text *txt, struct tsm_screen_attr *attr)
 	 * if default colors have changed, or we switch from a dirty screen,
 	 * redraw completely the next 2 frames.
 	 */
-	if (memcmp(&bb->attr, attr, sizeof(*attr)) || uterm_display_need_redraw(txt->disp))
+	if (memcmp(&bb->attr, attr, sizeof(*attr)) || display_need_redraw(txt->disp))
 		bb->redraw = 2;
 
 	bb->attr = *attr;
 
 	if (bb->redraw) {
-		uterm_display_clear(txt->disp, attr->br, attr->bg, attr->bb);
+		display_clear(txt->disp, attr->br, attr->bg, attr->bb);
 		for (i = 0; i < bb->cells; i++)
 			damage_cell(bb, i);
-	} else if (uterm_display_has_damage(txt->disp)) {
+	} else if (display_has_damage(txt->disp)) {
 		log_debug("Carry over damage from previous frame");
 		for (i = 0; i < bb->cells; i++) {
 			if (bb->damages[i])

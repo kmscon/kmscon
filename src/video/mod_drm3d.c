@@ -1,5 +1,5 @@
 /*
- * kmscon - drm3d backend module
+ * Kmscon - DRM3D Video backend
  *
  * Copyright (c) 2011-2013 David Herrmann <dh.herrmann@googlemail.com>
  *
@@ -34,7 +34,7 @@
 #include "shl/module_interface.h"
 #include "video_internal.h"
 
-extern struct uterm_video_module drm3d_module;
+extern struct video_module drm3d_module;
 
 #define LOG_SUBSYSTEM "mod_drm3d"
 
@@ -43,7 +43,7 @@ static int kmscon_drm3d_load(void)
 	int ret;
 
 	drm3d_module.owner = SHL_THIS_MODULE;
-	ret = uterm_video_register(&drm3d_module);
+	ret = video_register(&drm3d_module);
 	if (ret) {
 		log_error("cannot register drm3d font");
 		return ret;
@@ -53,7 +53,7 @@ static int kmscon_drm3d_load(void)
 
 static void kmscon_drm3d_unload(void)
 {
-	uterm_video_unregister(drm3d_module.name);
+	video_unregister(drm3d_module.name);
 }
 
 SHL_MODULE(NULL, kmscon_drm3d_load, kmscon_drm3d_unload, NULL);

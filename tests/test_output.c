@@ -63,34 +63,34 @@ struct {
 	unsigned int desired_height;
 } output_conf;
 
-static int blit_outputs(struct uterm_video *video)
+static int blit_outputs(struct video *video)
 {
-	struct uterm_display *iter;
+	struct display *iter;
 	int j, ret;
 
 	j = 0;
-	iter = uterm_video_get_displays(video);
-	for (; iter; iter = uterm_display_next(iter)) {
+	iter = video_get_displays(video);
+	for (; iter; iter = display_next(iter)) {
 		log_notice("Activating display %d %p...", j, iter);
-		ret = uterm_display_set_dpms(iter, UTERM_DPMS_ON);
+		ret = display_set_dpms(iter, DPMS_ON);
 		if (ret)
 			log_err("Cannot set DPMS to ON: %d", ret);
 
 		++j;
 	}
 
-	iter = uterm_video_get_displays(video);
-	for (; iter; iter = uterm_display_next(iter)) {
-		if (uterm_display_get_state(iter) != UTERM_DISPLAY_ACTIVE)
+	iter = video_get_displays(video);
+	for (; iter; iter = display_next(iter)) {
+		if (display_get_state(iter) != DISPLAY_ACTIVE)
 			continue;
 
-		ret = uterm_display_clear(iter, 0xff, 0xff, 0xff);
+		ret = display_clear(iter, 0xff, 0xff, 0xff);
 		if (ret) {
 			log_err("cannot fill framebuffer");
 			continue;
 		}
 
-		ret = uterm_display_swap(iter);
+		ret = display_swap(iter);
 		if (ret) {
 			log_err("Cannot swap screen: %d", ret);
 			continue;
@@ -106,18 +106,18 @@ static int blit_outputs(struct uterm_video *video)
 	return 0;
 }
 
-static int list_outputs(struct uterm_video *video)
+static int list_outputs(struct video *video)
 {
-	struct uterm_display *iter;
+	struct display *iter;
 	int i;
 
 	log_notice("List of Outputs:");
 
 	i = 0;
-	iter = uterm_video_get_displays(video);
-	for (; iter; iter = uterm_display_next(iter)) {
+	iter = video_get_displays(video);
+	for (; iter; iter = display_next(iter)) {
 		log_notice("Output %d:", i++);
-		log_notice("  active: %d", uterm_display_get_state(iter));
+		log_notice("  active: %d", display_get_state(iter));
 	}
 
 	log_notice("End of Output list");
@@ -174,7 +174,7 @@ struct conf_option options[] = {
 
 int main(int argc, char **argv)
 {
-	struct uterm_video *video;
+	struct video *video;
 	int ret;
 	const char *node;
 	const char *mode;
@@ -204,13 +204,13 @@ int main(int argc, char **argv)
 		goto err_fail;
 	}
 
-	ret = uterm_video_new(&video, eloop, fd, mode, output_conf.desired_width,
-			      output_conf.desired_height, false);
+	ret = video_new(&video, eloop, fd, mode, output_conf.desired_width,
+			output_conf.desired_height, false);
 	if (ret) {
 		if (!output_conf.fbdev) {
 			log_notice("cannot create drm device; trying drm2d mode");
-			ret = uterm_video_new(&video, eloop, fd, "drm2d", output_conf.desired_width,
-					      output_conf.desired_height, false);
+			ret = video_new(&video, eloop, fd, "drm2d", output_conf.desired_width,
+					output_conf.desired_height, false);
 			if (ret)
 				goto err_exit;
 		} else {
@@ -219,7 +219,7 @@ int main(int argc, char **argv)
 	}
 
 	log_notice("Wakeing up video object...");
-	ret = uterm_video_wake_up(video);
+	ret = video_wake_up(video);
 	if (ret < 0)
 		goto err_unref;
 
@@ -238,7 +238,7 @@ int main(int argc, char **argv)
 	}
 
 err_unref:
-	uterm_video_unref(video);
+	video_unref(video);
 err_exit:
 	test_exit(options, onum, eloop);
 err_fail:

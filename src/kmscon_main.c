@@ -175,8 +175,8 @@ int main(int argc, char **argv)
 	kmscon_load_modules();
 	kmscon_font_register(&kmscon_font_8x16_ops);
 	kmscon_text_register(&kmscon_text_bbulk_ops);
-	uterm_register_drm2d();
-	uterm_register_fbdev();
+	video_register_drm2d();
+	video_register_fbdev();
 
 	memset(&app, 0, sizeof(app));
 	app.conf_ctx = conf_ctx;

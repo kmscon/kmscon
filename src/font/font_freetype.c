@@ -277,7 +277,7 @@ static bool glyph_is_wide(FT_GlyphSlot glyph, int width)
 	return real_width > (width * 6) / 5;
 }
 
-static void copy_mono(struct uterm_video_buffer *buf, FT_GlyphSlot glyph, unsigned int ascender,
+static void copy_mono(struct video_buffer *buf, FT_GlyphSlot glyph, unsigned int ascender,
 		      bool underline)
 {
 	FT_Bitmap *map = &glyph->bitmap;
@@ -308,7 +308,7 @@ static void copy_mono(struct uterm_video_buffer *buf, FT_GlyphSlot glyph, unsign
 			buf->data[(buf->height - 1) * buf->stride + j] = 0xff;
 }
 
-static void draw_underline(struct uterm_video_buffer *buf, FT_Face face)
+static void draw_underline(struct video_buffer *buf, FT_Face face)
 {
 	int i, j;
 	int thickness = FT_MulFix(face->underline_thickness, face->size->metrics.y_scale);
@@ -329,7 +329,7 @@ static void draw_underline(struct uterm_video_buffer *buf, FT_Face face)
 			buf->data[i * buf->stride + j] = 0xff;
 }
 
-static void copy_glyph(struct uterm_video_buffer *buf, FT_Face face, FT_Bitmap *map, bool underline)
+static void copy_glyph(struct video_buffer *buf, FT_Face face, FT_Bitmap *map, bool underline)
 {
 	int top = (face->size->metrics.ascender >> 6) - face->glyph->bitmap_top;
 	int left = face->glyph->bitmap_left;

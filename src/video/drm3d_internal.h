@@ -1,5 +1,5 @@
 /*
- * uterm - Linux User-Space Terminal drm3d module
+ * Kmscon - DRM3D Video backend
  *
  * Copyright (c) 2011-2013 David Herrmann <dh.herrmann@googlemail.com>
  *
@@ -25,8 +25,8 @@
 
 /* Internal definitions */
 
-#ifndef UTERM_DRM3D_INTERNAL_H
-#define UTERM_DRM3D_INTERNAL_H
+#ifndef DRM3D_INTERNAL_H
+#define DRM3D_INTERNAL_H
 
 #define EGL_EGLEXT_PROTOTYPES
 #define GL_GLEXT_PROTOTYPES
@@ -53,21 +53,21 @@
 #define GL_UNPACK_ROW_LENGTH GL_UNPACK_ROW_LENGTH_EXT
 #endif
 
-struct uterm_drm3d_rb {
-	struct uterm_display *disp;
+struct drm3d_rb {
+	struct display *disp;
 	struct gbm_bo *bo;
 	uint32_t id;
 };
 
-struct uterm_drm3d_display {
-	struct uterm_drm_display ddrm;
+struct drm3d_display {
+	struct drm_display ddrm;
 	struct gbm_surface *gbm;
 	EGLSurface surface;
-	struct uterm_drm3d_rb *current;
-	struct uterm_drm3d_rb *next;
+	struct drm3d_rb *current;
+	struct drm3d_rb *next;
 };
 
-struct uterm_drm3d_video {
+struct drm3d_video {
 	struct gbm_device *gbm;
 	EGLDisplay disp;
 	EGLConfig conf;
@@ -84,10 +84,9 @@ struct uterm_drm3d_video {
 	GLuint uni_blend_bgcol;
 };
 
-int uterm_drm3d_display_use(struct uterm_display *disp);
-void uterm_drm3d_deinit_shaders(struct uterm_video *video);
-int uterm_drm3d_display_fake_blendv(struct uterm_display *disp,
-				    const struct uterm_video_blend_req *req, size_t num);
-int uterm_drm3d_display_clear(struct uterm_display *disp, uint8_t r, uint8_t g, uint8_t b);
+int drm3d_display_use(struct display *disp);
+void drm3d_deinit_shaders(struct video *video);
+int drm3d_display_fake_blendv(struct display *disp, const struct video_blend_req *req, size_t num);
+int drm3d_display_clear(struct display *disp, uint8_t r, uint8_t g, uint8_t b);
 
-#endif /* UTERM_DRM3D_INTERNAL_H */
+#endif /* DRM3D_INTERNAL_H */

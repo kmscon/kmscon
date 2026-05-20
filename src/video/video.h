@@ -1,5 +1,5 @@
 /*
- * uterm_video - Linux User-Space Terminal Video Handling
+ * video - Linux User-Space Terminal Video Handling
  *
  * Copyright (c) 2011-2013 David Herrmann <dh.herrmann@googlemail.com>
  *
@@ -47,64 +47,63 @@
  * applications. See uterm_vt for more.
  */
 
-#ifndef UTERM_UTERM_VIDEO_H
-#define UTERM_UTERM_VIDEO_H
+#ifndef VIDEO_H
+#define VIDEO_H
 
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include "shl/eloop.h"
 
-struct uterm_mode;
-struct uterm_display;
-struct uterm_video;
-struct uterm_video_module;
+struct display;
+struct video;
+struct video_module;
 
-enum uterm_display_state {
-	UTERM_DISPLAY_ACTIVE,
-	UTERM_DISPLAY_ASLEEP,
-	UTERM_DISPLAY_INACTIVE,
-	UTERM_DISPLAY_GONE,
+enum display_state {
+	DISPLAY_ACTIVE,
+	DISPLAY_ASLEEP,
+	DISPLAY_INACTIVE,
+	DISPLAY_GONE,
 };
 
-enum uterm_display_dpms {
-	UTERM_DPMS_ON,
-	UTERM_DPMS_STANDBY,
-	UTERM_DPMS_SUSPEND,
-	UTERM_DPMS_OFF,
-	UTERM_DPMS_UNKNOWN,
+enum display_dpms {
+	DPMS_ON,
+	DPMS_STANDBY,
+	DPMS_SUSPEND,
+	DPMS_OFF,
+	DPMS_UNKNOWN,
 };
 
-enum uterm_video_action {
-	UTERM_WAKE_UP,
-	UTERM_SLEEP,
-	UTERM_NEW,
-	UTERM_GONE,
-	UTERM_REFRESH,
+enum video_action {
+	VIDEO_WAKE_UP,
+	VIDEO_SLEEP,
+	VIDEO_NEW,
+	VIDEO_GONE,
+	VIDEO_REFRESH,
 };
 
-struct uterm_video_hotplug {
-	struct uterm_display *display;
+struct video_hotplug {
+	struct display *display;
 	int action;
 };
 
-enum uterm_display_action {
-	UTERM_PAGE_FLIP,
+enum display_action {
+	DISPLAY_PAGE_FLIP,
 };
 
-struct uterm_display_event {
+struct display_event {
 	int action;
 };
 
-struct uterm_video_buffer {
+struct video_buffer {
 	unsigned int width;
 	unsigned int height;
 	unsigned int stride;
 	uint8_t data[];
 };
 
-struct uterm_video_blend_req {
-	const struct uterm_video_buffer *buf;
+struct video_blend_req {
+	const struct video_buffer *buf;
 	unsigned int x;
 	unsigned int y;
 	uint8_t fr;
@@ -118,104 +117,100 @@ struct uterm_video_blend_req {
 /*
  * This matches struct drm_mode_rect, for damage tracking
  */
-struct uterm_video_rect {
+struct video_rect {
 	int32_t x1;
 	int32_t y1;
 	int32_t x2;
 	int32_t y2;
 };
 
-typedef void (*uterm_video_cb)(struct uterm_video *video, struct uterm_video_hotplug *arg,
-			       void *data);
-typedef void (*uterm_display_cb)(struct uterm_display *disp, struct uterm_display_event *arg,
-				 void *data);
+typedef void (*video_cb)(struct video *video, struct video_hotplug *arg, void *data);
+typedef void (*display_cb)(struct display *disp, struct display_event *arg, void *data);
 
 /* misc */
 
-const char *uterm_dpms_to_name(int dpms);
+const char *dpms_to_name(enum display_dpms dpms);
 
 /* display interface */
 
-void uterm_display_ref(struct uterm_display *disp);
-void uterm_display_unref(struct uterm_display *disp);
-bool uterm_display_is_drm(struct uterm_display *disp);
-bool uterm_display_has_opengl(struct uterm_display *disp);
-bool uterm_display_supports_damage(struct uterm_display *disp);
-const char *uterm_display_backend_name(struct uterm_display *disp);
-const char *uterm_display_name(struct uterm_display *disp);
-struct uterm_display *uterm_display_next(struct uterm_display *disp);
+void display_ref(struct display *disp);
+void display_unref(struct display *disp);
+bool display_is_drm(struct display *disp);
+bool display_has_opengl(struct display *disp);
+bool display_supports_damage(struct display *disp);
+const char *display_backend_name(struct display *disp);
+const char *display_name(struct display *disp);
+struct display *display_next(struct display *disp);
 
-int uterm_display_register_cb(struct uterm_display *disp, uterm_display_cb cb, void *data);
-void uterm_display_unregister_cb(struct uterm_display *disp, uterm_display_cb cb, void *data);
+int display_register_cb(struct display *disp, display_cb cb, void *data);
+void display_unregister_cb(struct display *disp, display_cb cb, void *data);
 
-unsigned int uterm_display_get_width(struct uterm_display *disp);
-unsigned int uterm_display_get_height(struct uterm_display *disp);
-int uterm_display_get_state(struct uterm_display *disp);
-int uterm_display_set_dpms(struct uterm_display *disp, int state);
-int uterm_display_get_dpms(const struct uterm_display *disp);
+unsigned int display_get_width(struct display *disp);
+unsigned int display_get_height(struct display *disp);
+int display_get_state(struct display *disp);
+int display_set_dpms(struct display *disp, enum display_dpms state);
+enum display_dpms display_get_dpms(const struct display *disp);
 
-int uterm_display_use(struct uterm_display *disp);
-int uterm_display_swap(struct uterm_display *disp);
-bool uterm_display_is_swapping(struct uterm_display *disp);
-void uterm_display_set_need_redraw(struct uterm_display *disp);
-bool uterm_display_need_redraw(struct uterm_display *disp);
+int display_use(struct display *disp);
+int display_swap(struct display *disp);
+bool display_is_swapping(struct display *disp);
+void display_set_need_redraw(struct display *disp);
+bool display_need_redraw(struct display *disp);
 
-int uterm_display_clear(struct uterm_display *disp, uint8_t r, uint8_t g, uint8_t b);
+int display_clear(struct display *disp, uint8_t r, uint8_t g, uint8_t b);
 
 /* cursor interface */
-#define UTERM_CURSOR_MAX_SIZE 64
-int uterm_display_setup_cursor(struct uterm_display *disp, const uint32_t *pixels,
-			       unsigned int width, unsigned int height, int hot_x, int hot_y);
-void uterm_display_destroy_cursor(struct uterm_display *disp);
-int uterm_display_show_cursor(struct uterm_display *disp, int32_t x, int32_t y);
-int uterm_display_hide_cursor(struct uterm_display *disp);
-void uterm_display_set_cursor_offset(struct uterm_display *disp, int32_t x, int32_t y);
+#define VIDEO_CURSOR_MAX_SIZE 64
+int display_setup_cursor(struct display *disp, const uint32_t *pixels, unsigned int width,
+			 unsigned int height, int hot_x, int hot_y);
+void display_destroy_cursor(struct display *disp);
+int display_show_cursor(struct display *disp, int32_t x, int32_t y);
+int display_hide_cursor(struct display *disp);
+void display_set_cursor_offset(struct display *disp, int32_t x, int32_t y);
 
-int uterm_display_fake_blendv(struct uterm_display *disp, const struct uterm_video_blend_req *req,
-			      size_t num);
-void uterm_display_set_damage(struct uterm_display *disp, size_t n_rect,
-			      struct uterm_video_rect *damages);
-bool uterm_display_has_damage(struct uterm_display *disp);
+int display_fake_blendv(struct display *disp, const struct video_blend_req *req, size_t num);
+void display_set_damage(struct display *disp, size_t n_rect, struct video_rect *damages);
+bool display_has_damage(struct display *disp);
 
 /* video interface */
 
-int uterm_video_new(struct uterm_video **out, struct ev_eloop *eloop, int fd, const char *backend,
-		    unsigned int desired_width, unsigned int desired_height, bool use_original);
-void uterm_video_ref(struct uterm_video *video);
-void uterm_video_unref(struct uterm_video *video);
+int video_new(struct video **out, struct ev_eloop *eloop, int fd, const char *backend,
+	      unsigned int desired_width, unsigned int desired_height, bool use_original);
+void video_ref(struct video *video);
+void video_unref(struct video *video);
 
-struct uterm_display *uterm_video_get_displays(struct uterm_video *video);
-int uterm_video_register_cb(struct uterm_video *video, uterm_video_cb cb, void *data);
-void uterm_video_unregister_cb(struct uterm_video *video, uterm_video_cb cb, void *data);
+struct display *video_get_displays(struct video *video);
+int video_register_cb(struct video *video, video_cb cb, void *data);
+void video_unregister_cb(struct video *video, video_cb cb, void *data);
 
-int uterm_video_register(const struct uterm_video_module *ops);
-void uterm_video_unregister(const char *name);
-void uterm_video_sleep(struct uterm_video *video);
-int uterm_video_wake_up(struct uterm_video *video);
-bool uterm_video_is_awake(struct uterm_video *video);
-void uterm_video_poll(struct uterm_video *video);
+int video_register(const struct video_module *ops);
+void video_unregister(const char *name);
+void video_sleep(struct video *video);
+int video_wake_up(struct video *video);
+bool video_is_awake(struct video *video);
+void video_poll(struct video *video);
 
 #ifdef BUILD_ENABLE_VIDEO_DRM2D
-extern struct uterm_video_module drm2d_module;
+extern struct video_module drm2d_module;
 
-static inline void uterm_register_drm2d(void)
+static inline void video_register_drm2d(void)
 {
-	uterm_video_register(&drm2d_module);
+	video_register(&drm2d_module);
 }
 
 #else
-static inline void uterm_register_drm2d(void) {}
+static inline void video_register_drm2d(void) {}
 #endif
 
 #ifdef BUILD_ENABLE_VIDEO_FBDEV
-extern struct uterm_video_module fbdev_module;
+extern struct video_module fbdev_module;
 
-static inline void uterm_register_fbdev(void)
+static inline void video_register_fbdev(void)
 {
-	uterm_video_register(&fbdev_module);
+	video_register(&fbdev_module);
 }
 #else
-static inline void uterm_register_fbdev(void) {}
+static inline void video_register_fbdev(void) {}
 #endif
 
-#endif /* UTERM_UTERM_VIDEO_H */
+#endif /* VIDEO_H */

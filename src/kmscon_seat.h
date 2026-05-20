@@ -64,7 +64,7 @@ enum kmscon_session_event_type {
 
 struct kmscon_session_event {
 	unsigned int type;
-	struct uterm_display *disp;
+	struct display *disp;
 };
 
 typedef int (*kmscon_session_cb_t)(struct kmscon_session *session,

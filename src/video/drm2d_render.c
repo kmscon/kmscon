@@ -1,5 +1,5 @@
 /*
- * uterm - Linux User-Space Terminal drm2d module
+ * Kmscon - DRM2D Video backend
  *
  * Copyright (c) 2011-2013 David Herrmann <dh.herrmann@googlemail.com>
  *
@@ -27,7 +27,6 @@
  * DRM2D Video backend rendering functions
  */
 
-#include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
 #include <stdbool.h>
@@ -38,16 +37,12 @@
 #include <xf86drm.h>
 #include <xf86drmMode.h>
 #include "drm2d_internal.h"
-#include "drm_shared_internal.h"
-#include "shl/eloop.h"
-#include "shl/log.h"
 #include "video.h"
 #include "video_internal.h"
 
-#define LOG_SUBSYSTEM "uterm_drm2d_render"
+#define LOG_SUBSYSTEM "drm2d_render"
 
-int uterm_drm2d_display_fake_blendv(struct uterm_display *disp,
-				    const struct uterm_video_blend_req *req, size_t num)
+int drm2d_display_fake_blendv(struct display *disp, const struct video_blend_req *req, size_t num)
 {
 	unsigned int tmp;
 	uint8_t *dst;
@@ -55,8 +50,8 @@ int uterm_drm2d_display_fake_blendv(struct uterm_display *disp,
 	unsigned int width, height, i, j;
 	unsigned int sw, sh;
 	uint_fast32_t r, g, b, out;
-	struct uterm_drm2d_rb *rb;
-	struct uterm_drm2d_display *d2d = disp->data;
+	struct drm2d_rb *rb;
+	struct drm2d_display *d2d = disp->data;
 
 	if (!req)
 		return -EINVAL;
@@ -131,10 +126,10 @@ int uterm_drm2d_display_fake_blendv(struct uterm_display *disp,
 	return 0;
 }
 
-int uterm_drm2d_display_clear(struct uterm_display *disp, uint8_t r, uint8_t g, uint8_t b)
+int drm2d_display_clear(struct display *disp, uint8_t r, uint8_t g, uint8_t b)
 {
-	struct uterm_drm2d_rb *rb;
-	struct uterm_drm2d_display *d2d = disp->data;
+	struct drm2d_rb *rb;
+	struct drm2d_display *d2d = disp->data;
 	unsigned int width = disp->width;
 	unsigned int height = disp->height;
 	uint8_t *dst;

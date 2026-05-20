@@ -1,5 +1,5 @@
 /*
- * uterm - Linux User-Space Terminal fbdev module
+ * Kmscon - FBDEV Video backend
  *
  * Copyright (c) 2011-2013 David Herrmann <dh.herrmann@googlemail.com>
  *
@@ -25,8 +25,8 @@
 
 /* Internal definitions */
 
-#ifndef UTERM_FBDEV_INTERNAL_H
-#define UTERM_FBDEV_INTERNAL_H
+#ifndef FBDEV_INTERNAL_H
+#define FBDEV_INTERNAL_H
 
 #include <inttypes.h>
 #include <limits.h>
@@ -77,8 +77,7 @@ struct fbdev_video {
 	bool pending_intro;
 };
 
-int uterm_fbdev_display_fake_blendv(struct uterm_display *disp,
-				    const struct uterm_video_blend_req *req, size_t num);
-int uterm_fbdev_display_clear(struct uterm_display *disp, uint8_t r, uint8_t g, uint8_t b);
+int fbdev_display_fake_blendv(struct display *disp, const struct video_blend_req *req, size_t num);
+int fbdev_display_clear(struct display *disp, uint8_t r, uint8_t g, uint8_t b);
 
-#endif /* UTERM_FBDEV_INTERNAL_H */
+#endif /* FBDEV_INTERNAL_H */

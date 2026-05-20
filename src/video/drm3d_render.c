@@ -1,5 +1,5 @@
 /*
- * uterm - Linux User-Space Terminal
+ * Kmscon - DRM3D Video backend
  *
  * Copyright (c) 2011-2013 David Herrmann <dh.herrmann@googlemail.com>
  *
@@ -48,7 +48,6 @@
 #include "drm3d_blend.vert.bin.h"
 #include "drm3d_internal.h"
 #include "drm_shared_internal.h"
-#include "shl/eloop.h"
 #include "shl/gl.h"
 #include "shl/log.h"
 #include "video.h"
@@ -56,9 +55,9 @@
 
 #define LOG_SUBSYSTEM "drm3d_render"
 
-static int init_shaders(struct uterm_video *video)
+static int init_shaders(struct video *video)
 {
-	struct uterm_drm3d_video *v3d = uterm_drm_video_get_data(video);
+	struct drm3d_video *v3d = drm_video_get_data(video);
 	int ret;
 	char *blend_attr[] = {"position", "texture_position"};
 	int blend_vlen, blend_flen;
@@ -92,9 +91,9 @@ static int init_shaders(struct uterm_video *video)
 	return 0;
 }
 
-void uterm_drm3d_deinit_shaders(struct uterm_video *video)
+void drm3d_deinit_shaders(struct video *video)
 {
-	struct uterm_drm3d_video *v3d = uterm_drm_video_get_data(video);
+	struct drm3d_video *v3d = drm_video_get_data(video);
 
 	if (v3d->sinit == 0)
 		return;
@@ -104,11 +103,11 @@ void uterm_drm3d_deinit_shaders(struct uterm_video *video)
 	gl_shader_unref(v3d->blend_shader);
 }
 
-static int display_blend(struct uterm_display *disp, const struct uterm_video_buffer *buf,
-			 unsigned int x, unsigned int y, uint8_t fr, uint8_t fg, uint8_t fb,
-			 uint8_t br, uint8_t bg, uint8_t bb)
+static int display_blend(struct display *disp, const struct video_buffer *buf, unsigned int x,
+			 unsigned int y, uint8_t fr, uint8_t fg, uint8_t fb, uint8_t br, uint8_t bg,
+			 uint8_t bb)
 {
-	struct uterm_drm3d_video *v3d;
+	struct drm3d_video *v3d;
 	unsigned int sw, sh, tmp, width, height, i;
 	float mat[16];
 	float vertices[6 * 2], texpos[6 * 2], fgcol[3], bgcol[3];
@@ -119,8 +118,8 @@ static int display_blend(struct uterm_display *disp, const struct uterm_video_bu
 	if (!buf)
 		return -EINVAL;
 
-	v3d = uterm_drm_video_get_data(disp->video);
-	ret = uterm_drm3d_display_use(disp);
+	v3d = drm_video_get_data(disp->video);
+	ret = drm3d_display_use(disp);
 	if (ret)
 		return ret;
 	ret = init_shaders(disp->video);
@@ -242,8 +241,7 @@ static int display_blend(struct uterm_display *disp, const struct uterm_video_bu
 	return 0;
 }
 
-int uterm_drm3d_display_fake_blendv(struct uterm_display *disp,
-				    const struct uterm_video_blend_req *req, size_t num)
+int drm3d_display_fake_blendv(struct display *disp, const struct video_blend_req *req, size_t num)
 {
 	int ret;
 	unsigned int i;
@@ -264,9 +262,9 @@ int uterm_drm3d_display_fake_blendv(struct uterm_display *disp,
 	return 0;
 }
 
-int uterm_drm3d_display_clear(struct uterm_display *disp, uint8_t r, uint8_t g, uint8_t b)
+int drm3d_display_clear(struct display *disp, uint8_t r, uint8_t g, uint8_t b)
 {
-	if (uterm_drm3d_display_use(disp))
+	if (drm3d_display_use(disp))
 		return -EFAULT;
 
 	glClearColor(r, g, b, 0);
