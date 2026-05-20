@@ -6,7 +6,7 @@
 #include "shl/eloop.h"
 #include "shl/hook.h"
 
-static void pointer_update_inactivity_timer(struct uterm_input_dev *dev)
+static void pointer_update_inactivity_timer(struct input_dev *dev)
 {
 	struct itimerspec spec;
 
@@ -17,11 +17,11 @@ static void pointer_update_inactivity_timer(struct uterm_input_dev *dev)
 	ev_timer_update(dev->input->hide_pointer, &spec);
 }
 
-static void pointer_dev_send_move(struct uterm_input_dev *dev)
+static void pointer_dev_send_move(struct input_dev *dev)
 {
-	struct uterm_input_pointer_event pev = {0};
+	struct input_pointer_event pev = {0};
 
-	pev.event = UTERM_MOVED;
+	pev.event = POINTER_MOVED;
 	pev.pointer_x = dev->pointer.x;
 	pev.pointer_y = dev->pointer.y;
 
@@ -37,22 +37,22 @@ static void pointer_dev_send_move(struct uterm_input_dev *dev)
 	shl_hook_call(dev->input->pointer_hook, dev->input, &pev);
 }
 
-static void pointer_dev_send_wheel(struct uterm_input_dev *dev, int32_t value)
+static void pointer_dev_send_wheel(struct input_dev *dev, int32_t value)
 {
-	struct uterm_input_pointer_event pev = {0};
+	struct input_pointer_event pev = {0};
 
-	pev.event = UTERM_WHEEL;
+	pev.event = POINTER_WHEEL;
 	pev.wheel = value;
 
 	shl_hook_call(dev->input->pointer_hook, dev->input, &pev);
 }
 
-static void pointer_dev_send_button(struct uterm_input_dev *dev, uint8_t button, bool pressed,
+static void pointer_dev_send_button(struct input_dev *dev, uint8_t button, bool pressed,
 				    bool dbl_click)
 {
-	struct uterm_input_pointer_event pev = {0};
+	struct input_pointer_event pev = {0};
 
-	pev.event = UTERM_BUTTON;
+	pev.event = POINTER_BUTTON;
 	pev.button = button;
 	pev.pressed = pressed;
 	pev.double_click = dbl_click;
@@ -60,17 +60,17 @@ static void pointer_dev_send_button(struct uterm_input_dev *dev, uint8_t button,
 	shl_hook_call(dev->input->pointer_hook, dev->input, &pev);
 }
 
-void pointer_dev_sync(struct uterm_input_dev *dev)
+void pointer_dev_sync(struct input_dev *dev)
 {
-	struct uterm_input_pointer_event pev = {0};
+	struct input_pointer_event pev = {0};
 
-	pev.event = UTERM_SYNC;
+	pev.event = POINTER_SYNC;
 
 	shl_hook_call(dev->input->pointer_hook, dev->input, &pev);
 	pointer_update_inactivity_timer(dev);
 }
 
-void pointer_dev_rel(struct uterm_input_dev *dev, uint16_t code, int32_t value)
+void pointer_dev_rel(struct input_dev *dev, uint16_t code, int32_t value)
 {
 	switch (code) {
 	case REL_X:
@@ -97,7 +97,7 @@ void pointer_dev_rel(struct uterm_input_dev *dev, uint16_t code, int32_t value)
 	}
 }
 
-static void pointer_dev_abs_x(struct uterm_input_dev *dev, int32_t value)
+static void pointer_dev_abs_x(struct input_dev *dev, int32_t value)
 {
 	switch (dev->pointer.kind) {
 	case POINTER_TOUCHPAD:
@@ -129,7 +129,7 @@ static void pointer_dev_abs_x(struct uterm_input_dev *dev, int32_t value)
 	pointer_dev_send_move(dev);
 }
 
-static void pointer_dev_abs_y(struct uterm_input_dev *dev, int32_t value)
+static void pointer_dev_abs_y(struct input_dev *dev, int32_t value)
 {
 	switch (dev->pointer.kind) {
 	case POINTER_TOUCHPAD:
@@ -161,7 +161,7 @@ static void pointer_dev_abs_y(struct uterm_input_dev *dev, int32_t value)
 	pointer_dev_send_move(dev);
 }
 
-void pointer_dev_abs(struct uterm_input_dev *dev, uint16_t code, int32_t value)
+void pointer_dev_abs(struct input_dev *dev, uint16_t code, int32_t value)
 {
 	switch (code) {
 	case ABS_X:
@@ -173,7 +173,7 @@ void pointer_dev_abs(struct uterm_input_dev *dev, uint16_t code, int32_t value)
 	}
 }
 
-void pointer_dev_button(struct uterm_input_dev *dev, uint16_t code, int32_t value)
+void pointer_dev_button(struct input_dev *dev, uint16_t code, int32_t value)
 {
 	struct timespec tp;
 	uint64_t elapsed;

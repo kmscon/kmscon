@@ -66,7 +66,7 @@ static int fake_deactivate(struct uterm_vt *vt)
 	return vt_cb_deactivate(vt, false);
 }
 
-static void fake_input(struct uterm_input *input, struct uterm_input_key_event *ev, void *data)
+static void fake_input(struct input *input, struct input_key_event *ev, void *data)
 {
 	struct uterm_vt *vt = data;
 
@@ -89,7 +89,7 @@ static void fake_input(struct uterm_input *input, struct uterm_input_key_event *
 static void fake_destroy(struct uterm_vt *vt)
 {
 	vt_cb_deactivate(vt, true);
-	uterm_input_sleep(vt->input);
+	input_sleep(vt->input);
 }
 
 static const struct uterm_vt_ops fake_ops = {
@@ -98,7 +98,7 @@ static const struct uterm_vt_ops fake_ops = {
 	.deactivate = fake_deactivate,
 };
 
-struct uterm_vt *uterm_vt_fake_new(struct ev_eloop *eloop, struct uterm_input *input)
+struct uterm_vt *uterm_vt_fake_new(struct ev_eloop *eloop, struct input *input)
 {
 	struct uterm_vt *vt;
 	int ret;
@@ -111,11 +111,11 @@ struct uterm_vt *uterm_vt_fake_new(struct ev_eloop *eloop, struct uterm_input *i
 	vt->input = input;
 	vt->ops = &fake_ops;
 
-	ret = uterm_input_register_key_cb(input, fake_input, vt);
+	ret = input_register_key_cb(input, fake_input, vt);
 	if (ret)
 		goto err_free;
 
-	uterm_input_wake_up(vt->input);
+	input_wake_up(vt->input);
 
 	return vt;
 

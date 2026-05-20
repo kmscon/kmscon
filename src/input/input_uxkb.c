@@ -1,5 +1,5 @@
 /*
- * uterm - Linux User-Space Terminal
+ * Kmscon - XKB Keyboard Handling
  *
  * Copyright (c) 2011 Ran Benita <ran234@gmail.com>
  * Copyright (c) 2012-2013 David Herrmann <dh.herrmann@gmail.com>
@@ -40,7 +40,7 @@
 #include "shl/log.h"
 #include "shl/misc.h"
 
-#define LOG_SUBSYSTEM "uterm_uxkb"
+#define LOG_SUBSYSTEM "uxkb"
 
 static void uxkb_log(struct xkb_context *context, enum xkb_log_level level, const char *format,
 		     va_list args)
@@ -69,8 +69,8 @@ static void uxkb_log(struct xkb_context *context, enum xkb_log_level level, cons
 	log_submit(LOG_DEFAULT, sev, format, args);
 }
 
-int uxkb_desc_init(struct uterm_input *input, const char *model, const char *layout,
-		   const char *variant, const char *options, const char *locale, const char *keymap,
+int uxkb_desc_init(struct input *input, const char *model, const char *layout, const char *variant,
+		   const char *options, const char *locale, const char *keymap,
 		   const char *compose_file, size_t compose_file_len)
 {
 	int ret;
@@ -169,7 +169,7 @@ err_ctx:
 	return ret;
 }
 
-void uxkb_desc_destroy(struct uterm_input *input)
+void uxkb_desc_destroy(struct input *input)
 {
 	xkb_compose_table_unref(input->compose_table);
 	xkb_keymap_unref(input->keymap);
@@ -178,13 +178,13 @@ void uxkb_desc_destroy(struct uterm_input *input)
 
 static void timer_event(struct ev_timer *timer, uint64_t num, void *data)
 {
-	struct uterm_input_dev *dev = data;
+	struct input_dev *dev = data;
 
 	dev->repeat_event.handled = false;
 	shl_hook_call(dev->input->key_hook, dev->input, &dev->repeat_event);
 }
 
-int uxkb_dev_init(struct uterm_input_dev *dev)
+int uxkb_dev_init(struct input_dev *dev)
 {
 	int ret;
 
@@ -213,7 +213,7 @@ err_timer:
 	return ret;
 }
 
-void uxkb_dev_destroy(struct uterm_input_dev *dev)
+void uxkb_dev_destroy(struct input_dev *dev)
 {
 	xkb_compose_state_unref(dev->compose_state);
 	xkb_state_unref(dev->state);
@@ -227,7 +227,7 @@ enum {
 	KEY_REPEATED = 2,
 };
 
-static void uxkb_dev_update_keyboard_leds(struct uterm_input_dev *dev)
+static void uxkb_dev_update_keyboard_leds(struct input_dev *dev)
 {
 	static const struct {
 		int evdev_led;
@@ -240,7 +240,7 @@ static void uxkb_dev_update_keyboard_leds(struct uterm_input_dev *dev)
 	struct input_event events[sizeof(leds) / sizeof(*leds)];
 	int i, ret;
 
-	if (!(dev->capabilities & UTERM_DEVICE_HAS_LEDS))
+	if (!(dev->capabilities & DEVICE_HAS_LEDS))
 		return;
 
 	memset(events, 0, sizeof(events));
@@ -257,13 +257,13 @@ static void uxkb_dev_update_keyboard_leds(struct uterm_input_dev *dev)
 		log_warning("cannot update LED state (%d): %m", errno);
 }
 
-void uxkb_dev_set_leds(struct uterm_input_dev *dev, unsigned int scroll_lock, unsigned int num_lock,
+void uxkb_dev_set_leds(struct input_dev *dev, unsigned int scroll_lock, unsigned int num_lock,
 		       unsigned int caps_lock)
 {
 	struct input_event events[3];
 	int ret;
 
-	if (!(dev->capabilities & UTERM_DEVICE_HAS_LEDS))
+	if (!(dev->capabilities & DEVICE_HAS_LEDS))
 		return;
 
 	memset(events, 0, sizeof(events));
@@ -285,7 +285,7 @@ void uxkb_dev_set_leds(struct uterm_input_dev *dev, unsigned int scroll_lock, un
 		log_warning("cannot set LED state (%d): %m", errno);
 }
 
-static inline int uxkb_dev_resize_event(struct uterm_input_dev *dev, size_t s)
+static inline int uxkb_dev_resize_event(struct input_dev *dev, size_t s)
 {
 	uint32_t *tmp;
 
@@ -324,7 +324,7 @@ static inline int uxkb_dev_resize_event(struct uterm_input_dev *dev, size_t s)
 	return 0;
 }
 
-static int uxkb_dev_fill_event(struct uterm_input_dev *dev, struct uterm_input_key_event *ev,
+static int uxkb_dev_fill_event(struct input_dev *dev, struct input_key_event *ev,
 			       xkb_keycode_t code, int num_syms, const xkb_keysym_t *syms)
 {
 	int ret, i;
@@ -342,13 +342,13 @@ static int uxkb_dev_fill_event(struct uterm_input_dev *dev, struct uterm_input_k
 	for (i = 0; i < num_syms; ++i) {
 		ev->codepoints[i] = xkb_keysym_to_utf32(syms[i]);
 		if (!ev->codepoints[i])
-			ev->codepoints[i] = UTERM_INPUT_INVALID;
+			ev->codepoints[i] = INPUT_INVALID;
 	}
 
 	return 0;
 }
 
-static void uxkb_dev_repeat(struct uterm_input_dev *dev, unsigned int state)
+static void uxkb_dev_repeat(struct input_dev *dev, unsigned int state)
 {
 	struct xkb_keymap *keymap = xkb_state_get_keymap(dev->state);
 	unsigned int i;
@@ -398,7 +398,7 @@ static void uxkb_dev_repeat(struct uterm_input_dev *dev, unsigned int state)
 	ev_timer_update(dev->repeat_timer, &spec);
 }
 
-int uxkb_dev_process(struct uterm_input_dev *dev, uint16_t key_state, uint16_t code)
+int uxkb_dev_process(struct input_dev *dev, uint16_t key_state, uint16_t code)
 {
 	struct xkb_state *state;
 	struct xkb_compose_state *compose_state;
@@ -513,7 +513,7 @@ int uxkb_dev_process(struct uterm_input_dev *dev, uint16_t key_state, uint16_t c
 	return 0;
 }
 
-void uxkb_dev_wake_up(struct uterm_input_dev *dev)
+void uxkb_dev_wake_up(struct input_dev *dev)
 {
 	xkb_mod_mask_t locked_mods;
 	xkb_layout_index_t locked_layout;

@@ -10,7 +10,7 @@ struct uterm_vt_ops {
 	void (*destroy)(struct uterm_vt *vt);
 	int (*activate)(struct uterm_vt *vt);
 	int (*deactivate)(struct uterm_vt *vt);
-	void (*input)(struct uterm_vt *vt, struct uterm_input_key_event *ev);
+	void (*input)(struct uterm_vt *vt, struct input_key_event *ev);
 	void (*retry)(struct uterm_vt *vt);
 	unsigned int (*get_num)(struct uterm_vt *vt);
 	void (*bell)(struct uterm_vt *vt);
@@ -22,7 +22,7 @@ struct uterm_vt_ops {
 
 struct uterm_vt {
 	struct ev_eloop *eloop;
-	struct uterm_input *input;
+	struct input *input;
 
 	struct uterm_vt_cb cb;
 	void *data;
@@ -37,15 +37,15 @@ void vt_cb_activate(struct uterm_vt *vt);
 int vt_cb_deactivate(struct uterm_vt *vt, bool force);
 void vt_cb_hup(struct uterm_vt *vt);
 
-struct uterm_vt *uterm_vt_real_new(struct ev_eloop *eloop, struct uterm_input *input,
+struct uterm_vt *uterm_vt_real_new(struct ev_eloop *eloop, struct input *input,
 				   const char *vt_name);
-struct uterm_vt *uterm_vt_fake_new(struct ev_eloop *eloop, struct uterm_input *input);
+struct uterm_vt *uterm_vt_fake_new(struct ev_eloop *eloop, struct input *input);
 #ifdef BUILD_ENABLE_LIBSEAT
-struct uterm_vt *uterm_vt_libseat_new(struct ev_eloop *eloop, struct uterm_input *input,
+struct uterm_vt *uterm_vt_libseat_new(struct ev_eloop *eloop, struct input *input,
 				      const char *vt_name);
 #else
-static inline struct uterm_vt *uterm_vt_libseat_new(struct ev_eloop *eloop,
-						    struct uterm_input *input, const char *vt_name)
+static inline struct uterm_vt *uterm_vt_libseat_new(struct ev_eloop *eloop, struct input *input,
+						    const char *vt_name)
 {
 	return NULL;
 }

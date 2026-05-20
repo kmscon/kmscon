@@ -99,7 +99,7 @@ struct kmscon_seat {
 	struct uterm_monitor *mon;
 
 	char *name;
-	struct uterm_input *input;
+	struct input *input;
 	struct uterm_vt *vt;
 	struct shl_dlist displays;
 	struct shl_dlist videos;
@@ -287,7 +287,7 @@ static int seat_go_asleep(struct kmscon_seat *seat, bool force)
 		}
 	}
 	seat->awake = false;
-	uterm_input_sleep(seat->input);
+	input_sleep(seat->input);
 
 	return err;
 }
@@ -308,7 +308,7 @@ static int seat_go_awake(struct kmscon_seat *seat)
 	}
 
 	seat->awake = true;
-	uterm_input_wake_up(seat->input);
+	input_wake_up(seat->input);
 
 	return 0;
 }
@@ -712,19 +712,17 @@ static void seat_dpms_reset_timer(struct kmscon_seat *seat)
 	ev_timer_update(seat->dpms_timer, &spec);
 }
 
-static void seat_pointer_event(struct uterm_input *input, struct uterm_input_pointer_event *ev,
-			       void *data)
+static void seat_pointer_event(struct input *input, struct input_pointer_event *ev, void *data)
 {
 	struct kmscon_seat *seat = data;
 
 	/* Reset DPMS timer only on real user actions (not SYNC or HIDE_TIMEOUT) */
-	if (ev->event != UTERM_MOVED && ev->event != UTERM_BUTTON && ev->event != UTERM_WHEEL)
+	if (ev->event != POINTER_MOVED && ev->event != POINTER_BUTTON && ev->event != POINTER_WHEEL)
 		return;
 	seat_dpms_reset_timer(seat);
 }
 
-static void seat_input_event(struct uterm_input *input, struct uterm_input_key_event *ev,
-			     void *data)
+static void seat_input_event(struct input *input, struct input_key_event *ev, void *data)
 {
 	struct kmscon_seat *seat = data;
 	struct kmscon_session *s;
@@ -856,9 +854,9 @@ static int kmscon_seat_set_keymap(struct kmscon_seat *seat)
 			log_error("cannot read compose file %s: %d", seat->conf->xkb_compose_file,
 				  ret);
 	}
-	ret = uterm_input_set_keymap(seat->input, seat->conf->xkb_model, seat->conf->xkb_layout,
-				     seat->conf->xkb_variant, seat->conf->xkb_options, locale,
-				     keymap, compose_file, compose_file_len);
+	ret = input_set_keymap(seat->input, seat->conf->xkb_model, seat->conf->xkb_layout,
+			       seat->conf->xkb_variant, seat->conf->xkb_options, locale, keymap,
+			       compose_file, compose_file_len);
 	if (ret)
 		log_error("cannot set keymap: %d", ret);
 
@@ -874,7 +872,7 @@ static void kmscon_seat_add_input(struct kmscon_seat *seat, struct uterm_monitor
 	if (!seat || !node)
 		return;
 
-	data = uterm_input_add_dev(seat->input, node);
+	data = input_add_dev(seat->input, node);
 	uterm_monitor_set_dev_data(udev, data);
 }
 
@@ -883,7 +881,7 @@ static void kmscon_seat_remove_input(struct kmscon_seat *seat, void *data)
 	if (!seat || !data)
 		return;
 
-	uterm_input_remove_dev(seat->input, data);
+	input_remove_dev(seat->input, data);
 }
 
 static void seat_monitor_new_dev(const char *node, enum uterm_monitor_dev_type type,
@@ -953,7 +951,7 @@ int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf,
 	shl_dlist_init(&seat->videos);
 	shl_dlist_init(&seat->sessions);
 
-	ret = uterm_input_new(&seat->input, seat->eloop);
+	ret = input_new(&seat->input, seat->eloop);
 	if (ret)
 		goto err_free;
 
@@ -988,8 +986,8 @@ int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf,
 		goto err_conf;
 	}
 
-	uterm_input_set_conf(seat->input, seat->conf->xkb_repeat_delay, seat->conf->xkb_repeat_rate,
-			     seat->conf->mouse);
+	input_set_conf(seat->input, seat->conf->xkb_repeat_delay, seat->conf->xkb_repeat_rate,
+		       seat->conf->mouse);
 
 	ret = kmscon_seat_set_keymap(seat);
 	if (ret)
@@ -1001,12 +999,12 @@ int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf,
 		goto err_conf;
 	}
 
-	ret = uterm_input_register_key_cb(seat->input, seat_input_event, seat);
+	ret = input_register_key_cb(seat->input, seat_input_event, seat);
 	if (ret)
 		goto err_mon;
 
 	/* Register pointer event handler for DPMS management */
-	ret = uterm_input_register_pointer_cb(seat->input, seat_pointer_event, seat);
+	ret = input_register_pointer_cb(seat->input, seat_pointer_event, seat);
 	if (ret) {
 		log_warning("cannot register pointer callback: %d", ret);
 		/* Not fatal, continue without pointer DPMS support */
@@ -1050,7 +1048,7 @@ err_name:
 err_vt:
 	uterm_vt_deallocate(seat->vt);
 err_input:
-	uterm_input_unref(seat->input);
+	input_unref(seat->input);
 err_free:
 	free(seat);
 	return ret;
@@ -1085,9 +1083,9 @@ void kmscon_seat_free(struct kmscon_seat *seat)
 
 	uterm_vt_deallocate(seat->vt);
 	uterm_monitor_unref(seat->mon);
-	uterm_input_unregister_key_cb(seat->input, seat_input_event, seat);
-	uterm_input_unregister_pointer_cb(seat->input, seat_pointer_event, seat);
-	uterm_input_unref(seat->input);
+	input_unregister_key_cb(seat->input, seat_input_event, seat);
+	input_unregister_pointer_cb(seat->input, seat_pointer_event, seat);
+	input_unref(seat->input);
 	kmscon_conf_free(seat->conf_ctx);
 	free(seat->name);
 	ev_eloop_rm_timer(seat->dpms_timer);
@@ -1350,7 +1348,7 @@ const char *kmscon_seat_get_name(struct kmscon_seat *seat)
 	return seat->name;
 }
 
-struct uterm_input *kmscon_seat_get_input(struct kmscon_seat *seat)
+struct input *kmscon_seat_get_input(struct kmscon_seat *seat)
 {
 	if (!seat)
 		return NULL;
@@ -1589,7 +1587,7 @@ void kmscon_session_set_leds(struct kmscon_session *sess, unsigned int scroll_lo
 	if (!sess || !sess->seat)
 		return;
 
-	uterm_input_set_leds(sess->seat->input, scroll_lock, num_lock, caps_lock);
+	input_set_leds(sess->seat->input, scroll_lock, num_lock, caps_lock);
 }
 
 void kmscon_session_notify_deactivated(struct kmscon_session *sess)

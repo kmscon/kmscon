@@ -44,7 +44,7 @@ static void print_help();
 #include "uterm_monitor.h"
 
 static struct ev_eloop *eloop;
-static struct uterm_input *input;
+static struct input *input;
 
 struct {
 	char *xkb_model;
@@ -62,37 +62,37 @@ static void sig_quit(struct ev_eloop *p, struct signalfd_siginfo *info, void *da
 	if (!input)
 		return;
 
-	if (uterm_input_is_awake(input)) {
-		uterm_input_sleep(input);
+	if (input_is_awake(input)) {
+		input_sleep(input);
 		log_info("Went to sleep\n");
 	} else {
-		uterm_input_wake_up(input);
+		input_wake_up(input);
 		log_info("Woke Up\n");
 	}
 }
 
 static void print_modifiers(unsigned int mods)
 {
-	if (mods & UTERM_SHIFT_MASK)
+	if (mods & INPUT_SHIFT_MASK)
 		printf("SHIFT ");
-	if (mods & UTERM_LOCK_MASK)
+	if (mods & INPUT_LOCK_MASK)
 		printf("LOCK ");
-	if (mods & UTERM_CONTROL_MASK)
+	if (mods & INPUT_CONTROL_MASK)
 		printf("CONTROL ");
-	if (mods & UTERM_ALT_MASK)
+	if (mods & INPUT_ALT_MASK)
 		printf("ALT ");
-	if (mods & UTERM_LOGO_MASK)
+	if (mods & INPUT_LOGO_MASK)
 		printf("LOGO ");
 	printf("\n");
 }
 
-static void input_arrived(struct uterm_input *input, struct uterm_input_key_event *ev, void *data)
+static void input_arrived(struct input *input, struct input_key_event *ev, void *data)
 {
 	char s[32];
 
 	xkb_keysym_get_name(ev->keysyms[0], s, sizeof(s));
 	printf("sym %s ", s);
-	if (ev->codepoints[0] != UTERM_INPUT_INVALID) {
+	if (ev->codepoints[0] != INPUT_INVALID) {
 		/*
 		 * Just a proof-of-concept hack. This works because glibc uses
 		 * UTF-32 (= UCS-4) as the internal wchar_t encoding.
@@ -124,26 +124,26 @@ static void setup_input(struct uterm_monitor *mon)
 				  ret);
 	}
 
-	ret = uterm_input_new(&input, eloop);
+	ret = input_new(&input, eloop);
 	if (ret)
 		return;
-	ret = uterm_input_set_keymap(input, input_conf.xkb_model, input_conf.xkb_layout,
-				     input_conf.xkb_variant, input_conf.xkb_options,
-				     input_conf.locale, input_conf.xkb_keymap,
-				     input_conf.xkb_compose_file, compose_file_len);
+	ret = input_set_keymap(input, input_conf.xkb_model, input_conf.xkb_layout,
+			       input_conf.xkb_variant, input_conf.xkb_options, input_conf.locale,
+			       input_conf.xkb_keymap, input_conf.xkb_compose_file,
+			       compose_file_len);
 	if (ret)
 		return;
-	uterm_input_set_conf(input, 250, 50, true);
-	ret = uterm_input_register_key_cb(input, input_arrived, NULL);
+	input_set_conf(input, 250, 50, true);
+	ret = input_register_key_cb(input, input_arrived, NULL);
 	if (ret)
 		return;
-	uterm_input_wake_up(input);
+	input_wake_up(input);
 }
 
 static void free_input(struct uterm_monitor *mon)
 {
-	uterm_input_unregister_key_cb(input, input_arrived, NULL);
-	uterm_input_unref(input);
+	input_unregister_key_cb(input, input_arrived, NULL);
+	input_unref(input);
 }
 
 static void monitor_new_dev(const char *node, enum uterm_monitor_dev_type type,
@@ -153,7 +153,7 @@ static void monitor_new_dev(const char *node, enum uterm_monitor_dev_type type,
 	void *dev_data;
 
 	if (type == UTERM_MONITOR_INPUT) {
-		dev_data = uterm_input_add_dev(input, node);
+		dev_data = input_add_dev(input, node);
 		uterm_monitor_set_dev_data(udev, dev_data);
 	}
 }
@@ -161,7 +161,7 @@ static void monitor_new_dev(const char *node, enum uterm_monitor_dev_type type,
 static void monitor_free_dev(void *data, enum uterm_monitor_dev_type type, void *dev_data)
 {
 	if (type == UTERM_MONITOR_INPUT)
-		uterm_input_remove_dev(input, dev_data);
+		input_remove_dev(input, dev_data);
 }
 
 static struct uterm_monitor_cb monitor_cb = {

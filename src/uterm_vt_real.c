@@ -124,7 +124,7 @@ static void real_sig_enter(struct ev_eloop *eloop, struct signalfd_siginfo *info
 	} else if (vt->base.active) {
 		log_warning("activating VT %d even though it's already active", vt->real_num);
 	} else {
-		uterm_input_wake_up(vt->base.input);
+		input_wake_up(vt->base.input);
 	}
 
 	log_debug("enter VT %d %p due to VT signal", vt->real_num, vt);
@@ -161,11 +161,11 @@ static void real_sig_leave(struct ev_eloop *eloop, struct signalfd_siginfo *info
 	if (vt->real_delayed) {
 		vt->real_delayed = false;
 		ev_eloop_unregister_idle_cb(vt->base.eloop, real_delayed, vt, EV_NORMAL);
-		uterm_input_sleep(vt->base.input);
+		input_sleep(vt->base.input);
 	} else if (!active) {
 		log_warning("deactivating VT %d even though it's not active", vt->real_num);
 	} else {
-		uterm_input_sleep(vt->base.input);
+		input_sleep(vt->base.input);
 	}
 
 	vt->real_target = -1;
@@ -330,7 +330,7 @@ static int real_open(struct uterm_vt_real *vt, const char *vt_name)
 			goto err_kbdmode;
 		}
 		vt->real_delayed = true;
-		uterm_input_wake_up(vt->base.input);
+		input_wake_up(vt->base.input);
 	}
 
 	return 0;
@@ -367,9 +367,9 @@ static void real_close(struct uterm_vt_real *vt)
 	if (vt->real_delayed) {
 		vt->real_delayed = false;
 		ev_eloop_unregister_idle_cb(vt->base.eloop, real_delayed, vt, EV_NORMAL);
-		uterm_input_sleep(vt->base.input);
+		input_sleep(vt->base.input);
 	} else if (vt->base.active) {
-		uterm_input_sleep(vt->base.input);
+		input_sleep(vt->base.input);
 	}
 	vt_cb_deactivate(&vt->base, true);
 
@@ -479,7 +479,7 @@ static int real_deactivate(struct uterm_vt *base)
 	return -EINPROGRESS;
 }
 
-static void real_input(struct uterm_input *input, struct uterm_input_key_event *ev, void *data)
+static void real_input(struct input *input, struct input_key_event *ev, void *data)
 {
 	struct uterm_vt_real *vt = data;
 	int id;
@@ -647,8 +647,7 @@ static char *seat_find_vt(void)
 	return vt;
 }
 
-struct uterm_vt *uterm_vt_real_new(struct ev_eloop *eloop, struct uterm_input *input,
-				   const char *vt_name)
+struct uterm_vt *uterm_vt_real_new(struct ev_eloop *eloop, struct input *input, const char *vt_name)
 {
 	struct uterm_vt_real *vt;
 	char *vt_path = NULL;
@@ -677,7 +676,7 @@ struct uterm_vt *uterm_vt_real_new(struct ev_eloop *eloop, struct uterm_input *i
 	if (ret)
 		goto err_sig1;
 
-	ret = uterm_input_register_key_cb(input, real_input, vt);
+	ret = input_register_key_cb(input, real_input, vt);
 	if (ret)
 		goto err_sig2;
 
@@ -690,7 +689,7 @@ struct uterm_vt *uterm_vt_real_new(struct ev_eloop *eloop, struct uterm_input *i
 	return &vt->base;
 
 err_input:
-	uterm_input_unregister_key_cb(input, real_input, vt);
+	input_unregister_key_cb(input, real_input, vt);
 
 err_sig2:
 	ev_eloop_unregister_signal_cb(eloop, SIGUSR2, real_sig_leave, vt);

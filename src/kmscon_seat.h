@@ -77,7 +77,7 @@ void kmscon_seat_free(struct kmscon_seat *seat);
 void kmscon_seat_startup(struct kmscon_seat *seat);
 
 const char *kmscon_seat_get_name(struct kmscon_seat *seat);
-struct uterm_input *kmscon_seat_get_input(struct kmscon_seat *seat);
+struct input *kmscon_seat_get_input(struct kmscon_seat *seat);
 struct ev_eloop *kmscon_seat_get_eloop(struct kmscon_seat *seat);
 struct conf_ctx *kmscon_seat_get_conf(struct kmscon_seat *seat);
 

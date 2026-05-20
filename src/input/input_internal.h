@@ -1,5 +1,5 @@
 /*
- * uterm - Linux User-Space Terminal
+ * Kmscon - Input Internal Definitions
  *
  * Copyright (c) 2011-2013 David Herrmann <dh.herrmann@gmail.com>
  *
@@ -25,8 +25,8 @@
 
 /* Internal definitions */
 
-#ifndef UTERM_INPUT_INTERNAL_H
-#define UTERM_INPUT_INTERNAL_H
+#ifndef INPUT_INTERNAL_H
+#define INPUT_INTERNAL_H
 
 #include <inttypes.h>
 #include <limits.h>
@@ -36,17 +36,16 @@
 #include "input.h"
 #include "shl/dlist.h"
 #include "shl/eloop.h"
-#include "shl/misc.h"
 
-enum uterm_input_device_capability {
-	UTERM_DEVICE_HAS_KEYS = (1 << 0),
-	UTERM_DEVICE_HAS_LEDS = (1 << 1),
-	UTERM_DEVICE_HAS_REL = (1 << 2),
-	UTERM_DEVICE_HAS_ABS = (1 << 3),
-	UTERM_DEVICE_HAS_MOUSE_BTN = (1 << 4),
-	UTERM_DEVICE_HAS_TOUCH = (1 << 5),
-	UTERM_DEVICE_HAS_WHEEL = (1 << 6),
-	UTERM_DEVICE_HAS_DIRECT = (1 << 7),
+enum input_device_capability {
+	DEVICE_HAS_KEYS = (1 << 0),
+	DEVICE_HAS_LEDS = (1 << 1),
+	DEVICE_HAS_REL = (1 << 2),
+	DEVICE_HAS_ABS = (1 << 3),
+	DEVICE_HAS_MOUSE_BTN = (1 << 4),
+	DEVICE_HAS_TOUCH = (1 << 5),
+	DEVICE_HAS_WHEEL = (1 << 6),
+	DEVICE_HAS_DIRECT = (1 << 7),
 };
 
 enum pointer_kind {
@@ -60,10 +59,10 @@ enum pointer_kind {
 /* Button state for pressed_button field */
 #define BUTTON_NONE 255
 
-struct uterm_input_pointer {
+struct input_pointer {
 	/* For pointers (mouse/trackpad/trackpoint/touchscreen) */
 	enum pointer_kind kind;
-	enum uterm_input_pointer_type action;
+	enum input_ev_type action;
 	struct timespec last_click;
 	int32_t x;
 	int32_t y;
@@ -84,9 +83,9 @@ struct uterm_input_pointer {
 	uint8_t pressed_button;
 };
 
-struct uterm_input_dev {
+struct input_dev {
 	struct shl_dlist list;
-	struct uterm_input *input;
+	struct input *input;
 
 	bool initialized;
 
@@ -101,16 +100,16 @@ struct uterm_input_dev {
 	struct xkb_compose_state *compose_state;
 
 	unsigned int num_syms;
-	struct uterm_input_key_event event;
-	struct uterm_input_key_event repeat_event;
+	struct input_key_event event;
+	struct input_key_event repeat_event;
 
 	bool repeating;
 	struct ev_timer *repeat_timer;
 
-	struct uterm_input_pointer pointer;
+	struct input_pointer pointer;
 };
 
-struct uterm_input {
+struct input {
 	unsigned long ref;
 	struct ev_eloop *eloop;
 	int awake;
@@ -141,21 +140,21 @@ static inline bool input_bit_is_set(const unsigned long *array, int bit)
 	return !!(array[bit / LONG_BIT] & (1UL << (bit % LONG_BIT)));
 }
 
-int uxkb_desc_init(struct uterm_input *input, const char *model, const char *layout,
-		   const char *variant, const char *options, const char *locale, const char *keymap,
+int uxkb_desc_init(struct input *input, const char *model, const char *layout, const char *variant,
+		   const char *options, const char *locale, const char *keymap,
 		   const char *compose_file, size_t compose_file_len);
-void uxkb_desc_destroy(struct uterm_input *input);
+void uxkb_desc_destroy(struct input *input);
 
-int uxkb_dev_init(struct uterm_input_dev *dev);
-void uxkb_dev_destroy(struct uterm_input_dev *dev);
-int uxkb_dev_process(struct uterm_input_dev *dev, uint16_t key_state, uint16_t code);
-void uxkb_dev_wake_up(struct uterm_input_dev *dev);
-void uxkb_dev_set_leds(struct uterm_input_dev *dev, unsigned int scroll_lock, unsigned int num_lock,
+int uxkb_dev_init(struct input_dev *dev);
+void uxkb_dev_destroy(struct input_dev *dev);
+int uxkb_dev_process(struct input_dev *dev, uint16_t key_state, uint16_t code);
+void uxkb_dev_wake_up(struct input_dev *dev);
+void uxkb_dev_set_leds(struct input_dev *dev, unsigned int scroll_lock, unsigned int num_lock,
 		       unsigned int caps_lock);
 
-void pointer_dev_rel(struct uterm_input_dev *dev, uint16_t code, int32_t value);
-void pointer_dev_abs(struct uterm_input_dev *dev, uint16_t code, int32_t value);
-void pointer_dev_button(struct uterm_input_dev *dev, uint16_t code, int32_t value);
-void pointer_dev_sync(struct uterm_input_dev *dev);
+void pointer_dev_rel(struct input_dev *dev, uint16_t code, int32_t value);
+void pointer_dev_abs(struct input_dev *dev, uint16_t code, int32_t value);
+void pointer_dev_button(struct input_dev *dev, uint16_t code, int32_t value);
+void pointer_dev_sync(struct input_dev *dev);
 
-#endif /* UTERM_INPUT_INTERNAL_H */
+#endif /* INPUT_INTERNAL_H */

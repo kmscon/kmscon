@@ -97,7 +97,7 @@ int main(int argc, char **argv)
 {
 	int ret;
 	struct ev_eloop *eloop;
-	struct uterm_input *input;
+	struct input *input;
 	struct uterm_vt *vt;
 	size_t onum;
 
@@ -106,7 +106,7 @@ int main(int argc, char **argv)
 	if (ret)
 		goto err_fail;
 
-	ret = uterm_input_new(&input, eloop);
+	ret = input_new(&input, eloop);
 	if (ret)
 		goto err_exit;
 
@@ -135,7 +135,7 @@ int main(int argc, char **argv)
 
 	uterm_vt_deallocate(vt);
 err_input:
-	uterm_input_unref(input);
+	input_unref(input);
 err_exit:
 	test_exit(options, onum, eloop);
 err_fail:

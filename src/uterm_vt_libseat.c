@@ -263,8 +263,7 @@ static void log_libseat(enum libseat_log_level level, const char *fmt, va_list a
 	log_submit(LOG_DEFAULT, log_level(level), fmt, args);
 }
 
-static void vt_libseat_input(struct uterm_input *input, struct uterm_input_key_event *ev,
-			     void *data)
+static void vt_libseat_input(struct input *input, struct input_key_event *ev, void *data)
 {
 	struct uterm_vt_libseat *vt = data;
 	int id = 0;
@@ -319,7 +318,7 @@ static void vt_libseat_close(int fd, int fd_id, void *data)
 	close(fd);
 }
 
-struct uterm_vt *uterm_vt_libseat_new(struct ev_eloop *eloop, struct uterm_input *input,
+struct uterm_vt *uterm_vt_libseat_new(struct ev_eloop *eloop, struct input *input,
 				      const char *vt_name)
 {
 	struct uterm_vt_libseat *vt;
@@ -373,9 +372,9 @@ struct uterm_vt *uterm_vt_libseat_new(struct ev_eloop *eloop, struct uterm_input
 		goto err_libseat;
 	}
 
-	uterm_input_set_device_ops(input, vt_libseat_open, vt_libseat_close, vt);
+	input_set_device_ops(input, vt_libseat_open, vt_libseat_close, vt);
 
-	ret = uterm_input_register_key_cb(input, vt_libseat_input, vt);
+	ret = input_register_key_cb(input, vt_libseat_input, vt);
 	if (ret)
 		goto err_libseat_fd;
 

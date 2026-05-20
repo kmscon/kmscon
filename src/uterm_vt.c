@@ -70,7 +70,7 @@ void vt_cb_hup(struct uterm_vt *vt)
 }
 
 SHL_EXPORT
-struct uterm_vt *uterm_vt_allocate(struct ev_eloop *eloop, bool libseat, struct uterm_input *input,
+struct uterm_vt *uterm_vt_allocate(struct ev_eloop *eloop, bool libseat, struct input *input,
 				   const char *vt_name, struct uterm_vt_cb *cb, void *data)
 {
 	struct uterm_vt *vt = NULL;
@@ -93,7 +93,7 @@ struct uterm_vt *uterm_vt_allocate(struct ev_eloop *eloop, bool libseat, struct 
 	vt->cb = *cb;
 	vt->data = data;
 
-	uterm_input_ref(input);
+	input_ref(input);
 	ev_eloop_ref(eloop);
 	return vt;
 }
@@ -107,7 +107,7 @@ void uterm_vt_deallocate(struct uterm_vt *vt)
 	if (vt->ops->destroy)
 		vt->ops->destroy(vt);
 
-	uterm_input_unref(vt->input);
+	input_unref(vt->input);
 	ev_eloop_unref(vt->eloop);
 	free(vt);
 }

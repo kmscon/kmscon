@@ -49,7 +49,7 @@ struct uterm_vt_cb {
 	uterm_vt_hup_cb hup;
 };
 
-struct uterm_vt *uterm_vt_allocate(struct ev_eloop *eloop, bool libseat, struct uterm_input *input,
+struct uterm_vt *uterm_vt_allocate(struct ev_eloop *eloop, bool libseat, struct input *input,
 				   const char *vt_name, struct uterm_vt_cb *cb, void *data);
 void uterm_vt_deallocate(struct uterm_vt *vt);
 

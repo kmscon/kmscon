@@ -1,5 +1,5 @@
 /*
- * uterm - Linux User-Space Terminal Input Handling
+ * Kmscon - Input Handling
  *
  * Copyright (c) 2011-2013 David Herrmann <dh.herrmann@googlemail.com>
  *
@@ -30,49 +30,49 @@
  * keyboard backends so the full XKB feature set is available.
  */
 
-#ifndef UTERM_UTERM_INPUT_H
-#define UTERM_UTERM_INPUT_H
+#ifndef KMSCON_INPUT_H
+#define KMSCON_INPUT_H
 
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include "shl/eloop.h"
 
-struct uterm_input;
+struct input;
 
 /* keep in sync with shl_xkb_mods */
-enum uterm_input_modifier {
-	UTERM_SHIFT_MASK = (1 << 0),
-	UTERM_LOCK_MASK = (1 << 1),
-	UTERM_CONTROL_MASK = (1 << 2),
-	UTERM_ALT_MASK = (1 << 3),
-	UTERM_LOGO_MASK = (1 << 4),
+enum input_modifier {
+	INPUT_SHIFT_MASK = (1 << 0),
+	INPUT_LOCK_MASK = (1 << 1),
+	INPUT_CONTROL_MASK = (1 << 2),
+	INPUT_ALT_MASK = (1 << 3),
+	INPUT_LOGO_MASK = (1 << 4),
 };
 
 /* keep in sync with TSM_VTE_INVALID */
-#define UTERM_INPUT_INVALID 0xffffffff
+#define INPUT_INVALID 0xffffffff
 
-struct uterm_input_key_event {
+struct input_key_event {
 	bool handled;	   /* user-controlled, default is false */
 	uint16_t keycode;  /* linux keycode - KEY_* - linux/input.h */
 	uint32_t ascii;	   /* ascii keysym for @keycode */
-	unsigned int mods; /* active modifiers - uterm_modifier mask */
+	unsigned int mods; /* active modifiers - input_modifier mask */
 
 	unsigned int num_syms; /* number of keysyms */
 	uint32_t *keysyms;     /* XKB-common keysym-array - XKB_KEY_* */
-	uint32_t *codepoints;  /* ucs4 unicode value or UTERM_INPUT_INVALID */
+	uint32_t *codepoints;  /* ucs4 unicode value or INPUT_INVALID */
 };
 
-enum uterm_input_pointer_type {
-	UTERM_MOVED,
-	UTERM_BUTTON,
-	UTERM_WHEEL,
-	UTERM_SYNC,
-	UTERM_HIDE_TIMEOUT,
+enum input_ev_type {
+	POINTER_MOVED,
+	POINTER_BUTTON,
+	POINTER_WHEEL,
+	POINTER_SYNC,
+	POINTER_HIDE_TIMEOUT,
 };
 
-struct uterm_input_pointer_event {
-	enum uterm_input_pointer_type event;
+struct input_pointer_event {
+	enum input_ev_type event;
 	int32_t pointer_x;
 	int32_t pointer_y;
 	int32_t wheel;
@@ -81,46 +81,42 @@ struct uterm_input_pointer_event {
 	bool double_click;
 };
 
-#define UTERM_INPUT_HAS_MODS(_ev, _mods) (((_ev)->mods & (_mods)) == (_mods))
+#define INPUT_HAS_MODS(_ev, _mods) (((_ev)->mods & (_mods)) == (_mods))
 
-typedef void (*uterm_input_key_cb)(struct uterm_input *input, struct uterm_input_key_event *ev,
-				   void *data);
+typedef void (*input_key_cb)(struct input *input, struct input_key_event *ev, void *data);
 
-typedef void (*uterm_input_pointer_cb)(struct uterm_input *input,
-				       struct uterm_input_pointer_event *ev, void *data);
+typedef void (*input_pointer_cb)(struct input *input, struct input_pointer_event *ev, void *data);
 
 typedef int (*uterm_open_cb)(const char *node, int *fd_id, void *data);
 typedef void (*uterm_close_cb)(int fd, int fd_id, void *data);
 
-int uterm_input_new(struct uterm_input **out, struct ev_eloop *eloop);
-int uterm_input_set_keymap(struct uterm_input *input, const char *model, const char *layout,
-			   const char *variant, const char *options, const char *locale,
-			   const char *keymap, const char *compose_file, size_t compose_file_len);
-void uterm_input_set_conf(struct uterm_input *input, unsigned int repeat_delay,
-			  unsigned int repeat_rate, bool mouse_enabled);
-void uterm_input_ref(struct uterm_input *input);
-void uterm_input_unref(struct uterm_input *input);
+int input_new(struct input **out, struct ev_eloop *eloop);
+int input_set_keymap(struct input *input, const char *model, const char *layout,
+		     const char *variant, const char *options, const char *locale,
+		     const char *keymap, const char *compose_file, size_t compose_file_len);
+void input_set_conf(struct input *input, unsigned int repeat_delay, unsigned int repeat_rate,
+		    bool mouse_enabled);
+void input_ref(struct input *input);
+void input_unref(struct input *input);
 
-void *uterm_input_add_dev(struct uterm_input *input, const char *node);
-void uterm_input_remove_dev(struct uterm_input *input, void *data);
+void *input_add_dev(struct input *input, const char *node);
+void input_remove_dev(struct input *input, void *data);
 
-int uterm_input_register_key_cb(struct uterm_input *input, uterm_input_key_cb cb, void *data);
-void uterm_input_unregister_key_cb(struct uterm_input *input, uterm_input_key_cb cb, void *data);
+int input_register_key_cb(struct input *input, input_key_cb cb, void *data);
+void input_unregister_key_cb(struct input *input, input_key_cb cb, void *data);
 
-int uterm_input_register_pointer_cb(struct uterm_input *input, uterm_input_pointer_cb cb,
-				    void *data);
-void uterm_input_unregister_pointer_cb(struct uterm_input *input, uterm_input_pointer_cb cb,
-				       void *data);
+int input_register_pointer_cb(struct input *input, input_pointer_cb cb, void *data);
+void input_unregister_pointer_cb(struct input *input, input_pointer_cb cb, void *data);
 
-void uterm_input_set_device_ops(struct uterm_input *input, uterm_open_cb open_cb,
-				uterm_close_cb close_cb, void *data);
+void input_set_device_ops(struct input *input, uterm_open_cb open_cb, uterm_close_cb close_cb,
+			  void *data);
 
-void uterm_input_sleep(struct uterm_input *input);
-void uterm_input_wake_up(struct uterm_input *input);
-bool uterm_input_is_awake(struct uterm_input *input);
-void uterm_input_set_pointer_max(struct uterm_input *input, unsigned int max_x, unsigned int max_y);
+void input_sleep(struct input *input);
+void input_wake_up(struct input *input);
+bool input_is_awake(struct input *input);
+void input_set_pointer_max(struct input *input, unsigned int max_x, unsigned int max_y);
 
-void uterm_input_set_leds(struct uterm_input *input, unsigned int scroll_lock,
-			  unsigned int num_lock, unsigned int caps_lock);
+void input_set_leds(struct input *input, unsigned int scroll_lock, unsigned int num_lock,
+		    unsigned int caps_lock);
 
-#endif /* UTERM_UTERM_INPUT_H */
+#endif /* KMSCON_INPUT_H */
