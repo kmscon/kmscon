@@ -87,14 +87,6 @@ struct video_hotplug {
 	int action;
 };
 
-enum display_action {
-	DISPLAY_PAGE_FLIP,
-};
-
-struct display_event {
-	int action;
-};
-
 struct video_buffer {
 	unsigned int width;
 	unsigned int height;
@@ -125,7 +117,7 @@ struct video_rect {
 };
 
 typedef void (*video_cb)(struct video *video, struct video_hotplug *arg, void *data);
-typedef void (*display_cb)(struct display *disp, struct display_event *arg, void *data);
+typedef void (*display_pageflip_cb)(void *unused, void *unused2, void *data);
 
 /* misc */
 
@@ -142,8 +134,8 @@ const char *display_backend_name(struct display *disp);
 const char *display_name(struct display *disp);
 struct display *display_next(struct display *disp);
 
-int display_register_cb(struct display *disp, display_cb cb, void *data);
-void display_unregister_cb(struct display *disp, display_cb cb, void *data);
+int display_register_pageflip(struct display *disp, display_pageflip_cb cb, void *data);
+void display_unregister_pageflip(struct display *disp, display_pageflip_cb cb, void *data);
 
 unsigned int display_get_width(struct display *disp);
 unsigned int display_get_height(struct display *disp);

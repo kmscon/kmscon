@@ -74,7 +74,7 @@ static void display_vblank_timer_event(struct ev_timer *timer, uint64_t expirati
 	struct fbdev_display *fbdev = disp->data;
 
 	fbdev->vblank_scheduled = false;
-	DISPLAY_CB(disp, DISPLAY_PAGE_FLIP);
+	PAGEFLIP_CB(disp);
 }
 
 static int display_init(struct display *disp)

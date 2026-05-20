@@ -111,11 +111,7 @@ int display_bind(struct display *disp);
 void display_unbind(struct display *disp);
 void display_ready(struct display *disp);
 
-#define DISPLAY_CB(disp, act)                                                                      \
-	shl_hook_call((disp)->hook, (disp),                                                        \
-		      &(struct display_event){                                                     \
-			      .action = (act),                                                     \
-		      })
+#define PAGEFLIP_CB(disp) shl_hook_call((disp)->hook, (disp), NULL)
 
 static inline bool display_is_online(const struct display *disp)
 {

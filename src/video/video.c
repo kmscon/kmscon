@@ -209,7 +209,7 @@ struct display *display_next(struct display *disp)
 }
 
 SHL_EXPORT
-int display_register_cb(struct display *disp, display_cb cb, void *data)
+int display_register_pageflip(struct display *disp, display_pageflip_cb cb, void *data)
 {
 	if (!disp)
 		return -EINVAL;
@@ -218,7 +218,7 @@ int display_register_cb(struct display *disp, display_cb cb, void *data)
 }
 
 SHL_EXPORT
-void display_unregister_cb(struct display *disp, display_cb cb, void *data)
+void display_unregister_pageflip(struct display *disp, display_pageflip_cb cb, void *data)
 {
 	if (!disp)
 		return;

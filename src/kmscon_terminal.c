@@ -415,12 +415,9 @@ static void redraw_all_text(struct kmscon_terminal *term)
 	}
 }
 
-static void display_event(struct display *disp, struct display_event *ev, void *data)
+static void display_pageflip(void *unused, void *unused2, void *data)
 {
 	struct screen *scr = data;
-
-	if (ev->action != DISPLAY_PAGE_FLIP)
-		return;
 
 	scr->swapping = false;
 	if (scr->pending)
@@ -673,7 +670,7 @@ static int add_display(struct kmscon_terminal *term, struct display *disp)
 	scr->disp = disp;
 	scr->enabled = true;
 
-	ret = display_register_cb(scr->disp, display_event, scr);
+	ret = display_register_pageflip(scr->disp, display_pageflip, scr);
 	if (ret) {
 		log_error("cannot register display callback: %d", ret);
 		goto err_free;
@@ -718,7 +715,7 @@ static int add_display(struct kmscon_terminal *term, struct display *disp)
 err_text:
 	kmscon_text_unref(scr->txt);
 err_cb:
-	display_unregister_cb(scr->disp, display_event, scr);
+	display_unregister_pageflip(scr->disp, display_pageflip, scr);
 err_free:
 	free(scr);
 	return ret;
@@ -733,7 +730,7 @@ static void free_screen(struct screen *scr, bool update)
 		display_destroy_cursor(scr->disp);
 	shl_dlist_unlink(&scr->list);
 	kmscon_text_unref(scr->txt);
-	display_unregister_cb(scr->disp, display_event, scr);
+	display_unregister_pageflip(scr->disp, display_pageflip, scr);
 	display_unref(scr->disp);
 	free(scr);
 

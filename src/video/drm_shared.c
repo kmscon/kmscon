@@ -1079,7 +1079,7 @@ static void drm_display_pflip(struct display *disp)
 	if (vdrm->page_flip)
 		vdrm->page_flip(disp);
 
-	DISPLAY_CB(disp, DISPLAY_PAGE_FLIP);
+	PAGEFLIP_CB(disp);
 }
 
 static void display_event(int fd, unsigned int frame, unsigned int sec, unsigned int usec,
