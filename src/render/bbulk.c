@@ -59,7 +59,7 @@
 struct bbcell {
 	uint64_t id;
 	struct tsm_screen_attr attr;
-	bool overflow;
+	bool double_width;
 };
 
 struct bbulk {
@@ -384,23 +384,31 @@ static int bbulk_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, 
 	struct bbcell *prev;
 	unsigned int offset = posx + posy * txt->cols;
 	bool last_col = (posx == txt->cols - 1);
+	bool changed;
 
-	if (!width)
-		return 0;
-
-	if (!len && posx && bb->prev[offset - 1].overflow)
-		return 0;
 
 	prev = &bb->prev[offset];
 
-	if (prev->id == id && !memcmp(&prev->attr, attr, sizeof(*attr))) {
-		if ((prev->overflow || width == 2) && !last_col) {
-			if (bb->damages[offset] || bb->damages[offset + 1] ||
-			    bb->prev[offset + 1].id == ID_DAMAGED) {
+	// left cell overflow on this cell.
+	if (!len && posx && bb->prev[offset - 1].double_width) {
+		if (prev->id == ID_OVERFLOW) {
+			bb->damages[offset] = false;
+			return 0;
+		}
+		prev->id = ID_OVERFLOW;
+		bb->damages[offset] = true;
+		return 0;
+	}
+	if (!width)
+		return 0;
+
+	changed = prev->id != id || memcmp(&prev->attr, attr, sizeof(*attr)) != 0;
+
+	if (!changed) {
+		/* Cell content is unchanged */
+		if (prev->double_width && !last_col) {
+			if (bb->damages[offset] || bb->damages[offset + 1]) {
 				bb->damages[offset] = false;
-				if (bb->prev[offset + 1].id == ID_OVERFLOW)
-					bb->damages[offset + 1] = false;
-				bb->prev[offset + 1].id = ID_OVERFLOW;
 			} else {
 				return 0;
 			}
@@ -411,8 +419,6 @@ static int bbulk_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, 
 		}
 	} else {
 		bb->damages[offset] = true;
-		if ((prev->overflow || width == 2) && !last_col)
-			damage_cell(bb, offset + 1);
 	}
 
 	prev->id = id;
@@ -422,15 +428,14 @@ static int bbulk_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, 
 	if (!glyph)
 		return -ENOMEM;
 
-	if (glyph->double_width && !last_col) {
-		prev->overflow = true;
-		bb->prev[offset + 1].overflow = false;
-	} else
-		prev->overflow = false;
+	if (glyph->double_width && !last_col && changed)
+		damage_cell(bb, offset + 1);
+
+	prev->double_width = glyph->double_width;
 
 	req = &bb->reqs[bb->req_len++];
 
-	if (prev->overflow && (txt->orientation == OR_LEFT || txt->orientation == OR_UPSIDE_DOWN))
+	if (glyph->double_width && !last_col && (txt->orientation == OR_LEFT || txt->orientation == OR_UPSIDE_DOWN))
 		/*
 		 * In case of left or upside down orientation, we need to draw to the
 		 * next cell, as the glyph is already rotated, so start on the next cell
@@ -484,7 +489,7 @@ static void mark_damaged(struct kmscon_text *txt, struct bbulk *bb, unsigned int
 
 	off = posx + posy * txt->cols;
 
-	damage_cell(bb, posx + posy * txt->cols);
+	damage_cell(bb, off);
 
 	if (posx + 1 < txt->cols)
 		damage_cell(bb, off + 1);
