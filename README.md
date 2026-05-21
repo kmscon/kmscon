@@ -7,29 +7,36 @@ It is an attempt to replace the in-kernel VT implementation with a userspace
 console. See kmscon(1) man-page for usage information.
 
 ## Requirements
-
+### Mandatory dependencies
 Kmscon requires the following software:
   - [libtsm](https://github.com/kmscon/libtsm): terminal emulator state machine
   - [libudev](https://www.freedesktop.org/software/systemd/man/libudev.html): providing input, video, etc. device hotplug support (>=v172)
   - [libxkbcommon](https://xkbcommon.org/): providing internationalized keyboard handling
-  - [libdrm](https://gitlab.freedesktop.org/mesa/drm): graphics access to DRM/KMS subsystem
-  - linux-headers: linux kernel headers for ABI definitions
+  - **linux-headers**: linux kernel headers for ABI definitions
 
-Everything else is optional:
+### Optional dependencies
+#### Video
 
 For video output at least one of the following is required:
-- fbdev: For framebuffer video output the kernel headers must be installed and located in the default include path.
-- DRM: For unaccelerated drm output the "libdrm" library must be installed and accessible via pkg-config.
-- OpenGLES2: For accelerated video output via OpenGLESv2 the following must be installed: libdrm, libgbm, egl, glesv2 (i.e., mesa)
+- [libdrm](https://gitlab.freedesktop.org/mesa/drm): graphics access to DRM/KMS subsystemDRM: For unaccelerated drm output the "libdrm" library must be installed and accessible via pkg-config.
+- **OpenGLES2**: For accelerated video output via OpenGLESv2 the following must be installed: libdrm, libgbm, egl, glesv2 (i.e., mesa)
+- **fbdev**: For framebuffer video output the kernel headers must be installed and located in the default include path, and the kernel built with fbdev device support (which is disabled on some distributions).
 
+#### Fonts
 For font handling the following is required:
-- 8x16: The 8x16 font is a static built-in font which does not require external dependencies.
-- unifont: Static font without external dependencies.
-- freetype: lightweight font rendering, using only freetype2 and fontconfig.
-- pango: drawing text with pango Pango requires: glib, pango, fontconfig, freetype2 and more
+- **8x16**: The 8x16 font is a static built-in font which does not require external dependencies.
+- [unifont](https://unifoundry.com/unifont/index.html):Embed unifont in kmscon, this requires no external dependencies.
+- [freetype](https://freetype.org/): lightweight font rendering, using only freetype2 and fontconfig.
+- [pango](https://gitlab.gnome.org/GNOME/pango): drawing text with Pango requires: glib, pango, fontconfig, freetype2 and more
 
-Seat:
-- libseat: Kmscon can take a seat with [libseat](https://sr.ht/~kennylevinsen/seatd/). In this case you must have either systemd-logind, elogind, or seatd configured. It allows to run kmscon as a regular user, and configure which GPU/input device are allowed for kmscon. The drawback is that kmscon-launch-gui won't work to launch another GUI that uses libseat, as the seat is already in use.
+#### Seats
+- [libseat](https://sr.ht/~kennylevinsen/seatd/): Kmscon can take a seat with libseat . In this case you must have either systemd-logind, elogind, or seatd configured. It allows to run kmscon as a regular user, and configure which GPU/input device are allowed for kmscon. The drawback is that kmscon-launch-gui won't work to launch another GUI that uses libseat, as the seat is already in use.
+- If libseat is not present, kmscon will use its own VT handling, or a fake backend if VT is disabled in the kernel.
+
+#### Terminfo
+ - [ncurses](https://invisible-island.net/ncurses/) You need the `tic` executable from ncurses, to build kmscon.ti into a binary terminfo definition.
+
+## Setup
 
 On Debian-based system, to install the systemd service files in the right location, you need to install systemd-dev.
 ```bash
@@ -71,10 +78,9 @@ explicitly enable it via command line:
 |`video_fbdev`| `auto` | Linux fbdev video backend |
 |`video_drm2d`| `auto` | Linux DRM software-rendering backend |
 |`video_drm3d`| `auto` | Linux DRM hardware-rendering backend |
-|`font_unifont`| `auto` | Static built-in non-scalable font (Unicode Unifont) |
+|`font_unifont`| `auto` | Static built-in font, with integer scaling (Unicode Unifont) |
 |`font_freetype`| `auto` | Freetype2 based scalable font renderer, also handle bitmap fonts |
 |`font_pango`| `auto` | Pango based scalable font renderer |
-|`renderer_bbulk`| `auto` | Simple 2D software-renderer (bulk-mode) |
 |`renderer_gltex`| `auto` | OpenGLESv2 accelerated renderer |
 |`session_dummy`| `auto` | Dummy fallback session |
 |`session_terminal`| `auto` | Terminal-emulator sessions |
