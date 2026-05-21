@@ -851,13 +851,18 @@ static void update_selection(struct tsm_screen *console, unsigned int x, unsigne
 	tsm_screen_selection_target(console, x, y);
 }
 
+static void free_selection(struct kmscon_terminal *term)
+{
+	if (!term->pointer.copy)
+		return;
+	free(term->pointer.copy);
+	term->pointer.copy = NULL;
+	term->pointer.copy_len = 0;
+}
+
 static void copy_selection(struct kmscon_terminal *term)
 {
-	if (term->pointer.copy) {
-		free(term->pointer.copy);
-		term->pointer.copy = NULL;
-		term->pointer.copy_len = 0;
-	}
+	free_selection(term);
 	term->pointer.copy_len = tsm_screen_selection_copy(term->console, &term->pointer.copy);
 }
 
@@ -1090,6 +1095,7 @@ static void terminal_destroy(struct kmscon_terminal *term)
 	tsm_screen_unref(term->console);
 	input_unref(term->input);
 	ev_eloop_unref(term->eloop);
+	free_selection(term);
 	free(term);
 }
 
