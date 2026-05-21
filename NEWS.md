@@ -1,5 +1,43 @@
 = KMSCON Release News =
 
+## CHANGES with 10.0.0
+### Important Notes
+* Kmscon now uses libseat by default. If you don't want to use libseat, you can build kmscon with `meson setup -Dlibseat=disabled` or start kmscon with `--no-libseat`.
+* If you use systemd-logind or elogind, make sure to have a correct PAM configuration, or kmscon won't start.
+* The --listen argument, which allowed kmscon to automatically start sessions on new seats has been removed. It doesn't integrate with libseat, it also means multiple session for multiple users will share the same kmscon process, which can be problematic, and it's too complex to maintain.
+* The --seats argument has been dropped, libseat doesn't allow to specify which seat to use.
+* For an emergency rescue shell, use `--no-libseat`, or use the noop backend with `LIBSEAT_BACKEND=noop kmscon`
+
+### CHANGES
+* drm: clear cursor plane before dropping master by @awsms in https://github.com/kmscon/kmscon/pull/370
+* seat: correctly free the dpms timer by @kdj0c in https://github.com/kmscon/kmscon/pull/372
+* Prepare libseat by @kdj0c in https://github.com/kmscon/kmscon/pull/371
+* freetype: Handle bitmap font with variable width by @kdj0c in https://github.com/kmscon/kmscon/pull/374
+* readme: Update with freetype font rendering by @kdj0c in https://github.com/kmscon/kmscon/pull/375
+* issue: Correctly handle \e with color code by @kdj0c in https://github.com/kmscon/kmscon/pull/377
+* hw_cursor: Add thickness to the generated cursor image by @kdj0c in https://github.com/kmscon/kmscon/pull/379
+* Refactor for libseat by @kdj0c in https://github.com/kmscon/kmscon/pull/376
+* Refactor, reorganize the code in subdirectories by @kdj0c in https://github.com/kmscon/kmscon/pull/380
+* input: Add natural scrolling option to configuration by @mscaletjlb in https://github.com/kmscon/kmscon/pull/381
+* Uterm vt remove target by @kdj0c in https://github.com/kmscon/kmscon/pull/383
+* Update .gitignore by @kdj0c in https://github.com/kmscon/kmscon/pull/384
+* launch-gui: add a small delay before running the command. by @kdj0c in https://github.com/kmscon/kmscon/pull/385
+* Refactor: move video device handling to kmscon_seat. by @kdj0c in https://github.com/kmscon/kmscon/pull/386
+* seat: Fix missing monitor video data by @kdj0c in https://github.com/kmscon/kmscon/pull/390
+* Libseat vt by @kdj0c in https://github.com/kmscon/kmscon/pull/387
+* Add a terminfo file. by @kdj0c in https://github.com/kmscon/kmscon/pull/392
+* Remove listen mode, and --seats argument. by @kdj0c in https://github.com/kmscon/kmscon/pull/394
+* bbulk: Fix a glitch with double width glyph by @kdj0c in https://github.com/kmscon/kmscon/pull/396
+* terminal: change COLORTERM default to truecolor by @kdj0c in https://github.com/kmscon/kmscon/pull/398
+* Refactoring by @kdj0c in https://github.com/kmscon/kmscon/pull/395
+* Fix dpms off by @kdj0c in https://github.com/kmscon/kmscon/pull/399
+* terminal: Free selection buffer on exit by @kdj0c in https://github.com/kmscon/kmscon/pull/400
+
+## New Contributors
+* @awsms made their first contribution in https://github.com/kmscon/kmscon/pull/370
+* @mscaletjlb made their first contribution in https://github.com/kmscon/kmscon/pull/381
+* @WhyNotHugo made their first contribution in https://github.com/kmscon/kmscon/pull/387
+
 ## CHANGES with 9.3.5
 * shl_lru: fix build error on i686 by @kdj0c in https://github.com/kmscon/kmscon/pull/363
 * Fix leaks by @kdj0c in https://github.com/kmscon/kmscon/pull/364
