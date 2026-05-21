@@ -53,6 +53,7 @@ libudev_deps = dependency('libudev', version: '>=172')
 dl_deps = dependency('dl')
 threads_deps = dependency('threads')
 zlib_deps = dependency('zlib')
+zlib_deps_native = dependency('zlib', native: true)
 
 python = find_program('python3')
 

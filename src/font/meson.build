@@ -22,7 +22,7 @@ font_deps = declare_dependency(
 # Unifont Generator
 # This generates the unifont sources from raw hex-encoded font data.
 #
-genunifont = executable('genunifont', 'genunifont.c', dependencies: [zlib_deps], native: true)
+genunifont = executable('genunifont', 'genunifont.c', dependencies: [zlib_deps_native], native: true)
 
 unifont_bin = custom_target('unifont-bin',
   input: ['font_unifont_data.hex'],
