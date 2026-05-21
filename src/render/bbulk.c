@@ -386,7 +386,6 @@ static int bbulk_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, 
 	bool last_col = (posx == txt->cols - 1);
 	bool changed;
 
-
 	prev = &bb->prev[offset];
 
 	// left cell overflow on this cell.
@@ -435,7 +434,8 @@ static int bbulk_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, 
 
 	req = &bb->reqs[bb->req_len++];
 
-	if (glyph->double_width && !last_col && (txt->orientation == OR_LEFT || txt->orientation == OR_UPSIDE_DOWN))
+	if (glyph->double_width && !last_col &&
+	    (txt->orientation == OR_LEFT || txt->orientation == OR_UPSIDE_DOWN))
 		/*
 		 * In case of left or upside down orientation, we need to draw to the
 		 * next cell, as the glyph is already rotated, so start on the next cell
