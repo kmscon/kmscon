@@ -657,7 +657,7 @@ static void seat_dpms_timeout(struct ev_timer *timer, uint64_t num, void *data)
 	struct kmscon_display *d;
 	int ret;
 
-	if (!seat->conf->dpms_timeout)
+	if (!seat->conf->dpms_timeout || !seat->awake)
 		return;
 
 	log_debug("DPMS: blanking screen due to inactivity");
