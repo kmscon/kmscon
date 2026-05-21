@@ -31,6 +31,7 @@
 #include <string.h>
 #include <sys/signalfd.h>
 #include "conf.h"
+#include "dbus.h"
 #include "kmscon_conf.h"
 #include "kmscon_seat.h"
 #include "render/text.h"
@@ -38,6 +39,8 @@
 #include "shl/log.h"
 #include "shl/module.h"
 #include "video/video.h"
+
+#define LOG_SUBSYSTEM "kmscon"
 
 struct kmscon_app {
 	struct conf_ctx *conf_ctx;
@@ -171,6 +174,7 @@ int main(int argc, char **argv)
 		kmscon_conf_free(conf_ctx);
 		return 0;
 	}
+	dbus_set_xkb_env_from_locale();
 
 	kmscon_load_modules();
 	kmscon_font_register(&kmscon_font_8x16_ops);

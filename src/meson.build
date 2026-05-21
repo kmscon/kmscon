@@ -89,14 +89,30 @@ kmscon_srcs = [
   'kmscon_issue.c',
   'kmscon_main.c',
 ]
+kmscon_dep = [xkbcommon_deps,
+  libtsm_deps,
+  threads_deps,
+  dl_deps,
+  conf_deps,
+  shl_deps,
+  eloop_deps,
+  uterm_deps,
+  render_deps,
+  font_deps,
+]
+
 if enable_session_dummy
   kmscon_srcs += 'kmscon_dummy.c'
 endif
 if enable_session_terminal
   kmscon_srcs += 'kmscon_terminal.c'
 endif
+if enable_dbus
+  kmscon_srcs += 'dbus.c'
+  kmscon_dep += dbus_deps
+endif
 kmscon = executable('kmscon', kmscon_srcs,
-  dependencies: [xkbcommon_deps, libtsm_deps, threads_deps, dl_deps, conf_deps, shl_deps, eloop_deps, uterm_deps, render_deps, font_deps],
+  dependencies: kmscon_dep,
   export_dynamic: true,
   install: true,
   install_dir: libexecdir,

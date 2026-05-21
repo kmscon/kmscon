@@ -76,6 +76,7 @@ glesv2_deps = dependency('glesv2', disabler: true, required: require_glesv2)
 pango_deps = dependency('pangoft2', disabler: true, required: get_option('font_pango'))
 freetype_deps = dependency('freetype2', disabler: true, required: get_option('font_freetype'))
 fontconfig_deps = dependency('fontconfig', disabler: true, required: get_option('font_freetype'))
+dbus_deps = dependency('dbus-1', disabler: true, required: get_option('dbus'))
 xsltproc = find_program('xsltproc', native: true, disabler: true, required: get_option('docs'))
 check_deps = dependency('check', disabler: true, required: get_option('tests'))
 tic = find_program('tic', required: false)
@@ -105,6 +106,7 @@ foreach name, reqs : {
   'font_pango': [pango_deps],
   'session_dummy': [],
   'session_terminal': [],
+  'dbus': [dbus_deps],
 }
   found = true
   foreach req : reqs
