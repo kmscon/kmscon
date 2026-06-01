@@ -36,7 +36,8 @@
  * option using a colon-separated list.  Plain files are read directly;
  * directories are scanned for *.issue files in lexicographic order.
  */
-#define ISSUE_DEFAULT_PATH "/etc/issue:/etc/issue.d"
+#define ISSUE_DEFAULT_PATH                                                                         \
+	"/run/issue:/run/issue.d:/etc/issue:/etc/issue.d:/usr/lib/issue:/usr/lib/issue.d"
 
 void kmscon_issue_write(struct tsm_vte *vte, struct kmscon_pty *pty, const char *search_path);
 
