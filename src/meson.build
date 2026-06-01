@@ -115,5 +115,5 @@ kmscon = executable('kmscon', kmscon_srcs,
   dependencies: kmscon_dep,
   export_dynamic: true,
   install: true,
-  install_dir: libexecdir,
+  install_dir: bindir,
 )

@@ -198,10 +198,6 @@ else
   dirs_info.set('PAM_CFG', '')
 endif
 foreach filename, kwargs : {
-  'scripts/kmscon.in': {
-    'install_dir': bindir,
-    'install_mode': 'rwxr-xr-x',
-  },
   'scripts/kmscon-launch-gui.sh': {
     'install_dir': bindir,
     'install_mode': 'rwxr-xr-x',
