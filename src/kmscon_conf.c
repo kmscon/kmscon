@@ -34,6 +34,7 @@
 #include <xkbcommon/xkbcommon-keysyms.h>
 #include "conf.h"
 #include "kmscon_conf.h"
+#include "kmscon_issue.h"
 #include "shl/githead.h"
 #include "shl/log.h"
 #include "shl/misc.h"
@@ -85,7 +86,7 @@ static void print_help()
 		"\t                              Display issue files before the\n"
 		"\t                              login prompt. Use --no-issue to\n"
 		"\t                              let the login process handle it.\n"
-		"\t    --issue-path <path>     [/etc/issue:/etc/issue.d]\n"
+		"\t    --issue-path <path>     [" ISSUE_DEFAULT_PATH "]\n"
 		"\t                              Colon-separated list of issue\n"
 		"\t                              files and directories to read\n"
 		"\t-l, --login                 [/bin/login -p]\n"
@@ -732,7 +733,7 @@ int kmscon_conf_new(struct conf_ctx **out)
 
 		/* Terminal Options */
 		CONF_OPTION_BOOL(0, "issue", &conf->issue, true),
-		CONF_OPTION_STRING(0, "issue-path", &conf->issue_path, "/etc/issue:/etc/issue.d"),
+		CONF_OPTION_STRING(0, "issue-path", &conf->issue_path, ISSUE_DEFAULT_PATH),
 		CONF_OPTION(0, 'l', "login", &conf_login, aftercheck_login, NULL, file_login,
 			    &conf->login, false),
 		CONF_OPTION_STRING('t', "term", &conf->term, "kmscon"),

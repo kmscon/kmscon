@@ -29,6 +29,15 @@
 #include <libtsm.h>
 #include "pty.h"
 
+/*
+ * Default search path, matching agetty's default.
+ *
+ * Distros can override this with --issue-path or the issue-path config
+ * option using a colon-separated list.  Plain files are read directly;
+ * directories are scanned for *.issue files in lexicographic order.
+ */
+#define ISSUE_DEFAULT_PATH "/etc/issue:/etc/issue.d"
+
 void kmscon_issue_write(struct tsm_vte *vte, struct kmscon_pty *pty, const char *search_path);
 
 #endif /* KMSCON_ISSUE_H */

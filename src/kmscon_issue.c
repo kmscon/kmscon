@@ -36,16 +36,6 @@
 /* Cap total collected issue text to prevent runaway allocation. */
 #define ISSUE_MAX_SIZE (256u * 1024u)
 
-/*
- * Default search path, matching agetty's default:
- *   /etc/issue:/etc/issue.d
- *
- * Distros can override this with --issue-path or the issue-path config
- * option using a colon-separated list.  Plain files are read directly;
- * directories are scanned for *.issue files in lexicographic order.
- */
-#define ISSUE_DEFAULT_PATH "/etc/issue:/etc/issue.d"
-
 /* Color escape codes */
 // clang-format off
 #define UL_COLOR_RESET		"[0m"
