@@ -114,7 +114,7 @@ static int font_get_width(FT_Face face)
 {
 	FT_UInt glyph_index = FT_Get_Char_Index(face, 'M');
 
-	if (FT_Load_Glyph(face, glyph_index, FT_LOAD_DEFAULT))
+	if (FT_Load_Glyph(face, glyph_index, FT_LOAD_TARGET_LIGHT))
 		return -1;
 
 	if (FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL))
@@ -377,7 +377,7 @@ static struct kmscon_glyph *render_glyph(FT_Face face, FT_UInt index, const uint
 	if (!cwidth)
 		return NULL;
 
-	if (FT_Load_Glyph(face, index, FT_LOAD_NO_HINTING)) {
+	if (FT_Load_Glyph(face, index, FT_LOAD_TARGET_LIGHT)) {
 		log_err("Failed to load glyph\n");
 		return NULL;
 	}
