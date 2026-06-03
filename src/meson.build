@@ -88,6 +88,7 @@ kmscon_srcs = [
   'kmscon_conf.c',
   'kmscon_issue.c',
   'kmscon_main.c',
+  'kmscon_terminal.c',
 ]
 kmscon_dep = [xkbcommon_deps,
   libtsm_deps,
@@ -101,12 +102,6 @@ kmscon_dep = [xkbcommon_deps,
   font_deps,
 ]
 
-if enable_session_dummy
-  kmscon_srcs += 'kmscon_dummy.c'
-endif
-if enable_session_terminal
-  kmscon_srcs += 'kmscon_terminal.c'
-endif
 if enable_dbus
   kmscon_srcs += 'dbus.c'
   kmscon_dep += dbus_deps

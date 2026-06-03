@@ -79,8 +79,6 @@ struct kmscon_conf_t {
 	unsigned int session_max;
 	/* allow keyboard session control */
 	bool session_control;
-	/* run terminal session */
-	bool terminal_session;
 
 	/* Terminal Options */
 	/* display /etc/issue before login prompt */
@@ -145,8 +143,6 @@ struct kmscon_conf_t {
 	struct conf_grab *grab_session_next;
 	/* session-prev grab */
 	struct conf_grab *grab_session_prev;
-	/* session-dummy grab */
-	struct conf_grab *grab_session_dummy;
 	/* session-close grab */
 	struct conf_grab *grab_session_close;
 	/* terminal-new grab */

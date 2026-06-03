@@ -39,7 +39,6 @@
 #include "conf.h"
 #include "input/input.h"
 #include "kmscon_conf.h"
-#include "kmscon_dummy.h"
 #include "kmscon_seat.h"
 #include "kmscon_terminal.h"
 #include "shl/dlist.h"
@@ -111,7 +110,6 @@ struct kmscon_seat {
 	bool foreground;
 	struct kmscon_session *current_sess;
 	struct kmscon_session *scheduled_sess;
-	struct kmscon_session *dummy_sess;
 
 	unsigned int async_schedule;
 
@@ -410,16 +408,13 @@ static void seat_reschedule(struct kmscon_seat *seat)
 	shl_dlist_for_each_but_one(iter, start, &seat->sessions)
 	{
 		sess = shl_dlist_entry(iter, struct kmscon_session, list);
-		if (sess == seat->dummy_sess || !sess->enabled)
+		if (!sess->enabled)
 			continue;
 		seat->scheduled_sess = sess;
 		return;
 	}
 
-	if (seat->dummy_sess && seat->dummy_sess->enabled)
-		seat->scheduled_sess = seat->dummy_sess;
-	else
-		seat->scheduled_sess = NULL;
+	seat->scheduled_sess = NULL;
 }
 
 static bool seat_has_schedule(struct kmscon_seat *seat)
@@ -452,13 +447,11 @@ static void seat_next(struct kmscon_seat *seat)
 		return;
 
 	next = NULL;
-	if (!seat->current_sess && seat->dummy_sess && seat->dummy_sess->enabled)
-		next = seat->dummy_sess;
 
 	shl_dlist_for_each_but_one(iter, cur, &seat->sessions)
 	{
 		s = shl_dlist_entry(iter, struct kmscon_session, list);
-		if (!s->enabled || seat->dummy_sess == s)
+		if (!s->enabled)
 			continue;
 
 		next = s;
@@ -485,13 +478,10 @@ static void seat_prev(struct kmscon_seat *seat)
 		return;
 
 	prev = NULL;
-	if (!seat->current_sess && seat->dummy_sess && seat->dummy_sess->enabled)
-		prev = seat->dummy_sess;
-
 	shl_dlist_for_each_reverse_but_one(iter, cur, &seat->sessions)
 	{
 		s = shl_dlist_entry(iter, struct kmscon_session, list);
-		if (!s->enabled || seat->dummy_sess == s)
+		if (!s->enabled)
 			continue;
 
 		prev = s;
@@ -748,15 +738,7 @@ static void seat_input_event(struct input *input, struct input_key_event *ev, vo
 		seat_prev(seat);
 		return;
 	}
-	if (conf_grab_matches(seat->conf->grab_session_dummy, ev->mods, ev->num_syms,
-			      ev->keysyms)) {
-		ev->handled = true;
-		if (!seat->conf->session_control)
-			return;
-		seat->scheduled_sess = seat->dummy_sess;
-		seat_switch(seat);
-		return;
-	}
+
 	if (conf_grab_matches(seat->conf->grab_session_close, ev->mods, ev->num_syms,
 			      ev->keysyms)) {
 		ev->handled = true;
@@ -764,8 +746,6 @@ static void seat_input_event(struct input *input, struct input_key_event *ev, vo
 			return;
 		s = seat->current_sess;
 		if (!s)
-			return;
-		if (s == seat->dummy_sess)
 			return;
 
 		/* First time this is invoked on a session, we simply try
@@ -1312,25 +1292,13 @@ void kmscon_seat_startup(struct kmscon_seat *seat)
 	if (!seat)
 		return;
 
-	ret = kmscon_dummy_register(&s, seat);
-	if (ret == -EOPNOTSUPP) {
-		log_notice("dummy sessions not compiled in");
-	} else if (ret) {
-		log_error("cannot register dummy session: %d", ret);
-	} else {
-		seat->dummy_sess = s;
+	ret = kmscon_terminal_register(&s, seat, uterm_vt_get_num(seat->vt));
+	if (ret == -EOPNOTSUPP)
+		log_notice("terminal support not compiled in");
+	else if (ret)
+		log_error("cannot register terminal session");
+	else
 		kmscon_session_enable(s);
-	}
-
-	if (seat->conf->terminal_session) {
-		ret = kmscon_terminal_register(&s, seat, uterm_vt_get_num(seat->vt));
-		if (ret == -EOPNOTSUPP)
-			log_notice("terminal support not compiled in");
-		else if (ret)
-			log_error("cannot register terminal session");
-		else
-			kmscon_session_enable(s);
-	}
 
 	if (seat->conf->switchvt || uterm_vt_get_num(seat->vt) == 0)
 		uterm_vt_activate(seat->vt);
@@ -1450,8 +1418,6 @@ void kmscon_session_unregister(struct kmscon_session *sess)
 
 	seat = sess->seat;
 	sess->enabled = false;
-	if (seat->dummy_sess == sess)
-		seat->dummy_sess = NULL;
 	seat_reschedule(seat);
 
 	if (seat->current_sess == sess) {
@@ -1551,7 +1517,7 @@ void kmscon_session_enable(struct kmscon_session *sess)
 	log_debug("enable session %p", sess);
 	sess->enabled = true;
 	if (sess->seat &&
-	    (!sess->seat->current_sess || sess->seat->current_sess == sess->seat->dummy_sess)) {
+	    (!sess->seat->current_sess)) {
 		sess->seat->scheduled_sess = sess;
 		if (seat_has_schedule(sess->seat))
 			seat_switch(sess->seat);

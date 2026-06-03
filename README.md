@@ -82,8 +82,6 @@ explicitly enable it via command line:
 |`font_freetype`| `auto` | Freetype2 based scalable font renderer, also handle bitmap fonts |
 |`font_pango`| `auto` | Pango based scalable font renderer |
 |`renderer_gltex`| `auto` | OpenGLESv2 accelerated renderer |
-|`session_dummy`| `auto` | Dummy fallback session |
-|`session_terminal`| `auto` | Terminal-emulator sessions |
 |`docs`|`auto`| Build manpages and documentation |
 
 

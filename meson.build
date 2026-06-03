@@ -91,7 +91,6 @@ sections = {
   'video': 'Video Backends',
   'font': 'Font Backends',
   'renderer': 'Renderers',
-  'session': 'Session Types',
 }
 config = configuration_data()
 # Note: keep this in sync with the dependencies above
@@ -104,8 +103,6 @@ foreach name, reqs : {
   'font_unifont': [],
   'font_freetype': [freetype_deps, fontconfig_deps],
   'font_pango': [pango_deps],
-  'session_dummy': [],
-  'session_terminal': [],
   'dbus': [dbus_deps],
 }
   found = true

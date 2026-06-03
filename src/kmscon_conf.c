@@ -79,7 +79,6 @@ static void print_help()
 		"Session Options:\n"
 		"\t    --session-max <max>         [50]  Maximum number of sessions\n"
 		"\t    --session-control           [off] Allow keyboard session-control\n"
-		"\t    --terminal-session          [on]  Enable terminal session\n"
 		"\n"
 		"Terminal Options:\n"
 		"\t    --issue                 [on]\n"
@@ -149,8 +148,6 @@ static void print_help()
 		"\t                                  Switch to the next session\n"
 		"\t    --grab-session-prev <grab>  [<Ctrl><Logo>Left]\n"
 		"\t                                  Switch to the previous session\n"
-		"\t    --grab-session-dummy <grab> [<Ctrl><Logo>Escape]\n"
-		"\t                                  Switch to a dummy session\n"
 		"\t    --grab-session-close <grab> [<Ctrl><Logo>BackSpace]\n"
 		"\t                                  Close current session\n"
 		"\t    --grab-terminal-new <grab>  [<Ctrl><Logo>Return]\n"
@@ -660,9 +657,6 @@ static struct conf_grab def_grab_session_next =
 static struct conf_grab def_grab_session_prev =
 	CONF_SINGLE_GRAB(SHL_CONTROL_MASK | SHL_LOGO_MASK, XKB_KEY_Left);
 
-static struct conf_grab def_grab_session_dummy =
-	CONF_SINGLE_GRAB(SHL_CONTROL_MASK | SHL_LOGO_MASK, XKB_KEY_Escape);
-
 static struct conf_grab def_grab_session_close =
 	CONF_SINGLE_GRAB(SHL_CONTROL_MASK | SHL_LOGO_MASK, XKB_KEY_BackSpace);
 
@@ -729,7 +723,6 @@ int kmscon_conf_new(struct conf_ctx **out)
 		/* Session Options */
 		CONF_OPTION_UINT(0, "session-max", &conf->session_max, 50),
 		CONF_OPTION_BOOL(0, "session-control", &conf->session_control, false),
-		CONF_OPTION_BOOL(0, "terminal-session", &conf->terminal_session, true),
 
 		/* Terminal Options */
 		CONF_OPTION_BOOL(0, "issue", &conf->issue, true),
@@ -768,8 +761,6 @@ int kmscon_conf_new(struct conf_ctx **out)
 				 &def_grab_session_next),
 		CONF_OPTION_GRAB(0, "grab-session-prev", &conf->grab_session_prev,
 				 &def_grab_session_prev),
-		CONF_OPTION_GRAB(0, "grab-session-dummy", &conf->grab_session_dummy,
-				 &def_grab_session_dummy),
 		CONF_OPTION_GRAB(0, "grab-session-close", &conf->grab_session_close,
 				 &def_grab_session_close),
 		CONF_OPTION_GRAB(0, "grab-terminal-new", &conf->grab_terminal_new,

@@ -187,14 +187,6 @@
                 sessions via keyboard input. (default: off)</para>
         </listitem>
       </varlistentry>
-
-      <varlistentry>
-        <term><option>--terminal-session</option></term>
-        <listitem>
-          <para>Start a terminal session after setup is done.
-                (default: on)</para>
-        </listitem>
-      </varlistentry>
     </variablelist>
 
     <para>Terminal Options:</para>
@@ -460,14 +452,6 @@
         <listitem>
           <para>Switch to the previous session.
                 (default: &lt;Ctrl&gt;&lt;Logo&gt;Left)</para>
-        </listitem>
-      </varlistentry>
-
-      <varlistentry>
-        <term><option>--grab-session-dummy {grab}</option></term>
-        <listitem>
-          <para>Switch to a dummy session (blank screen).
-                (default: &lt;Ctrl&gt;&lt;Logo&gt;Escape)</para>
         </listitem>
       </varlistentry>
 
@@ -886,16 +870,11 @@
   <refsect1>
     <title>Sessions</title>
     <para>If KMSCON is active on a seat, the internal session-manager is woken
-          up. At most times, only the terminal-session is active, but KMSCON can
-          also support any other session type. You can switch between sessions
-          with keyboard-shortcuts and you can create/destroy sessions during
-          runtime.</para>
+          up. At most times, only the terminal-session is active. You can switch
+          between sessions with keyboard-shortcuts and you can create/destroy
+          terminal sessions during runtime.</para>
 
-    <para>Dummy sessions simply show a black screen and are used if no other
-          session is available. Otherwise, dummy sessions are hidden from the
-          user so they cannot switch to it.</para>
-
-    <para>Terminal sessions provide a terminal emulator. They are the main
+    <para>Terminal sessions provide a terminal emulator. They are the only
           session type and provide all the terminal-emulation
           functionality.</para>
   </refsect1>

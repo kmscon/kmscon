@@ -162,13 +162,6 @@ font-name=Ubuntu Mono
       </varlistentry>
 
       <varlistentry>
-        <term><option>terminal-session</option></term>
-        <listitem>
-          <para>Enable terminal session. (default: on)</para>
-        </listitem>
-      </varlistentry>
-
-      <varlistentry>
         <term><option>login</option></term>
         <listitem>
           <para>Start the given login process instead of the default process; all arguments following '--' will be be parsed as argv to this process. No more options after '--' will be parsed so use it at the end of the argument string. (default: /bin/login -p)</para>
@@ -365,13 +358,6 @@ font-name=Ubuntu Mono
         <term><option>grab-session-prev</option></term>
         <listitem>
           <para>Switch to previous session. (default: &lt;Ctrl&gt;&lt;Logo&gt;Left)</para>
-        </listitem>
-      </varlistentry>
-
-      <varlistentry>
-        <term><option>grab-session-dummy</option></term>
-        <listitem>
-          <para>Switch to dummy session. (default: &lt;Ctrl&gt;&lt;Logo&gt;Escape)</para>
         </listitem>
       </varlistentry>
 
