@@ -85,6 +85,7 @@ explicitly enable it via command line:
 |`session_dummy`| `auto` | Dummy fallback session |
 |`session_terminal`| `auto` | Terminal-emulator sessions |
 |`docs`|`auto`| Build manpages and documentation |
+|`term`|`kmscon`| Default $TERM value |
 
 
 ## Running

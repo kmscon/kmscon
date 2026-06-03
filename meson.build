@@ -126,6 +126,9 @@ config.set('BUILD_ENABLE_DEBUG', get_option('extra_debug'))
 config.set_quoted('BUILD_MODULE_DIR', prefix / moduledir)
 config.set_quoted('BUILD_CONFIG_DIR', prefix / sysconfdir)
 
+# Default $TERM value
+config.set_quoted('BUILD_DEFAULT_TERM', get_option('term'))
+
 # Make all files include "config.h" by default. This shouldn't cause any
 # problems and we cannot forget to include it anymore.
 config_h = configure_file(configuration: config, output: 'config.h')

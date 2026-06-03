@@ -96,7 +96,7 @@ static void print_help()
 		"\t                              argv to this process. No more options\n"
 		"\t                              after '--' will be parsed so use it at\n"
 		"\t                              the end of the argument string\n"
-		"\t-t, --term <TERM>           [kmscon]\n"
+		"\t-t, --term <TERM>           [" BUILD_DEFAULT_TERM "]\n"
 		"\t                              Value of the TERM environment variable\n"
 		"\t                              for the child process\n"
 		"\t    --reset-env             [on]\n"
@@ -736,7 +736,7 @@ int kmscon_conf_new(struct conf_ctx **out)
 		CONF_OPTION_STRING(0, "issue-path", &conf->issue_path, ISSUE_DEFAULT_PATH),
 		CONF_OPTION(0, 'l', "login", &conf_login, aftercheck_login, NULL, file_login,
 			    &conf->login, false),
-		CONF_OPTION_STRING('t', "term", &conf->term, "kmscon"),
+		CONF_OPTION_STRING('t', "term", &conf->term, BUILD_DEFAULT_TERM),
 		CONF_OPTION_BOOL(0, "reset-env", &conf->reset_env, true),
 		CONF_OPTION_BOOL(0, "backspace-delete", &conf->backspace_delete, true),
 		CONF_OPTION_UINT(0, "sb-size", &conf->sb_size, 1000),
