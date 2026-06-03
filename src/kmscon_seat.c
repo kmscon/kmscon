@@ -1216,30 +1216,6 @@ void kmscon_seat_startup(struct kmscon_seat *seat)
 	uterm_monitor_scan(seat->mon, seat->name);
 }
 
-const char *kmscon_seat_get_name(struct kmscon_seat *seat)
-{
-	if (!seat)
-		return NULL;
-
-	return seat->name;
-}
-
-struct input *kmscon_seat_get_input(struct kmscon_seat *seat)
-{
-	if (!seat)
-		return NULL;
-
-	return seat->input;
-}
-
-struct ev_eloop *kmscon_seat_get_eloop(struct kmscon_seat *seat)
-{
-	if (!seat)
-		return NULL;
-
-	return seat->eloop;
-}
-
 struct conf_ctx *kmscon_seat_get_conf(struct kmscon_seat *seat)
 {
 	if (!seat)
@@ -1274,7 +1250,8 @@ static struct kmscon_session *kmscon_seat_new_session(struct kmscon_seat *seat)
 	memset(sess, 0, sizeof(*sess));
 	sess->seat = seat;
 	sess->foreground = true;
-	sess->term = terminal_new(seat, sess, uterm_vt_get_num(seat->vt));
+	sess->term = terminal_new(sess, uterm_vt_get_num(seat->vt), seat->conf_ctx, seat->eloop,
+				  seat->input, seat->name);
 	if (!sess->term) {
 		log_error("cannot create terminal for new session on seat %s", seat->name);
 		free(sess);

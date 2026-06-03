@@ -1149,14 +1149,12 @@ static void write_event(struct tsm_vte *vte, const char *u8, size_t len, void *d
 	kmscon_pty_write(term->pty, u8, len);
 }
 
-struct kmscon_terminal *terminal_new(struct kmscon_seat *seat, struct kmscon_session *session,
-				     unsigned int vtnr)
+struct kmscon_terminal *terminal_new(struct kmscon_session *session, unsigned int vtnr,
+				     struct conf_ctx *conf_ctx, struct ev_eloop *eloop,
+				     struct input *input, const char *seat_name)
 {
 	struct kmscon_terminal *term;
 	int ret;
-
-	if (!seat)
-		return NULL;
 
 	term = malloc(sizeof(*term));
 	if (!term)
@@ -1165,11 +1163,11 @@ struct kmscon_terminal *terminal_new(struct kmscon_seat *seat, struct kmscon_ses
 	memset(term, 0, sizeof(*term));
 	term->ref = 1;
 	term->session = session;
-	term->eloop = kmscon_seat_get_eloop(seat);
-	term->input = kmscon_seat_get_input(seat);
+	term->eloop = eloop;
+	term->input = input;
 	shl_dlist_init(&term->screens);
 
-	term->conf_ctx = kmscon_seat_get_conf(seat);
+	term->conf_ctx = conf_ctx;
 	term->conf = conf_ctx_get_mem(term->conf_ctx);
 
 	strncpy(term->font_attr.name, term->conf->font_name, KMSCON_FONT_MAX_NAME - 1);
@@ -1208,7 +1206,7 @@ struct kmscon_terminal *terminal_new(struct kmscon_seat *seat, struct kmscon_ses
 		goto err_font;
 
 	ret = kmscon_pty_set_conf(term->pty, term->conf->term, "truecolor", term->conf->argv,
-				  kmscon_seat_get_name(seat), vtnr, term->conf->reset_env,
+				  seat_name, vtnr, term->conf->reset_env,
 				  term->conf->backspace_delete);
 	if (ret)
 		goto err_pty;

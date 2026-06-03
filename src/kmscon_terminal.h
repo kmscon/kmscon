@@ -33,14 +33,16 @@
 #ifndef KMSCON_TERMINAL_H
 #define KMSCON_TERMINAL_H
 
-#include "kmscon_seat.h"
-#include "video/video.h"
-
+struct conf_ctx;
+struct display;
+struct ev_eloop;
 struct kmscon_terminal;
 struct kmscon_session;
+struct input;
 
-struct kmscon_terminal *terminal_new(struct kmscon_seat *seat, struct kmscon_session *session,
-				     unsigned int vtnr);
+struct kmscon_terminal *terminal_new(struct kmscon_session *session, unsigned int vtnr,
+				     struct conf_ctx *conf_ctx, struct ev_eloop *eloop,
+				     struct input *input, const char *seat_name);
 void terminal_destroy(struct kmscon_terminal *term);
 int terminal_add_display(struct kmscon_terminal *term, struct display *disp);
 void terminal_rm_display(struct kmscon_terminal *term, struct display *disp);
