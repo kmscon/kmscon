@@ -645,7 +645,7 @@ static void rotate_ccw_all(struct kmscon_terminal *term)
 	update_pointer_max_all(term);
 }
 
-static int add_display(struct kmscon_terminal *term, struct display *disp)
+int terminal_add_display(struct kmscon_terminal *term, struct display *disp)
 {
 	struct shl_dlist *iter;
 	struct screen *scr;
@@ -741,7 +741,7 @@ static void free_screen(struct screen *scr, bool update)
 	terminal_update_size_notify(term);
 }
 
-static void rm_display(struct kmscon_terminal *term, struct display *disp)
+void terminal_rm_display(struct kmscon_terminal *term, struct display *disp)
 {
 	struct shl_dlist *iter;
 	struct screen *scr;
@@ -1080,7 +1080,30 @@ static void terminal_close(struct kmscon_terminal *term)
 	term->opened = false;
 }
 
-static void terminal_destroy(struct kmscon_terminal *term)
+void terminal_refresh_displays(struct kmscon_terminal *term)
+{
+	if (term->pointer.visible)
+		hw_cursor_show(term, term->pointer.x, term->pointer.y);
+	redraw_all_text(term);
+}
+
+void terminal_activate(struct kmscon_terminal *term)
+{
+	term->awake = true;
+	if (!term->opened)
+		terminal_open(term);
+	if (term->pointer.visible)
+		hw_cursor_show(term, term->pointer.x, term->pointer.y);
+	redraw_all_text(term);
+}
+
+void terminal_deactivate(struct kmscon_terminal *term)
+{
+	term->awake = false;
+	hw_cursor_hide(term);
+}
+
+void terminal_destroy(struct kmscon_terminal *term)
 {
 	log_debug("free terminal object %p", term);
 
@@ -1097,43 +1120,6 @@ static void terminal_destroy(struct kmscon_terminal *term)
 	ev_eloop_unref(term->eloop);
 	free_selection(term);
 	free(term);
-}
-
-static int session_event(struct kmscon_session *session, struct kmscon_session_event *ev,
-			 void *data)
-{
-	struct kmscon_terminal *term = data;
-
-	switch (ev->type) {
-	case KMSCON_SESSION_DISPLAY_NEW:
-		add_display(term, ev->disp);
-		break;
-	case KMSCON_SESSION_DISPLAY_GONE:
-		rm_display(term, ev->disp);
-		break;
-	case KMSCON_SESSION_DISPLAY_REFRESH:
-		if (term->pointer.visible)
-			hw_cursor_show(term, term->pointer.x, term->pointer.y);
-		redraw_all_text(term);
-		break;
-	case KMSCON_SESSION_ACTIVATE:
-		term->awake = true;
-		if (!term->opened)
-			terminal_open(term);
-		if (term->pointer.visible)
-			hw_cursor_show(term, term->pointer.x, term->pointer.y);
-		redraw_all_text(term);
-		break;
-	case KMSCON_SESSION_DEACTIVATE:
-		term->awake = false;
-		hw_cursor_hide(term);
-		break;
-	case KMSCON_SESSION_UNREGISTER:
-		terminal_destroy(term);
-		break;
-	}
-
-	return 0;
 }
 
 static void pty_input(struct kmscon_pty *pty, const char *u8, size_t len, void *data)
@@ -1163,21 +1149,22 @@ static void write_event(struct tsm_vte *vte, const char *u8, size_t len, void *d
 	kmscon_pty_write(term->pty, u8, len);
 }
 
-int kmscon_terminal_register(struct kmscon_session **out, struct kmscon_seat *seat,
-			     unsigned int vtnr)
+struct kmscon_terminal *terminal_new(struct kmscon_seat *seat, struct kmscon_session *session,
+				     unsigned int vtnr)
 {
 	struct kmscon_terminal *term;
 	int ret;
 
-	if (!out || !seat)
-		return -EINVAL;
+	if (!seat)
+		return NULL;
 
 	term = malloc(sizeof(*term));
 	if (!term)
-		return -ENOMEM;
+		return NULL;
 
 	memset(term, 0, sizeof(*term));
 	term->ref = 1;
+	term->session = session;
 	term->eloop = kmscon_seat_get_eloop(seat);
 	term->input = kmscon_seat_get_input(seat);
 	shl_dlist_init(&term->screens);
@@ -1241,20 +1228,11 @@ int kmscon_terminal_register(struct kmscon_session **out, struct kmscon_seat *se
 			goto err_input;
 	}
 
-	ret = kmscon_seat_register_session(seat, &term->session, session_event, term);
-	if (ret) {
-		log_error("cannot register session for terminal: %d", ret);
-		goto err_pointer;
-	}
-
 	ev_eloop_ref(term->eloop);
 	input_ref(term->input);
-	*out = term->session;
 	log_debug("new terminal object %p", term);
-	return 0;
+	return term;
 
-err_pointer:
-	input_unregister_pointer_cb(term->input, pointer_event, term);
 err_input:
 	input_unregister_key_cb(term->input, input_event, term);
 err_ptyfd:
@@ -1269,5 +1247,5 @@ err_con:
 	tsm_screen_unref(term->console);
 err_free:
 	free(term);
-	return ret;
+	return NULL;
 }

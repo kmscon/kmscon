@@ -34,8 +34,18 @@
 #define KMSCON_TERMINAL_H
 
 #include "kmscon_seat.h"
+#include "video/video.h"
 
-int kmscon_terminal_register(struct kmscon_session **out, struct kmscon_seat *seat,
-			     unsigned int vtnr);
+struct kmscon_terminal;
+struct kmscon_session;
+
+struct kmscon_terminal *terminal_new(struct kmscon_seat *seat, struct kmscon_session *session,
+				     unsigned int vtnr);
+void terminal_destroy(struct kmscon_terminal *term);
+int terminal_add_display(struct kmscon_terminal *term, struct display *disp);
+void terminal_rm_display(struct kmscon_terminal *term, struct display *disp);
+void terminal_refresh_displays(struct kmscon_terminal *term);
+void terminal_activate(struct kmscon_terminal *term);
+void terminal_deactivate(struct kmscon_terminal *term);
 
 #endif /* KMSCON_TERMINAL_H */

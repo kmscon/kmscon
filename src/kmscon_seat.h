@@ -33,14 +33,10 @@
 #define KMSCON_SEAT_H
 
 #include <stdbool.h>
-#include <stdlib.h>
 #include "conf.h"
 #include "input/input.h"
 #include "kmscon_conf.h"
 #include "shl/eloop.h"
-#include "uterm_monitor.h"
-#include "uterm_vt.h"
-#include "video/video.h"
 
 struct kmscon_seat;
 struct kmscon_session;
@@ -53,23 +49,6 @@ enum kmscon_seat_event {
 
 typedef int (*kmscon_seat_cb_t)(struct kmscon_seat *seat, unsigned int event, void *data);
 
-enum kmscon_session_event_type {
-	KMSCON_SESSION_DISPLAY_NEW,
-	KMSCON_SESSION_DISPLAY_GONE,
-	KMSCON_SESSION_DISPLAY_REFRESH,
-	KMSCON_SESSION_ACTIVATE,
-	KMSCON_SESSION_DEACTIVATE,
-	KMSCON_SESSION_UNREGISTER,
-};
-
-struct kmscon_session_event {
-	unsigned int type;
-	struct display *disp;
-};
-
-typedef int (*kmscon_session_cb_t)(struct kmscon_session *session,
-				   struct kmscon_session_event *event, void *data);
-
 int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf,
 		    struct kmscon_conf_t *conf, struct ev_eloop *eloop, kmscon_seat_cb_t cb,
 		    void *data);
@@ -81,26 +60,12 @@ struct input *kmscon_seat_get_input(struct kmscon_seat *seat);
 struct ev_eloop *kmscon_seat_get_eloop(struct kmscon_seat *seat);
 struct conf_ctx *kmscon_seat_get_conf(struct kmscon_seat *seat);
 
-int kmscon_seat_register_session(struct kmscon_seat *seat, struct kmscon_session **out,
-				 kmscon_session_cb_t cb, void *data);
-
-void kmscon_session_ref(struct kmscon_session *sess);
-void kmscon_session_unref(struct kmscon_session *sess);
-void kmscon_session_unregister(struct kmscon_session *sess);
-bool kmscon_session_is_registered(struct kmscon_session *sess);
-
-bool kmscon_session_is_active(struct kmscon_session *sess);
 int kmscon_session_set_foreground(struct kmscon_session *sess);
 int kmscon_session_set_background(struct kmscon_session *sess);
 bool kmscon_session_get_foreground(struct kmscon_session *sess);
 
-void kmscon_session_enable(struct kmscon_session *sess);
-void kmscon_session_disable(struct kmscon_session *sess);
-bool kmscon_session_is_enabled(struct kmscon_session *sess);
 void kmscon_session_bell(struct kmscon_session *sess);
 void kmscon_session_set_leds(struct kmscon_session *sess, unsigned int scroll_lock,
 			     unsigned int num_lock, unsigned int caps_lock);
-
-void kmscon_session_notify_deactivated(struct kmscon_session *sess);
 
 #endif /* KMSCON_SEAT_H */
