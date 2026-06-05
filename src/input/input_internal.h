@@ -141,9 +141,8 @@ static inline bool input_bit_is_set(const unsigned long *array, int bit)
 }
 
 int uxkb_layout_init(struct input *input, const char *model, const char *layout,
-		     const char *variant, const char *options, const char *keymap);
-void uxkb_compose_table_init(struct input *input, const char *compose_file, size_t compose_file_len,
-			     const char *locale);
+		     const char *variant, const char *options, const char *keymap_file);
+void uxkb_compose_table_init(struct input *input, const char *compose_file, const char *locale);
 void uxkb_layout_destroy(struct input *input);
 void uxkb_compose_table_destroy(struct input *input);
 

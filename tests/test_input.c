@@ -104,25 +104,7 @@ static void input_arrived(struct input *input, struct input_key_event *ev, void 
 
 static void setup_input(struct uterm_monitor *mon)
 {
-	char *keymap, *compose_file;
-	size_t compose_file_len;
 	int ret;
-
-	keymap = NULL;
-	if (input_conf.xkb_keymap && *input_conf.xkb_keymap) {
-		ret = shl_read_file(input_conf.xkb_keymap, &keymap, NULL);
-		if (ret)
-			log_error("cannot read keymap file %s: %d", input_conf.xkb_keymap, ret);
-	}
-
-	compose_file = NULL;
-	compose_file_len = 0;
-	if (input_conf.xkb_compose_file && *input_conf.xkb_compose_file) {
-		ret = shl_read_file(input_conf.xkb_compose_file, &compose_file, &compose_file_len);
-		if (ret)
-			log_error("cannot read compose file %s: %d", input_conf.xkb_compose_file,
-				  ret);
-	}
 
 	ret = input_new(&input, eloop);
 	if (ret)
@@ -133,7 +115,7 @@ static void setup_input(struct uterm_monitor *mon)
 	if (ret)
 		return;
 
-	input_set_compose(input, input_conf.locale, compose_file, compose_file_len);
+	input_set_compose(input, input_conf.locale, input_conf.xkb_compose_file);
 	input_set_conf(input, 250, 50, true);
 	ret = input_register_key_cb(input, input_arrived, NULL);
 	if (ret)

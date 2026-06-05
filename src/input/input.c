@@ -510,10 +510,9 @@ int input_set_keymap(struct input *input, const char *model, const char *layout,
 }
 
 SHL_EXPORT
-void input_set_compose(struct input *input, const char *locale, const char *compose_file,
-		       size_t compose_file_len)
+void input_set_compose(struct input *input, const char *locale, const char *compose_file)
 {
-	uxkb_compose_table_init(input, compose_file, compose_file_len, locale);
+	uxkb_compose_table_init(input, compose_file, locale);
 }
 
 SHL_EXPORT

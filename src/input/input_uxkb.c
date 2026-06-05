@@ -69,8 +69,29 @@ static void uxkb_log(struct xkb_context *context, enum xkb_log_level level, cons
 	log_submit(LOG_DEFAULT, sev, format, args);
 }
 
+static struct xkb_keymap *uxkb_layout_from_file(struct input *input, const char *file)
+{
+	struct xkb_keymap *keymap;
+	FILE *keymap_file;
+
+	keymap_file = fopen(file, "r");
+	if (!keymap_file) {
+		log_error("cannot open keymap file %s", file);
+		return NULL;
+	}
+
+	keymap = xkb_keymap_new_from_file(input->ctx, keymap_file, XKB_KEYMAP_FORMAT_TEXT_V1,
+					  XKB_KEYMAP_COMPILE_NO_FLAGS);
+	fclose(keymap_file);
+	if (!keymap) {
+		log_error("cannot create keymap from file %s", file);
+		return NULL;
+	}
+	return keymap;
+}
+
 int uxkb_layout_init(struct input *input, const char *model, const char *layout,
-		     const char *variant, const char *options, const char *keymap)
+		     const char *variant, const char *options, const char *keymap_file)
 {
 	int ret = 0;
 	struct xkb_rule_names rmlvo = {
@@ -96,19 +117,12 @@ int uxkb_layout_init(struct input *input, const char *model, const char *layout,
 	xkb_context_set_log_fn(input->ctx, uxkb_log);
 
 	/* If a complete keymap file was given, first try that. */
-	if (keymap && *keymap) {
-		input->keymap = xkb_keymap_new_from_string(input->ctx, keymap,
-							   XKB_KEYMAP_FORMAT_TEXT_V1, 0);
-		if (input->keymap) {
-			log_debug("new keyboard description from memory");
-		} else {
-			log_warn("cannot parse keymap, reverting to rmlvo");
-		}
-	}
+	if (keymap_file)
+		input->keymap = uxkb_layout_from_file(input, keymap_file);
 
-	if (!input->keymap) {
-		input->keymap = xkb_keymap_new_from_names(input->ctx, &rmlvo, 0);
-	}
+	if (!input->keymap)
+		input->keymap =
+			xkb_keymap_new_from_names(input->ctx, &rmlvo, XKB_KEYMAP_COMPILE_NO_FLAGS);
 
 	if (!input->keymap) {
 		log_warn("failed to create keymap (%s, %s, %s, %s), "
@@ -145,16 +159,23 @@ err_ctx:
 	return ret;
 }
 
-void uxkb_compose_table_init(struct input *input, const char *compose_file, size_t compose_file_len,
-			     const char *locale)
+void uxkb_compose_table_init(struct input *input, const char *compose_file, const char *locale)
 {
-	if (compose_file && *compose_file) {
-		input->compose_table = xkb_compose_table_new_from_buffer(
-			input->ctx, compose_file, compose_file_len, locale,
-			XKB_COMPOSE_FORMAT_TEXT_V1, 0);
+	FILE *compose;
 
+	if (compose_file) {
+		compose = fopen(compose_file, "r");
+		if (!compose) {
+			log_error("cannot open compose file %s", compose_file);
+			return;
+		}
+		input->compose_table = xkb_compose_table_new_from_file(
+			input->ctx, compose, locale, XKB_COMPOSE_FORMAT_TEXT_V1,
+			XKB_COMPOSE_COMPILE_NO_FLAGS);
+
+		fclose(compose);
 		if (input->compose_table) {
-			log_debug("new compose table from memory");
+			log_debug("new compose table from file %s", compose_file);
 		} else {
 			log_warn("cannot parse compose table, "
 				 "reverting to default");
@@ -162,7 +183,8 @@ void uxkb_compose_table_init(struct input *input, const char *compose_file, size
 	}
 
 	if (!input->compose_table) {
-		input->compose_table = xkb_compose_table_new_from_locale(input->ctx, locale, 0);
+		input->compose_table = xkb_compose_table_new_from_locale(
+			input->ctx, locale, XKB_COMPOSE_COMPILE_NO_FLAGS);
 		if (!input->compose_table) {
 			log_warn("failed to create XKB default compose "
 				 "table, disabling compose support");

@@ -593,53 +593,6 @@ static const char *find_locale(void)
 	return locale;
 }
 
-static int kmscon_seat_set_keymap(struct kmscon_seat *seat)
-{
-
-	char *keymap;
-	int ret;
-
-	/* TODO: The XKB-API currently requires zero-terminated strings as
-	 * keymap input. Hence, we have to read it in instead of using mmap().
-	 * We should fix this upstream! */
-	keymap = NULL;
-	if (seat->conf->xkb_keymap && *seat->conf->xkb_keymap) {
-		ret = shl_read_file(seat->conf->xkb_keymap, &keymap, NULL);
-		if (ret)
-			log_error("cannot read keymap file %s: %d", seat->conf->xkb_keymap, ret);
-	}
-
-	ret = input_set_keymap(seat->input, seat->conf->xkb_model, seat->conf->xkb_layout,
-			       seat->conf->xkb_variant, seat->conf->xkb_options, keymap);
-	if (ret)
-		log_error("cannot set keymap: %d", ret);
-
-	free(keymap);
-	return ret;
-}
-
-static void kmscon_seat_set_compose(struct kmscon_seat *seat)
-{
-	const char *locale;
-	char *compose_file;
-	size_t compose_file_len;
-	int ret;
-
-	locale = find_locale();
-
-	compose_file = NULL;
-	compose_file_len = 0;
-	if (seat->conf->xkb_compose_file && *seat->conf->xkb_compose_file) {
-		ret = shl_read_file(seat->conf->xkb_compose_file, &compose_file, &compose_file_len);
-		if (ret) {
-			log_error("cannot read compose file %s: %d", seat->conf->xkb_compose_file,
-				  ret);
-			return;
-		}
-	}
-	input_set_compose(seat->input, locale, compose_file, compose_file_len);
-}
-
 int kmscon_seat_update_xkb_layout(struct kmscon_seat *seat, const char *model, const char *layout,
 				  const char *variant, const char *options)
 {
@@ -651,7 +604,7 @@ int kmscon_seat_update_xkb_layout(struct kmscon_seat *seat, const char *model, c
 		return ret;
 	}
 	/* Compose table is lost when updating the keymap, so we need to set it again */
-	kmscon_seat_set_compose(seat);
+	input_set_compose(seat->input, find_locale(), seat->conf->xkb_compose_file);
 	return ret;
 }
 
@@ -780,11 +733,13 @@ int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf,
 	input_set_conf(seat->input, seat->conf->xkb_repeat_delay, seat->conf->xkb_repeat_rate,
 		       seat->conf->mouse);
 
-	ret = kmscon_seat_set_keymap(seat);
+	ret = input_set_keymap(seat->input, seat->conf->xkb_model, seat->conf->xkb_layout,
+			       seat->conf->xkb_variant, seat->conf->xkb_options,
+			       seat->conf->xkb_keymap);
 	if (ret)
 		goto err_conf;
 
-	kmscon_seat_set_compose(seat);
+	input_set_compose(seat->input, find_locale(), seat->conf->xkb_compose_file);
 
 	ret = uterm_monitor_new(&seat->mon, seat->eloop, &seat_monitor_cb, seat);
 	if (ret) {

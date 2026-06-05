@@ -93,8 +93,7 @@ typedef void (*uterm_close_cb)(int fd, int fd_id, void *data);
 int input_new(struct input **out, struct ev_eloop *eloop);
 int input_set_keymap(struct input *input, const char *model, const char *layout,
 		     const char *variant, const char *options, const char *keymap);
-void input_set_compose(struct input *input, const char *locale, const char *compose_file,
-		       size_t compose_file_len);
+void input_set_compose(struct input *input, const char *locale, const char *compose_file);
 int input_update_keymap(struct input *input, const char *model, const char *layout,
 			const char *variant, const char *options);
 void input_set_conf(struct input *input, unsigned int repeat_delay, unsigned int repeat_rate,
