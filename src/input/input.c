@@ -506,18 +506,6 @@ SHL_EXPORT
 int input_set_keymap(struct input *input, const char *model, const char *layout,
 		     const char *variant, const char *options, const char *keymap)
 {
-	/* xkbcommon won't use the XKB_DEFAULT_OPTIONS environment
-	 * variable if options is an empty string.
-	 * So if all variables are empty, use NULL instead.
-	 */
-	if (model && *model == 0 && layout && *layout == 0 && variant && *variant == 0 && options &&
-	    *options == 0) {
-		model = NULL;
-		layout = NULL;
-		variant = NULL;
-		options = NULL;
-	}
-
 	return uxkb_layout_init(input, model, layout, variant, options, keymap);
 }
 
@@ -534,18 +522,6 @@ int input_update_keymap(struct input *input, const char *model, const char *layo
 {
 	struct shl_dlist *iter;
 	struct input_dev *dev;
-
-	/* xkbcommon won't use the XKB_DEFAULT_OPTIONS environment
-	 * variable if options is an empty string.
-	 * So if all variables are empty, use NULL instead.
-	 */
-	if (model && *model == 0 && layout && *layout == 0 && variant && *variant == 0 && options &&
-	    *options == 0) {
-		model = NULL;
-		layout = NULL;
-		variant = NULL;
-		options = NULL;
-	}
 
 	if (input->ctx) {
 		shl_dlist_for_each(iter, &input->devices)

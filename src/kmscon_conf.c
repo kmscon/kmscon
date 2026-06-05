@@ -736,12 +736,12 @@ int kmscon_conf_new(struct conf_ctx **out)
 		CONF_OPTION_BOOL(0, "bell", &conf->bell, false),
 
 		/* Input Options */
-		CONF_OPTION_STRING(0, "xkb-model", &conf->xkb_model, ""),
-		CONF_OPTION_STRING(0, "xkb-layout", &conf->xkb_layout, ""),
-		CONF_OPTION_STRING(0, "xkb-variant", &conf->xkb_variant, ""),
-		CONF_OPTION_STRING(0, "xkb-options", &conf->xkb_options, ""),
-		CONF_OPTION_STRING(0, "xkb-keymap", &conf->xkb_keymap, ""),
-		CONF_OPTION_STRING(0, "xkb-compose-file", &conf->xkb_compose_file, ""),
+		CONF_OPTION_STRING(0, "xkb-model", &conf->xkb_model, NULL),
+		CONF_OPTION_STRING(0, "xkb-layout", &conf->xkb_layout, NULL),
+		CONF_OPTION_STRING(0, "xkb-variant", &conf->xkb_variant, NULL),
+		CONF_OPTION_STRING(0, "xkb-options", &conf->xkb_options, NULL),
+		CONF_OPTION_STRING(0, "xkb-keymap", &conf->xkb_keymap, NULL),
+		CONF_OPTION_STRING(0, "xkb-compose-file", &conf->xkb_compose_file, NULL),
 		CONF_OPTION_UINT(0, "xkb-repeat-delay", &conf->xkb_repeat_delay, 250),
 		CONF_OPTION_UINT(0, "xkb-repeat-rate", &conf->xkb_repeat_rate, 50),
 		CONF_OPTION_BOOL(0, "mouse", &conf->mouse, true),
