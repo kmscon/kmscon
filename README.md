@@ -99,7 +99,7 @@ kmscon [options]
 
 ### Locale
 
-Kmscon queries and setups system locale settings before starting if systemd-localed is available.
+Kmscon queries and setups system locale settings before starting if built with dbus enabled.
 Otherwise, you can change locale settings via `--xkb-{model,layout,variant,options}` command line options.
 See `man kmscon` for more information.
 
@@ -107,6 +107,35 @@ See `man kmscon` for more information.
 
 The default configuration file is `/etc/kmscon/kmscon.conf`. Any command line option can be put in the config file in
 its long form without the leading `--` (double dash). See `man kmscon` for more information or look at [kmscon.conf](scripts/etc/kmscon.conf.example)
+
+## Differences from fbcon
+### Loadkeys
+
+loadkeys doesn't work in kmscon, as it doesn't use the kernel tty for input.
+You can configure the layout in kmscon.conf, or in the command line.
+If you build kmscon with dbus support, you can also change the layout at runtime with `localectl set-keymap <keymap>`
+
+### setfont
+
+setfont doesn't work, as it sets the kernel font.
+you can configure the font in kmscon.conf
+```
+font-engine=freetype
+font-size=18
+# font-name is only for freetype/pango. Unifont and 8x16 uses their own bitmap.
+font-name=Hack Nerd Font
+```
+
+### GUI application
+
+As kmscon is already using the GPU, starting a Desktop environment, or a graphic application won't work, as it won't be able to take the GPU.
+There is a script, kmscon-launch-gui that put kmscon in the background, and is able to start a gui application.
+
+`kmscon-launch-gui kmscube -c 100`
+
+For some application like mpv, you need an additional wayland compositor, or the keyboard input won't work.
+
+`kmscon-launch-gui cage -- mpv test.mp4`
 
 ## License
 
