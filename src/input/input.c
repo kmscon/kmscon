@@ -504,8 +504,7 @@ err_free:
 
 SHL_EXPORT
 int input_set_keymap(struct input *input, const char *model, const char *layout,
-		     const char *variant, const char *options, const char *locale,
-		     const char *keymap, const char *compose_file, size_t compose_file_len)
+		     const char *variant, const char *options, const char *keymap)
 {
 	/* xkbcommon won't use the XKB_DEFAULT_OPTIONS environment
 	 * variable if options is an empty string.
@@ -519,8 +518,14 @@ int input_set_keymap(struct input *input, const char *model, const char *layout,
 		options = NULL;
 	}
 
-	return uxkb_desc_init(input, model, layout, variant, options, locale, keymap, compose_file,
-			      compose_file_len);
+	return uxkb_layout_init(input, model, layout, variant, options, keymap);
+}
+
+SHL_EXPORT
+void input_set_compose(struct input *input, const char *locale, const char *compose_file,
+		       size_t compose_file_len)
+{
+	uxkb_compose_table_init(input, compose_file, compose_file_len, locale);
 }
 
 SHL_EXPORT
@@ -565,7 +570,8 @@ void input_unref(struct input *input)
 		input_free_dev(dev);
 	}
 
-	uxkb_desc_destroy(input);
+	uxkb_compose_table_destroy(input);
+	uxkb_layout_destroy(input);
 	shl_hook_free(input->key_hook);
 	shl_hook_free(input->pointer_hook);
 	ev_eloop_rm_timer(input->hide_pointer);

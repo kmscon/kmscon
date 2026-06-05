@@ -69,11 +69,10 @@ static void uxkb_log(struct xkb_context *context, enum xkb_log_level level, cons
 	log_submit(LOG_DEFAULT, sev, format, args);
 }
 
-int uxkb_desc_init(struct input *input, const char *model, const char *layout, const char *variant,
-		   const char *options, const char *locale, const char *keymap,
-		   const char *compose_file, size_t compose_file_len)
+int uxkb_layout_init(struct input *input, const char *model, const char *layout,
+		     const char *variant, const char *options, const char *keymap)
 {
-	int ret;
+	int ret = 0;
 	struct xkb_rule_names rmlvo = {
 		.rules = "evdev",
 		.model = model,
@@ -140,7 +139,15 @@ int uxkb_desc_init(struct input *input, const char *model, const char *layout, c
 		log_debug("new keyboard description (%s, %s, %s, %s)", model, layout, variant,
 			  options);
 	}
+	return 0;
+err_ctx:
+	xkb_context_unref(input->ctx);
+	return ret;
+}
 
+void uxkb_compose_table_init(struct input *input, const char *compose_file, size_t compose_file_len,
+			     const char *locale)
+{
 	if (compose_file && *compose_file) {
 		input->compose_table = xkb_compose_table_new_from_buffer(
 			input->ctx, compose_file, compose_file_len, locale,
@@ -161,19 +168,20 @@ int uxkb_desc_init(struct input *input, const char *model, const char *layout, c
 				 "table, disabling compose support");
 		}
 	}
-
-	return 0;
-
-err_ctx:
-	xkb_context_unref(input->ctx);
-	return ret;
 }
 
-void uxkb_desc_destroy(struct input *input)
+void uxkb_compose_table_destroy(struct input *input)
 {
 	xkb_compose_table_unref(input->compose_table);
+	input->compose_table = NULL;
+}
+
+void uxkb_layout_destroy(struct input *input)
+{
 	xkb_keymap_unref(input->keymap);
 	xkb_context_unref(input->ctx);
+	input->keymap = NULL;
+	input->ctx = NULL;
 }
 
 static void timer_event(struct ev_timer *timer, uint64_t num, void *data)
@@ -218,6 +226,9 @@ void uxkb_dev_destroy(struct input_dev *dev)
 	xkb_compose_state_unref(dev->compose_state);
 	xkb_state_unref(dev->state);
 	ev_eloop_rm_timer(dev->repeat_timer);
+	dev->compose_state = NULL;
+	dev->state = NULL;
+	dev->repeat_timer = NULL;
 }
 
 #define EVDEV_KEYCODE_OFFSET 8

@@ -128,11 +128,12 @@ static void setup_input(struct uterm_monitor *mon)
 	if (ret)
 		return;
 	ret = input_set_keymap(input, input_conf.xkb_model, input_conf.xkb_layout,
-			       input_conf.xkb_variant, input_conf.xkb_options, input_conf.locale,
-			       input_conf.xkb_keymap, input_conf.xkb_compose_file,
-			       compose_file_len);
+			       input_conf.xkb_variant, input_conf.xkb_options,
+			       input_conf.xkb_keymap);
 	if (ret)
 		return;
+
+	input_set_compose(input, input_conf.locale, compose_file, compose_file_len);
 	input_set_conf(input, 250, 50, true);
 	ret = input_register_key_cb(input, input_arrived, NULL);
 	if (ret)

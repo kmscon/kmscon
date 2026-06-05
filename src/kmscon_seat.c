@@ -595,12 +595,9 @@ static const char *find_locale(void)
 
 static int kmscon_seat_set_keymap(struct kmscon_seat *seat)
 {
-	const char *locale;
-	char *keymap, *compose_file;
-	size_t compose_file_len;
-	int ret;
 
-	locale = find_locale();
+	char *keymap;
+	int ret;
 
 	/* TODO: The XKB-API currently requires zero-terminated strings as
 	 * keymap input. Hence, we have to read it in instead of using mmap().
@@ -612,22 +609,35 @@ static int kmscon_seat_set_keymap(struct kmscon_seat *seat)
 			log_error("cannot read keymap file %s: %d", seat->conf->xkb_keymap, ret);
 	}
 
-	compose_file = NULL;
-	compose_file_len = 0;
-	if (seat->conf->xkb_compose_file && *seat->conf->xkb_compose_file) {
-		ret = shl_read_file(seat->conf->xkb_compose_file, &compose_file, &compose_file_len);
-		if (ret)
-			log_error("cannot read compose file %s: %d", seat->conf->xkb_compose_file,
-				  ret);
-	}
 	ret = input_set_keymap(seat->input, seat->conf->xkb_model, seat->conf->xkb_layout,
-			       seat->conf->xkb_variant, seat->conf->xkb_options, locale, keymap,
-			       compose_file, compose_file_len);
+			       seat->conf->xkb_variant, seat->conf->xkb_options, keymap);
 	if (ret)
 		log_error("cannot set keymap: %d", ret);
 
 	free(keymap);
 	return ret;
+}
+
+static void kmscon_seat_set_compose(struct kmscon_seat *seat)
+{
+	const char *locale;
+	char *compose_file;
+	size_t compose_file_len;
+	int ret;
+
+	locale = find_locale();
+
+	compose_file = NULL;
+	compose_file_len = 0;
+	if (seat->conf->xkb_compose_file && *seat->conf->xkb_compose_file) {
+		ret = shl_read_file(seat->conf->xkb_compose_file, &compose_file, &compose_file_len);
+		if (ret) {
+			log_error("cannot read compose file %s: %d", seat->conf->xkb_compose_file,
+				  ret);
+			return;
+		}
+	}
+	input_set_compose(seat->input, locale, compose_file, compose_file_len);
 }
 
 static void kmscon_seat_add_input(struct kmscon_seat *seat, struct uterm_monitor_dev *udev,
@@ -758,6 +768,8 @@ int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf,
 	ret = kmscon_seat_set_keymap(seat);
 	if (ret)
 		goto err_conf;
+
+	kmscon_seat_set_compose(seat);
 
 	ret = uterm_monitor_new(&seat->mon, seat->eloop, &seat_monitor_cb, seat);
 	if (ret) {
