@@ -52,6 +52,7 @@ struct kmscon_app {
 	struct conf_ctx *seat_ctx;
 	struct kmscon_conf_t *seat_conf;
 	struct kmscon_seat *seat;
+	struct kmscon_dbus *dbus;
 };
 
 static int app_seat_event(struct kmscon_seat *s, unsigned int event, void *data)
@@ -115,6 +116,30 @@ static void destroy_app(struct kmscon_app *app)
 	ev_eloop_unregister_signal_cb(app->eloop, SIGINT, app_sig_generic, app);
 	ev_eloop_unregister_signal_cb(app->eloop, SIGTERM, app_sig_generic, app);
 	ev_eloop_unref(app->eloop);
+	kmscon_dbus_free(app->dbus);
+}
+
+static void update_xkb_layout(const char *model, const char *layout, const char *variant,
+			      const char *options, void *data)
+{
+	struct kmscon_app *app = data;
+
+	log_debug("updating xkb layout: %s, %s, %s, %s", model, layout, variant, options);
+	if (kmscon_seat_update_xkb_layout(app->seat, model, layout, variant, options))
+		log_error("cannot update xkb layout");
+}
+
+static void listen_to_dbus_locale1(struct kmscon_app *app)
+{
+	int ret;
+
+	if (app->conf->xkb_keymap || app->conf->xkb_model || app->conf->xkb_layout ||
+	    app->conf->xkb_variant || app->conf->xkb_options)
+		return;
+
+	ret = kmscon_dbus_listen_locale1(app->dbus, update_xkb_layout, app);
+	if (ret)
+		log_warning("cannot listen to locale1: %d", ret);
 }
 
 static int setup_app(struct kmscon_app *app)
@@ -145,6 +170,11 @@ static int setup_app(struct kmscon_app *app)
 		goto err_app;
 	}
 
+	app->dbus = kmscon_dbus_new(app->eloop);
+	if (app->dbus) {
+		kmscon_dbus_set_xkb_env_from_locale1(app->dbus);
+		listen_to_dbus_locale1(app);
+	}
 	return 0;
 
 err_app:
@@ -174,7 +204,6 @@ int main(int argc, char **argv)
 		kmscon_conf_free(conf_ctx);
 		return 0;
 	}
-	dbus_set_xkb_env_from_locale();
 
 	kmscon_load_modules();
 	kmscon_font_register(&kmscon_font_8x16_ops);

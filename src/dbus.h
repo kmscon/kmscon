@@ -27,12 +27,35 @@
 #ifndef _KMSCON_DBUS_H
 #define _KMSCON_DBUS_H
 
+struct ev_eloop;
+struct kmscon_dbus;
+
+typedef void (*dbus_update_xkb_layout_cb)(const char *model, const char *layout,
+					  const char *variant, const char *options, void *data);
+
 #ifdef BUILD_ENABLE_DBUS
-void dbus_set_xkb_env_from_locale(void);
+void kmscon_dbus_set_xkb_env_from_locale1(struct kmscon_dbus *dbus);
+struct kmscon_dbus *kmscon_dbus_new(struct ev_eloop *eloop);
+void kmscon_dbus_free(struct kmscon_dbus *dbus);
+int kmscon_dbus_listen_locale1(struct kmscon_dbus *dbus, dbus_update_xkb_layout_cb cb, void *data);
+
 #else
-static inline void dbus_set_xkb_env_from_locale(void)
+static inline void kmscon_dbus_set_xkb_env_from_locale1(struct kmscon_dbus *dbus)
 {
 	return;
+}
+static inline struct kmscon_dbus *kmscon_dbus_new(struct ev_eloop *eloop)
+{
+	return NULL;
+}
+static inline void kmscon_dbus_free(struct kmscon_dbus *dbus)
+{
+	return;
+}
+static inline int kmscon_dbus_listen_locale1(struct kmscon_dbus *dbus, dbus_update_xkb_layout_cb cb,
+					     void *data)
+{
+	return 0;
 }
 #endif /* BUILD_ENABLE_DBUS */
 #endif /* _KMSCON_DBUS_H */
