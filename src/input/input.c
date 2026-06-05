@@ -529,6 +529,50 @@ void input_set_compose(struct input *input, const char *locale, const char *comp
 }
 
 SHL_EXPORT
+int input_update_keymap(struct input *input, const char *model, const char *layout,
+			const char *variant, const char *options)
+{
+	struct shl_dlist *iter;
+	struct input_dev *dev;
+
+	/* xkbcommon won't use the XKB_DEFAULT_OPTIONS environment
+	 * variable if options is an empty string.
+	 * So if all variables are empty, use NULL instead.
+	 */
+	if (model && *model == 0 && layout && *layout == 0 && variant && *variant == 0 && options &&
+	    *options == 0) {
+		model = NULL;
+		layout = NULL;
+		variant = NULL;
+		options = NULL;
+	}
+
+	if (input->ctx) {
+		shl_dlist_for_each(iter, &input->devices)
+		{
+			dev = shl_dlist_entry(iter, struct input_dev, list);
+			if (dev->capabilities & DEVICE_HAS_KEYS) {
+				input_sleep_dev(dev);
+				input_exit_keyboard(dev);
+			}
+		}
+	}
+	uxkb_compose_table_destroy(input);
+	uxkb_layout_destroy(input);
+	uxkb_layout_init(input, model, layout, variant, options, NULL);
+	shl_dlist_for_each(iter, &input->devices)
+	{
+		dev = shl_dlist_entry(iter, struct input_dev, list);
+		if (dev->capabilities & DEVICE_HAS_KEYS) {
+			input_init_keyboard(dev);
+			if (input->awake)
+				input_wake_up_dev(dev);
+		}
+	}
+	return 0;
+}
+
+SHL_EXPORT
 void input_set_conf(struct input *input, unsigned int repeat_delay, unsigned int repeat_rate,
 		    bool mouse_enabled)
 {

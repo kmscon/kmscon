@@ -640,6 +640,21 @@ static void kmscon_seat_set_compose(struct kmscon_seat *seat)
 	input_set_compose(seat->input, locale, compose_file, compose_file_len);
 }
 
+int kmscon_seat_update_xkb_layout(struct kmscon_seat *seat, const char *model, const char *layout,
+				  const char *variant, const char *options)
+{
+	int ret;
+
+	ret = input_update_keymap(seat->input, model, layout, variant, options);
+	if (ret) {
+		log_error("cannot update keymap: %d", ret);
+		return ret;
+	}
+	/* Compose table is lost when updating the keymap, so we need to set it again */
+	kmscon_seat_set_compose(seat);
+	return ret;
+}
+
 static void kmscon_seat_add_input(struct kmscon_seat *seat, struct uterm_monitor_dev *udev,
 				  const char *node)
 {

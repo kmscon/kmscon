@@ -53,6 +53,8 @@ int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf,
 		    void *data);
 void kmscon_seat_free(struct kmscon_seat *seat);
 void kmscon_seat_startup(struct kmscon_seat *seat);
+int kmscon_seat_update_xkb_layout(struct kmscon_seat *seat, const char *model, const char *layout,
+				  const char *variant, const char *options);
 
 struct conf_ctx *kmscon_seat_get_conf(struct kmscon_seat *seat);
 
