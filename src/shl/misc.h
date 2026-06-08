@@ -31,7 +31,6 @@
 #ifndef SHL_MISC_H
 #define SHL_MISC_H
 
-#include <dirent.h>
 #include <errno.h>
 #include <limits.h>
 #include <stdbool.h>
@@ -62,31 +61,6 @@
 		_a < _b ? _a : _b;                                                                 \
 	})
 
-static inline int shl_dirent(const char *path, struct dirent **ent)
-{
-	size_t len;
-	struct dirent *tmp;
-	long name_max;
-
-	/* errno may be left unchanged, see pathconf(3p) */
-	errno = 0;
-	name_max = pathconf(path, _PC_NAME_MAX);
-	if (name_max < 0) {
-		if (errno)
-			return -errno;
-		else
-			return -EINVAL;
-	}
-
-	len = offsetof(struct dirent, d_name) + name_max + 1;
-	tmp = malloc(len);
-	if (!tmp)
-		return -ENOMEM;
-
-	*ent = tmp;
-	return 0;
-}
-
 static inline int shl_strtou(const char *input, unsigned int *output)
 {
 	unsigned long val;
@@ -105,22 +79,6 @@ static inline int shl_strtou(const char *input, unsigned int *output)
 
 	if (output)
 		*output = res;
-	return 0;
-}
-
-static inline int shl_dup(void **out, const void *data, size_t size)
-{
-	void *cpy;
-
-	if (!data || !size)
-		return -EINVAL;
-
-	cpy = malloc(size);
-	if (!cpy)
-		return -ENOMEM;
-
-	memcpy(cpy, data, size);
-	*out = cpy;
 	return 0;
 }
 
@@ -534,86 +492,6 @@ static inline int shl_dup_array(char ***out, char **argv)
 		/* empty */;
 
 	return shl_dup_array_size(out, argv, i);
-}
-
-/* returns true if the string-list contains only a single entry \entry */
-static inline bool shl_string_list_is(char **list, const char *entry)
-{
-	if (!list || !entry)
-		return false;
-	if (!list[0] || list[1])
-		return false;
-	return !strcmp(list[0], entry);
-}
-
-static inline unsigned int shl_string_list_count(char **list, bool ignore_empty)
-{
-	unsigned int num;
-
-	if (!list)
-		return 0;
-
-	for (num = 0; *list; ++list)
-		if (**list || !ignore_empty)
-			++num;
-
-	return num;
-}
-
-/* reads a whole file into a buffer with 0-termination */
-static inline int shl_read_file(const char *path, char **out, size_t *size)
-{
-	FILE *ffile;
-	ssize_t len;
-	char *buf;
-	int ret;
-
-	if (!path || !out)
-		return -EINVAL;
-
-	errno = 0;
-
-	ffile = fopen(path, "rb");
-	if (!ffile)
-		return -errno;
-
-	if (fseek(ffile, 0, SEEK_END) != 0) {
-		ret = -errno;
-		goto err_close;
-	}
-
-	len = ftell(ffile);
-	if (len < 0) {
-		ret = -errno;
-		goto err_close;
-	}
-
-	rewind(ffile);
-
-	buf = malloc(len + 1);
-	if (!buf) {
-		ret = -ENOMEM;
-		goto err_close;
-	}
-
-	errno = 0;
-	if (len && len != fread(buf, 1, len, ffile)) {
-		ret = errno ? -errno : -EFAULT;
-		goto err_free;
-	}
-
-	buf[len] = 0;
-	*out = buf;
-	if (size)
-		*size = len;
-	ret = 0;
-	goto err_close;
-
-err_free:
-	free(buf);
-err_close:
-	fclose(ffile);
-	return ret;
 }
 
 /* TODO: xkbcommon should provide these flags!
