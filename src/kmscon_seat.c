@@ -1101,8 +1101,6 @@ void kmscon_seat_startup(struct kmscon_seat *seat)
 	if (!seat)
 		return;
 
-	seat_go_awake(seat);
-
 	s = kmscon_seat_new_session(seat);
 	if (s)
 		seat_switch(seat, s);
