@@ -162,6 +162,10 @@ void kmscon_dbus_free(struct kmscon_dbus *dbus)
 {
 	if (!dbus)
 		return;
+	if (dbus->watch_fd) {
+		ev_eloop_rm_fd(dbus->watch_fd);
+		dbus->watch_fd = NULL;
+	}
 	dbus_connection_unref(dbus->conn);
 	free(dbus);
 }
