@@ -1126,13 +1126,24 @@ static void pty_input(struct kmscon_pty *pty, const char *u8, size_t len, void *
 {
 	struct kmscon_terminal *term = data;
 
-	if (!len) {
-		terminal_close(term);
-		terminal_open(term);
-	} else {
+	if (len) {
 		tsm_vte_input(term->vte, u8, len);
 		redraw_all(term);
 	}
+}
+
+static void pty_exit(struct kmscon_pty *pty, bool restart, void *data)
+{
+	struct kmscon_terminal *term = data;
+
+	terminal_close(term);
+
+	if (restart) {
+		terminal_open(term);
+		return;
+	}
+
+	ev_eloop_exit(term->eloop);
 }
 
 static void pty_event(struct ev_fd *fd, int mask, void *data)
@@ -1201,13 +1212,13 @@ struct kmscon_terminal *terminal_new(struct kmscon_session *session, unsigned in
 	if (ret)
 		goto err_vte;
 
-	ret = kmscon_pty_new(&term->pty, pty_input, term);
+	ret = kmscon_pty_new(&term->pty, pty_input, pty_exit, term);
 	if (ret)
 		goto err_font;
 
 	ret = kmscon_pty_set_conf(term->pty, term->conf->term, "truecolor", term->conf->argv,
 				  seat_name, vtnr, term->conf->reset_env,
-				  term->conf->backspace_delete);
+				  term->conf->backspace_delete, term->conf->oneshot);
 	if (ret)
 		goto err_pty;
 

@@ -215,6 +215,14 @@
       </varlistentry>
 
       <varlistentry>
+        <term><option>--oneshot</option></term>
+        <listitem>
+          <para>When the login process exits, exit kmscon. This is useful for
+                setup scripts, or asking for disk encryption. (default: off)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
         <term><option>-t {term}</option></term>
         <term><option>--term {term}</option></term>
         <listitem>

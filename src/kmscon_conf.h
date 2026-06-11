@@ -89,6 +89,8 @@ struct kmscon_conf_t {
 	bool login;
 	/* argv for login process */
 	char **argv;
+	/* when the login process exits, exit kmscon */
+	bool oneshot;
 	/* TERM value */
 	char *term;
 	/* reset environment */

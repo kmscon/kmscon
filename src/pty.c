@@ -61,6 +61,7 @@ struct kmscon_pty {
 	char io_buf[KMSCON_NREAD];
 
 	kmscon_pty_input_cb input_cb;
+	kmscon_pty_exit_cb exit_cb;
 	void *data;
 
 	char *term;
@@ -70,12 +71,14 @@ struct kmscon_pty {
 	char *vtnr;
 	bool env_reset;
 	bool backspace_delete;
+	bool oneshot;
 
 	time_t last_spawn_time;
 	int retry_count;
 };
 
-int kmscon_pty_new(struct kmscon_pty **out, kmscon_pty_input_cb input_cb, void *data)
+int kmscon_pty_new(struct kmscon_pty **out, kmscon_pty_input_cb input_cb,
+		   kmscon_pty_exit_cb exit_cb, void *data)
 {
 	struct kmscon_pty *pty;
 	int ret;
@@ -91,6 +94,7 @@ int kmscon_pty_new(struct kmscon_pty **out, kmscon_pty_input_cb input_cb, void *
 	pty->fd = -1;
 	pty->ref = 1;
 	pty->input_cb = input_cb;
+	pty->exit_cb = exit_cb;
 	pty->last_spawn_time = time(NULL);
 	pty->retry_count = 0;
 	pty->data = data;
@@ -141,7 +145,7 @@ void kmscon_pty_unref(struct kmscon_pty *pty)
 
 int kmscon_pty_set_conf(struct kmscon_pty *pty, const char *term, const char *colorterm,
 			char **argv, const char *seat, unsigned int vtnr, bool do_reset,
-			bool backspace)
+			bool backspace, bool oneshot)
 {
 	char *vt;
 
@@ -150,6 +154,7 @@ int kmscon_pty_set_conf(struct kmscon_pty *pty, const char *term, const char *co
 
 	pty->env_reset = do_reset;
 	pty->backspace_delete = backspace;
+	pty->oneshot = oneshot;
 
 	if (term) {
 		pty->term = strdup(term);
@@ -485,7 +490,14 @@ static void sig_child(struct ev_eloop *eloop, struct ev_child_data *chld, void *
 	log_info("child exited: pid: %u status: %d", chld->pid, chld->status);
 
 	if (pty->retry_count == MAX_RETRY_COUNT) {
-		log_err("reached max retry attempts for login process");
+		log_err("reached max retry attempts for login process %d retries in %d seconds",
+			MAX_RETRY_COUNT, MAX_RETRY_TIME);
+		pty->exit_cb(pty, false, pty->data);
+		return;
+	}
+	if (pty->oneshot) {
+		log_info("oneshot is enabled, exiting kmscon...");
+		pty->exit_cb(pty, false, pty->data);
 		return;
 	}
 
@@ -497,8 +509,7 @@ static void sig_child(struct ev_eloop *eloop, struct ev_child_data *chld, void *
 	} else {
 		pty->retry_count = 0;
 	}
-
-	pty->input_cb(pty, NULL, 0, pty->data);
+	pty->exit_cb(pty, true, pty->data);
 }
 
 int kmscon_pty_open(struct kmscon_pty *pty, unsigned short width, unsigned short height, bool drm)

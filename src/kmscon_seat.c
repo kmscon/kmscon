@@ -265,6 +265,8 @@ static void seat_switch(struct kmscon_seat *seat, struct kmscon_session *new)
 			seat_go_background(seat);
 		}
 		terminal_activate(new->term);
+	} else {
+		seat_go_background(seat);
 	}
 	seat->current_sess = new;
 }

@@ -48,13 +48,15 @@
 struct kmscon_pty;
 
 typedef void (*kmscon_pty_input_cb)(struct kmscon_pty *pty, const char *u8, size_t len, void *data);
+typedef void (*kmscon_pty_exit_cb)(struct kmscon_pty *pty, bool restart, void *data);
 
-int kmscon_pty_new(struct kmscon_pty **out, kmscon_pty_input_cb input_cb, void *data);
+int kmscon_pty_new(struct kmscon_pty **out, kmscon_pty_input_cb input_cb,
+		   kmscon_pty_exit_cb exit_cb, void *data);
 void kmscon_pty_ref(struct kmscon_pty *pty);
 void kmscon_pty_unref(struct kmscon_pty *pty);
 int kmscon_pty_set_conf(struct kmscon_pty *pty, const char *term, const char *colorterm,
 			char **argv, const char *seat, unsigned int vtnr, bool do_reset,
-			bool backspace);
+			bool backspace, bool oneshot);
 
 int kmscon_pty_get_fd(struct kmscon_pty *pty);
 void kmscon_pty_dispatch(struct kmscon_pty *pty);
