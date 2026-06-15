@@ -303,7 +303,7 @@ static void do_redraw_screen(struct screen *scr)
 
 	tsm_vte_get_def_attr(scr->term->vte, &attr);
 	kmscon_text_prepare(scr->txt, &attr);
-	tsm_screen_draw(scr->term->console, kmscon_text_draw_cb, scr->txt);
+	kmscon_text_draw(scr->txt, scr->term->console);
 	draw_pointer(scr);
 	kmscon_text_render(scr->txt);
 

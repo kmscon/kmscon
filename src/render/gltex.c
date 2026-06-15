@@ -407,8 +407,7 @@ err_free:
 	return NULL;
 }
 
-static struct gl_glyph *find_glyph(struct kmscon_text *txt, uint64_t id, const uint32_t *ch,
-				   size_t len, const struct tsm_screen_attr *attr)
+static struct gl_glyph *find_glyph(struct kmscon_text *txt, const struct tsm_screen_cell *cell)
 {
 	struct gltex *gt = txt->data;
 	struct atlas *atlas;
@@ -419,17 +418,17 @@ static struct gl_glyph *find_glyph(struct kmscon_text *txt, uint64_t id, const u
 	const uint8_t *src;
 	struct kmscon_font *font = txt->font;
 	unsigned int num;
-	const uint32_t replacement_char = 0x25a1;
 	struct kmscon_glyph *glyph;
+	uint32_t ch = cell->ch ? cell->ch : ' ';
+	uint64_t id = kmscon_glyph_id(ch, cell->attr2.u8);
 
-	font->attr.underline = !!attr->underline;
-	font->attr.italic = !!attr->italic;
-	font->attr.bold = !!attr->bold;
+	font->attr.underline = !!cell->attr2.underline;
+	font->attr.italic = !!cell->attr2.italic;
+	font->attr.bold = !!cell->attr2.bold;
 
-	if (len == 1 && !kmscon_font_has_glyph(font, ch, len)) {
-		id = (id & ~0xffffffff) | replacement_char;
-		ch = &replacement_char;
-		len = 1;
+	if (!kmscon_font_has_glyph(font, &ch, 1)) {
+		ch = 0x25a1;
+		id = kmscon_glyph_id(ch, cell->attr2.u8);
 	}
 
 	if (shl_hashtable_find(gt->glyphs, (void **)&glglyph, id))
@@ -440,7 +439,7 @@ static struct gl_glyph *find_glyph(struct kmscon_text *txt, uint64_t id, const u
 		return NULL;
 	memset(glglyph, 0, sizeof(*glglyph));
 
-	glyph = kmscon_font_render(font, id, ch, len);
+	glyph = kmscon_font_render(font, id, &ch, 1);
 	if (!glyph)
 		return NULL;
 
@@ -570,38 +569,31 @@ static int gltex_prepare(struct kmscon_text *txt, struct tsm_screen_attr *attr)
 	return 0;
 }
 
-static int gltex_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, size_t len,
-		      unsigned int width, unsigned int posx, unsigned int posy,
-		      const struct tsm_screen_attr *attr)
+static int gltex_draw_cell(struct kmscon_text *txt, const struct tsm_screen_cell *cell,
+			   unsigned int posx, unsigned int posy)
 {
 	struct gltex *gt = txt->data;
 	struct atlas *atlas;
 	struct gl_glyph *glglyph;
 	float gl_x1, gl_x2, gl_y1, gl_y2;
+	float width;
 	int i, idx;
 
-	if (!width)
-		return 0;
-
-	if (!len && posx && gt->previous_overflow) {
+	if (posx && gt->previous_overflow && (cell->ch == 0 || cell->ch == ' ')) {
 		gt->previous_overflow = false;
 		return 0;
 	}
-	glglyph = find_glyph(txt, id, ch, len, attr);
+	glglyph = find_glyph(txt, cell);
 	if (!glglyph)
 		return -ENOMEM;
 
 	atlas = glglyph->atlas;
 
-	if (width == 1 && glglyph->double_width) {
-		gt->previous_overflow = true;
-		width = 2;
-	} else {
-		gt->previous_overflow = false;
-	}
-
 	if (atlas->cache_num >= atlas->cache_size)
 		return -ERANGE;
+
+	width = glglyph->double_width ? 2.0 : 1.0;
+	gt->previous_overflow = glglyph->double_width;
 
 	idx = atlas->cache_num * 2 * 6;
 	gl_x1 = gt->off_x + gt->advance_x * posx - 1.0;
@@ -639,25 +631,45 @@ static int gltex_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, 
 
 	for (i = 0; i < 6; ++i) {
 		idx = atlas->cache_num * 3 * 6 + i * 3;
-		if (attr->inverse) {
-			atlas->cache_fgcol[idx + 0] = attr->br / 255.0;
-			atlas->cache_fgcol[idx + 1] = attr->bg / 255.0;
-			atlas->cache_fgcol[idx + 2] = attr->bb / 255.0;
-			atlas->cache_bgcol[idx + 0] = attr->fr / 255.0;
-			atlas->cache_bgcol[idx + 1] = attr->fg / 255.0;
-			atlas->cache_bgcol[idx + 2] = attr->fb / 255.0;
-		} else {
-			atlas->cache_fgcol[idx + 0] = attr->fr / 255.0;
-			atlas->cache_fgcol[idx + 1] = attr->fg / 255.0;
-			atlas->cache_fgcol[idx + 2] = attr->fb / 255.0;
-			atlas->cache_bgcol[idx + 0] = attr->br / 255.0;
-			atlas->cache_bgcol[idx + 1] = attr->bg / 255.0;
-			atlas->cache_bgcol[idx + 2] = attr->bb / 255.0;
-		}
+		atlas->cache_fgcol[idx + 0] = cell->fg.r / 255.0;
+		atlas->cache_fgcol[idx + 1] = cell->fg.g / 255.0;
+		atlas->cache_fgcol[idx + 2] = cell->fg.b / 255.0;
+		atlas->cache_bgcol[idx + 0] = cell->bg.r / 255.0;
+		atlas->cache_bgcol[idx + 1] = cell->bg.g / 255.0;
+		atlas->cache_bgcol[idx + 2] = cell->bg.b / 255.0;
 	}
 
 	++atlas->cache_num;
 
+	return 0;
+}
+
+static int gltex_draw_cursor(struct kmscon_text *txt, const struct tsm_screen_cell *cell,
+			     unsigned int cur_x, unsigned int cur_y)
+{
+	struct tsm_screen_cell cursor_cell = *cell;
+
+	cursor_cell.fg = cell->bg;
+	cursor_cell.bg = cell->fg;
+
+	return gltex_draw_cell(txt, &cursor_cell, cur_x, cur_y);
+}
+
+static int gltex_draw(struct kmscon_text *txt, const struct tsm_screen_cell *cells,
+		      unsigned int cur_x, unsigned int cur_y, bool cur_visible)
+{
+	unsigned int posx, posy;
+
+	for (posy = 0; posy < txt->rows; posy++) {
+		for (posx = 0; posx < txt->cols; posx++) {
+			const struct tsm_screen_cell *cell = &cells[posx + posy * txt->cols];
+
+			if (posx == cur_x && posy == cur_y && cur_visible)
+				gltex_draw_cursor(txt, cell, cur_x, cur_y);
+			else
+				gltex_draw_cell(txt, cell, posx, posy);
+		}
+	}
 	return 0;
 }
 
@@ -669,10 +681,10 @@ static int gltex_draw_pointer(struct kmscon_text *txt, unsigned int x, unsigned 
 	float gl_x1, gl_x2, gl_y1, gl_y2;
 	unsigned int sw, sh;
 	int i, idx;
-	uint32_t ch = 'I';
-	uint64_t id = ch;
+	struct tsm_screen_cell pointer_cell = {0};
+	pointer_cell.ch = 'I';
 
-	glyph = find_glyph(txt, id, &ch, 1, &gt->attr);
+	glyph = find_glyph(txt, &pointer_cell);
 	if (!glyph)
 		return -ENOMEM;
 

@@ -124,6 +124,8 @@ void display_set_cursor_offset(struct display *disp, int32_t x, int32_t y)
 #include "shl/log.h"
 #undef log_warning
 #define log_warning(f, ...)
+#undef log_debug
+#define log_debug(f, ...)
 /* Pull in the implementation so we can call bbulk_set directly */
 #include "../src/render/bbulk.c"
 
@@ -155,22 +157,22 @@ int main(void)
 	/* First call allocates */
 	ret = bbulk_set(&txt);
 	assert(ret == 0);
-	assert(bb->reqs && bb->prev && bb->damages && bb->damage_rects);
-	unsigned int prev_cells = bb->cells;
+	assert(bb->reqs && bb->cells && bb->cell_flags && bb->damage_rects);
+	unsigned int prev_cells = bb->cell_count;
 
 	bbulk_unset(&txt);
 
 	/* Second call with identical geometry should remain valid and fully damaged */
 	ret = bbulk_set(&txt);
 	assert(ret == 0);
-	assert(bb->cells == prev_cells);
+	assert(bb->cell_count == prev_cells);
 	assert(bb->reqs != NULL);
-	assert(bb->prev != NULL);
-	assert(bb->damages != NULL);
+	assert(bb->cells != NULL);
+	assert(bb->cell_flags != NULL);
 	assert(bb->damage_rects != NULL);
 	/* All cells should be marked damaged */
-	for (unsigned i = 0; i < bb->cells; ++i)
-		assert(bb->prev[i].id == ID_DAMAGED);
+	for (unsigned i = 0; i < bb->cell_count; ++i)
+		assert(bb->cells[i].ch == ID_DAMAGED);
 
 	/* Exercise prepare/render + damage path */
 	struct tsm_screen_attr attr;
@@ -183,8 +185,8 @@ int main(void)
 
 	bbulk_unset(&txt);
 	assert(bb->reqs == NULL);
-	assert(bb->prev == NULL);
-	assert(bb->damages == NULL);
+	assert(bb->cells == NULL);
+	assert(bb->cell_flags == NULL);
 	assert(bb->damage_rects == NULL);
 	kmscon_text_bbulk_ops.destroy(&txt);
 	return 0;

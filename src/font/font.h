@@ -74,6 +74,11 @@ static inline unsigned int kmscon_glyph_cwidth(const struct kmscon_glyph *glyph)
 	return glyph->double_width ? 2 : 1;
 }
 
+static inline uint64_t kmscon_glyph_id(uint32_t ch, uint8_t u8)
+{
+	return (uint64_t)ch | (uint64_t)u8 << 32;
+}
+
 struct kmscon_font {
 	unsigned long ref;
 	struct shl_register_record *record;

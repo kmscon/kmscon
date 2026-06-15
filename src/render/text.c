@@ -32,6 +32,7 @@
  */
 
 #include <errno.h>
+#include <libtsm.h>
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
@@ -430,31 +431,27 @@ int kmscon_text_prepare(struct kmscon_text *txt, struct tsm_screen_attr *attr)
 /**
  * kmscon_text_draw:
  * @txt: valid text renderer
- * @id: a unique ID that identifies @ch globally
- * @ch: ucs4 symbol you want to draw
- * @len: length of @ch or 0 for empty cell
- * @width: cell-width of character
- * @posx: X-position of the glyph
- * @posy: Y-position of the glyph
- * @attr: glyph attributes
+ * @con: valid tsm screen
  *
- * This draws a single glyph at the requested position. The position is a
- * console position, not a pixel position! You must precede this call with
- * kmscon_text_prepare(). Use this function to feed all glyphs into the
- * rendering pipeline and finally call kmscon_text_render().
+ * This draw all cells in the screen.
  *
  * Returns: 0 on success or negative error code if this glyph couldn't be drawn.
  */
-int kmscon_text_draw(struct kmscon_text *txt, uint64_t id, const uint32_t *ch, size_t len,
-		     unsigned int width, unsigned int posx, unsigned int posy,
-		     const struct tsm_screen_attr *attr)
+int kmscon_text_draw(struct kmscon_text *txt, struct tsm_screen *con)
 {
-	if (!txt || !txt->rendering)
-		return -EINVAL;
-	if (posx >= txt->cols || posy >= txt->rows || !attr)
+	const struct tsm_screen_cell *cells;
+	unsigned int cur_x, cur_y;
+	bool cur_visible;
+
+	if (!txt || !con)
 		return -EINVAL;
 
-	return txt->ops->draw(txt, id, ch, len, width, posx, posy, attr);
+	cells = tsm_screen_draw2(con);
+	cur_x = tsm_screen_get_cursor_x(con);
+	cur_y = tsm_screen_get_cursor_y(con);
+	cur_visible = !(tsm_screen_get_flags(con) & TSM_SCREEN_HIDE_CURSOR);
+
+	return txt->ops->draw(txt, cells, cur_x, cur_y, cur_visible);
 }
 
 /**
@@ -519,11 +516,4 @@ void kmscon_text_abort(struct kmscon_text *txt)
 	if (txt->ops->abort)
 		txt->ops->abort(txt);
 	txt->rendering = false;
-}
-
-int kmscon_text_draw_cb(struct tsm_screen *con, uint64_t id, const uint32_t *ch, size_t len,
-			unsigned int width, unsigned int posx, unsigned int posy,
-			const struct tsm_screen_attr *attr, tsm_age_t age, void *data)
-{
-	return kmscon_text_draw(data, id, ch, len, width, posx, posy, attr);
 }
