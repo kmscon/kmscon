@@ -348,6 +348,9 @@ static void copy_glyph(struct video_buffer *buf, FT_Face face, FT_Bitmap *map, b
 	}
 	height = min((int)(buf->height - top), (int)(map->rows - top_src));
 
+	if (left + map->width > buf->width)
+		left -= ((left + map->width) - buf->width) / 2;
+
 	if (left < 0) {
 		left_src = -left;
 		left = 0;
