@@ -419,7 +419,7 @@ static struct gl_glyph *find_glyph(struct kmscon_text *txt, uint64_t id, const u
 	const uint8_t *src;
 	struct kmscon_font *font = txt->font;
 	unsigned int num;
-	const uint32_t replacement_char = 0xfffd;
+	const uint32_t replacement_char = 0x25a1;
 	struct kmscon_glyph *glyph;
 
 	font->attr.underline = !!attr->underline;

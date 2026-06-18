@@ -116,14 +116,8 @@ static bool kmscon_font_8x16_has_glyph(struct kmscon_font *font, const uint32_t 
 static struct kmscon_glyph *kmscon_font_8x16_render(struct kmscon_font *font, uint64_t id,
 						    const uint32_t *ch, size_t len)
 {
-	uint32_t c = *ch;
-
-	// Handle replacement character
-	if (c == 0xfffd)
-		c = '?';
-
 	if (len > 1 || *ch >= 256)
-		return NULL;
+		return new_glyph('?');
 
 	return new_glyph(*ch);
 }

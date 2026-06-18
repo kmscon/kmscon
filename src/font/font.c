@@ -281,7 +281,7 @@ struct kmscon_glyph *kmscon_font_render(struct kmscon_font *font, uint64_t id, c
 					size_t len)
 {
 	uint32_t empty_char = ' ';
-	uint32_t replacement_char = 0xfffd;
+	uint32_t replacement_char = 0x25a1;
 	uint32_t invalid_char = '?';
 	struct kmscon_glyph *glyph;
 

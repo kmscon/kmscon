@@ -295,7 +295,7 @@ static struct kmscon_glyph *find_glyph(struct kmscon_text *txt, uint64_t id, con
 	struct bbulk *bb = txt->data;
 	struct kmscon_glyph *glyph;
 	struct kmscon_font *font = txt->font;
-	const uint32_t replacement_char = 0xfffd;
+	const uint32_t replacement_char = 0x25a1;
 
 	font->attr.underline = !!attr->underline;
 	font->attr.italic = !!attr->italic;
