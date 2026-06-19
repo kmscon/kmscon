@@ -305,7 +305,7 @@ static struct kmscon_glyph *find_glyph(struct kmscon_text *txt, const struct tsm
 	font->attr.italic = !!cell->attr2.italic;
 	font->attr.bold = !!cell->attr2.bold;
 
-	if (!kmscon_font_has_glyph(font, &ch, 1)) {
+	if (!kmscon_font_has_glyph(font, ch)) {
 		ch = replacement_char;
 		id = kmscon_glyph_id(ch, cell->attr2.u8);
 	}
@@ -314,7 +314,7 @@ static struct kmscon_glyph *find_glyph(struct kmscon_text *txt, const struct tsm
 	if (glyph)
 		return glyph;
 
-	glyph = kmscon_font_render(font, id, &ch, 1);
+	glyph = kmscon_font_render(font, ch);
 	if (!glyph)
 		return NULL;
 

@@ -100,8 +100,8 @@ static void manager__unref()
 	}
 }
 
-static struct kmscon_glyph *get_glyph(struct face *face, uint64_t id, const uint32_t *ch,
-				      size_t len, const struct kmscon_font_attr *attr)
+static struct kmscon_glyph *get_glyph(struct face *face, const uint32_t ch,
+				      const struct kmscon_font_attr *attr)
 {
 	struct kmscon_glyph *glyph = NULL;
 	PangoLayout *layout;
@@ -113,9 +113,7 @@ static struct kmscon_glyph *get_glyph(struct face *face, uint64_t id, const uint
 	size_t ulen, cnt;
 	char *val;
 
-	if (!len)
-		return NULL;
-	cwidth = tsm_ucs4_get_width(*ch);
+	cwidth = tsm_ucs4_get_width(ch);
 	if (!cwidth)
 		return NULL;
 
@@ -153,7 +151,7 @@ static struct kmscon_glyph *get_glyph(struct face *face, uint64_t id, const uint
 	else
 		pango_attr_list_change(attrlist, pango_attr_weight_new(PANGO_WEIGHT_NORMAL));
 
-	val = tsm_ucs4_to_utf8_alloc(ch, len, &ulen);
+	val = tsm_ucs4_to_utf8_alloc(&ch, 1, &ulen);
 	if (!val)
 		goto out_layout;
 
@@ -375,15 +373,14 @@ static void kmscon_font_pango_destroy(struct kmscon_font *font)
 	manager_unlock();
 }
 
-static bool kmscon_font_pango_has_glyph(struct kmscon_font *font, const uint32_t *ch, size_t len)
+static bool kmscon_font_pango_has_glyph(struct kmscon_font *font, uint32_t ch)
 {
 	return true;
 }
 
-static struct kmscon_glyph *kmscon_font_pango_render(struct kmscon_font *font, uint64_t id,
-						     const uint32_t *ch, size_t len)
+static struct kmscon_glyph *kmscon_font_pango_render(struct kmscon_font *font, uint32_t ch)
 {
-	return get_glyph(font->data, id, ch, len, &font->attr);
+	return get_glyph(font->data, ch, &font->attr);
 }
 
 struct kmscon_font_ops kmscon_font_pango_ops = {

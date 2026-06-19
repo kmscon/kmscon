@@ -426,7 +426,7 @@ static struct gl_glyph *find_glyph(struct kmscon_text *txt, const struct tsm_scr
 	font->attr.italic = !!cell->attr2.italic;
 	font->attr.bold = !!cell->attr2.bold;
 
-	if (!kmscon_font_has_glyph(font, &ch, 1)) {
+	if (!kmscon_font_has_glyph(font, ch)) {
 		ch = 0x25a1;
 		id = kmscon_glyph_id(ch, cell->attr2.u8);
 	}
@@ -439,7 +439,7 @@ static struct gl_glyph *find_glyph(struct kmscon_text *txt, const struct tsm_scr
 		return NULL;
 	memset(glglyph, 0, sizeof(*glglyph));
 
-	glyph = kmscon_font_render(font, id, &ch, 1);
+	glyph = kmscon_font_render(font, ch);
 	if (!glyph)
 		return NULL;
 

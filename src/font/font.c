@@ -267,9 +267,7 @@ void kmscon_font_unref(struct kmscon_font *font)
 /**
  * kmscon_font_render:
  * @font: Valid font object
- * @id: Unique ID that identifies @ch globally
  * @ch: Symbol to find a glyph for
- * @len: Length of @ch
  *
  * Renders the glyph for symbol @ch and returns a pointer to the glyph.
  * If the glyph cannot be found or is invalid, NULL is returned.
@@ -277,26 +275,18 @@ void kmscon_font_unref(struct kmscon_font *font)
  * Returns: a new allocated glyph object on success, NULL on failure
  */
 SHL_EXPORT
-struct kmscon_glyph *kmscon_font_render(struct kmscon_font *font, uint64_t id, const uint32_t *ch,
-					size_t len)
+struct kmscon_glyph *kmscon_font_render(struct kmscon_font *font, uint32_t ch)
 {
-	uint32_t empty_char = ' ';
-	uint32_t replacement_char = 0x25a1;
-	uint32_t invalid_char = '?';
 	struct kmscon_glyph *glyph;
 
 	if (!font)
 		return NULL;
 
-	if (!len) {
-		return font->ops->render(font, empty_char, &empty_char, 1);
-	}
-
-	glyph = font->ops->render(font, id, ch, len);
+	glyph = font->ops->render(font, ch);
 	if (!glyph)
-		glyph = font->ops->render(font, replacement_char, &replacement_char, 1);
+		glyph = font->ops->render(font, 0x25a1);
 	if (!glyph)
-		glyph = font->ops->render(font, invalid_char, &invalid_char, 1);
+		glyph = font->ops->render(font, '?');
 	return glyph;
 }
 
@@ -311,10 +301,10 @@ struct kmscon_glyph *kmscon_font_render(struct kmscon_font *font, uint64_t id, c
  * Returns: true if the font has a glyph for the given symbol, false otherwise
  */
 SHL_EXPORT
-bool kmscon_font_has_glyph(struct kmscon_font *font, const uint32_t *ch, size_t len)
+bool kmscon_font_has_glyph(struct kmscon_font *font, uint32_t ch)
 {
 	if (!font)
 		return false;
 
-	return font->ops->has_glyph(font, ch, len);
+	return font->ops->has_glyph(font, ch);
 }

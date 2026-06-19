@@ -40,14 +40,11 @@ unsigned int kmscon_font_get_height(const struct kmscon_font *font)
 }
 
 /* Stub font rendering APIs used by text_bbulk.c */
-struct kmscon_glyph *kmscon_font_render(struct kmscon_font *font, uint64_t id, const uint32_t *ch,
-					size_t len)
+struct kmscon_glyph *kmscon_font_render(struct kmscon_font *font, const uint32_t ch)
 {
 	struct kmscon_glyph *g;
 	(void)font;
-	(void)id;
 	(void)ch;
-	(void)len;
 	g = malloc(sizeof(*g) + FAKE_CELL_W * FAKE_CELL_W);
 	memset(g, 0, sizeof(*g) + FAKE_CELL_W * FAKE_CELL_W);
 	g->buf.width = g->buf.height = FAKE_CELL_W;
@@ -55,11 +52,10 @@ struct kmscon_glyph *kmscon_font_render(struct kmscon_font *font, uint64_t id, c
 	return g;
 }
 
-bool kmscon_font_has_glyph(struct kmscon_font *font, const uint32_t *ch, size_t len)
+bool kmscon_font_has_glyph(struct kmscon_font *font, const uint32_t ch)
 {
 	(void)font;
 	(void)ch;
-	(void)len;
 	return true;
 }
 
