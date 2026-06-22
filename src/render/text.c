@@ -412,7 +412,7 @@ int kmscon_text_rotate(struct kmscon_text *txt, enum Orientation orientation)
  *
  * Returns: 0 on success, negative error code on failure.
  */
-int kmscon_text_prepare(struct kmscon_text *txt, struct tsm_screen_attr *attr)
+int kmscon_text_prepare(struct kmscon_text *txt, struct tsm_screen_attr *attr, bool blinking)
 {
 	int ret = 0;
 
@@ -420,6 +420,7 @@ int kmscon_text_prepare(struct kmscon_text *txt, struct tsm_screen_attr *attr)
 		return -EINVAL;
 
 	txt->rendering = true;
+	txt->blinking = blinking;
 	if (txt->ops->prepare)
 		ret = txt->ops->prepare(txt, attr);
 	if (ret)
@@ -451,7 +452,7 @@ int kmscon_text_draw(struct kmscon_text *txt, struct tsm_screen *con)
 	cur_y = tsm_screen_get_cursor_y(con);
 	cur_visible = !(tsm_screen_get_flags(con) & TSM_SCREEN_HIDE_CURSOR);
 
-	return txt->ops->draw(txt, cells, cur_x, cur_y, cur_visible);
+	return txt->ops->draw(txt, cells, cur_x, cur_y, cur_visible && txt->blinking);
 }
 
 /**

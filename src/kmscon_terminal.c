@@ -99,7 +99,12 @@ struct kmscon_terminal {
 	struct kmscon_font *font;
 
 	struct kmscon_pointer pointer;
+
+	struct ev_timer *blink_timer;
+	bool blinking;
 };
+
+#define BLINK_TIMER_NS (500 * 1000 * 1000)
 
 static int font_set(struct kmscon_terminal *term);
 
@@ -302,7 +307,7 @@ static void do_redraw_screen(struct screen *scr)
 	scr->pending = false;
 
 	tsm_vte_get_def_attr(scr->term->vte, &attr);
-	kmscon_text_prepare(scr->txt, &attr);
+	kmscon_text_prepare(scr->txt, &attr, scr->term->blinking);
 	kmscon_text_draw(scr->txt, scr->term->console);
 	draw_pointer(scr);
 	kmscon_text_render(scr->txt);
@@ -422,6 +427,17 @@ static void display_pageflip(void *unused, void *unused2, void *data)
 	scr->swapping = false;
 	if (scr->pending)
 		do_redraw_screen(scr);
+}
+
+static void blink_event(struct ev_timer *timer, uint64_t count, void *data)
+{
+	struct kmscon_terminal *term = data;
+
+	if (!term->awake)
+		return;
+
+	term->blinking = !term->blinking;
+	redraw_all(term);
 }
 
 static void osc_event(struct tsm_vte *vte, const char *osc_string, size_t osc_len, void *data)
@@ -1090,6 +1106,7 @@ void terminal_refresh_displays(struct kmscon_terminal *term)
 void terminal_activate(struct kmscon_terminal *term)
 {
 	term->awake = true;
+	ev_timer_enable(term->blink_timer);
 	if (!term->opened)
 		terminal_open(term);
 	if (term->pointer.visible)
@@ -1101,6 +1118,7 @@ void terminal_deactivate(struct kmscon_terminal *term)
 {
 	term->awake = false;
 	hw_cursor_hide(term);
+	ev_timer_disable(term->blink_timer);
 }
 
 void terminal_destroy(struct kmscon_terminal *term)
@@ -1109,6 +1127,7 @@ void terminal_destroy(struct kmscon_terminal *term)
 
 	terminal_close(term);
 	rm_all_screens(term);
+	ev_eloop_rm_timer(term->blink_timer);
 	input_unregister_pointer_cb(term->input, pointer_event, term);
 	input_unregister_key_cb(term->input, input_event, term);
 	ev_eloop_rm_fd(term->ptyfd);
@@ -1165,6 +1184,10 @@ struct kmscon_terminal *terminal_new(struct kmscon_session *session, unsigned in
 				     struct input *input, const char *seat_name)
 {
 	struct kmscon_terminal *term;
+	struct itimerspec blink_interval = {
+		.it_interval = {0, BLINK_TIMER_NS},
+		.it_value = {0, BLINK_TIMER_NS},
+	};
 	int ret;
 
 	term = malloc(sizeof(*term));
@@ -1236,12 +1259,18 @@ struct kmscon_terminal *terminal_new(struct kmscon_session *session, unsigned in
 		if (ret)
 			goto err_input;
 	}
+	ret = ev_eloop_new_timer(term->eloop, &term->blink_timer, &blink_interval, blink_event,
+				 term);
+	if (ret)
+		goto err_pointer;
 
 	ev_eloop_ref(term->eloop);
 	input_ref(term->input);
 	log_debug("new terminal object %p", term);
 	return term;
 
+err_pointer:
+	input_unregister_pointer_cb(term->input, pointer_event, term);
 err_input:
 	input_unregister_key_cb(term->input, input_event, term);
 err_ptyfd:

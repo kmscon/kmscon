@@ -420,16 +420,19 @@ static struct gl_glyph *find_glyph(struct kmscon_text *txt, const struct tsm_scr
 	unsigned int num;
 	struct kmscon_glyph *glyph;
 	uint32_t ch = cell->ch ? cell->ch : ' ';
-	uint64_t id = kmscon_glyph_id(ch, cell->attr2.u8);
+	uint64_t id;
 
 	font->attr.underline = !!cell->attr2.underline;
 	font->attr.italic = !!cell->attr2.italic;
 	font->attr.bold = !!cell->attr2.bold;
 
-	if (!kmscon_font_has_glyph(font, ch)) {
+	if (cell->attr2.blink && txt->blinking)
+		ch = ' ';
+
+	if (!kmscon_font_has_glyph(font, ch))
 		ch = 0x25a1;
-		id = kmscon_glyph_id(ch, cell->attr2.u8);
-	}
+
+	id = kmscon_glyph_id(ch, cell->attr2.u8);
 
 	if (shl_hashtable_find(gt->glyphs, (void **)&glglyph, id))
 		return glglyph;

@@ -296,19 +296,17 @@ static struct kmscon_glyph *find_glyph(struct kmscon_text *txt, const struct tsm
 	struct bbulk *bb = txt->data;
 	struct kmscon_glyph *glyph;
 	struct kmscon_font *font = txt->font;
-
-	const uint32_t replacement_char = 0x25a1;
 	uint32_t ch = cell->ch ? cell->ch : ' ';
-	uint64_t id = kmscon_glyph_id(cell->ch, cell->attr2.u8);
+	uint64_t id;
 
 	font->attr.underline = !!cell->attr2.underline;
 	font->attr.italic = !!cell->attr2.italic;
 	font->attr.bold = !!cell->attr2.bold;
 
-	if (!kmscon_font_has_glyph(font, ch)) {
-		ch = replacement_char;
-		id = kmscon_glyph_id(ch, cell->attr2.u8);
-	}
+	if (!kmscon_font_has_glyph(font, ch))
+		ch = 0x25a1;
+
+	id = kmscon_glyph_id(cell->ch, cell->attr2.u8);
 
 	glyph = shl_lru_get(bb->glyphs, id);
 	if (glyph)
@@ -409,7 +407,7 @@ static int bbulk_draw_cell(struct kmscon_text *txt, const struct tsm_screen_cell
 
 	*cur_cell = *cell;
 
-	glyph = find_glyph(txt, cell);
+	glyph = find_glyph(txt, cur_cell);
 	if (!glyph)
 		return -ENOMEM;
 
@@ -432,34 +430,28 @@ static int bbulk_draw_cell(struct kmscon_text *txt, const struct tsm_screen_cell
 		set_coordinate(txt, &req->x, &req->y, posx, posy);
 
 	req->buf = &glyph->buf;
-	set_color(req, cell);
+	set_color(req, cur_cell);
 	return 0;
-}
-
-static int bbulk_draw_cursor(struct kmscon_text *txt, const struct tsm_screen_cell *cell,
-			     unsigned int cur_x, unsigned int cur_y)
-{
-	struct tsm_screen_cell cursor_cell = *cell;
-
-	cursor_cell.fg = cell->bg;
-	cursor_cell.bg = cell->fg;
-
-	return bbulk_draw_cell(txt, &cursor_cell, cur_x, cur_y);
 }
 
 static int bbulk_draw(struct kmscon_text *txt, const struct tsm_screen_cell *cells,
 		      unsigned int cur_x, unsigned int cur_y, bool cur_visible)
 {
 	unsigned int posx, posy;
+	struct tsm_screen_cell cell;
 
 	for (posy = 0; posy < txt->rows; posy++) {
 		for (posx = 0; posx < txt->cols; posx++) {
-			const struct tsm_screen_cell *cell = &cells[posx + posy * txt->cols];
-
-			if (posx == cur_x && posy == cur_y && cur_visible)
-				bbulk_draw_cursor(txt, cell, cur_x, cur_y);
-			else
-				bbulk_draw_cell(txt, cell, posx, posy);
+			cell = cells[posx + posy * txt->cols];
+			if (posx == cur_x && posy == cur_y && cur_visible) {
+				struct tsm_screen_color tmp;
+				tmp = cell.fg;
+				cell.fg = cell.bg;
+				cell.bg = tmp;
+			} else if (cell.attr2.blink && txt->blinking) {
+				cell.ch = ' ';
+			}
+			bbulk_draw_cell(txt, &cell, posx, posy);
 		}
 	}
 	return 0;
@@ -658,7 +650,7 @@ static int bbulk_render(struct kmscon_text *txt)
 	int ret;
 
 	ret = display_blendv(txt->disp, bb->reqs, bb->req_len);
-	// log_debug("bbulk, redraw %d cells", bb->req_len);
+	log_debug("bbulk, redraw %d cells", bb->req_len);
 	if (display_supports_damage(txt->disp)) {
 		bbulk_compute_damage(txt);
 		display_set_damage(txt->disp, bb->damage_rect_len, bb->damage_rects);
