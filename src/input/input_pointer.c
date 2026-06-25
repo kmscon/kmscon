@@ -180,6 +180,10 @@ void pointer_dev_button(struct input_dev *dev, uint16_t code, int32_t value)
 	bool pressed = (value == 1);
 	bool dbl_click = false;
 
+	/* Only handle press and release events */
+	if (value > 1)
+		return;
+
 	switch (code) {
 	case BTN_LEFT:
 		if (pressed) {
