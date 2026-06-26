@@ -65,21 +65,21 @@ typedef union {
 } cell_flags_t;
 
 struct bbulk {
-	struct video_blend_req *reqs;
-	unsigned int req_len;
-	unsigned int req_total_len;
-	struct tsm_screen_attr attr;
+	unsigned int sw;	     /* screen width */
+	unsigned int sh;	     /* screen height */
+	unsigned int off_x;	     /* offset of the first cell */
+	unsigned int off_y;	     /* offset of the first cell */
+	struct tsm_screen_attr attr; /* attributes for background color */
+
+	unsigned int requests; /* number of blend calls, for debugging */
 	struct shl_lru *glyphs;
 	struct tsm_screen_cell *cells;
 	cell_flags_t *cell_flags;
 	unsigned int cell_count;
-	unsigned int sw;
-	unsigned int sh;
+
 	struct video_rect *damage_rects;
 	unsigned int damage_rect_len;
 	uint8_t redraw;
-	unsigned int off_x;
-	unsigned int off_y;
 };
 
 static int bbulk_init(struct kmscon_text *txt)
@@ -148,17 +148,11 @@ static int bbulk_set(struct kmscon_text *txt)
 	compute_border(txt);
 
 	bb->cell_count = txt->max_cols * txt->max_rows;
-	bb->req_total_len = bb->cell_count + 1; /* + 1 for the mouse pointer */
 	max_damage_rects = SHL_DIV_ROUND_UP(txt->max_cols, DAMAGE_MERGE_LEN + 1) * txt->max_rows;
-
-	bb->reqs = malloc(sizeof(*bb->reqs) * bb->req_total_len);
-	if (!bb->reqs)
-		return -ENOMEM;
-	memset(bb->reqs, 0, sizeof(*bb->reqs) * bb->req_total_len);
 
 	bb->cells = malloc(sizeof(*bb->cells) * bb->cell_count);
 	if (!bb->cells)
-		goto free_reqs;
+		goto err_no_mem;
 	memset(bb->cells, 0, sizeof(*bb->cells) * bb->cell_count);
 
 	bb->cell_flags = malloc(sizeof(*bb->cell_flags) * bb->cell_count);
@@ -184,8 +178,7 @@ free_damages:
 	free(bb->cell_flags);
 free_prev:
 	free(bb->cells);
-free_reqs:
-	free(bb->reqs);
+err_no_mem:
 	return -ENOMEM;
 }
 
@@ -195,12 +188,10 @@ static void bbulk_unset(struct kmscon_text *txt)
 
 	shl_lru_free(bb->glyphs);
 	free(bb->damage_rects);
-	free(bb->reqs);
 	free(bb->cell_flags);
 	free(bb->cells);
 	bb->glyphs = NULL;
 	bb->damage_rects = NULL;
-	bb->reqs = NULL;
 	bb->cell_flags = NULL;
 	bb->cells = NULL;
 }
@@ -373,7 +364,7 @@ static int bbulk_draw_cell(struct kmscon_text *txt, const struct tsm_screen_cell
 	unsigned int offset = posx + posy * txt->cols;
 	struct tsm_screen_cell *cur_cell = &bb->cells[offset];
 	struct kmscon_glyph *glyph;
-	struct video_blend_req *req;
+	struct video_blend_req req;
 	bool last_col = (posx == txt->cols - 1);
 	bool changed;
 
@@ -416,8 +407,6 @@ static int bbulk_draw_cell(struct kmscon_text *txt, const struct tsm_screen_cell
 
 	bb->cell_flags[offset].double_width = glyph->double_width;
 
-	req = &bb->reqs[bb->req_len++];
-
 	if (glyph->double_width && !last_col &&
 	    (txt->orientation == OR_LEFT || txt->orientation == OR_UPSIDE_DOWN))
 		/*
@@ -425,12 +414,14 @@ static int bbulk_draw_cell(struct kmscon_text *txt, const struct tsm_screen_cell
 		 * next cell, as the glyph is already rotated, so start on the next cell
 		 * and end on this cell
 		 */
-		set_coordinate(txt, &req->x, &req->y, posx + 1, posy);
+		set_coordinate(txt, &req.x, &req.y, posx + 1, posy);
 	else
-		set_coordinate(txt, &req->x, &req->y, posx, posy);
+		set_coordinate(txt, &req.x, &req.y, posx, posy);
 
-	req->buf = &glyph->buf;
-	set_color(req, cur_cell);
+	req.buf = &glyph->buf;
+	set_color(&req, cur_cell);
+	display_blend(txt->disp, &req);
+	bb->requests++;
 	return 0;
 }
 
@@ -553,33 +544,31 @@ static int bbulk_draw_pointer(struct kmscon_text *txt, unsigned int pointer_x,
 			      unsigned int pointer_y)
 {
 	struct bbulk *bb = txt->data;
-	struct video_blend_req *req;
+	struct video_blend_req req;
 	struct kmscon_glyph *bb_glyph;
 	struct tsm_screen_cell pointer_cell = {0};
 	pointer_cell.ch = 'I';
 
-	if (bb->req_len >= bb->req_total_len)
-		return -ENOMEM;
-
 	pointer_x = min(pointer_x, txt->cols * FONT_WIDTH(txt) - (FONT_WIDTH(txt) / 2));
 	pointer_y = min(pointer_y, txt->rows * FONT_HEIGHT(txt) - (FONT_HEIGHT(txt) / 2));
 
-	req = &bb->reqs[bb->req_len++];
 	mark_damaged(txt, bb, pointer_x, pointer_y);
 
 	bb_glyph = find_glyph(txt, &pointer_cell);
 	if (!bb_glyph)
 		return -ENOMEM;
 
-	req->buf = &bb_glyph->buf;
-	set_pointer_coordinate(bb, txt, req, pointer_x, pointer_y);
+	req.buf = &bb_glyph->buf;
+	set_pointer_coordinate(bb, txt, &req, pointer_x, pointer_y);
 
-	req->fr = bb->attr.fr;
-	req->fg = bb->attr.fg;
-	req->fb = bb->attr.fb;
-	req->br = bb->attr.br;
-	req->bg = bb->attr.bg;
-	req->bb = bb->attr.bb;
+	req.fr = bb->attr.fr;
+	req.fg = bb->attr.fg;
+	req.fb = bb->attr.fb;
+	req.br = bb->attr.br;
+	req.bg = bb->attr.bg;
+	req.bb = bb->attr.bb;
+	display_blend(txt->disp, &req);
+	bb->requests++;
 	return 0;
 }
 
@@ -647,12 +636,9 @@ static void bbulk_compute_damage(struct kmscon_text *txt)
 static int bbulk_render(struct kmscon_text *txt)
 {
 	struct bbulk *bb = txt->data;
-	int i;
 	int ret = 0;
 
-	for (i = 0; i < bb->req_len; i++)
-		ret = display_blend(txt->disp, &bb->reqs[i]);
-	log_debug("bbulk, redraw %d cells", bb->req_len);
+	log_debug("bbulk, redraw %d cells", bb->requests);
 	if (display_supports_damage(txt->disp)) {
 		bbulk_compute_damage(txt);
 		display_set_damage(txt->disp, bb->damage_rect_len, bb->damage_rects);
@@ -665,11 +651,7 @@ static int bbulk_prepare(struct kmscon_text *txt, struct tsm_screen_attr *attr)
 	struct bbulk *bb = txt->data;
 	int i;
 
-	// Clear previous requests
-	for (i = 0; i < bb->req_total_len; ++i)
-		bb->reqs[i].buf = NULL;
-
-	bb->req_len = 0;
+	bb->requests = 0;
 	bb->damage_rect_len = 0;
 
 	/*

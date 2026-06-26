@@ -152,7 +152,6 @@ int main(void)
 	/* First call allocates */
 	ret = bbulk_set(&txt);
 	assert(ret == 0);
-	assert(bb->reqs && bb->cells && bb->cell_flags && bb->damage_rects);
 	unsigned int prev_cells = bb->cell_count;
 
 	bbulk_unset(&txt);
@@ -161,7 +160,6 @@ int main(void)
 	ret = bbulk_set(&txt);
 	assert(ret == 0);
 	assert(bb->cell_count == prev_cells);
-	assert(bb->reqs != NULL);
 	assert(bb->cells != NULL);
 	assert(bb->cell_flags != NULL);
 	assert(bb->damage_rects != NULL);
@@ -179,7 +177,6 @@ int main(void)
 	assert(bb->damage_rect_len > 0);
 
 	bbulk_unset(&txt);
-	assert(bb->reqs == NULL);
 	assert(bb->cells == NULL);
 	assert(bb->cell_flags == NULL);
 	assert(bb->damage_rects == NULL);
