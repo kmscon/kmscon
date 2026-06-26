@@ -29,6 +29,7 @@
 
 #include <fcntl.h>
 #include <inttypes.h>
+#include <shl/misc.h>
 #include <stdbool.h>
 #include <sys/mman.h>
 #include <unistd.h>
@@ -58,21 +59,19 @@ int drm2d_display_blend(struct display *disp, const struct video_blend_req *req)
 	sw = disp->width;
 	sh = disp->height;
 
-	tmp = req->x + req->buf->width;
+	width = min(req->w, req->buf->width);
+	tmp = req->x + width;
 	if (tmp < req->x || req->x >= sw)
 		return -EINVAL;
 	if (tmp > sw)
 		width = sw - req->x;
-	else
-		width = req->buf->width;
 
-	tmp = req->y + req->buf->height;
+	height = min(req->h, req->buf->height);
+	tmp = req->y + height;
 	if (tmp < req->y || req->y >= sh)
 		return -EINVAL;
 	if (tmp > sh)
 		height = sh - req->y;
-	else
-		height = req->buf->height;
 
 	dst = rb->map;
 	dst = &dst[req->y * rb->stride + req->x * 4];

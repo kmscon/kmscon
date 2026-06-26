@@ -422,6 +422,17 @@ static int bbulk_draw_cell(struct kmscon_text *txt, const struct tsm_screen_cell
 	else
 		set_coordinate(txt, &req.x, &req.y, posx, posy);
 
+	req.w = glyph->buf.width;
+	req.h = glyph->buf.height;
+
+	/* Truncate the glyph if it would overflow in the border */
+	if (glyph->double_width && last_col) {
+		if (txt->orientation == OR_NORMAL || txt->orientation == OR_UPSIDE_DOWN)
+			req.w = FONT_WIDTH(txt);
+		else if (txt->orientation == OR_RIGHT || txt->orientation == OR_LEFT)
+			req.h = FONT_WIDTH(txt);
+	}
+
 	req.buf = &glyph->buf;
 	set_color(&req, cur_cell);
 	display_blend(txt->disp, &req);

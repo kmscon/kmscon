@@ -29,10 +29,9 @@
 
 #include <errno.h>
 #include <stdbool.h>
-#include <stdlib.h>
-#include <string.h>
 #include "fbdev_internal.h"
 #include "shl/log.h"
+#include "shl/misc.h"
 #include "video.h"
 #include "video_internal.h"
 
@@ -127,21 +126,19 @@ int fbdev_display_blend(struct display *disp, const struct video_blend_req *req)
 	if (!req || !req->buf)
 		return -EINVAL;
 
-	tmp = req->x + req->buf->width;
+	width = min(req->w, req->buf->width);
+	tmp = req->x + width;
 	if (tmp < req->x || req->x >= fbdev->xres)
 		return -EINVAL;
 	if (tmp > fbdev->xres)
 		width = fbdev->xres - req->x;
-	else
-		width = req->buf->width;
 
-	tmp = req->y + req->buf->height;
+	height = min(req->h, req->buf->height);
+	tmp = req->y + height;
 	if (tmp < req->y || req->y >= fbdev->yres)
 		return -EINVAL;
 	if (tmp > fbdev->yres)
 		height = fbdev->yres - req->y;
-	else
-		height = req->buf->height;
 
 	if (!(disp->flags & DISPLAY_DBUF) || fbdev->bufid)
 		dst = fbdev->map;

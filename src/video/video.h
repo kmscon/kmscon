@@ -98,6 +98,8 @@ struct video_blend_req {
 	const struct video_buffer *buf;
 	unsigned int x;
 	unsigned int y;
+	unsigned int w;
+	unsigned int h;
 	uint8_t fr;
 	uint8_t fg;
 	uint8_t fb;
