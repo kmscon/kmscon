@@ -312,12 +312,12 @@ int display_clear(struct display *disp, uint8_t r, uint8_t g, uint8_t b)
 }
 
 SHL_EXPORT
-int display_blendv(struct display *disp, const struct video_blend_req *req, size_t num)
+int display_blend(struct display *disp, const struct video_blend_req *req)
 {
 	if (!disp || !display_is_online(disp) || !video_is_awake(disp->video))
 		return -EINVAL;
 
-	return VIDEO_CALL(disp->ops->blendv, -EOPNOTSUPP, disp, req, num);
+	return VIDEO_CALL(disp->ops->blend, -EOPNOTSUPP, disp, req);
 }
 
 SHL_EXPORT

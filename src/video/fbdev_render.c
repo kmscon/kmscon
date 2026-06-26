@@ -114,154 +114,149 @@ static void write_24bit(uint8_t *dst, uint_fast32_t value)
 #endif
 }
 
-int fbdev_display_blendv(struct display *disp, const struct video_blend_req *req, size_t num)
+int fbdev_display_blend(struct display *disp, const struct video_blend_req *req)
 {
 	unsigned int tmp;
 	uint8_t *dst;
 	const uint8_t *src;
-	unsigned int width, height, i, j;
+	unsigned int width, height, i;
 	unsigned int r, g, b;
 	uint32_t val;
 	struct fbdev_display *fbdev = disp->data;
 
-	if (!req)
+	if (!req || !req->buf)
 		return -EINVAL;
 
-	for (j = 0; j < num; ++j, ++req) {
-		if (!req->buf)
-			continue;
+	tmp = req->x + req->buf->width;
+	if (tmp < req->x || req->x >= fbdev->xres)
+		return -EINVAL;
+	if (tmp > fbdev->xres)
+		width = fbdev->xres - req->x;
+	else
+		width = req->buf->width;
 
-		tmp = req->x + req->buf->width;
-		if (tmp < req->x || req->x >= fbdev->xres)
-			return -EINVAL;
-		if (tmp > fbdev->xres)
-			width = fbdev->xres - req->x;
-		else
-			width = req->buf->width;
+	tmp = req->y + req->buf->height;
+	if (tmp < req->y || req->y >= fbdev->yres)
+		return -EINVAL;
+	if (tmp > fbdev->yres)
+		height = fbdev->yres - req->y;
+	else
+		height = req->buf->height;
 
-		tmp = req->y + req->buf->height;
-		if (tmp < req->y || req->y >= fbdev->yres)
-			return -EINVAL;
-		if (tmp > fbdev->yres)
-			height = fbdev->yres - req->y;
-		else
-			height = req->buf->height;
+	if (!(disp->flags & DISPLAY_DBUF) || fbdev->bufid)
+		dst = fbdev->map;
+	else
+		dst = &fbdev->map[fbdev->yres * fbdev->stride];
+	dst = &dst[req->y * fbdev->stride + req->x * fbdev->Bpp];
+	src = req->buf->data;
 
-		if (!(disp->flags & DISPLAY_DBUF) || fbdev->bufid)
-			dst = fbdev->map;
-		else
-			dst = &fbdev->map[fbdev->yres * fbdev->stride];
-		dst = &dst[req->y * fbdev->stride + req->x * fbdev->Bpp];
-		src = req->buf->data;
-
-		/* Division by 256 instead of 255 increases
-		 * speed by like 20% on slower machines.
-		 * Downside is, full white is 254/254/254
-		 * instead of 255/255/255. */
-		if (fbdev->xrgb32) {
-			while (height--) {
-				for (i = 0; i < width; ++i) {
-					if (src[i] == 0) {
-						r = req->br;
-						g = req->bg;
-						b = req->bb;
-					} else if (src[i] == 255) {
-						r = req->fr;
-						g = req->fg;
-						b = req->fb;
-					} else {
-						r = req->fr * src[i] + req->br * (255 - src[i]);
-						r /= 256;
-						g = req->fg * src[i] + req->bg * (255 - src[i]);
-						g /= 256;
-						b = req->fb * src[i] + req->bb * (255 - src[i]);
-						b /= 256;
-					}
-					val = (r << 16) | (g << 8) | b;
-					((uint32_t *)dst)[i] = val;
+	/* Division by 256 instead of 255 increases
+	 * speed by like 20% on slower machines.
+	 * Downside is, full white is 254/254/254
+	 * instead of 255/255/255. */
+	if (fbdev->xrgb32) {
+		while (height--) {
+			for (i = 0; i < width; ++i) {
+				if (src[i] == 0) {
+					r = req->br;
+					g = req->bg;
+					b = req->bb;
+				} else if (src[i] == 255) {
+					r = req->fr;
+					g = req->fg;
+					b = req->fb;
+				} else {
+					r = req->fr * src[i] + req->br * (255 - src[i]);
+					r /= 256;
+					g = req->fg * src[i] + req->bg * (255 - src[i]);
+					g /= 256;
+					b = req->fb * src[i] + req->bb * (255 - src[i]);
+					b /= 256;
 				}
-				dst += fbdev->stride;
-				src += req->buf->stride;
+				val = (r << 16) | (g << 8) | b;
+				((uint32_t *)dst)[i] = val;
 			}
-		} else if (fbdev->Bpp == 2) {
-			while (height--) {
-				for (i = 0; i < width; ++i) {
-					if (src[i] == 0) {
-						r = req->br;
-						g = req->bg;
-						b = req->bb;
-					} else if (src[i] == 255) {
-						r = req->fr;
-						g = req->fg;
-						b = req->fb;
-					} else {
-						r = req->fr * src[i] + req->br * (255 - src[i]);
-						r /= 256;
-						g = req->fg * src[i] + req->bg * (255 - src[i]);
-						g /= 256;
-						b = req->fb * src[i] + req->bb * (255 - src[i]);
-						b /= 256;
-					}
-					val = (r << 16) | (g << 8) | b;
-					((uint16_t *)dst)[i] = xrgb32_to_device(disp, val);
-				}
-				dst += fbdev->stride;
-				src += req->buf->stride;
-			}
-		} else if (fbdev->Bpp == 3) {
-			while (height--) {
-				for (i = 0; i < width; ++i) {
-					if (src[i] == 0) {
-						r = req->br;
-						g = req->bg;
-						b = req->bb;
-					} else if (src[i] == 255) {
-						r = req->fr;
-						g = req->fg;
-						b = req->fb;
-					} else {
-						r = req->fr * src[i] + req->br * (255 - src[i]);
-						r /= 256;
-						g = req->fg * src[i] + req->bg * (255 - src[i]);
-						g /= 256;
-						b = req->fb * src[i] + req->bb * (255 - src[i]);
-						b /= 256;
-					}
-					val = (r << 16) | (g << 8) | b;
-					uint_fast32_t full = xrgb32_to_device(disp, val);
-					write_24bit(&dst[i * 3], full);
-				}
-				dst += fbdev->stride;
-				src += req->buf->stride;
-			}
-		} else if (fbdev->Bpp == 4) {
-			while (height--) {
-				for (i = 0; i < width; ++i) {
-					if (src[i] == 0) {
-						r = req->br;
-						g = req->bg;
-						b = req->bb;
-					} else if (src[i] == 255) {
-						r = req->fr;
-						g = req->fg;
-						b = req->fb;
-					} else {
-						r = req->fr * src[i] + req->br * (255 - src[i]);
-						r /= 256;
-						g = req->fg * src[i] + req->bg * (255 - src[i]);
-						g /= 256;
-						b = req->fb * src[i] + req->bb * (255 - src[i]);
-						b /= 256;
-					}
-					val = (r << 16) | (g << 8) | b;
-					((uint32_t *)dst)[i] = xrgb32_to_device(disp, val);
-				}
-				dst += fbdev->stride;
-				src += req->buf->stride;
-			}
-		} else {
-			log_warning("invalid Bpp");
+			dst += fbdev->stride;
+			src += req->buf->stride;
 		}
+	} else if (fbdev->Bpp == 2) {
+		while (height--) {
+			for (i = 0; i < width; ++i) {
+				if (src[i] == 0) {
+					r = req->br;
+					g = req->bg;
+					b = req->bb;
+				} else if (src[i] == 255) {
+					r = req->fr;
+					g = req->fg;
+					b = req->fb;
+				} else {
+					r = req->fr * src[i] + req->br * (255 - src[i]);
+					r /= 256;
+					g = req->fg * src[i] + req->bg * (255 - src[i]);
+					g /= 256;
+					b = req->fb * src[i] + req->bb * (255 - src[i]);
+					b /= 256;
+				}
+				val = (r << 16) | (g << 8) | b;
+				((uint16_t *)dst)[i] = xrgb32_to_device(disp, val);
+			}
+			dst += fbdev->stride;
+			src += req->buf->stride;
+		}
+	} else if (fbdev->Bpp == 3) {
+		while (height--) {
+			for (i = 0; i < width; ++i) {
+				if (src[i] == 0) {
+					r = req->br;
+					g = req->bg;
+					b = req->bb;
+				} else if (src[i] == 255) {
+					r = req->fr;
+					g = req->fg;
+					b = req->fb;
+				} else {
+					r = req->fr * src[i] + req->br * (255 - src[i]);
+					r /= 256;
+					g = req->fg * src[i] + req->bg * (255 - src[i]);
+					g /= 256;
+					b = req->fb * src[i] + req->bb * (255 - src[i]);
+					b /= 256;
+				}
+				val = (r << 16) | (g << 8) | b;
+				uint_fast32_t full = xrgb32_to_device(disp, val);
+				write_24bit(&dst[i * 3], full);
+			}
+			dst += fbdev->stride;
+			src += req->buf->stride;
+		}
+	} else if (fbdev->Bpp == 4) {
+		while (height--) {
+			for (i = 0; i < width; ++i) {
+				if (src[i] == 0) {
+					r = req->br;
+					g = req->bg;
+					b = req->bb;
+				} else if (src[i] == 255) {
+					r = req->fr;
+					g = req->fg;
+					b = req->fb;
+				} else {
+					r = req->fr * src[i] + req->br * (255 - src[i]);
+					r /= 256;
+					g = req->fg * src[i] + req->bg * (255 - src[i]);
+					g /= 256;
+					b = req->fb * src[i] + req->bb * (255 - src[i]);
+					b /= 256;
+				}
+				val = (r << 16) | (g << 8) | b;
+				((uint32_t *)dst)[i] = xrgb32_to_device(disp, val);
+			}
+			dst += fbdev->stride;
+			src += req->buf->stride;
+		}
+	} else {
+		log_warning("invalid Bpp");
 	}
 
 	return 0;

@@ -98,11 +98,10 @@ int display_clear(struct display *disp, uint8_t r, uint8_t g, uint8_t b)
 	(void)b;
 	return 0;
 }
-int display_blendv(struct display *disp, const struct video_blend_req *req, size_t num)
+int display_blend(struct display *disp, const struct video_blend_req *req)
 {
 	(void)disp;
 	(void)req;
-	(void)num;
 	return 0;
 }
 void display_set_damage(struct display *disp, size_t n_rect, struct video_rect *damages)

@@ -30,8 +30,6 @@
 #include <fcntl.h>
 #include <inttypes.h>
 #include <stdbool.h>
-#include <stdlib.h>
-#include <string.h>
 #include <sys/mman.h>
 #include <unistd.h>
 #include <xf86drm.h>
@@ -42,87 +40,81 @@
 
 #define LOG_SUBSYSTEM "drm2d_render"
 
-int drm2d_display_blendv(struct display *disp, const struct video_blend_req *req, size_t num)
+int drm2d_display_blend(struct display *disp, const struct video_blend_req *req)
 {
 	unsigned int tmp;
 	uint8_t *dst;
 	const uint8_t *src;
-	unsigned int width, height, i, j;
+	unsigned int width, height, i;
 	unsigned int sw, sh;
 	uint_fast32_t r, g, b, out;
 	struct drm2d_rb *rb;
 	struct drm2d_display *d2d = disp->data;
 
-	if (!req)
+	if (!req || !req->buf)
 		return -EINVAL;
 
 	rb = &d2d->rb[d2d->current_rb ^ 1];
 	sw = disp->width;
 	sh = disp->height;
 
-	for (j = 0; j < num; ++j, ++req) {
-		if (!req->buf)
-			continue;
+	tmp = req->x + req->buf->width;
+	if (tmp < req->x || req->x >= sw)
+		return -EINVAL;
+	if (tmp > sw)
+		width = sw - req->x;
+	else
+		width = req->buf->width;
 
-		tmp = req->x + req->buf->width;
-		if (tmp < req->x || req->x >= sw)
-			return -EINVAL;
-		if (tmp > sw)
-			width = sw - req->x;
-		else
-			width = req->buf->width;
+	tmp = req->y + req->buf->height;
+	if (tmp < req->y || req->y >= sh)
+		return -EINVAL;
+	if (tmp > sh)
+		height = sh - req->y;
+	else
+		height = req->buf->height;
 
-		tmp = req->y + req->buf->height;
-		if (tmp < req->y || req->y >= sh)
-			return -EINVAL;
-		if (tmp > sh)
-			height = sh - req->y;
-		else
-			height = req->buf->height;
+	dst = rb->map;
+	dst = &dst[req->y * rb->stride + req->x * 4];
+	src = req->buf->data;
 
-		dst = rb->map;
-		dst = &dst[req->y * rb->stride + req->x * 4];
-		src = req->buf->data;
+	while (height--) {
+		for (i = 0; i < width; ++i) {
+			/* Division by 255 (t /= 255) is done with:
+			 *   t += 0x80
+			 *   t = (t + (t >> 8)) >> 8
+			 * This speeds up the computation by ~20% as the
+			 * division is not needed. */
+			if (src[i] == 0) {
+				r = req->br;
+				g = req->bg;
+				b = req->bb;
+				out = (r << 16) | (g << 8) | b;
+			} else if (src[i] == 255) {
+				r = req->fr;
+				g = req->fg;
+				b = req->fb;
+				out = (r << 16) | (g << 8) | b;
+			} else {
+				r = req->fr * src[i] + req->br * (255 - src[i]);
+				r += 0x80;
+				r = (r + (r >> 8)) >> 8;
 
-		while (height--) {
-			for (i = 0; i < width; ++i) {
-				/* Division by 255 (t /= 255) is done with:
-				 *   t += 0x80
-				 *   t = (t + (t >> 8)) >> 8
-				 * This speeds up the computation by ~20% as the
-				 * division is not needed. */
-				if (src[i] == 0) {
-					r = req->br;
-					g = req->bg;
-					b = req->bb;
-					out = (r << 16) | (g << 8) | b;
-				} else if (src[i] == 255) {
-					r = req->fr;
-					g = req->fg;
-					b = req->fb;
-					out = (r << 16) | (g << 8) | b;
-				} else {
-					r = req->fr * src[i] + req->br * (255 - src[i]);
-					r += 0x80;
-					r = (r + (r >> 8)) >> 8;
+				g = req->fg * src[i] + req->bg * (255 - src[i]);
+				g += 0x80;
+				g = (g + (g >> 8)) >> 8;
 
-					g = req->fg * src[i] + req->bg * (255 - src[i]);
-					g += 0x80;
-					g = (g + (g >> 8)) >> 8;
-
-					b = req->fb * src[i] + req->bb * (255 - src[i]);
-					b += 0x80;
-					b = (b + (b >> 8)) >> 8;
-					out = (r << 16) | (g << 8) | b;
-				}
-
-				((uint32_t *)dst)[i] = out;
+				b = req->fb * src[i] + req->bb * (255 - src[i]);
+				b += 0x80;
+				b = (b + (b >> 8)) >> 8;
+				out = (r << 16) | (g << 8) | b;
 			}
-			dst += rb->stride;
-			src += req->buf->stride;
-		}
-	}
 
+			((uint32_t *)dst)[i] = out;
+		}
+		dst += rb->stride;
+		src += req->buf->stride;
+	}
 	return 0;
 }
 

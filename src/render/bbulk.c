@@ -647,9 +647,11 @@ static void bbulk_compute_damage(struct kmscon_text *txt)
 static int bbulk_render(struct kmscon_text *txt)
 {
 	struct bbulk *bb = txt->data;
-	int ret;
+	int i;
+	int ret = 0;
 
-	ret = display_blendv(txt->disp, bb->reqs, bb->req_len);
+	for (i = 0; i < bb->req_len; i++)
+		ret = display_blend(txt->disp, &bb->reqs[i]);
 	log_debug("bbulk, redraw %d cells", bb->req_len);
 	if (display_supports_damage(txt->disp)) {
 		bbulk_compute_damage(txt);
