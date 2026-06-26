@@ -45,7 +45,6 @@
 #include <unistd.h>
 #include <xf86drm.h>
 #include <xf86drmMode.h>
-#include "drm3d_internal.h"
 #include "drm_shared_internal.h"
 #include "shl/log.h"
 #include "shl/misc.h"
@@ -53,6 +52,37 @@
 #include "video_internal.h"
 
 #define LOG_SUBSYSTEM "drm3d_video"
+
+struct drm3d_rb {
+	struct display *disp;
+	struct gbm_bo *bo;
+	uint32_t id;
+};
+
+struct drm3d_display {
+	struct drm_display ddrm;
+	struct gbm_surface *gbm;
+	EGLSurface surface;
+	struct drm3d_rb *current;
+	struct drm3d_rb *next;
+};
+
+struct drm3d_video {
+	struct gbm_device *gbm;
+	EGLDisplay disp;
+	EGLConfig conf;
+	EGLContext ctx;
+
+	unsigned int sinit;
+	bool supports_rowlen;
+	GLuint tex;
+
+	struct gl_shader *blend_shader;
+	GLuint uni_blend_proj;
+	GLuint uni_blend_tex;
+	GLuint uni_blend_fgcol;
+	GLuint uni_blend_bgcol;
+};
 
 static void bo_destroy_event(struct gbm_bo *bo, void *data)
 {
@@ -372,8 +402,8 @@ static const struct display_ops drm_display_ops = {
 	.use = drm3d_display_use,
 	.swap = drm3d_display_swap,
 	.is_swapping = drm_is_swapping,
-	.blendv = drm3d_display_blendv,
-	.clear = drm3d_display_clear,
+	.blendv = NULL,
+	.clear = NULL,
 	.set_damage = NULL,
 	.has_damage = NULL,
 	.setup_cursor = drm_display_setup_cursor,
@@ -601,7 +631,6 @@ static void drm3d_video_destroy(struct video *video)
 
 	if (!eglMakeCurrent(v3d->disp, EGL_NO_SURFACE, EGL_NO_SURFACE, v3d->ctx))
 		log_err("cannot activate GL context during destruction");
-	drm3d_deinit_shaders(video);
 
 	eglMakeCurrent(v3d->disp, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
 	eglDestroyContext(v3d->disp, v3d->ctx);
