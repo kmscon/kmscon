@@ -69,6 +69,8 @@ struct bbulk {
 	unsigned int sh;	     /* screen height */
 	unsigned int off_x;	     /* offset of the first cell */
 	unsigned int off_y;	     /* offset of the first cell */
+	unsigned int max_x;	     /* maximum x offset of the last cell */
+	unsigned int max_y;	     /* maximum y offset of the last cell */
 	struct tsm_screen_attr attr; /* attributes for background color */
 
 	unsigned int requests; /* number of blend calls, for debugging */
@@ -115,9 +117,13 @@ static void compute_border(struct kmscon_text *txt)
 	if (txt->orientation == OR_NORMAL || txt->orientation == OR_UPSIDE_DOWN) {
 		bb->off_x = (bb->sw - txt->cols * FONT_WIDTH(txt)) / 2;
 		bb->off_y = (bb->sh - txt->rows * FONT_HEIGHT(txt)) / 2;
+		bb->max_x = bb->off_x + txt->cols * FONT_WIDTH(txt);
+		bb->max_y = bb->off_y + txt->rows * FONT_HEIGHT(txt);
 	} else {
 		bb->off_x = (bb->sw - txt->rows * FONT_HEIGHT(txt)) / 2;
 		bb->off_y = (bb->sh - txt->cols * FONT_WIDTH(txt)) / 2;
+		bb->max_x = bb->off_x + txt->rows * FONT_HEIGHT(txt);
+		bb->max_y = bb->off_y + txt->cols * FONT_WIDTH(txt);
 	}
 	display_set_cursor_offset(txt->disp, bb->off_x, bb->off_y);
 }
@@ -327,24 +333,22 @@ static void set_coordinate(struct kmscon_text *txt, unsigned int *x, unsigned in
 
 	switch (txt->orientation) {
 	case OR_NORMAL:
-		*x = posx * FONT_WIDTH(txt);
-		*y = posy * FONT_HEIGHT(txt);
+		*x = posx * FONT_WIDTH(txt) + bb->off_x;
+		*y = posy * FONT_HEIGHT(txt) + bb->off_y;
 		break;
 	case OR_UPSIDE_DOWN:
-		*x = bb->sw - (posx + 1) * FONT_WIDTH(txt);
-		*y = bb->sh - (posy + 1) * FONT_HEIGHT(txt);
+		*x = bb->max_x - (posx + 1) * FONT_WIDTH(txt);
+		*y = bb->max_y - (posy + 1) * FONT_HEIGHT(txt);
 		break;
 	case OR_RIGHT:
-		*x = bb->sw - (posy + 1) * FONT_HEIGHT(txt);
-		*y = posx * FONT_WIDTH(txt);
+		*x = bb->max_x - (posy + 1) * FONT_HEIGHT(txt);
+		*y = posx * FONT_WIDTH(txt) + bb->off_y;
 		break;
 	case OR_LEFT:
-		*x = posy * FONT_HEIGHT(txt);
-		*y = bb->sh - (posx + 1) * FONT_WIDTH(txt);
+		*x = posy * FONT_HEIGHT(txt) + bb->off_x;
+		*y = bb->max_y - (posx + 1) * FONT_WIDTH(txt);
 		break;
 	}
-	*x += bb->off_x;
-	*y += bb->off_y;
 }
 
 static void set_color(struct video_blend_req *req, const struct tsm_screen_cell *cell)
