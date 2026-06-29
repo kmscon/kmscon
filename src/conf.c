@@ -165,6 +165,8 @@ int conf_ctx_parse_ctx(struct conf_ctx *ctx, const struct conf_ctx *src)
 	return 0;
 }
 
+#define LONG_OPTION 100000
+#define NO_LONG_OPTION 200000
 /*
  * Parse command line arguments
  * This temporarily allocates the short_options and long_options arrays so we
@@ -183,13 +185,15 @@ int conf_ctx_parse_argv(struct conf_ctx *ctx, int argc, char **argv)
 	if (!ctx || !argv)
 		return -EINVAL;
 
-	short_options = malloc(sizeof(char) * (ctx->onum + 1) * 2);
+	/* Worst case, 2 char per option + 1 for the terminating null byte */
+	short_options = calloc(ctx->onum * 2 + 1, sizeof(char));
 	if (!short_options) {
 		log_error("out of memory to parse cmd-line arguments (%d): %m", errno);
 		return -ENOMEM;
 	}
 
-	long_options = malloc(sizeof(struct option) * ctx->onum * 2);
+	/* Worst case, 2 struct option per option + 1 for the terminating null option */
+	long_options = calloc(ctx->onum * 2 + 1, sizeof(struct option));
 	if (!long_options) {
 		log_error("out of memory to parse cmd-line arguments (%d): %m", errno);
 		free(short_options);
@@ -211,7 +215,7 @@ int conf_ctx_parse_argv(struct conf_ctx *ctx, int argc, char **argv)
 			opt->name = &ctx->opts[i].long_name[3];
 			opt->has_arg = !!(ctx->opts[i].type->flags & CONF_HAS_ARG);
 			opt->flag = NULL;
-			opt->val = 100000 + i;
+			opt->val = LONG_OPTION + i;
 			++opt;
 
 			/* boolean args are also added with "no-" prefix */
@@ -219,7 +223,7 @@ int conf_ctx_parse_argv(struct conf_ctx *ctx, int argc, char **argv)
 				opt->name = ctx->opts[i].long_name;
 				opt->has_arg = 0;
 				opt->flag = NULL;
-				opt->val = 200000 + i;
+				opt->val = NO_LONG_OPTION + i;
 				++opt;
 			}
 		}
@@ -235,14 +239,14 @@ int conf_ctx_parse_argv(struct conf_ctx *ctx, int argc, char **argv)
 			fprintf(stderr, "Missing argument for: %s\n", argv[optind - 1]);
 			return -EFAULT;
 		} else if (c == '?') {
-			if (optopt && optopt < 100000)
+			if (optopt && optopt < LONG_OPTION)
 				fprintf(stderr, "Unknown argument: -%c\n", optopt);
 			else if (!optopt)
 				fprintf(stderr, "Unknown argument: %s\n", argv[optind - 1]);
 			else
 				fprintf(stderr, "Option takes no arg: %s\n", argv[optind - 1]);
 			return -EFAULT;
-		} else if (c < 100000) {
+		} else if (c < LONG_OPTION) {
 			for (i = 0; i < ctx->onum; ++i) {
 				o = &ctx->opts[i];
 
@@ -258,8 +262,8 @@ int conf_ctx_parse_argv(struct conf_ctx *ctx, int argc, char **argv)
 				o->flags |= CONF_LOCKED;
 				break;
 			}
-		} else if (c < 200000) {
-			i = c - 100000;
+		} else if (c < NO_LONG_OPTION) {
+			i = c - LONG_OPTION;
 			o = &ctx->opts[i];
 
 			if (o->type->parse) {
@@ -270,7 +274,7 @@ int conf_ctx_parse_argv(struct conf_ctx *ctx, int argc, char **argv)
 
 			o->flags |= CONF_LOCKED;
 		} else {
-			i = c - 200000;
+			i = c - NO_LONG_OPTION;
 			o = &ctx->opts[i];
 
 			if (o->type->parse) {

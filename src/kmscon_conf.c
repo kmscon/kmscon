@@ -850,7 +850,7 @@ int kmscon_conf_load_main(struct conf_ctx *ctx, int argc, char **argv)
 
 	ret = conf_ctx_parse_argv(ctx, argc, argv);
 	if (ret)
-		return ret;
+		log_warn("Some wrong command line arguments ignored: %d\n", ret);
 
 	if (conf->exit)
 		return 0;
