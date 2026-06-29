@@ -6,7 +6,7 @@ option('docs', type: 'feature', value: 'auto',
   description: 'Build documentation')
 
 # seat management
-option('libseat', type: 'feature', value: 'auto',
+option('libseat', type: 'feature', value: 'disabled',
   description: 'Use libseat to integrate with systemd-logind, elogind, or seatd')
 
 # video backends
