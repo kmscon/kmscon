@@ -143,7 +143,7 @@ font-name=Ubuntu Mono
       <varlistentry>
         <term><option>libseat</option></term>
         <listitem>
-          <para>Use libseat for seat management. (default: on)</para>
+          <para>Use libseat for seat management. (default: off)</para>
         </listitem>
       </varlistentry>
 

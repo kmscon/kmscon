@@ -81,7 +81,7 @@ static void print_help()
 		"\t    --session-control           [off] Allow keyboard session-control\n"
 		"\n"
 		"Terminal Options:\n"
-		"\t    --issue                 [on]\n"
+		"\t    --issue                 [off]\n"
 		"\t                              Display issue files before the\n"
 		"\t                              login prompt. Use --no-issue to\n"
 		"\t                              let the login process handle it.\n"
@@ -723,7 +723,7 @@ int kmscon_conf_new(struct conf_ctx **out)
 		/* Seat Options */
 		CONF_OPTION(0, 0, "vt", &conf_vt, NULL, NULL, NULL, &conf->vt, NULL),
 		CONF_OPTION_BOOL(0, "switchvt", &conf->switchvt, true),
-		CONF_OPTION_BOOL(0, "libseat", &conf->libseat, true),
+		CONF_OPTION_BOOL(0, "libseat", &conf->libseat, false),
 
 		/* Session Options */
 		CONF_OPTION_UINT(0, "session-max", &conf->session_max, 50),

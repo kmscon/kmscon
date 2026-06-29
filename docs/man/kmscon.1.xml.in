@@ -132,7 +132,7 @@
       <varlistentry>
         <term><option>--vt {/path/to/vt|ttyX|X}</option></term>
         <listitem>
-          <para>Use this VT. The argument is either the full path `/dev/ttyX', 
+          <para>Use this VT. The argument is either the full path `/dev/ttyX',
                 the device name `ttyX' or just the tty number. If not specified,
                 KMSCON tries to find a VT by itself. On seats without VTs,
                 KMSCON simply activates itself automatically without using any
@@ -163,7 +163,7 @@
           <para>Use libseat for seat management, input and video devices.
                 This option is only available if KMSCON was compiled with
                 libseat support. Use --no-libseat to disable it.
-                (default: on)</para>
+                (default: off)</para>
         </listitem>
       </varlistentry>
     </variablelist>
@@ -843,7 +843,7 @@
           Systems simultaneously. You can even use the linux-console on all the
           other virtual terminals.</para>
 
-    <para>By default, KMSCON runs on the current seat. (Often it is 
+    <para>By default, KMSCON runs on the current seat. (Often it is
           <emphasis>seat0</emphasis>). For seats without virtual terminals,
           KMSCON will automatically activate itself and run exclusively on that
           seat. If the virtual terminal or the seat that kmscon
