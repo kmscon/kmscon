@@ -685,6 +685,25 @@ void input_set_device_ops(struct input *input, uterm_open_cb open_cb, uterm_clos
 }
 
 SHL_EXPORT
+unsigned int input_get_mods(struct input *input)
+{
+	struct shl_dlist *iter;
+	struct input_dev *dev;
+	unsigned int mods = 0;
+
+	if (!input)
+		return 0;
+	shl_dlist_for_each(iter, &input->devices)
+	{
+		dev = shl_dlist_entry(iter, struct input_dev, list);
+		if (dev->capabilities & DEVICE_HAS_KEYS)
+			mods |= uxkb_dev_get_mods(dev);
+	}
+
+	return mods;
+}
+
+SHL_EXPORT
 void input_sleep(struct input *input)
 {
 	struct shl_dlist *iter;

@@ -149,6 +149,7 @@ void uxkb_compose_table_destroy(struct input *input);
 int uxkb_dev_init(struct input_dev *dev);
 void uxkb_dev_destroy(struct input_dev *dev);
 int uxkb_dev_process(struct input_dev *dev, uint16_t key_state, uint16_t code);
+unsigned int uxkb_dev_get_mods(struct input_dev *dev);
 void uxkb_dev_wake_up(struct input_dev *dev);
 void uxkb_dev_set_leds(struct input_dev *dev, unsigned int scroll_lock, unsigned int num_lock,
 		       unsigned int caps_lock);

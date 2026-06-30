@@ -113,6 +113,7 @@ void input_unregister_pointer_cb(struct input *input, input_pointer_cb cb, void 
 void input_set_device_ops(struct input *input, uterm_open_cb open_cb, uterm_close_cb close_cb,
 			  void *data);
 
+unsigned int input_get_mods(struct input *input);
 void input_sleep(struct input *input);
 void input_wake_up(struct input *input);
 bool input_is_awake(struct input *input);

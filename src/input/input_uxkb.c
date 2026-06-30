@@ -546,6 +546,14 @@ int uxkb_dev_process(struct input_dev *dev, uint16_t key_state, uint16_t code)
 	return 0;
 }
 
+unsigned int uxkb_dev_get_mods(struct input_dev *dev)
+{
+	if (!dev || !dev->state)
+		return 0;
+
+	return xkb_state_serialize_mods(dev->state, XKB_STATE_MODS_EFFECTIVE);
+}
+
 void uxkb_dev_wake_up(struct input_dev *dev)
 {
 	xkb_mod_mask_t locked_mods;
