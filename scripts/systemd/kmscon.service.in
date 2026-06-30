@@ -7,7 +7,7 @@ After=rc-local.service
 
 [Service]
 @PAM_CFG@
-ExecStart=kmscon
+ExecStart=kmscon --login -- /sbin/agetty -8 -o '-p -- \\u' --noclear -- - $$TERM
 
 [Install]
 WantedBy=multi-user.target

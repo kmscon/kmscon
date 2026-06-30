@@ -83,11 +83,11 @@ static void print_help()
 		"Terminal Options:\n"
 		"\t    --issue                 [off]\n"
 		"\t                              Display issue files before the\n"
-		"\t                              login prompt. Use --no-issue to\n"
-		"\t                              let the login process handle it.\n"
+		"\t                              login prompt.\n"
 		"\t    --issue-path <path>     [" ISSUE_DEFAULT_PATH "]\n"
 		"\t                              Colon-separated list of issue\n"
 		"\t                              files and directories to read\n"
+		"\t                              when using --issue\n"
 		"\t-l, --login                 [/bin/login -p]\n"
 		"\t                              Start the given login process instead\n"
 		"\t                              of the default process; all arguments\n"
@@ -730,7 +730,7 @@ int kmscon_conf_new(struct conf_ctx **out)
 		CONF_OPTION_BOOL(0, "session-control", &conf->session_control, false),
 
 		/* Terminal Options */
-		CONF_OPTION_BOOL(0, "issue", &conf->issue, true),
+		CONF_OPTION_BOOL(0, "issue", &conf->issue, false),
 		CONF_OPTION_STRING(0, "issue-path", &conf->issue_path, ISSUE_DEFAULT_PATH),
 		CONF_OPTION(0, 'l', "login", &conf_login, aftercheck_login, NULL, file_login,
 			    &conf->login, false),
