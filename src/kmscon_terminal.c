@@ -776,6 +776,27 @@ void terminal_rm_display(struct kmscon_terminal *term, struct display *disp)
 	free_screen(scr, true);
 }
 
+static void zoom_in(struct kmscon_terminal *term)
+{
+	if (term->font_attr.height > 150) // don't allow zoom in beyond 150
+		return;
+
+	term->font_attr.height += term->font->increase_step;
+	if (font_set(term))
+		term->font_attr.height -= term->font->increase_step;
+}
+
+static void zoom_out(struct kmscon_terminal *term)
+{
+	if (term->font_attr.height <= term->font->increase_step)
+		return;
+	if (term->font_attr.height - term->font->increase_step < 10)
+		return;
+	term->font_attr.height -= term->font->increase_step;
+	if (font_set(term))
+		term->font_attr.height += term->font->increase_step;
+}
+
 static void input_event(struct input *input, struct input_key_event *ev, void *data)
 {
 	struct kmscon_terminal *term = data;
@@ -813,22 +834,12 @@ static void input_event(struct input *input, struct input_key_event *ev, void *d
 	}
 	if (conf_grab_matches(term->conf->grab_zoom_in, ev->mods, ev->num_syms, ev->keysyms)) {
 		ev->handled = true;
-		if (term->font_attr.height + term->font->increase_step < term->font_attr.height)
-			return;
-
-		term->font_attr.height += term->font->increase_step;
-		if (font_set(term))
-			term->font_attr.height -= term->font->increase_step;
+		zoom_in(term);
 		return;
 	}
 	if (conf_grab_matches(term->conf->grab_zoom_out, ev->mods, ev->num_syms, ev->keysyms)) {
 		ev->handled = true;
-		if (term->font_attr.height <= term->font->increase_step)
-			return;
-
-		term->font_attr.height -= term->font->increase_step;
-		if (font_set(term))
-			term->font_attr.height += term->font->increase_step;
+		zoom_out(term);
 		return;
 	}
 	if (conf_grab_matches(term->conf->grab_rotate_cw, ev->mods, ev->num_syms, ev->keysyms)) {
@@ -1035,11 +1046,17 @@ static void pointer_event(struct input *input, struct input_pointer_event *ev, v
 		handle_pointer_button(term, ev);
 		break;
 	case POINTER_WHEEL:
-		tsm_screen_selection_reset(term->console);
-		if (term->conf->natural_scrolling != (ev->wheel > 0))
-			tsm_screen_sb_up(term->console, 3);
-		else
-			tsm_screen_sb_down(term->console, 3);
+		if (input_get_mods(term->input) & INPUT_CONTROL_MASK) {
+			if (ev->wheel > 0)
+				zoom_in(term);
+			else
+				zoom_out(term);
+		} else {
+			if (term->conf->natural_scrolling != (ev->wheel > 0))
+				tsm_screen_sb_up(term->console, 3);
+			else
+				tsm_screen_sb_down(term->console, 3);
+		}
 		break;
 	case POINTER_SYNC:
 		redraw_all(term);
