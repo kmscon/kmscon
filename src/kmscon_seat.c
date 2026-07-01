@@ -472,7 +472,8 @@ static void seat_dpms_timeout(struct ev_timer *timer, uint64_t num, void *data)
 		if (ret)
 			log_warning("cannot set DPMS to OFF for display: %d", ret);
 	}
-
+	if (seat->current_sess)
+		terminal_deactivate(seat->current_sess->term);
 	seat->dpms_blanked = true;
 }
 
@@ -500,6 +501,8 @@ static void seat_dpms_reset_timer(struct kmscon_seat *seat)
 			if (ret)
 				log_warning("cannot set DPMS to ON for display: %d", ret);
 		}
+		if (seat->current_sess)
+			terminal_activate(seat->current_sess->term);
 		seat->dpms_blanked = false;
 	}
 
