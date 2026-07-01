@@ -169,6 +169,22 @@ font-name=Ubuntu Mono
       </varlistentry>
 
       <varlistentry>
+        <term><option>asciicast</option></term>
+        <listitem>
+          <para>Path to an asciicast animation to play after opening the
+                terminal session. The animation is stopped on keyboard input. (default:
+                unset)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>asciicast-loop</option></term>
+        <listitem>
+          <para>Loop the asciicast animation. (default: off)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
         <term><option>term</option></term>
         <listitem>
           <para>Value of the TERM environment variable for the child process. (default: kmscon)</para>

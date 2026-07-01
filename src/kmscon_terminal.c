@@ -36,6 +36,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "asciinema.h"
 #include "conf.h"
 #include "font/font.h"
 #include "input/input.h"
@@ -102,6 +103,7 @@ struct kmscon_terminal {
 
 	struct ev_timer *blink_timer;
 	bool blinking;
+	struct kmscon_asciinema *asciinema;
 };
 
 #define BLINK_TIMER_NS (500 * 1000 * 1000)
@@ -438,6 +440,24 @@ static void blink_event(struct ev_timer *timer, uint64_t count, void *data)
 
 	term->blinking = !term->blinking;
 	redraw_all(term);
+}
+
+static void asciinema_write(const char *u8, size_t len, void *data)
+{
+	struct kmscon_terminal *term = data;
+
+	if (!term->opened || !term->awake || !kmscon_session_get_foreground(term->session))
+		return;
+
+	tsm_vte_input(term->vte, u8, len);
+	redraw_all(term);
+}
+
+static void asciinema_start(struct kmscon_terminal *term)
+{
+	if (!term->asciinema)
+		return;
+	kmscon_asciinema_start(term->asciinema);
 }
 
 static void osc_event(struct tsm_vte *vte, const char *osc_string, size_t osc_len, void *data)
@@ -807,6 +827,7 @@ static void input_event(struct input *input, struct input_key_event *ev, void *d
 
 	// reset mouse selection on keypress
 	tsm_screen_selection_reset(term->console);
+	kmscon_asciinema_stop(term->asciinema);
 
 	if (conf_grab_matches(term->conf->grab_scroll_up, ev->mods, ev->num_syms, ev->keysyms)) {
 		tsm_screen_sb_up(term->console, 1);
@@ -1101,6 +1122,7 @@ static int terminal_open(struct kmscon_terminal *term)
 	term->opened = true;
 	if (term->conf->issue)
 		kmscon_issue_write(term->vte, term->pty, term->conf->issue_path);
+	asciinema_start(term);
 
 	update_pointer_max_all(term);
 	redraw_all(term);
@@ -1109,6 +1131,7 @@ static int terminal_open(struct kmscon_terminal *term)
 
 static void terminal_close(struct kmscon_terminal *term)
 {
+	kmscon_asciinema_pause(term->asciinema);
 	kmscon_pty_close(term->pty);
 	term->opened = false;
 }
@@ -1126,6 +1149,8 @@ void terminal_activate(struct kmscon_terminal *term)
 	ev_timer_enable(term->blink_timer);
 	if (!term->opened)
 		terminal_open(term);
+	else
+		kmscon_asciinema_resume(term->asciinema);
 	if (term->pointer.visible)
 		hw_cursor_show(term, term->pointer.x, term->pointer.y);
 	redraw_all_text(term);
@@ -1136,6 +1161,7 @@ void terminal_deactivate(struct kmscon_terminal *term)
 	term->awake = false;
 	hw_cursor_hide(term);
 	ev_timer_disable(term->blink_timer);
+	kmscon_asciinema_pause(term->asciinema);
 }
 
 void terminal_destroy(struct kmscon_terminal *term)
@@ -1145,6 +1171,7 @@ void terminal_destroy(struct kmscon_terminal *term)
 	terminal_close(term);
 	rm_all_screens(term);
 	ev_eloop_rm_timer(term->blink_timer);
+	kmscon_asciinema_free(term->asciinema);
 	input_unregister_pointer_cb(term->input, pointer_event, term);
 	input_unregister_key_cb(term->input, input_event, term);
 	ev_eloop_rm_fd(term->ptyfd);
@@ -1280,6 +1307,13 @@ struct kmscon_terminal *terminal_new(struct kmscon_session *session, unsigned in
 				 term);
 	if (ret)
 		goto err_pointer;
+
+	if (term->conf->asciicast) {
+		ret = kmscon_asciinema_new(&term->asciinema, term->eloop, term->conf->asciicast,
+					   term->conf->asciicast_loop, asciinema_write, term);
+		if (ret)
+			log_warn("cannot load asciicast %s: %d", term->conf->asciicast, ret);
+	}
 
 	ev_eloop_ref(term->eloop);
 	input_ref(term->input);

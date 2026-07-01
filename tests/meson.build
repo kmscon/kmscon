@@ -37,3 +37,11 @@ test_bbulk = executable('test_bbulk', 'test_bbulk.c',
   dependencies: [libtsm_deps, htable_deps],
 )
 test('test_bbulk', test_bbulk)
+
+test_asciinema = executable('test_asciinema',
+  'test_asciinema.c',
+  '../src/asciinema.c',
+  include_directories: src_inc,
+  dependencies: [libtsm_deps, shl_deps, eloop_deps],
+)
+test('test_asciinema', test_asciinema)

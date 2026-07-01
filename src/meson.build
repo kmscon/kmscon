@@ -84,6 +84,7 @@ conf_deps = declare_dependency(
 
 kmscon_srcs = [
   'pty.c',
+  'asciinema.c',
   'kmscon_seat.c',
   'kmscon_conf.c',
   'kmscon_issue.c',

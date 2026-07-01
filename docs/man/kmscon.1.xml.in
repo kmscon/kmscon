@@ -223,6 +223,21 @@
       </varlistentry>
 
       <varlistentry>
+        <term><option>--asciicast {path}</option></term>
+        <listitem>
+          <para>Play an asciicast animation after opening the terminal session.
+                The animation is stopped on keyboard input. (default: unset)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>--asciicast-loop</option></term>
+        <listitem>
+          <para>Loop the asciicast animation. (default: off)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
         <term><option>-t {term}</option></term>
         <term><option>--term {term}</option></term>
         <listitem>

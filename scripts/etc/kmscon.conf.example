@@ -88,6 +88,13 @@
 #dpms-timeout=600
 
 ## Terminal options
+## Play an asciicast animation after opening the terminal session.
+## The animation stops on keyboard input.
+#asciicast=/usr/share/kmscon/login.cast
+
+## Loop the asciicast animation.
+#asciicast-loop
+
 ## value of the $TERM variable
 #term=kmscon
 

@@ -85,6 +85,10 @@ struct kmscon_conf_t {
 	bool issue;
 	/* colon-separated issue search path */
 	char *issue_path;
+	/* asciicast animation to play after opening the terminal session */
+	char *asciicast;
+	/* loop asciicast animation */
+	bool asciicast_loop;
 	/* custom login process */
 	bool login;
 	/* argv for login process */
