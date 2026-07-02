@@ -28,10 +28,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <sys/utsname.h>
 #include <time.h>
 #include "kmscon_issue.h"
 #include "pty.h"
+#include "shl/log.h"
 
 /* Cap total collected issue text to prevent runaway allocation. */
 #define ISSUE_MAX_SIZE (256u * 1024u)
@@ -108,54 +110,98 @@ static char *read_os_release_field(const char *field)
 	return NULL;
 }
 
-static size_t append_file(FILE *out, const char *path, size_t limit)
+#define MAX_FILES 64
+#define CHUNK_SIZE 4096
+struct issue_parser {
+	size_t limit;
+	char *parsed[MAX_FILES];
+	int n_parsed_files;
+};
+
+static const char *bname(const char *path)
+{
+	const char *p = strrchr(path, '/');
+	return p ? p + 1 : (char *)path;
+}
+
+static bool is_masked(const char *path, const struct issue_parser *parser)
+{
+	const char *b = bname(path);
+
+	for (int i = 0; i < parser->n_parsed_files; i++)
+		if (strcmp(b, parser->parsed[i]) == 0)
+			return true;
+	return false;
+}
+
+static void add_parsed_file(struct issue_parser *parser, const char *path)
+{
+	if (parser->n_parsed_files < MAX_FILES - 1)
+		parser->parsed[parser->n_parsed_files++] = strdup(bname(path));
+}
+
+static void free_parser(struct issue_parser *parser)
+{
+	for (int i = 0; i < parser->n_parsed_files; i++)
+		free(parser->parsed[i]);
+	parser->n_parsed_files = 0;
+}
+
+static void append_file(FILE *out, const char *path, struct issue_parser *parser)
 {
 	FILE *fp;
-	char buf[4096];
-	size_t n, total = 0;
+	char buf[CHUNK_SIZE];
+	size_t n;
 
-	if (!limit)
-		return 0;
+	if (!parser->limit)
+		return;
+
+	// Ignore files that have the same name as a parsed file
+	// so /etc/issue takes precedence over /run/issue and /usr/lib/issue
+	if (is_masked(path, parser)) {
+		log_debug("Ignoring masked file: %s", path);
+		return;
+	}
 
 	fp = fopen(path, "r");
 	if (!fp)
-		return 0;
+		return;
 
-	while (total < limit) {
-		size_t chunk = sizeof(buf);
-		if (chunk > limit - total)
-			chunk = limit - total;
+	add_parsed_file(parser, path);
+
+	while (parser->limit) {
+		size_t chunk = CHUNK_SIZE;
+		if (chunk > parser->limit)
+			chunk = parser->limit;
 		n = fread(buf, 1, chunk, fp);
 		if (!n)
 			break;
 		fwrite(buf, 1, n, out);
-		total += n;
+		parser->limit -= n;
 	}
-
+	log_debug("Parse issue file %s", path);
 	fclose(fp);
-	return total;
 }
 
-static size_t append_dir(FILE *out, const char *dir, size_t limit)
+static void append_dir(FILE *out, const char *dir, struct issue_parser *parser)
 {
 	glob_t gl;
 	char *pattern;
-	size_t i, total = 0;
+	int i;
 
 	if (asprintf(&pattern, "%s/*.issue", dir) < 0)
-		return 0;
+		return;
 
 	if (glob(pattern, 0, NULL, &gl) != 0) {
 		free(pattern);
-		return 0;
+		return;
 	}
 	free(pattern);
 
-	for (i = 0; i < gl.gl_pathc && total < limit; i++)
-		total += append_file(out, gl.gl_pathv[i], limit - total);
+	for (i = 0; i < gl.gl_pathc && parser->limit; i++)
+		append_file(out, gl.gl_pathv[i], parser);
 
 	globfree(&gl);
-	return total;
 }
 
 /*
@@ -166,9 +212,11 @@ static size_t append_dir(FILE *out, const char *dir, size_t limit)
 static char *collect_issue_text(const char *search_path, size_t *out_len)
 {
 	FILE *mem;
+	struct stat sb;
 	char *buf = NULL;
-	size_t len = 0, total = 0;
+	size_t len = 0;
 	char *dup, *saveptr, *entry;
+	struct issue_parser parser = {.limit = ISSUE_MAX_SIZE, .n_parsed_files = 0};
 
 	if (!search_path || !*search_path)
 		return NULL;
@@ -183,14 +231,16 @@ static char *collect_issue_text(const char *search_path, size_t *out_len)
 		return NULL;
 	}
 
-	for (entry = strtok_r(dup, ":", &saveptr); entry && total < ISSUE_MAX_SIZE;
+	for (entry = strtok_r(dup, ":", &saveptr); entry && parser.limit;
 	     entry = strtok_r(NULL, ":", &saveptr)) {
-		size_t n = append_file(mem, entry, ISSUE_MAX_SIZE - total);
-		if (!n)
-			n = append_dir(mem, entry, ISSUE_MAX_SIZE - total);
-		total += n;
+		if (stat(entry, &sb) != 0)
+			continue;
+		if (S_ISDIR(sb.st_mode))
+			append_dir(mem, entry, &parser);
+		else
+			append_file(mem, entry, &parser);
 	}
-
+	free_parser(&parser);
 	free(dup);
 	fclose(mem);
 
