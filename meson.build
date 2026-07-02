@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 project('kmscon', 'c',
-  version: '10.0.0',
+  version: '10.0.1',
   license: 'MIT',
   # meson 0.58: f-string
   # meson 0.62: dependency libdl
@@ -148,7 +148,7 @@ if xsltproc.found()
 else
   docs_error_string = 'executable xsltproc was not found.'
 endif
-enable_docs = get_option('docs').require(xsltproc.found() and have_manpages_stylesheet, 
+enable_docs = get_option('docs').require(xsltproc.found() and have_manpages_stylesheet,
   error_message: docs_error_string).allowed()
 
 # Additionally check if glesv2 is needed

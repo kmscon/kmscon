@@ -74,7 +74,7 @@ explicitly enable it via command line:
 | option | default | description |
 |:------|:-------:|:-----------|
 |`extra_debug`| `false` | Additional debug outputs |
-|`libseat`| `auto` | Use libseat to get access to device (DRM and inputs) |
+|`libseat`| `false` | Use libseat to get access to device (DRM and inputs) |
 |`video_fbdev`| `auto` | Linux fbdev video backend |
 |`video_drm2d`| `auto` | Linux DRM software-rendering backend |
 |`video_drm3d`| `auto` | Linux DRM hardware-rendering backend |

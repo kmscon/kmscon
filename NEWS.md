@@ -1,5 +1,44 @@
 = KMSCON Release News =
 
+## CHANGES with 10.0.1
+### Important Notes
+* libseat has still some issues, so libseat support is not built by default. you need to add `-Dlibseat=enabled` to the meson configuration to enable it, and start with `--libseat`.
+* kmscon built-in issue support is still lacking network escape code (\4 \6 \a \A), so the default is to use agetty. You can edit kmsconvt@tty, remove the `--login` option, and add `--issue` to use the built-in issue support.
+* Dynamic keyboard layout support, kmscon listen to the locale1 dbus variables, and updates the keyboard layout accordingly. You can use `localectl set-keymap` to change the keyboard layout on the fly.
+
+## What's Changed
+* fix zlib cross-compiling errors by @aduskett in https://github.com/kmscon/kmscon/pull/402
+* RFC: Update default issue search path with util-linux defaults by @Vogtinator in https://github.com/kmscon/kmscon/pull/408
+* freetype: Enable light hinting by @Vogtinator in https://github.com/kmscon/kmscon/pull/412
+* Add dbus support by @kdj0c in https://github.com/kmscon/kmscon/pull/409
+* Refactor session management by @kdj0c in https://github.com/kmscon/kmscon/pull/416
+* Remove trailing blank line in kmsconvt@.service.in by @e-Gyi-qO in https://github.com/kmscon/kmscon/pull/421
+* Update keyboard layout by @kdj0c in https://github.com/kmscon/kmscon/pull/418
+* Meson: Add an option to set the default $TERM environment variable by @kdj0c in https://github.com/kmscon/kmscon/pull/414
+* seat: Fix seat startup in background by @kdj0c in https://github.com/kmscon/kmscon/pull/423
+* Readme: Add some workaround informations by @kdj0c in https://github.com/kmscon/kmscon/pull/422
+* Xkb read file by @kdj0c in https://github.com/kmscon/kmscon/pull/424
+* dbus: Fix missing watchfd cleanup by @kdj0c in https://github.com/kmscon/kmscon/pull/426
+* pty: Add --oneshot argument. by @kdj0c in https://github.com/kmscon/kmscon/pull/427
+* freetype: center the glyph if it is bigger by @kdj0c in https://github.com/kmscon/kmscon/pull/430
+* font: Use U+25a1 character when a glyph is not present by @kdj0c in https://github.com/kmscon/kmscon/pull/429
+* Use new tsm_screen_draw2() API by @kdj0c in https://github.com/kmscon/kmscon/pull/431
+* terminal: Add blink support by @kdj0c in https://github.com/kmscon/kmscon/pull/432
+* input: ignore button repeat and other event by @kdj0c in https://github.com/kmscon/kmscon/pull/435
+* terminfo: update with fixes from ncurses by @kdj0c in https://github.com/kmscon/kmscon/pull/436
+* conf: Read config file when unknown command line arguments. by @kdj0c in https://github.com/kmscon/kmscon/pull/442
+* Default no libseat by @kdj0c in https://github.com/kmscon/kmscon/pull/443
+* Drawing refactor by @kdj0c in https://github.com/kmscon/kmscon/pull/441
+* seat: deactivate terminal when going into dpms off by @kdj0c in https://github.com/kmscon/kmscon/pull/446
+* Zoom in/out  with ctrl + mouse wheel by @kdj0c in https://github.com/kmscon/kmscon/pull/445
+* service: Revert to agetty for showing issue. by @kdj0c in https://github.com/kmscon/kmscon/pull/444
+* terminfo: don't use ansi+*** macro as they may not be present by @kdj0c in https://github.com/kmscon/kmscon/pull/447
+* issue: implement uapi masking by @kdj0c in https://github.com/kmscon/kmscon/pull/449
+
+## New Contributors
+* @Vogtinator made their first contribution in https://github.com/kmscon/kmscon/pull/408
+* @e-Gyi-qO made their first contribution in https://github.com/kmscon/kmscon/pull/421
+
 ## CHANGES with 10.0.0
 ### Important Notes
 * Kmscon now uses libseat by default. If you don't want to use libseat, you can build kmscon with `meson setup -Dlibseat=disabled` or start kmscon with `--no-libseat`.
