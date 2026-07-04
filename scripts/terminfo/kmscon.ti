@@ -52,9 +52,9 @@ kmscon|KMS Console,
 
 # Rendition (SGR)
   sgr=%?%p9%t\E(0%e\E(B%;\E[0%?%p6%t;1%;%?%p5%t;2%;%?%p2%t;4%;%?%p1%p3%|%t;7%;%?%p4%t;5%;%?%p7%t;8%;m,
-  sgr0=\E(B\E[m, bold=\E[1m, smul=\E[4m,
+  sgr0=\E(B\E[m, bold=\E[1m, smul=\E[4m, sitm=\E[3m,
   rev=\E[7m, smso=\E[7m, rmso=\E[27m,
-  rmul=\E[24m, smacs=\E(0, rmacs=\E(B,
+  rmul=\E[24m, ritm=\E[23m, smacs=\E(0, rmacs=\E(B,
   flash=\E[?5h$<200/>\E[?5l,
 
 # Color Support (xterm-256color style)
