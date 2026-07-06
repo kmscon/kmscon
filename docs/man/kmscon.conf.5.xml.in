@@ -229,6 +229,14 @@ font-name=Ubuntu Mono
       </varlistentry>
 
       <varlistentry>
+        <term><option>blink</option></term>
+        <listitem>
+          <para>Enable cursor and text blink. When enabled, the cursor will blink on the screen,
+                and text with blink attribute will blink too. (default: on)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
         <term><option>xkb-model</option></term>
         <listitem>
           <para>Set XkbModel for input devices. (default: unset)</para>

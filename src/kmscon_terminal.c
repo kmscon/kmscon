@@ -1146,7 +1146,8 @@ void terminal_refresh_displays(struct kmscon_terminal *term)
 void terminal_activate(struct kmscon_terminal *term)
 {
 	term->awake = true;
-	ev_timer_enable(term->blink_timer);
+	if (term->conf->blink)
+		ev_timer_enable(term->blink_timer);
 	if (!term->opened)
 		terminal_open(term);
 	else
@@ -1160,7 +1161,8 @@ void terminal_deactivate(struct kmscon_terminal *term)
 {
 	term->awake = false;
 	hw_cursor_hide(term);
-	ev_timer_disable(term->blink_timer);
+	if (term->conf->blink)
+		ev_timer_disable(term->blink_timer);
 	kmscon_asciinema_pause(term->asciinema);
 }
 
@@ -1303,11 +1305,12 @@ struct kmscon_terminal *terminal_new(struct kmscon_session *session, unsigned in
 		if (ret)
 			goto err_input;
 	}
-	ret = ev_eloop_new_timer(term->eloop, &term->blink_timer, &blink_interval, blink_event,
-				 term);
-	if (ret)
-		goto err_pointer;
-
+	if (term->conf->blink) {
+		ret = ev_eloop_new_timer(term->eloop, &term->blink_timer, &blink_interval,
+					 blink_event, term);
+		if (ret)
+			goto err_pointer;
+	}
 	if (term->conf->asciicast) {
 		ret = kmscon_asciinema_new(&term->asciinema, term->eloop, term->conf->asciicast,
 					   term->conf->asciicast_loop, asciinema_write, term);

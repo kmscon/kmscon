@@ -105,6 +105,8 @@ struct kmscon_conf_t {
 	unsigned int sb_size;
 	/* enable bell forwarding */
 	bool bell;
+	/* enable cursor and text blinking */
+	bool blink;
 
 	/* Input Options */
 	/* input KBD model */

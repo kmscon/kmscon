@@ -278,6 +278,14 @@
                 (default: off)</para>
         </listitem>
       </varlistentry>
+
+      <varlistentry>
+        <term><option>--blink</option></term>
+        <listitem>
+          <para>Enable cursor and text blink. When enabled, the cursor will blink on the screen,
+                and text with blink attribute will blink too. (default: on)</para>
+        </listitem>
+      </varlistentry>
     </variablelist>
 
     <para>Input Options:</para>

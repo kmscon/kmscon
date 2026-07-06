@@ -452,7 +452,7 @@ int kmscon_text_draw(struct kmscon_text *txt, struct tsm_screen *con)
 	cur_y = tsm_screen_get_cursor_y(con);
 	cur_visible = !(tsm_screen_get_flags(con) & TSM_SCREEN_HIDE_CURSOR);
 
-	return txt->ops->draw(txt, cells, cur_x, cur_y, cur_visible && txt->blinking);
+	return txt->ops->draw(txt, cells, cur_x, cur_y, cur_visible && !txt->blinking);
 }
 
 /**
