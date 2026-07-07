@@ -38,10 +38,10 @@ static void print_help();
 #include <unistd.h>
 #include <xkbcommon/xkbcommon.h>
 #include "input/input.h"
+#include "monitor.h"
 #include "shl/eloop.h"
 #include "shl/log.h"
 #include "test_include.h"
-#include "uterm_monitor.h"
 
 static struct ev_eloop *eloop;
 static struct input *input;

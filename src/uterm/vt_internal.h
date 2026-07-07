@@ -4,7 +4,7 @@
 #include "input/input.h"
 #include "shl/dlist.h"
 #include "shl/eloop.h"
-#include "uterm_vt.h"
+#include "vt.h"
 
 struct uterm_vt_ops {
 	void (*destroy)(struct uterm_vt *vt);

@@ -41,12 +41,12 @@
 #include "kmscon_conf.h"
 #include "kmscon_seat.h"
 #include "kmscon_terminal.h"
+#include "monitor.h"
 #include "shl/dlist.h"
 #include "shl/eloop.h"
 #include "shl/log.h"
-#include "uterm_monitor.h"
-#include "uterm_vt.h"
 #include "video/video.h"
+#include "vt.h"
 
 #define LOG_SUBSYSTEM "seat"
 

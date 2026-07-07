@@ -71,8 +71,8 @@
 #include "shl/eloop.h"
 #include "shl/log.h"
 #include "shl/misc.h"
-#include "uterm_vt.h"
-#include "uterm_vt_internal.h"
+#include "vt.h"
+#include "vt_internal.h"
 
 struct uterm_vt_real {
 	struct uterm_vt base;

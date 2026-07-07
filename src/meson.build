@@ -30,42 +30,7 @@ subdir('input')
 subdir('video')
 subdir('render')
 subdir('misc')
-
-#
-# libuterm
-# The uterm library provides helpers to create terminals in user-space. They
-# are not limited to text-based terminals but rather provide graphics contexts
-# so arbitrary output can be displayed. Additionally, they provide VT
-# abstractions and an input layer
-#
-uterm_srcs = [
-  'uterm_monitor.c',
-  'uterm_vt.c',
-  'uterm_vt_fake.c',
-  'uterm_vt_real.c',
-]
-
-uterm_dep = [
-  libudev_deps,
-  xkbcommon_deps,
-  shl_deps,
-  eloop_deps,
-  input_deps,
-  video_deps,
-]
-
-if enable_libseat
-  uterm_srcs += 'uterm_vt_libseat.c'
-  uterm_dep += libseat_deps
-endif
-
-uterm = static_library('uterm', uterm_srcs,
-  dependencies: uterm_dep
-)
-uterm_deps = declare_dependency(
-  link_with: [uterm],
-  dependencies: uterm_dep
-)
+subdir('uterm')
 
 #
 # Binaries

@@ -40,10 +40,10 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
+#include "monitor.h"
 #include "shl/dlist.h"
 #include "shl/log.h"
 #include "shl/misc.h"
-#include "uterm_monitor.h"
 
 #define LOG_SUBSYSTEM "monitor"
 

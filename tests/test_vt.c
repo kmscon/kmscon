@@ -46,7 +46,7 @@ static void print_help();
 #include "shl/eloop.h"
 #include "shl/log.h"
 #include "test_include.h"
-#include "uterm_vt.h"
+#include "vt.h"
 
 static void print_help()
 {

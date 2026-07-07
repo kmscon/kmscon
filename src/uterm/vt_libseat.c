@@ -34,8 +34,8 @@
 #include "shl/eloop.h"
 #include "shl/log.h"
 #include "shl/misc.h"
-#include "uterm_vt.h"
-#include "uterm_vt_internal.h"
+#include "vt.h"
+#include "vt_internal.h"
 
 #define LOG_SUBSYSTEM "libseat"
 
