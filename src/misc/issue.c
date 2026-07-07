@@ -30,7 +30,7 @@
 #include <sys/stat.h>
 #include <sys/utsname.h>
 #include <time.h>
-#include "kmscon_issue.h"
+#include "issue.h"
 #include "shl/log.h"
 
 /* Cap total collected issue text to prevent runaway allocation. */

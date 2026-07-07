@@ -10,7 +10,7 @@ foreach name, deps : {
 }
   deps += [
     shl_deps,
-    conf_deps,
+    misc_deps,
     xkbcommon_deps,
   ]
   test_name = f'test_@name@'
@@ -40,13 +40,14 @@ test('test_bbulk', test_bbulk)
 
 test_asciinema = executable('test_asciinema',
   'test_asciinema.c',
-  '../src/asciinema.c',
-  include_directories: src_inc,
+  '../src/misc/asciinema.c',
+  include_directories: misc_inc,
   dependencies: [libtsm_deps, shl_deps, eloop_deps],
 )
 test('test_asciinema', test_asciinema)
 
-test_issue = executable('test_issue', 'test_issue.c', '../src/kmscon_issue.c',
+test_issue = executable('test_issue', 'test_issue.c', '../src/misc/issue.c',
+  include_directories: misc_inc,
   dependencies: [libtsm_deps, shl_deps],
 )
 test('test_issue', test_issue)

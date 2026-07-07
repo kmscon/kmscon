@@ -2,8 +2,6 @@
 #
 # SPDX-License-Identifier: MIT
 
-
-
 #
 # Binary File Compiler
 #
@@ -31,6 +29,7 @@ subdir('font')
 subdir('input')
 subdir('video')
 subdir('render')
+subdir('misc')
 
 #
 # libuterm
@@ -75,19 +74,9 @@ uterm_deps = declare_dependency(
 # built as part of kmscon.
 #
 
-# conf as a standalone library for use in tests
-conf = static_library('conf', 'conf.c', dependencies: [xkbcommon_deps])
-conf_deps = declare_dependency(
-  link_with: [conf],
-  include_directories: [include_directories('.')]
-)
-
 kmscon_srcs = [
-  'pty.c',
-  'asciinema.c',
   'kmscon_seat.c',
   'kmscon_conf.c',
-  'kmscon_issue.c',
   'kmscon_main.c',
   'kmscon_terminal.c',
 ]
@@ -95,18 +84,14 @@ kmscon_dep = [xkbcommon_deps,
   libtsm_deps,
   threads_deps,
   dl_deps,
-  conf_deps,
   shl_deps,
   eloop_deps,
   uterm_deps,
   render_deps,
   font_deps,
+  misc_deps,
 ]
 
-if enable_dbus
-  kmscon_srcs += 'dbus.c'
-  kmscon_dep += dbus_deps
-endif
 kmscon = executable('kmscon', kmscon_srcs,
   dependencies: kmscon_dep,
   export_dynamic: true,

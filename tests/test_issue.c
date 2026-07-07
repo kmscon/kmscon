@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../src/kmscon_issue.h"
+#include "issue.h"
 
 struct kmscon_pty;
 
