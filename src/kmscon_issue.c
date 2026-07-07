@@ -24,7 +24,6 @@
  */
 
 #include <glob.h>
-#include <libtsm.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -32,7 +31,6 @@
 #include <sys/utsname.h>
 #include <time.h>
 #include "kmscon_issue.h"
-#include "pty.h"
 #include "shl/log.h"
 
 /* Cap total collected issue text to prevent runaway allocation. */
@@ -378,8 +376,7 @@ static void expand_color(const char **ppos, const char *end, FILE *out)
 	*ppos = pos;
 }
 
-static void expand_issue(const char *raw, size_t raw_len, struct tsm_vte *vte,
-			 struct kmscon_pty *pty)
+static char *expand_issue(const char *raw, size_t raw_len, char *pty_name, size_t *out_len)
 {
 	FILE *out;
 	char *obuf = NULL;
@@ -390,13 +387,12 @@ static void expand_issue(const char *raw, size_t raw_len, struct tsm_vte *vte,
 	const char *pos, *end, *esc;
 	char timebuf[64];
 	char datebuf[64];
-	char tty_name[128];
 	const char *tty_short;
 	const char *escape_val[128] = {0};
 
 	out = open_memstream(&obuf, &olen);
 	if (!out)
-		return;
+		return NULL;
 
 	if (uname(&uts) < 0)
 		memset(&uts, 0, sizeof(uts));
@@ -411,11 +407,10 @@ static void expand_issue(const char *raw, size_t raw_len, struct tsm_vte *vte,
 		datebuf[0] = '\0';
 	}
 
-	tty_name[0] = '\0';
-	kmscon_pty_get_slave_name(pty, tty_name, sizeof(tty_name));
-	tty_short = tty_name;
-	if (!strncmp(tty_short, "/dev/", 5))
-		tty_short += 5;
+	if (!strncmp(pty_name, "/dev/", 5))
+		tty_short = pty_name + 5;
+	else
+		tty_short = pty_name;
 
 	escape_val['\\'] = "\\";
 	escape_val['s'] = uts.sysname;
@@ -459,23 +454,31 @@ static void expand_issue(const char *raw, size_t raw_len, struct tsm_vte *vte,
 	}
 
 	fclose(out);
-	if (olen > 0)
-		tsm_vte_input(vte, obuf, olen);
-	free(obuf);
+	*out_len = olen;
+	return obuf;
 }
 
-void kmscon_issue_write(struct tsm_vte *vte, struct kmscon_pty *pty, const char *search_path)
+/**
+ * kmscon_issue_get_buffer
+ * Allocate and return a buffer containing the expanded issue text with the given pty name.
+ * The buffer must be freed by the caller.
+ */
+char *kmscon_issue_get_buffer(const char *search_path, char *pty_name, size_t *len)
 {
 	char *raw;
 	size_t raw_len;
+	char *out;
+	size_t out_len;
 
 	if (!search_path)
 		search_path = ISSUE_DEFAULT_PATH;
 
 	raw = collect_issue_text(search_path, &raw_len);
 	if (!raw)
-		return;
+		return NULL;
 
-	expand_issue(raw, raw_len, vte, pty);
+	out = expand_issue(raw, raw_len, pty_name, &out_len);
 	free(raw);
+	*len = out_len;
+	return out;
 }

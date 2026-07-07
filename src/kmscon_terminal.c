@@ -1104,6 +1104,21 @@ static void rm_all_screens(struct kmscon_terminal *term)
 	term->min_rows = 0;
 }
 
+static void kmscon_issue_write(struct kmscon_terminal *term)
+{
+	char pty_name[128] = {0};
+	char *issue;
+	size_t issue_len;
+
+	kmscon_pty_get_slave_name(term->pty, pty_name, sizeof(pty_name));
+	issue = kmscon_issue_get_buffer(term->conf->issue_path, pty_name, &issue_len);
+	if (!issue || !issue_len)
+		return;
+
+	tsm_vte_input(term->vte, issue, issue_len);
+	free(issue);
+}
+
 static int terminal_open(struct kmscon_terminal *term)
 {
 	int ret;
@@ -1121,7 +1136,7 @@ static int terminal_open(struct kmscon_terminal *term)
 
 	term->opened = true;
 	if (term->conf->issue)
-		kmscon_issue_write(term->vte, term->pty, term->conf->issue_path);
+		kmscon_issue_write(term);
 	asciinema_start(term);
 
 	update_pointer_max_all(term);

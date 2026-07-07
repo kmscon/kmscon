@@ -45,3 +45,8 @@ test_asciinema = executable('test_asciinema',
   dependencies: [libtsm_deps, shl_deps, eloop_deps],
 )
 test('test_asciinema', test_asciinema)
+
+test_issue = executable('test_issue', 'test_issue.c', '../src/kmscon_issue.c',
+  dependencies: [libtsm_deps, shl_deps],
+)
+test('test_issue', test_issue)

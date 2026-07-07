@@ -26,9 +26,6 @@
 #ifndef KMSCON_ISSUE_H
 #define KMSCON_ISSUE_H
 
-#include <libtsm.h>
-#include "pty.h"
-
 /*
  * Default search path, matching agetty's default.
  *
@@ -39,6 +36,6 @@
 #define ISSUE_DEFAULT_PATH                                                                         \
 	"/etc/issue:/etc/issue.d:/run/issue:/run/issue.d:/usr/lib/issue:/usr/lib/issue.d"
 
-void kmscon_issue_write(struct tsm_vte *vte, struct kmscon_pty *pty, const char *search_path);
+char *kmscon_issue_get_buffer(const char *search_path, char *pty_name, size_t *len);
 
 #endif /* KMSCON_ISSUE_H */
