@@ -46,7 +46,7 @@ test_asciinema = executable('test_asciinema',
 )
 test('test_asciinema', test_asciinema)
 
-test_issue = executable('test_issue', 'test_issue.c', '../src/misc/issue.c',
+test_issue = executable('test_issue', 'test_issue.c', '../src/misc/issue.c', '../src/misc/issue_network.c',
   include_directories: misc_inc,
   dependencies: [libtsm_deps, shl_deps],
 )

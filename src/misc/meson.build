@@ -4,6 +4,7 @@ misc_srcs = [
   'asciinema.c',
   'conf.c',
   'issue.c',
+  'issue_network.c',
   'pty.c',
 ]
 misc_deps = [xkbcommon_deps, shl_deps]
