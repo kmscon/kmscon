@@ -40,10 +40,10 @@ subdir('uterm')
 #
 
 kmscon_srcs = [
-  'kmscon_seat.c',
-  'kmscon_conf.c',
-  'kmscon_main.c',
-  'kmscon_terminal.c',
+  'seat.c',
+  'config.c',
+  'main.c',
+  'terminal.c',
 ]
 kmscon_dep = [xkbcommon_deps,
   libtsm_deps,

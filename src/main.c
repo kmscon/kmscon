@@ -31,10 +31,10 @@
 #include <string.h>
 #include <sys/signalfd.h>
 #include "conf.h"
+#include "config.h"
 #include "dbus.h"
-#include "kmscon_conf.h"
-#include "kmscon_seat.h"
 #include "render/text.h"
+#include "seat.h"
 #include "shl/eloop.h"
 #include "shl/log.h"
 #include "shl/module.h"

@@ -33,8 +33,8 @@
 #include <unistd.h>
 #include <xkbcommon/xkbcommon-keysyms.h>
 #include "conf.h"
+#include "config.h"
 #include "issue.h"
-#include "kmscon_conf.h"
 #include "shl/githead.h"
 #include "shl/log.h"
 #include "shl/misc.h"

@@ -34,7 +34,7 @@
 
 #include <stdbool.h>
 #include "conf.h"
-#include "kmscon_conf.h"
+#include "config.h"
 #include "shl/eloop.h"
 
 struct kmscon_seat;

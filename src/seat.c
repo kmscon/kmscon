@@ -37,14 +37,14 @@
 #include <sys/reboot.h>
 #include <unistd.h>
 #include "conf.h"
+#include "config.h"
 #include "input/input.h"
-#include "kmscon_conf.h"
-#include "kmscon_seat.h"
-#include "kmscon_terminal.h"
 #include "monitor.h"
+#include "seat.h"
 #include "shl/dlist.h"
 #include "shl/eloop.h"
 #include "shl/log.h"
+#include "terminal.h"
 #include "video/video.h"
 #include "vt.h"
 

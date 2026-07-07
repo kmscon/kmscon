@@ -28,8 +28,8 @@
  * global parameters can be accessed via this header.
  */
 
-#ifndef KMSCON_MAIN_H
-#define KMSCON_MAIN_H
+#ifndef KMSCON_CONFIG_H
+#define KMSCON_CONFIG_H
 
 #include <libtsm.h>
 #include <stdbool.h>
@@ -198,4 +198,4 @@ void kmscon_conf_free(struct conf_ctx *ctx);
 int kmscon_conf_load_main(struct conf_ctx *ctx, int argc, char **argv);
 int kmscon_conf_load_seat(struct conf_ctx *ctx, const struct conf_ctx *main, const char *seat);
 
-#endif /* KMSCON_MAIN_H */
+#endif /* KMSCON_CONFIG_H */
