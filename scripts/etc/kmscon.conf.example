@@ -110,6 +110,9 @@
 ## Forward BEL (0x07) to the VT (default off)
 #bell
 
+## Blinking cursor and text with blink attribute (enabled by default)
+#blink
+
 ## Colors palette, one of [solarized, solarized-black, solarized-white,
 ## soft-black, base16-dark, base16-light, vga, legacy, custom]
 #palette=solarized
