@@ -1453,7 +1453,7 @@ int drm_video_hotplug(struct video *video, bool read_dpms, bool modeset)
 	struct drm_display *ddrm;
 	int ret, i, dpms;
 	struct shl_dlist *iter, *tmp;
-	bool new_display = false;
+	bool needs_modeset = modeset;
 
 	if (!video_is_awake(video) || !video_need_hotplug(video))
 		return 0;
@@ -1491,8 +1491,10 @@ int drm_video_hotplug(struct video *video, bool read_dpms, bool modeset)
 
 			disp->flags |= DISPLAY_AVAILABLE;
 
-			if (!display_is_online(disp))
+			if (!display_is_online(disp)) {
+				needs_modeset = true;
 				break;
+			}
 
 			if (read_dpms) {
 				dpms = drm_get_dpms(vdrm->fd, conn);
@@ -1505,7 +1507,7 @@ int drm_video_hotplug(struct video *video, bool read_dpms, bool modeset)
 		}
 
 		if (iter == &video->displays) {
-			new_display = true;
+			needs_modeset = true;
 			bind_display(video, res, conn);
 		}
 		drmModeFreeConnector(conn);
@@ -1525,7 +1527,7 @@ int drm_video_hotplug(struct video *video, bool read_dpms, bool modeset)
 		goto finish_hotplug;
 	}
 
-	if (modeset || new_display) {
+	if (needs_modeset) {
 		ret = try_modeset(video);
 		if (ret)
 			return ret;
@@ -1588,8 +1590,13 @@ void drm_video_sleep(struct video *video)
 
 int drm_video_poll(struct video *video)
 {
+	int ret;
+
 	video->flags |= VIDEO_HOTPLUG;
-	return drm_video_hotplug(video, false, false);
+	ret = drm_video_hotplug(video, false, false);
+	if (ret)
+		drm_video_arm_vt_timer(video);
+	return ret;
 }
 
 /* Waits for events on DRM fd for \mtimeout milliseconds and returns 0 if the
