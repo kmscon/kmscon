@@ -175,7 +175,8 @@ static void display_done_modeset(struct display *disp, int status)
 {
 	struct drm2d_display *d2d = disp->data;
 	if (status) {
-		display_freefb(disp);
+		if (!display_is_online(disp))
+			display_freefb(disp);
 	} else {
 		d2d->current_rb = d2d->current_rb ^ 1;
 	}

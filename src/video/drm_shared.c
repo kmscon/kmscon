@@ -859,8 +859,11 @@ static int perform_modeset(struct video *video)
 	struct drm_video *vdrm = video->data;
 	struct display *disp;
 	struct drm_display *ddrm;
+	size_t num_prepared = 0;
+	size_t i = 0;
 	int flags;
 	int ret = 0;
+	bool refs_taken = false;
 
 	/* prepare modeset on all outputs */
 	req = drmModeAtomicAlloc();
@@ -882,10 +885,11 @@ static int perform_modeset(struct video *video)
 		ret = ddrm->prepare_modeset(disp, req);
 		if (ret < 0)
 			break;
+		++num_prepared;
 	}
 	if (ret < 0) {
 		log_err("prepare atomic commit failed, %d\n", ret);
-		return ret;
+		goto err_commit;
 	}
 
 	/* perform test-only atomic commit */
@@ -902,6 +906,7 @@ static int perform_modeset(struct video *video)
 		disp = shl_dlist_entry(iter, struct display, list);
 		display_ref(disp);
 	}
+	refs_taken = true;
 
 	/* initial modeset on all outputs */
 	flags = DRM_MODE_ATOMIC_ALLOW_MODESET | DRM_MODE_PAGE_FLIP_EVENT;
@@ -912,14 +917,17 @@ static int perform_modeset(struct video *video)
 err_commit:
 	drmModeAtomicFree(req);
 
+	i = 0;
 	shl_dlist_for_each(iter, &video->displays)
 	{
+		if (i++ >= num_prepared)
+			break;
 		disp = shl_dlist_entry(iter, struct display, list);
 		ddrm = disp->data;
 		ddrm->done_modeset(disp, ret);
 		if (ret) {
-			disp->flags &= ~DISPLAY_ONLINE;
-			display_unref(disp);
+			if (refs_taken)
+				display_unref(disp);
 		} else
 			disp->flags |= DISPLAY_ONLINE | DISPLAY_VSYNC | DISPLAY_NEED_REDRAW;
 	}
@@ -981,17 +989,32 @@ static int try_modeset(struct video *video)
 	if (ret != -EAGAIN)
 		return ret;
 
+	if (shl_dlist_empty(&video->displays))
+		return ret;
+
 	/* Retry with default mode for all display */
 	shl_dlist_for_each(iter, &video->displays)
 	{
 		disp = shl_dlist_entry(iter, struct display, list);
 		ddrm = disp->data;
+		ddrm->previous_mode = ddrm->current_mode;
 		ddrm->current_mode = &ddrm->default_mode;
 	}
 	if (vdrm->legacy)
-		return legacy_modeset(video);
+		ret = legacy_modeset(video);
 	else
-		return perform_modeset(video);
+		ret = perform_modeset(video);
+
+	shl_dlist_for_each(iter, &video->displays)
+	{
+		disp = shl_dlist_entry(iter, struct display, list);
+		ddrm = disp->data;
+		if (ret)
+			ddrm->current_mode = ddrm->previous_mode;
+		ddrm->previous_mode = NULL;
+	}
+
+	return ret;
 }
 
 static int legacy_pageflip(int fd, struct display *disp, uint32_t fb)

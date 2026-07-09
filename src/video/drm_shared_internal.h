@@ -76,6 +76,7 @@ struct drm_display {
 	uint32_t damage_blob_id;
 
 	drmModeModeInfoPtr current_mode;
+	drmModeModeInfoPtr previous_mode;
 	drmModeModeInfo default_mode;
 	drmModeModeInfo desired_mode;
 	drmModeModeInfo original_mode;
