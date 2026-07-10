@@ -388,7 +388,7 @@ static char *expand_issue(const char *raw, size_t raw_len, char *pty_name, size_
 	char timebuf[64];
 	char datebuf[64];
 	const char *tty_short;
-	const char *escape_val[128] = {0};
+	char code;
 
 	out = open_memstream(&obuf, &olen);
 	if (!out)
@@ -412,17 +412,6 @@ static char *expand_issue(const char *raw, size_t raw_len, char *pty_name, size_
 	else
 		tty_short = pty_name;
 
-	escape_val['\\'] = "\\";
-	escape_val['s'] = uts.sysname;
-	escape_val['n'] = uts.nodename;
-	escape_val['r'] = uts.release;
-	escape_val['v'] = uts.version;
-	escape_val['m'] = uts.machine;
-	escape_val['o'] = uts.domainname[0] ? uts.domainname : "(none)";
-	escape_val['d'] = datebuf;
-	escape_val['t'] = timebuf;
-	escape_val['l'] = tty_short;
-
 	pos = raw;
 	end = raw + raw_len;
 	while (pos < end) {
@@ -437,20 +426,47 @@ static char *expand_issue(const char *raw, size_t raw_len, char *pty_name, size_
 		if (pos >= end)
 			break;
 
-		if (*pos == 'S') {
-			pos++;
+		code = *pos++;
+		switch (code) {
+		case '\\':
+			fputc('\\', out);
+			break;
+		case 's':
+			fputs(uts.sysname, out);
+			break;
+		case 'n':
+			fputs(uts.nodename, out);
+			break;
+		case 'r':
+			fputs(uts.release, out);
+			break;
+		case 'v':
+			fputs(uts.version, out);
+			break;
+		case 'm':
+			fputs(uts.machine, out);
+			break;
+		case 'o':
+			fputs(uts.domainname[0] ? uts.domainname : "(none)", out);
+			break;
+		case 'd':
+			fputs(datebuf, out);
+			break;
+		case 't':
+			fputs(timebuf, out);
+			break;
+		case 'l':
+			fputs(tty_short, out);
+			break;
+		case 'S':
 			expand_os_release(&pos, end, out);
-			continue;
-		}
-		if (*pos == 'e') {
-			pos++;
+			break;
+		case 'e':
 			expand_color(&pos, end, out);
-			continue;
+			break;
+		default:
+			break;
 		}
-
-		if ((unsigned char)*pos < 128 && escape_val[(unsigned char)*pos])
-			fputs(escape_val[(unsigned char)*pos], out);
-		pos++;
 	}
 
 	fclose(out);
