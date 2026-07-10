@@ -251,32 +251,37 @@ static char *collect_issue_text(const char *search_path, size_t *out_len)
 	return buf;
 }
 
-static void expand_os_release(const char **ppos, const char *end, FILE *out)
+static bool get_parameter(const char **ppos, const char *end, char *parameter, size_t len)
 {
 	const char *pos = *ppos;
+	size_t l = 0;
+
+	parameter[0] = '\0';
+	if (pos >= end || *pos != '{')
+		return false;
+	pos++;
+	while (pos < end && *pos != '}' && l < len - 1)
+		parameter[l++] = *pos++;
+	parameter[l++] = '\0';
+	pos++;
+	*ppos = pos;
+	return true;
+}
+
+static void expand_os_release(const char **ppos, const char *end, FILE *out)
+{
+	char field_name[64];
 	char *field_val;
 
-	if (pos < end && *pos == '{') {
-		char field_name[64];
-		char *fe = field_name;
-		pos++;
-		while (pos < end && *pos != '}' && fe < field_name + sizeof(field_name) - 1)
-			*fe++ = *pos++;
-		*fe = '\0';
-		while (pos < end && *pos != '}')
-			pos++;
-		if (pos < end && *pos == '}')
-			pos++;
-		field_val = read_os_release_field(field_name);
-	} else {
+	if (!get_parameter(ppos, end, field_name, sizeof(field_name)))
 		field_val = read_os_release_field("PRETTY_NAME");
-	}
+	else
+		field_val = read_os_release_field(field_name);
 
 	if (field_val) {
 		fputs(field_val, out);
 		free(field_val);
 	}
-	*ppos = pos;
 }
 
 /* Write literal text to out, converting \n to \r\n for the terminal. */
@@ -352,28 +357,17 @@ const char *color_sequence_from_colorname(const char *str)
 
 static void expand_color(const char **ppos, const char *end, FILE *out)
 {
-	const char *pos = *ppos;
 	const char *color_escape = NULL;
 	char color_name[16]; // longest color name is 13 characters
-	char *cn = color_name;
 
 	fputs("\033", out);
-	if (pos >= end || *pos != '{')
+
+	if (!get_parameter(ppos, end, color_name, sizeof(color_name)))
 		return;
 
-	pos++;
-	while (pos < end && *pos != '}' && cn < color_name + sizeof(color_name) - 1)
-		*cn++ = *pos++;
-	*cn = '\0';
-	while (pos < end && *pos != '}')
-		pos++;
-	if (pos < end && *pos == '}') {
-		pos++;
-		color_escape = color_sequence_from_colorname(color_name);
-	}
+	color_escape = color_sequence_from_colorname(color_name);
 	if (color_escape)
 		fputs(color_escape, out);
-	*ppos = pos;
 }
 
 static char *expand_issue(const char *raw, size_t raw_len, char *pty_name, size_t *out_len)
