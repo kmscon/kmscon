@@ -12,26 +12,26 @@ Resources:
 	Linux Console Codes:
 		man console_codes
 	VT100 User Manual:
-		http://vt100.net/docs/vt100-ug/chapter3.html
+		https://vt100.net/docs/vt100-ug/chapter3.html
 	VT510 User Manual:
-		http://vt100.net/docs/vt510-rm/contents
+		https://vt100.net/docs/vt510-rm/contents
 	XTerm Escape Sequences:
-		http://invisible-island.net/xterm/ctlseqs/ctlseqs.html
+		https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
 	C0 and C1 Control Codes:
-		http://en.wikipedia.org/wiki/C0_and_C1_control_codes
+		https://en.wikipedia.org/wiki/C0_and_C1_control_codes
 	ANSI Escape Sequences / Control Sequence Introducer (CSI)
-		http://en.wikipedia.org/wiki/Control_Sequence_Introducer
+		https://en.wikipedia.org/wiki/ANSI_escape_code#Fe_Escape_sequences
 	vttest Terminal Tests:
-		http://invisible-island.net/vttest/
+		https://invisible-island.net/vttest/
 	vt100-vt520 docs:
-		http://vt100.net/
+		https://vt100.net/
 
 Implementations:
 	XTerm:
-		http://invisible-island.net/xterm/
+		https://invisible-island.net/xterm/
 	libVTE:
 		http://developer.gnome.org/vte/unstable/
 	Google JavaScript HTerm:
 		http://git.chromium.org/gitweb/?p=chromiumos/platform/assets.git;a=tree;f=chromeapps/hterm/js;hb=HEAD
 	Wayland Terminal Widget:
-		http://cgit.freedesktop.org/wayland/weston/tree/clients/terminal.c
+		https://cgit.freedesktop.org/wayland/weston/tree/clients/terminal.c

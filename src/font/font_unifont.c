@@ -33,7 +33,7 @@
  * statically compiled into the file. This bitmap font has 8x16 and 16x16
  * glyphs. This can statically compile in any font defined as a unifont style
  * hex format. This font is from the GNU unifont project available at:
- *   http://unifoundry.com/unifont.html
+ *   https://unifoundry.com/unifont/index.html
  *
  * This file is heavily based on font_8x16.c
  */
