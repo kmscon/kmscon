@@ -30,8 +30,8 @@ Implementations:
 	XTerm:
 		https://invisible-island.net/xterm/
 	libVTE:
-		http://developer.gnome.org/vte/unstable/
+		https://gitlab.gnome.org/GNOME/vte
 	Google JavaScript HTerm:
-		http://git.chromium.org/gitweb/?p=chromiumos/platform/assets.git;a=tree;f=chromeapps/hterm/js;hb=HEAD
+		https://chromium.googlesource.com/apps/libapps/+/HEAD/hterm
 	Wayland Terminal Widget:
 		https://cgit.freedesktop.org/wayland/weston/tree/clients/terminal.c
