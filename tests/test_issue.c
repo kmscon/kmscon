@@ -23,6 +23,8 @@ int main()
 
 	printf("ipv4: %s\n", issue_network_get_best_ip(book, NULL, false));
 	printf("ipv6: %s\n", issue_network_get_best_ip(book, NULL, true));
+	printf("good ips: %s\n", issue_network_get_all_ip(book, true));
+	printf("all ips: %s\n", issue_network_get_all_ip(book, false));
 
 	issue_network_free_book(book);
 	return 0;

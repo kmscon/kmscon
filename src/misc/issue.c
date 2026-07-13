@@ -381,6 +381,16 @@ static void expand_ip(const char **ppos, const char *end, FILE *out, struct addr
 	fputs(issue_network_get_best_ip(book, interface_name, ipv6), out);
 }
 
+static void expand_all_ip(const char **ppos, const char *end, FILE *out, struct addr_book *book,
+			  bool filter)
+{
+	char *text;
+
+	text = issue_network_get_all_ip(book, filter);
+	fputs(text, out);
+	free(text);
+}
+
 static char *expand_issue(const char *raw, size_t raw_len, char *pty_name, size_t *out_len)
 {
 	FILE *out;
@@ -479,6 +489,16 @@ static char *expand_issue(const char *raw, size_t raw_len, char *pty_name, size_
 			if (!book)
 				book = issue_network_gen_book();
 			expand_ip(&pos, end, out, book, true);
+			break;
+		case 'a':
+			if (!book)
+				book = issue_network_gen_book();
+			expand_all_ip(&pos, end, out, book, true);
+			break;
+		case 'A':
+			if (!book)
+				book = issue_network_gen_book();
+			expand_all_ip(&pos, end, out, book, false);
 			break;
 		default:
 			break;

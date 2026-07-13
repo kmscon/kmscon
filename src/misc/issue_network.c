@@ -231,3 +231,108 @@ const char *issue_network_get_best_ip(struct addr_book *book, const char *interf
 	return best->addr;
 }
 
+#define MAX_ADDR_PER_IFACE 32
+
+struct interface {
+	struct shl_dlist list;
+	char name[IFNAMSIZ];
+	int n_addrs;
+	struct ip_addr *ips[MAX_ADDR_PER_IFACE];
+};
+
+static struct interface *get_interface(struct shl_dlist *ifaces, const char *name)
+{
+	struct shl_dlist *iter;
+	struct interface *iface;
+
+	shl_dlist_for_each(iter, ifaces)
+	{
+		iface = shl_dlist_entry(iter, struct interface, list);
+		if (strcmp(iface->name, name) == 0)
+			return iface;
+	}
+	iface = calloc(1, sizeof(*iface));
+	if (!iface)
+		return NULL;
+	strncpy(iface->name, name, IFNAMSIZ);
+	shl_dlist_link_tail(ifaces, &iface->list);
+	return iface;
+}
+
+static void add_ip_to_interface(struct shl_dlist *ifaces, struct ip_addr *ip)
+{
+	struct interface *iface;
+
+	iface = get_interface(ifaces, ip->interface);
+
+	if (iface && iface->n_addrs < MAX_ADDR_PER_IFACE)
+		iface->ips[iface->n_addrs++] = ip;
+}
+
+/* Allocate and return a string containing all IP addresses
+ * The caller is responsible for freeing the returned string
+ */
+char *issue_network_get_all_ip(struct addr_book *book, bool filter)
+{
+	struct shl_dlist *iter, *tmp;
+	struct ip_addr *ip;
+	struct shl_dlist head;
+	struct interface *iface;
+	size_t remaining;
+	size_t len;
+	char *out;
+	char *s;
+
+	shl_dlist_init(&head);
+
+	/* Treat RAT_SITE as good as RAT_UNIVERSE, like agetty does */
+	if (book->best_quality == RAT_UNIVERSE)
+		book->best_quality = RAT_SITE;
+
+	shl_dlist_for_each(iter, &book->ipv4)
+	{
+		ip = shl_dlist_entry(iter, struct ip_addr, list);
+		if (filter && ip->quality < book->best_quality)
+			continue;
+		add_ip_to_interface(&head, ip);
+	}
+	shl_dlist_for_each(iter, &book->ipv6)
+	{
+		ip = shl_dlist_entry(iter, struct ip_addr, list);
+		if (filter && ip->quality < book->best_quality)
+			continue;
+		add_ip_to_interface(&head, ip);
+	}
+
+	out = malloc(BUF_SIZE);
+	s = out;
+	remaining = BUF_SIZE - 1;
+	shl_dlist_for_each(iter, &head)
+	{
+		iface = shl_dlist_entry(iter, struct interface, list);
+		len = snprintf(s, remaining, "%s: ", iface->name);
+		s += len;
+		remaining -= len;
+
+		for (int i = 0; i < iface->n_addrs && remaining > 0; i++) {
+			ip = iface->ips[i];
+			len = snprintf(s, remaining, "%s ", ip->addr);
+			s += len;
+			remaining -= len;
+		}
+		if (remaining < 2)
+			break;
+		*s++ = '\r';
+		*s++ = '\n';
+		remaining -= 2;
+	}
+	*s = '\0';
+
+	shl_dlist_for_each_safe(iter, tmp, &head)
+	{
+		iface = shl_dlist_entry(iter, struct interface, list);
+		shl_dlist_unlink(iter);
+		free(iface);
+	}
+	return out;
+}
