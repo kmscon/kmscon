@@ -24,6 +24,7 @@
  */
 
 #include <glob.h>
+#include <net/if.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -31,6 +32,7 @@
 #include <sys/utsname.h>
 #include <time.h>
 #include "issue.h"
+#include "issue_network.h"
 #include "shl/log.h"
 
 /* Cap total collected issue text to prevent runaway allocation. */
@@ -370,6 +372,15 @@ static void expand_color(const char **ppos, const char *end, FILE *out)
 		fputs(color_escape, out);
 }
 
+static void expand_ip(const char **ppos, const char *end, FILE *out, struct addr_book *book,
+		      bool ipv6)
+{
+	char interface_name[IFNAMSIZ];
+
+	get_parameter(ppos, end, interface_name, sizeof(interface_name));
+	fputs(issue_network_get_best_ip(book, interface_name, ipv6), out);
+}
+
 static char *expand_issue(const char *raw, size_t raw_len, char *pty_name, size_t *out_len)
 {
 	FILE *out;
@@ -383,6 +394,7 @@ static char *expand_issue(const char *raw, size_t raw_len, char *pty_name, size_
 	char datebuf[64];
 	const char *tty_short;
 	char code;
+	struct addr_book *book = NULL;
 
 	out = open_memstream(&obuf, &olen);
 	if (!out)
@@ -458,11 +470,21 @@ static char *expand_issue(const char *raw, size_t raw_len, char *pty_name, size_
 		case 'e':
 			expand_color(&pos, end, out);
 			break;
+		case '4':
+			if (!book)
+				book = issue_network_gen_book();
+			expand_ip(&pos, end, out, book, false);
+			break;
+		case '6':
+			if (!book)
+				book = issue_network_gen_book();
+			expand_ip(&pos, end, out, book, true);
+			break;
 		default:
 			break;
 		}
 	}
-
+	issue_network_free_book(book);
 	fclose(out);
 	*out_len = olen;
 	return obuf;
