@@ -48,4 +48,3 @@ foreach section, pages : manpages
         )
     endforeach
 endforeach
-

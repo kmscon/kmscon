@@ -51,5 +51,3 @@ if enable_glesv2
         dependencies: shl_gl_dep,
     )
 endif
-
-

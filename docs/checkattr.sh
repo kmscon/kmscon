@@ -12,5 +12,3 @@ echo "${underline}underlined${nounderline} text does, too."
 
 echo "▛▜"
 echo "▙${invert}▘${noinvert}"
-
-
