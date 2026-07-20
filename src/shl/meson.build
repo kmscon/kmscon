@@ -57,5 +57,3 @@ shl_gl_deps = declare_dependency(
   dependencies: shl_gl_dep
 )
 endif
-
-
