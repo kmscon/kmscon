@@ -66,3 +66,10 @@ test_issue = executable(
     dependencies: [libtsm_deps, shl_deps],
 )
 test('test_issue', test_issue)
+
+test_issue_parameter = executable('test_issue_parameter', 'test_issue_parameter.c',
+  '../src/misc/issue.c', '../src/misc/issue_network.c',
+  include_directories: misc_inc,
+  dependencies: [libtsm_deps, shl_deps],
+)
+test('test_issue_parameter', test_issue_parameter)

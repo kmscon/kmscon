@@ -258,14 +258,21 @@ static bool get_parameter(const char **ppos, const char *end, char *parameter, s
 	const char *pos = *ppos;
 	size_t l = 0;
 
+	if (!len)
+		return false;
+
 	parameter[0] = '\0';
 	if (pos >= end || *pos != '{')
 		return false;
 	pos++;
-	while (pos < end && *pos != '}' && l < len - 1)
-		parameter[l++] = *pos++;
-	parameter[l++] = '\0';
-	pos++;
+	while (pos < end && *pos != '}') {
+		if (l < len - 1)
+			parameter[l++] = *pos;
+		pos++;
+	}
+	parameter[l] = '\0';
+	if (pos < end)
+		pos++;
 	*ppos = pos;
 	return true;
 }
