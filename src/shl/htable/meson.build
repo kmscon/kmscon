@@ -8,9 +8,9 @@
 htable = static_library('ext-htable', ['htable.c'])
 
 htable_deps = declare_dependency(
-  link_with: [htable],
-  include_directories: [
-    include_directories('.'),
-  ]
+    link_with: [htable],
+    include_directories: [
+        include_directories('.'),
+    ],
 )
 

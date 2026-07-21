@@ -5,20 +5,29 @@
 #
 # Binary File Compiler
 #
-embed_gen = generator(python,
-  arguments: [
-    meson.project_source_root() / 'tools' / 'embedded_file.py',
-    '@EXTRA_ARGS@',
-    '@INPUT@',
-    '@BUILD_DIR@',
-  ],
-  output: ['@PLAINNAME@.bin.h', '@PLAINNAME@.bin.c'],
+embed_gen = generator(
+    python,
+    arguments: [
+        meson.project_source_root() / 'tools' / 'embedded_file.py',
+        '@EXTRA_ARGS@',
+        '@INPUT@',
+        '@BUILD_DIR@',
+    ],
+    output: ['@PLAINNAME@.bin.h', '@PLAINNAME@.bin.c'],
 )
 shader_regex = [
-  '--regex', '^/\\*.*$',   '', # Start of multi-line comment
-  '--regex', '^ \\*.*$',   '', # Multi-line comment body
-  '--regex', '^[ \\t]*', '', # Indentation whitespace
-  '--regex', '[\\r\\n]', '', # Newlines
+    '--regex',
+    '^/\\*.*$',
+    '',  # Start of multi-line comment
+    '--regex',
+    '^ \\*.*$',
+    '',  # Multi-line comment body
+    '--regex',
+    '^[ \\t]*',
+    '',  # Indentation whitespace
+    '--regex',
+    '[\\r\\n]',
+    '',  # Newlines
 ]
 
 src_inc = [include_directories('.')]
@@ -40,26 +49,29 @@ subdir('uterm')
 #
 
 kmscon_srcs = [
-  'seat.c',
-  'config.c',
-  'main.c',
-  'terminal.c',
+    'seat.c',
+    'config.c',
+    'main.c',
+    'terminal.c',
 ]
-kmscon_dep = [xkbcommon_deps,
-  libtsm_deps,
-  threads_deps,
-  dl_deps,
-  shl_deps,
-  eloop_deps,
-  uterm_deps,
-  render_deps,
-  font_deps,
-  misc_deps,
+kmscon_dep = [
+    xkbcommon_deps,
+    libtsm_deps,
+    threads_deps,
+    dl_deps,
+    shl_deps,
+    eloop_deps,
+    uterm_deps,
+    render_deps,
+    font_deps,
+    misc_deps,
 ]
 
-kmscon = executable('kmscon', kmscon_srcs,
-  dependencies: kmscon_dep,
-  export_dynamic: true,
-  install: true,
-  install_dir: bindir,
+kmscon = executable(
+    'kmscon',
+    kmscon_srcs,
+    dependencies: kmscon_dep,
+    export_dynamic: true,
+    install: true,
+    install_dir: bindir,
 )

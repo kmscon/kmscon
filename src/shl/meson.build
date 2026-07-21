@@ -6,30 +6,27 @@
 
 # Git-HEAD helper
 githead = vcs_tag(
-  input: 'githead.c.in',
-  output: 'githead.c',
-  command: ['git', 'describe', '--tags'],
-  fallback: 'v' + meson.project_version(),
+    input: 'githead.c.in',
+    output: 'githead.c',
+    command: ['git', 'describe', '--tags'],
+    fallback: 'v' + meson.project_version(),
 )
 
 # htable
 subdir('htable')
 
 shl_srcs = [
-  'log.c',
-  'module.c',
-  githead,
+    'log.c',
+    'module.c',
+    githead,
 ]
-shl_dep = [
-  htable_deps,
-  xkbcommon_deps
-]
+shl_dep = [htable_deps, xkbcommon_deps]
 
 shl = static_library('shl', shl_srcs, dependencies: shl_dep)
 shl_deps = declare_dependency(
-  link_with: [shl],
-  dependencies: shl_dep,
-  include_directories: src_inc,
+    link_with: [shl],
+    dependencies: shl_dep,
+    include_directories: src_inc,
 )
 
 #
@@ -39,23 +36,20 @@ shl_deps = declare_dependency(
 #
 eloop = static_library('eloop', 'eloop.c', dependencies: [shl_deps])
 eloop_deps = declare_dependency(
-  link_with: [eloop],
+    link_with: [eloop],
 )
 
 if enable_glesv2
-  shl_gl_srcs = [
-    'gl_shader.c',
-  ]
-  shl_gl_dep = [
-    shl_deps,
-    glesv2_deps
-  ]
+    shl_gl_srcs = [
+        'gl_shader.c',
+    ]
+    shl_gl_dep = [shl_deps, glesv2_deps]
 
-shl_gl = static_library('shl_gl', shl_gl_srcs, dependencies: shl_gl_dep)
-shl_gl_deps = declare_dependency(
-  link_with: [shl_gl],
-  dependencies: shl_gl_dep
-)
+    shl_gl = static_library('shl_gl', shl_gl_srcs, dependencies: shl_gl_dep)
+    shl_gl_deps = declare_dependency(
+        link_with: [shl_gl],
+        dependencies: shl_gl_dep,
+    )
 endif
 
 
