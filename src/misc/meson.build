@@ -7,7 +7,7 @@ misc_srcs = [
     'issue_network.c',
     'pty.c',
 ]
-misc_deps = [xkbcommon_deps, shl_deps]
+misc_deps = [xkbcommon_deps, shl_deps, libtsm_deps]
 
 if enable_dbus
     misc_srcs += 'dbus.c'
