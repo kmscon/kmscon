@@ -45,21 +45,6 @@ jobs:
     - name: Install dependencies on Ubuntu
       run: sudo apt-get update && sudo apt-get install -y meson check libudev-dev libxkbcommon-dev libdrm-dev libgbm-dev libegl1-mesa-dev libgles-dev libpango1.0-dev libsystemd-dev jq libseat-dev
 
-    - name: Compile and install libtsm
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        LIBTSM: "https://api.github.com/repos/kmscon/libtsm/releases/latest"
-      run: |
-        tar_url=$(curl -s --request GET --header "Authorization: Bearer $GH_TOKEN" --url $LIBTSM | jq -r .tarball_url)
-        curl --request GET -s -L -o libtsm.tar.gz --header "Authorization: Bearer $GH_TOKEN" --url $tar_url
-        mkdir libtsm
-        tar -xf libtsm.tar.gz -C libtsm --strip 1
-        cd libtsm
-        meson setup build
-        cd build
-        meson compile
-        sudo meson install
-
     - name: Configure Meson
       run: meson setup build
 
