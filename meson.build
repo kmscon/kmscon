@@ -2,30 +2,32 @@
 #
 # SPDX-License-Identifier: MIT
 
-project('kmscon', 'c',
-  version: '10.0.1',
-  license: 'MIT',
-  # meson 0.58: f-string
-  # meson 0.62: dependency libdl
-  meson_version: '>=1.1',
-  default_options: [
-    'warning_level=1',
-    'werror=true',
-    'buildtype=debugoptimized',
-    'c_std=gnu99',
-  ]
+project(
+    'kmscon',
+    'c',
+    version: '10.0.1',
+    license: 'MIT',
+    # meson 0.58: f-string
+    # meson 0.62: dependency libdl
+    meson_version: '>=1.1',
+    default_options: [
+        'warning_level=1',
+        'werror=true',
+        'buildtype=debugoptimized',
+        'c_std=gnu99',
+    ],
 )
 
 add_project_arguments(
-  '-ffast-math',
-  '-fno-strict-aliasing',
-  '-ffunction-sections',
-  '-fdata-sections',
-  '-fstack-protector',
-  '-fvisibility=hidden',
-  '-D_GNU_SOURCE',
-  '-D_POSIX_C_SOURCE=200809L',
-  language: 'c'
+    '-ffast-math',
+    '-fno-strict-aliasing',
+    '-ffunction-sections',
+    '-fdata-sections',
+    '-fstack-protector',
+    '-fvisibility=hidden',
+    '-D_GNU_SOURCE',
+    '-D_POSIX_C_SOURCE=200809L',
+    language: 'c',
 )
 
 #
@@ -33,14 +35,17 @@ add_project_arguments(
 #
 prefix = get_option('prefix')
 bindir = get_option('bindir')
-datadir= get_option('datadir')
+datadir = get_option('datadir')
 sysconfdir = get_option('sysconfdir') / meson.project_name()
 libexecdir = get_option('libexecdir') / meson.project_name()
 mandir = get_option('mandir')
 moduledir = get_option('libdir') / meson.project_name()
 
 systemd_deps = dependency('systemd', required: false)
-systemdsystemunitdir = systemd_deps.get_variable('systemdsystemunitdir', default_value: 'lib/systemd/system')
+systemdsystemunitdir = systemd_deps.get_variable(
+    'systemdsystemunitdir',
+    default_value: 'lib/systemd/system',
+)
 
 #
 # Required dependencies
@@ -65,19 +70,42 @@ python = find_program('python3')
 # This also allows early reporting when a feature is enabled but its dependencis
 # are not found.
 #
-require_glesv2 = get_option('video_drm3d').enabled() or get_option('renderer_gltex').enabled()
+require_glesv2 = get_option('video_drm3d').enabled() or get_option(
+    'renderer_gltex',
+).enabled()
 require_libdrm = get_option('video_drm2d').enabled() or get_option('video_drm3d').enabled()
 
-libseat_deps = dependency('libseat', disabler: true, required: get_option('libseat'))
+libseat_deps = dependency(
+    'libseat',
+    disabler: true,
+    required: get_option('libseat'),
+)
 libdrm_deps = dependency('libdrm', disabler: true, required: require_libdrm)
 gbm_deps = dependency('gbm', disabler: true, required: get_option('video_drm3d'))
 egl_deps = dependency('egl', disabler: true, required: get_option('video_drm3d'))
 glesv2_deps = dependency('glesv2', disabler: true, required: require_glesv2)
-pango_deps = dependency('pangoft2', disabler: true, required: get_option('font_pango'))
-freetype_deps = dependency('freetype2', disabler: true, required: get_option('font_freetype'))
-fontconfig_deps = dependency('fontconfig', disabler: true, required: get_option('font_freetype'))
+pango_deps = dependency(
+    'pangoft2',
+    disabler: true,
+    required: get_option('font_pango'),
+)
+freetype_deps = dependency(
+    'freetype2',
+    disabler: true,
+    required: get_option('font_freetype'),
+)
+fontconfig_deps = dependency(
+    'fontconfig',
+    disabler: true,
+    required: get_option('font_freetype'),
+)
 dbus_deps = dependency('dbus-1', disabler: true, required: get_option('dbus'))
-xsltproc = find_program('xsltproc', native: true, disabler: true, required: get_option('docs'))
+xsltproc = find_program(
+    'xsltproc',
+    native: true,
+    disabler: true,
+    required: get_option('docs'),
+)
 check_deps = dependency('check', disabler: true, required: get_option('tests'))
 tic = find_program('tic', required: false)
 
@@ -88,35 +116,39 @@ tic = find_program('tic', required: false)
 # This will also store the information in a configuration header.
 #
 sections = {
-  'video': 'Video Backends',
-  'font': 'Font Backends',
-  'renderer': 'Renderers',
+    'video': 'Video Backends',
+    'font': 'Font Backends',
+    'renderer': 'Renderers',
 }
 config = configuration_data()
 # Note: keep this in sync with the dependencies above
 foreach name, reqs : {
-  'libseat': [libseat_deps],
-  'video_fbdev': [],
-  'video_drm2d': [libdrm_deps],
-  'video_drm3d': [libdrm_deps, gbm_deps, egl_deps, glesv2_deps],
-  'renderer_gltex': [glesv2_deps],
-  'font_unifont': [],
-  'font_freetype': [freetype_deps, fontconfig_deps],
-  'font_pango': [pango_deps],
-  'dbus': [dbus_deps],
+    'libseat': [libseat_deps],
+    'video_fbdev': [],
+    'video_drm2d': [libdrm_deps],
+    'video_drm3d': [libdrm_deps, gbm_deps, egl_deps, glesv2_deps],
+    'renderer_gltex': [glesv2_deps],
+    'font_unifont': [],
+    'font_freetype': [freetype_deps, fontconfig_deps],
+    'font_pango': [pango_deps],
+    'dbus': [dbus_deps],
 }
-  found = true
-  foreach req : reqs
-    found = found and req.found()
-  endforeach
-  enabled = get_option(name).require(found).allowed()
-  upper_name = name.to_upper()
-  # set a variable for later use
-  set_variable(f'enable_@name@', enabled)
-  # set in config header for code use
-  config.set(f'BUILD_ENABLE_@upper_name@', enabled)
-  # summary output
-  summary(name, enabled, section: sections.get(name.split('_')[0], 'Miscellaneous'))
+    found = true
+    foreach req : reqs
+        found = found and req.found()
+    endforeach
+    enabled = get_option(name).require(found).allowed()
+    upper_name = name.to_upper()
+    # set a variable for later use
+    set_variable(f'enable_@name@', enabled)
+    # set in config header for code use
+    config.set(f'BUILD_ENABLE_@upper_name@', enabled)
+    # summary output
+    summary(
+        name,
+        enabled,
+        section: sections.get(name.split('_')[0], 'Miscellaneous'),
+    )
 endforeach
 
 config.set('BUILD_ENABLE_DEBUG', get_option('extra_debug'))
@@ -139,17 +171,24 @@ add_project_arguments('-include', abs_config_h, language: 'c')
 manpages_stylesheet = 'http://docbook.sourceforge.net/release/xsl/current/manpages/docbook.xsl'
 have_manpages_stylesheet = false
 if xsltproc.found()
-  have_manpages_stylesheet = run_command(xsltproc, '--nonet', manpages_stylesheet, check: false).returncode() == 0
-  if not have_manpages_stylesheet
-    docs_error_string = 'docbook.xsl stylesheet was not found.'
-  else
-    docs_error_string = ''
-  endif
+    have_manpages_stylesheet = run_command(
+        xsltproc,
+        '--nonet',
+        manpages_stylesheet,
+        check: false,
+    ).returncode() == 0
+    if not have_manpages_stylesheet
+        docs_error_string = 'docbook.xsl stylesheet was not found.'
+    else
+        docs_error_string = ''
+    endif
 else
-  docs_error_string = 'executable xsltproc was not found.'
+    docs_error_string = 'executable xsltproc was not found.'
 endif
-enable_docs = get_option('docs').require(xsltproc.found() and have_manpages_stylesheet,
-  error_message: docs_error_string).allowed()
+enable_docs = get_option('docs').require(
+    xsltproc.found() and have_manpages_stylesheet,
+    error_message: docs_error_string,
+).allowed()
 
 # Additionally check if glesv2 is needed
 enable_glesv2 = enable_video_drm3d or enable_renderer_gltex
@@ -159,20 +198,26 @@ enable_glesv2 = enable_video_drm3d or enable_renderer_gltex
 # Show configuration to the user so they can check whether everything was
 # configured as expected.
 #
-summary({
-  'prefix': prefix,
-  'libexecdir': libexecdir,
-  'bindir': bindir,
-  'sysconfdir': sysconfdir,
-  'moduledir': moduledir,
-  'mandir': mandir,
-  'systemdsystemunitdir': systemdsystemunitdir,
-}, section: 'Directories')
-summary({
-  'extra_debug': get_option('extra_debug'),
-  'tests': get_option('tests'),
-  'docs': enable_docs,
-}, section: 'Miscellaneous')
+summary(
+    {
+        'prefix': prefix,
+        'libexecdir': libexecdir,
+        'bindir': bindir,
+        'sysconfdir': sysconfdir,
+        'moduledir': moduledir,
+        'mandir': mandir,
+        'systemdsystemunitdir': systemdsystemunitdir,
+    },
+    section: 'Directories',
+)
+summary(
+    {
+        'extra_debug': get_option('extra_debug'),
+        'tests': get_option('tests'),
+        'docs': enable_docs,
+    },
+    section: 'Miscellaneous',
+)
 
 #
 # Putting code together
@@ -180,10 +225,10 @@ summary({
 subdir('src')
 
 if get_option('tests')
-  subdir('tests')
+    subdir('tests')
 endif
 if enable_docs
-  subdir('docs')
+    subdir('docs')
 endif
 
 #
@@ -193,40 +238,45 @@ dirs_info = configuration_data()
 dirs_info.set('libexecdir', prefix / libexecdir)
 dirs_info.set('bindir', prefix / bindir)
 if enable_libseat
-  dirs_info.set('PAM_CFG', 'User=root\nPAMName=kmscon')
+    dirs_info.set('PAM_CFG', 'User=root\nPAMName=kmscon')
 else
-  dirs_info.set('PAM_CFG', '')
+    dirs_info.set('PAM_CFG', '')
 endif
 foreach filename, kwargs : {
-  'scripts/kmscon-launch-gui.sh': {
-    'install_dir': bindir,
-    'install_mode': 'rwxr-xr-x',
-  },
-  'scripts/systemd/kmscon.service.in': {
-    'install_dir': systemdsystemunitdir,
-    'install_mode': 'rw-r--r--',
-  },
-  'scripts/systemd/kmsconvt@.service.in': {
-    'install_dir': systemdsystemunitdir,
-    'install_mode': 'rw-r--r--',
-  },
+    'scripts/kmscon-launch-gui.sh': {
+        'install_dir': bindir,
+        'install_mode': 'rwxr-xr-x',
+    },
+    'scripts/systemd/kmscon.service.in': {
+        'install_dir': systemdsystemunitdir,
+        'install_mode': 'rw-r--r--',
+    },
+    'scripts/systemd/kmsconvt@.service.in': {
+        'install_dir': systemdsystemunitdir,
+        'install_mode': 'rw-r--r--',
+    },
 }
-  install_data(configure_file(input: filename, output: '@BASENAME@', configuration: dirs_info),
-    kwargs: kwargs,
-  )
+    install_data(
+        configure_file(
+            input: filename,
+            output: '@BASENAME@',
+            configuration: dirs_info,
+        ),
+        kwargs: kwargs,
+    )
 endforeach
 
 # kmscon.conf
 install_data(
-  'scripts/etc/kmscon.conf.example',
-  install_dir: join_paths(get_option('sysconfdir'), 'kmscon')
+    'scripts/etc/kmscon.conf.example',
+    install_dir: join_paths(get_option('sysconfdir'), 'kmscon'),
 )
 if enable_libseat
-  install_data(
-    'scripts/pam/kmscon',
-    install_dir: get_option('sysconfdir') / 'pam.d',
-    rename: 'kmscon',
-  )
+    install_data(
+        'scripts/pam/kmscon',
+        install_dir: get_option('sysconfdir') / 'pam.d',
+        rename: 'kmscon',
+    )
 endif
 
 # Terminfo
@@ -237,7 +287,7 @@ if tic.found()
     meson.add_install_script(
         'scripts/terminfo/build_terminfo.py',
         prefix / datadir,
-        terminfo_src
+        terminfo_src,
     )
 else
     warning('The "tic" compiler was not found. Terminfo will not be installed.')
