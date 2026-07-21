@@ -376,9 +376,15 @@ static void expand_ip(const char **ppos, const char *end, FILE *out, struct addr
 		      bool ipv6)
 {
 	char interface_name[IFNAMSIZ];
+	const char *address;
 
 	get_parameter(ppos, end, interface_name, sizeof(interface_name));
-	fputs(issue_network_get_best_ip(book, interface_name, ipv6), out);
+	if (!book)
+		return;
+
+	address = issue_network_get_best_ip(book, interface_name, ipv6);
+	if (address)
+		fputs(address, out);
 }
 
 static void expand_all_ip(const char **ppos, const char *end, FILE *out, struct addr_book *book,
@@ -386,8 +392,12 @@ static void expand_all_ip(const char **ppos, const char *end, FILE *out, struct 
 {
 	char *text;
 
+	if (!book)
+		return;
+
 	text = issue_network_get_all_ip(book, filter);
-	fputs(text, out);
+	if (text)
+		fputs(text, out);
 	free(text);
 }
 
