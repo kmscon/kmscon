@@ -16,6 +16,22 @@ jobs:
       run: sudo apt-get update && sudo apt-get install -y clang-format-20
     - name: Check format
       run: clang-format-20 -n --Werror src/*.c src/*.h src/*/*.c src/*/*.h tests/*.c tests/*.h
+  meson-format:
+    name: meson format check
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install meson
+      run: sudo pip install --break-system-packages meson
+    - name: Fix meson formatting
+      run: meson format --recursive --inplace
+    - name: Check for mistakes
+      run: |
+        if ! git diff --exit-code --color=always; then
+          echo "---"
+          echo "Please don't forget to run \`meson format --recursive --inplace\`"
+          exit 1
+        fi
   build:
     name: Ubuntu tests
     runs-on: ubuntu-latest
