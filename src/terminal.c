@@ -1160,6 +1160,10 @@ void terminal_refresh_displays(struct kmscon_terminal *term)
 
 void terminal_activate(struct kmscon_terminal *term)
 {
+	// Don't open pty yet if there are no screens.
+	if (shl_dlist_empty(&term->screens))
+		return;
+
 	term->awake = true;
 	if (term->conf->blink)
 		ev_timer_enable(term->blink_timer);
@@ -1167,9 +1171,8 @@ void terminal_activate(struct kmscon_terminal *term)
 		terminal_open(term);
 	else
 		kmscon_asciinema_resume(term->asciinema);
-	if (term->pointer.visible)
-		hw_cursor_show(term, term->pointer.x, term->pointer.y);
-	redraw_all_text(term);
+
+	terminal_refresh_displays(term);
 }
 
 void terminal_deactivate(struct kmscon_terminal *term)

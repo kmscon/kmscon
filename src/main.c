@@ -90,8 +90,7 @@ static int setup_seat(struct kmscon_app *app)
 	app->seat_ctx = kmscon_seat_get_conf(app->seat);
 	app->seat_conf = conf_ctx_get_mem(app->seat_ctx);
 
-	kmscon_seat_startup(app->seat);
-	return 0;
+	return kmscon_seat_startup(app->seat);
 }
 
 static void destroy_seat(struct kmscon_app *app)

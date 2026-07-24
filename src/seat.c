@@ -151,6 +151,8 @@ static void activate_display(struct kmscon_display *d)
 			s = shl_dlist_entry(iter, struct kmscon_session, list);
 			terminal_add_display(s->term, d->disp);
 		}
+		if (seat->current_sess)
+			terminal_activate(seat->current_sess->term);
 	}
 }
 
@@ -1054,24 +1056,24 @@ static void kmscon_seat_poll_video(void *data)
 	video_poll(vid->video);
 }
 
-void kmscon_seat_startup(struct kmscon_seat *seat)
+int kmscon_seat_startup(struct kmscon_seat *seat)
 {
-	struct kmscon_session *s;
-
 	if (!seat)
-		return;
+		return -ENODEV;
 
-	s = kmscon_seat_new_session(seat);
-	if (s)
-		seat_switch(seat, s);
-	else
+	seat->current_sess = kmscon_seat_new_session(seat);
+	if (!seat->current_sess) {
 		log_error("cannot create new session on seat %s", seat->name);
+		return -ENOMEM;
+	}
 
 	if (seat->conf->switchvt || uterm_vt_get_num(seat->vt) == 0)
 		uterm_vt_activate(seat->vt);
 
 	log_debug("scanning for devices...");
 	uterm_monitor_scan(seat->mon, seat->name);
+
+	return 0;
 }
 
 struct conf_ctx *kmscon_seat_get_conf(struct kmscon_seat *seat)
