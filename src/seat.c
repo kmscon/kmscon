@@ -1010,6 +1010,7 @@ static int kmscon_seat_add_video(struct kmscon_seat *seat, enum uterm_monitor_de
 	return 0;
 
 err_node:
+	uterm_monitor_set_dev_data(udev, NULL);
 	free(vid->node);
 err_free:
 	free(vid);
