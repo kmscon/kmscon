@@ -137,6 +137,10 @@ static struct kmscon_glyph *kmscon_font_8x16_render(struct kmscon_font *font, ui
 {
 	unsigned int scale = font->attr.height / 16;
 
+	if (ch == FONT_FULL_BLOCK)
+		ch = 219;
+	else if (ch == FONT_VBAR)
+		ch = 179;
 	if (ch >= 256)
 		return new_glyph('?', &font->attr, scale);
 
