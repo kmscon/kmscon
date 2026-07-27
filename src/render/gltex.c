@@ -647,30 +647,24 @@ static int gltex_draw_cell(struct kmscon_text *txt, const struct tsm_screen_cell
 	return 0;
 }
 
-static int gltex_draw_cursor(struct kmscon_text *txt, const struct tsm_screen_cell *cell,
-			     unsigned int cur_x, unsigned int cur_y)
-{
-	struct tsm_screen_cell cursor_cell = *cell;
-
-	cursor_cell.fg = cell->bg;
-	cursor_cell.bg = cell->fg;
-
-	return gltex_draw_cell(txt, &cursor_cell, cur_x, cur_y);
-}
-
 static int gltex_draw(struct kmscon_text *txt, const struct tsm_screen_cell *cells,
-		      unsigned int cur_x, unsigned int cur_y, bool cur_visible)
+		      struct kmscon_cursor *cursor)
 {
-	unsigned int posx, posy;
+	unsigned int posx, posy, off;
 
 	for (posy = 0; posy < txt->rows; posy++) {
 		for (posx = 0; posx < txt->cols; posx++) {
-			const struct tsm_screen_cell *cell = &cells[posx + posy * txt->cols];
+			off = posx + posy * txt->cols;
 
-			if (posx == cur_x && posy == cur_y && cur_visible)
-				gltex_draw_cursor(txt, cell, cur_x, cur_y);
-			else
-				gltex_draw_cell(txt, cell, posx, posy);
+			if (cursor->visible && cursor->x == posx && cursor->y == posy)
+				gltex_draw_cell(txt, &cursor->cell, posx, posy);
+			else if (cells[off].attr2.blink && txt->blinking) {
+				struct tsm_screen_cell cell = cells[off];
+
+				cell.ch = ' ';
+				gltex_draw_cell(txt, &cell, posx, posy);
+			} else
+				gltex_draw_cell(txt, &cells[off], posx, posy);
 		}
 	}
 	return 0;

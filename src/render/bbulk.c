@@ -441,23 +441,23 @@ static int bbulk_draw_cell(struct kmscon_text *txt, const struct tsm_screen_cell
 }
 
 static int bbulk_draw(struct kmscon_text *txt, const struct tsm_screen_cell *cells,
-		      unsigned int cur_x, unsigned int cur_y, bool cur_visible)
+		      struct kmscon_cursor *cursor)
 {
-	unsigned int posx, posy;
-	struct tsm_screen_cell cell;
+	unsigned int posx, posy, off;
 
 	for (posy = 0; posy < txt->rows; posy++) {
 		for (posx = 0; posx < txt->cols; posx++) {
-			cell = cells[posx + posy * txt->cols];
-			if (posx == cur_x && posy == cur_y && cur_visible) {
-				struct tsm_screen_color tmp;
-				tmp = cell.fg;
-				cell.fg = cell.bg;
-				cell.bg = tmp;
-			} else if (cell.attr2.blink && txt->blinking) {
+			off = posx + posy * txt->cols;
+
+			if (cursor->visible && cursor->x == posx && cursor->y == posy)
+				bbulk_draw_cell(txt, &cursor->cell, posx, posy);
+			else if (cells[off].attr2.blink && txt->blinking) {
+				struct tsm_screen_cell cell = cells[off];
+
 				cell.ch = ' ';
-			}
-			bbulk_draw_cell(txt, &cell, posx, posy);
+				bbulk_draw_cell(txt, &cell, posx, posy);
+			} else
+				bbulk_draw_cell(txt, &cells[off], posx, posy);
 		}
 	}
 	return 0;

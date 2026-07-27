@@ -36,6 +36,7 @@
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
+#include "font/font.h"
 #include "shl/log.h"
 #include "shl/misc.h"
 #include "shl/register.h"
@@ -429,6 +430,28 @@ int kmscon_text_prepare(struct kmscon_text *txt, struct tsm_screen_attr *attr, b
 	return ret;
 }
 
+static bool is_cursor_blinking(enum tsm_screen_cursor_style style)
+{
+	return (!style || style & 1);
+}
+
+static bool is_underline(enum tsm_screen_cursor_style style)
+{
+	return (style == TSM_SCREEN_CURSOR_UNDERLINE_BLINK ||
+		style == TSM_SCREEN_CURSOR_UNDERLINE_STEADY);
+}
+
+#define CURSOR_STYLES 7
+static const uint32_t cursor_char[CURSOR_STYLES] = {
+	FONT_FULL_BLOCK, // default
+	FONT_FULL_BLOCK, // block blink
+	FONT_FULL_BLOCK, // block steady
+	0,		 // underline blink
+	0,		 // underline steady
+	FONT_VBAR,	 // vbar blink
+	FONT_VBAR,	 // vbar steady
+};
+
 /**
  * kmscon_text_draw:
  * @txt: valid text renderer
@@ -441,18 +464,31 @@ int kmscon_text_prepare(struct kmscon_text *txt, struct tsm_screen_attr *attr, b
 int kmscon_text_draw(struct kmscon_text *txt, struct tsm_screen *con)
 {
 	const struct tsm_screen_cell *cells;
-	unsigned int cur_x, cur_y;
-	bool cur_visible;
+	struct kmscon_cursor cursor = {0};
+	enum tsm_screen_cursor_style style;
+	unsigned offset;
 
 	if (!txt || !con)
 		return -EINVAL;
 
 	cells = tsm_screen_draw2(con);
-	cur_x = tsm_screen_get_cursor_x(con);
-	cur_y = tsm_screen_get_cursor_y(con);
-	cur_visible = !(tsm_screen_get_flags(con) & TSM_SCREEN_HIDE_CURSOR);
+	cursor.x = tsm_screen_get_cursor_x(con);
+	cursor.y = tsm_screen_get_cursor_y(con);
+	style = tsm_screen_get_cursor_style(con);
 
-	return txt->ops->draw(txt, cells, cur_x, cur_y, cur_visible && !txt->blinking);
+	offset = cursor.x + cursor.y * txt->cols;
+	cursor.visible = !(tsm_screen_get_flags(con) & TSM_SCREEN_HIDE_CURSOR);
+	cursor.cell.fg = cells[offset].fg;
+	cursor.cell.bg = cells[offset].bg;
+	if (is_cursor_blinking(style))
+		cursor.visible = cursor.visible && !txt->blinking;
+	if (is_underline(style)) {
+		cursor.cell.attr2.underline = !cells[offset].attr2.underline;
+		cursor.cell.ch = cells[offset].ch;
+	} else if (style < CURSOR_STYLES)
+		cursor.cell.ch = cursor_char[style];
+
+	return txt->ops->draw(txt, cells, &cursor);
 }
 
 /**

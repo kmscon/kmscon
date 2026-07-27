@@ -69,6 +69,13 @@ struct kmscon_text {
 	bool blinking;
 };
 
+struct kmscon_cursor {
+	struct tsm_screen_cell cell;
+	unsigned int x;
+	unsigned int y;
+	bool visible;
+};
+
 struct kmscon_text_ops {
 	const char *name;
 	struct shl_module *owner;
@@ -80,7 +87,7 @@ struct kmscon_text_ops {
 	int (*rotate)(struct kmscon_text *txt, enum Orientation orientation);
 	int (*prepare)(struct kmscon_text *txt, struct tsm_screen_attr *attr);
 	int (*draw)(struct kmscon_text *txt, const struct tsm_screen_cell *cells,
-		    unsigned int cur_x, unsigned int cur_y, bool cur_visible);
+		    struct kmscon_cursor *cursor);
 	int (*draw_pointer)(struct kmscon_text *txt, unsigned int x, unsigned int y);
 	int (*render)(struct kmscon_text *txt);
 	void (*abort)(struct kmscon_text *txt);
