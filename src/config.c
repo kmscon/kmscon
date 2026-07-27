@@ -81,9 +81,10 @@ static void print_help()
 		"\t    --session-control           [off] Allow keyboard session-control\n"
 		"\n"
 		"Terminal Options:\n"
-		"\t    --issue                 [off]\n"
+		"\t    --issue                 [on]\n"
 		"\t                              Display issue files before the\n"
-		"\t                              login prompt.\n"
+		"\t                              login prompt. Use --no-issue to\n"
+		"\t                              let the login process handle it.\n"
 		"\t    --issue-path <path>     [" ISSUE_DEFAULT_PATH "]\n"
 		"\t                              Colon-separated list of issue\n"
 		"\t                              files and directories to read\n"
@@ -737,7 +738,7 @@ int kmscon_conf_new(struct conf_ctx **out)
 		CONF_OPTION_BOOL(0, "session-control", &conf->session_control, false),
 
 		/* Terminal Options */
-		CONF_OPTION_BOOL(0, "issue", &conf->issue, false),
+		CONF_OPTION_BOOL(0, "issue", &conf->issue, true),
 		CONF_OPTION_STRING(0, "issue-path", &conf->issue_path, ISSUE_DEFAULT_PATH),
 		CONF_OPTION_STRING(0, "asciicast", &conf->asciicast, NULL),
 		CONF_OPTION_BOOL(0, "asciicast-loop", &conf->asciicast_loop, false),
