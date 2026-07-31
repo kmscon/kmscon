@@ -461,7 +461,7 @@ static const uint32_t cursor_char[CURSOR_STYLES] = {
  *
  * Returns: 0 on success or negative error code if this glyph couldn't be drawn.
  */
-int kmscon_text_draw(struct kmscon_text *txt, struct tsm_screen *con)
+int kmscon_text_draw(struct kmscon_text *txt, struct tsm_screen *con, bool cursor_blink)
 {
 	const struct tsm_screen_cell *cells;
 	struct kmscon_cursor cursor = {0};
@@ -481,7 +481,7 @@ int kmscon_text_draw(struct kmscon_text *txt, struct tsm_screen *con)
 	cursor.cell.fg = cells[offset].fg;
 	cursor.cell.bg = cells[offset].bg;
 	if (is_cursor_blinking(style))
-		cursor.visible = cursor.visible && !txt->blinking;
+		cursor.visible = cursor.visible && !cursor_blink;
 	if (is_underline(style)) {
 		cursor.cell.attr2.underline = !cells[offset].attr2.underline;
 		cursor.cell.ch = cells[offset].ch;
