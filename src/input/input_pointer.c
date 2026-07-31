@@ -199,14 +199,14 @@ void pointer_dev_button(struct input_dev *dev, uint16_t code, int32_t value)
 		pointer_dev_send_button(dev, 0, pressed, dbl_click);
 		break;
 	case BTN_RIGHT:
-		dev->pointer.pressed_button = pressed ? 1 : BUTTON_NONE; /* Button 1 = right */
-		pointer_dev_send_button(dev, 1, pressed, false);
+		dev->pointer.pressed_button = pressed ? 2 : BUTTON_NONE; /* Button 2 = right */
+		pointer_dev_send_button(dev, 2, pressed, false);
 		break;
 	case BTN_TOOL_DOUBLETAP:
 	case BTN_TOOL_TRIPLETAP:
 	case BTN_MIDDLE:
-		dev->pointer.pressed_button = pressed ? 2 : BUTTON_NONE; /* Button 2 = middle */
-		pointer_dev_send_button(dev, 2, pressed, false);
+		dev->pointer.pressed_button = pressed ? 1 : BUTTON_NONE; /* Button 1 = middle */
+		pointer_dev_send_button(dev, 1, pressed, false);
 		break;
 	case BTN_TOUCH:
 		dev->pointer.touchpaddown = pressed;
