@@ -340,7 +340,7 @@ static void copy_glyph(struct video_buffer *buf, FT_Face face, FT_Bitmap *map, b
 	uint8_t *dst;
 
 	if (!map->width || !map->rows)
-		return;
+		goto underline;
 
 	if (top < 0) {
 		top_src = -top;
@@ -358,7 +358,7 @@ static void copy_glyph(struct video_buffer *buf, FT_Face face, FT_Bitmap *map, b
 	width = min((int)(buf->width - left), (int)(map->width - left_src));
 
 	if (width <= 0 || height <= 0)
-		return;
+		goto underline;
 
 	dst = buf->data + left + top * buf->stride;
 	for (i = 0; i < height; i++) {
@@ -366,6 +366,7 @@ static void copy_glyph(struct video_buffer *buf, FT_Face face, FT_Bitmap *map, b
 		dst += buf->stride;
 	}
 
+underline:
 	if (underline)
 		draw_underline(buf, face);
 }
