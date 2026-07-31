@@ -976,15 +976,16 @@ static void handle_pointer_button(struct kmscon_terminal *term, struct input_poi
 		}
 		break;
 	case 1:
-		term->pointer.select = false;
-		tsm_screen_selection_reset(term->console);
-		break;
-	case 2:
 		if (ev->pressed) {
 			if (term->pointer.copy && term->pointer.copy_len)
 				tsm_vte_paste(term->vte, term->pointer.copy);
 			tsm_screen_selection_reset(term->console);
 		}
+		break;
+	case 2:
+		term->pointer.select = false;
+		tsm_screen_selection_reset(term->console);
+		break;
 	}
 }
 
