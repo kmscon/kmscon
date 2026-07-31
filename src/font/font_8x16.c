@@ -56,15 +56,21 @@
 static int kmscon_font_8x16_init(struct kmscon_font *out, const struct kmscon_font_attr *attr)
 {
 	static const char name[] = "static-8x16";
+	unsigned int scale;
 
 	log_debug("loading static 8x16 font");
 
 	memset(&out->attr, 0, sizeof(out->attr));
 	memcpy(out->attr.name, name, sizeof(name));
+
+	scale = (attr->height + 8) / 16;
+	if (!scale)
+		scale = 1;
 	out->attr.bold = false;
 	out->attr.italic = false;
-	out->attr.width = 8;
-	out->attr.height = 16;
+	out->attr.width = 8 * scale;
+	out->attr.height = 16 * scale;
+	out->increase_step = 16;
 
 	return 0;
 }
@@ -79,30 +85,34 @@ static uint8_t unfold(uint8_t val)
 	return 0xff * !!val;
 }
 
-static struct kmscon_glyph *new_glyph(uint32_t ch)
+static struct kmscon_glyph *new_glyph(uint32_t ch, unsigned int scale)
 {
 	const char *font_data;
 	struct kmscon_glyph *glyph;
+	unsigned int w = 8 * scale;
+	unsigned int h = 16 * scale;
 	uint8_t c;
-	int i, j;
+	int i, j, k, l;
 
 	font_data = &_binary_font_8x16_data_start[16 * ch];
 	if (font_data + 16 > _binary_font_8x16_data_end)
 		return NULL;
 
-	glyph = malloc(sizeof(*glyph) + 8 * 16);
+	glyph = malloc(sizeof(*glyph) + w * h);
 	if (!glyph)
 		return NULL;
 
 	glyph->double_width = false;
-	glyph->buf.width = 8;
-	glyph->buf.height = 16;
-	glyph->buf.stride = 8;
+	glyph->buf.width = w;
+	glyph->buf.height = h;
+	glyph->buf.stride = w;
 
-	for (i = 0; i < 16; i++) {
-		for (j = 0; j < 8; j++) {
-			c = (uint8_t)font_data[i];
-			glyph->buf.data[i * 8 + j] = unfold(c & (1 << (7 - j)));
+	for (i = 0; i < h; i++) {
+		for (j = 0; j < w; j++) {
+			k = i / scale;
+			l = j / scale;
+			c = (uint8_t)font_data[k];
+			glyph->buf.data[i * glyph->buf.stride + j] = unfold(c & (1 << (7 - l)));
 		}
 	}
 	return glyph;
@@ -115,10 +125,12 @@ static bool kmscon_font_8x16_has_glyph(struct kmscon_font *font, uint32_t ch)
 
 static struct kmscon_glyph *kmscon_font_8x16_render(struct kmscon_font *font, uint32_t ch)
 {
-	if (ch >= 256)
-		return new_glyph('?');
+	unsigned int scale = font->attr.height / 16;
 
-	return new_glyph(ch);
+	if (ch >= 256)
+		return new_glyph('?', scale);
+
+	return new_glyph(ch, scale);
 }
 
 struct kmscon_font_ops kmscon_font_8x16_ops = {
