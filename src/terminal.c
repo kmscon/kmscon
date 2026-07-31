@@ -102,11 +102,15 @@ struct kmscon_terminal {
 	struct kmscon_pointer pointer;
 
 	struct ev_timer *blink_timer;
+	struct ev_timer *blink_cursor;
 	bool blinking;
+	bool cursor_blinking;
+
 	struct kmscon_asciinema *asciinema;
 };
 
-#define BLINK_TIMER_NS (500 * 1000 * 1000)
+#define BLINK_TIMER_NS (500 * 1000 * 1000) // Blinking interval 500ms
+#define BLINK_CURSOR_TYPING 1		   // After keypress, wait 1s before blinking the cursor
 
 static int font_set(struct kmscon_terminal *term);
 
@@ -310,7 +314,7 @@ static void do_redraw_screen(struct screen *scr)
 
 	tsm_vte_get_def_attr(scr->term->vte, &attr);
 	kmscon_text_prepare(scr->txt, &attr, scr->term->blinking);
-	kmscon_text_draw(scr->txt, scr->term->console);
+	kmscon_text_draw(scr->txt, scr->term->console, scr->term->cursor_blinking);
 	draw_pointer(scr);
 	kmscon_text_render(scr->txt);
 
@@ -439,6 +443,17 @@ static void blink_event(struct ev_timer *timer, uint64_t count, void *data)
 		return;
 
 	term->blinking = !term->blinking;
+	redraw_all(term);
+}
+
+static void cursor_blink_event(struct ev_timer *timer, uint64_t count, void *data)
+{
+	struct kmscon_terminal *term = data;
+
+	if (!term->awake)
+		return;
+
+	term->cursor_blinking = !term->cursor_blinking;
 	redraw_all(term);
 }
 
@@ -820,6 +835,10 @@ static void zoom_out(struct kmscon_terminal *term)
 static void input_event(struct input *input, struct input_key_event *ev, void *data)
 {
 	struct kmscon_terminal *term = data;
+	struct itimerspec blink_interval = {
+		.it_interval = {0, BLINK_TIMER_NS},
+		.it_value = {BLINK_CURSOR_TYPING, 0},
+	};
 
 	if (!term->opened || !term->awake || ev->handled ||
 	    !kmscon_session_get_foreground(term->session))
@@ -828,6 +847,8 @@ static void input_event(struct input *input, struct input_key_event *ev, void *d
 	// reset mouse selection on keypress
 	tsm_screen_selection_reset(term->console);
 	kmscon_asciinema_stop(term->asciinema);
+	term->cursor_blinking = false;
+	ev_timer_update(term->blink_cursor, &blink_interval);
 
 	if (conf_grab_matches(term->conf->grab_scroll_up, ev->mods, ev->num_syms, ev->keysyms)) {
 		tsm_screen_sb_up(term->console, 1);
@@ -1166,8 +1187,10 @@ void terminal_activate(struct kmscon_terminal *term)
 		return;
 
 	term->awake = true;
-	if (term->conf->blink)
+	if (term->conf->blink) {
 		ev_timer_enable(term->blink_timer);
+		ev_timer_enable(term->blink_cursor);
+	}
 	if (!term->opened)
 		terminal_open(term);
 	else
@@ -1180,8 +1203,10 @@ void terminal_deactivate(struct kmscon_terminal *term)
 {
 	term->awake = false;
 	hw_cursor_hide(term);
-	if (term->conf->blink)
+	if (term->conf->blink) {
 		ev_timer_disable(term->blink_timer);
+		ev_timer_disable(term->blink_cursor);
+	}
 	kmscon_asciinema_pause(term->asciinema);
 }
 
@@ -1192,6 +1217,7 @@ void terminal_destroy(struct kmscon_terminal *term)
 	terminal_close(term);
 	rm_all_screens(term);
 	ev_eloop_rm_timer(term->blink_timer);
+	ev_eloop_rm_timer(term->blink_cursor);
 	kmscon_asciinema_free(term->asciinema);
 	input_unregister_pointer_cb(term->input, pointer_event, term);
 	input_unregister_key_cb(term->input, input_event, term);
@@ -1329,6 +1355,10 @@ struct kmscon_terminal *terminal_new(struct kmscon_session *session, unsigned in
 					 blink_event, term);
 		if (ret)
 			goto err_pointer;
+		ret = ev_eloop_new_timer(term->eloop, &term->blink_cursor, &blink_interval,
+					 cursor_blink_event, term);
+		if (ret)
+			goto err_blink;
 	}
 	if (term->conf->asciicast) {
 		ret = kmscon_asciinema_new(&term->asciinema, term->eloop, term->conf->asciicast,
@@ -1342,6 +1372,8 @@ struct kmscon_terminal *terminal_new(struct kmscon_session *session, unsigned in
 	log_debug("new terminal object %p", term);
 	return term;
 
+err_blink:
+	ev_eloop_rm_timer(term->blink_timer);
 err_pointer:
 	input_unregister_pointer_cb(term->input, pointer_event, term);
 err_input:
