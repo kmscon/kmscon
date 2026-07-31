@@ -80,12 +80,22 @@ static void kmscon_font_8x16_destroy(struct kmscon_font *font)
 	log_debug("unloading static 8x16 font");
 }
 
+static uint8_t apply_attr(uint8_t c, const struct kmscon_font_attr *attr, bool last_line)
+{
+	if (attr->bold)
+		c |= c >> 1;
+	if (attr->underline && last_line)
+		c = 0xff;
+	return c;
+}
+
 static uint8_t unfold(uint8_t val)
 {
 	return 0xff * !!val;
 }
 
-static struct kmscon_glyph *new_glyph(uint32_t ch, unsigned int scale)
+static struct kmscon_glyph *new_glyph(uint32_t ch, const struct kmscon_font_attr *attr,
+				      unsigned int scale)
 {
 	const char *font_data;
 	struct kmscon_glyph *glyph;
@@ -111,7 +121,7 @@ static struct kmscon_glyph *new_glyph(uint32_t ch, unsigned int scale)
 		for (j = 0; j < w; j++) {
 			k = i / scale;
 			l = j / scale;
-			c = (uint8_t)font_data[k];
+			c = apply_attr((uint8_t)font_data[k], attr, k == 15);
 			glyph->buf.data[i * glyph->buf.stride + j] = unfold(c & (1 << (7 - l)));
 		}
 	}
@@ -128,9 +138,9 @@ static struct kmscon_glyph *kmscon_font_8x16_render(struct kmscon_font *font, ui
 	unsigned int scale = font->attr.height / 16;
 
 	if (ch >= 256)
-		return new_glyph('?', scale);
+		return new_glyph('?', &font->attr, scale);
 
-	return new_glyph(ch, scale);
+	return new_glyph(ch, &font->attr, scale);
 }
 
 struct kmscon_font_ops kmscon_font_8x16_ops = {
