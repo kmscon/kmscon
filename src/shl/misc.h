@@ -556,7 +556,7 @@ static inline bool shl_grab_matches(unsigned int ev_mods, unsigned int ev_num_sy
 				    const uint32_t *ev_syms, unsigned int grab_mods,
 				    unsigned int grab_num_syms, const uint32_t *grab_syms)
 {
-	if (!SHL_HAS_BITS(ev_mods, grab_mods))
+	if (ev_mods != grab_mods)
 		return false;
 
 	if (grab_num_syms != 0) {
