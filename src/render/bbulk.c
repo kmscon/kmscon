@@ -529,30 +529,27 @@ static void set_pointer_coordinate(struct bbulk *bb, struct kmscon_text *txt,
 	switch (txt->orientation) {
 	default:
 	case OR_NORMAL:
-		x = pointer_x;
-		y = pointer_y;
+		x = pointer_x + bb->off_x;
+		y = pointer_y + bb->off_y;
 		break;
 	case OR_UPSIDE_DOWN:
-		x = bb->sw - pointer_x;
-		y = bb->sh - pointer_y;
+		x = bb->max_x - pointer_x;
+		y = bb->max_y - pointer_y;
 		break;
 	case OR_RIGHT:
-		x = bb->sw - pointer_y;
-		y = pointer_x;
+		x = bb->max_x - pointer_y;
+		y = pointer_x + bb->off_y;
 		break;
 	case OR_LEFT:
-		x = pointer_y;
-		y = bb->sh - pointer_x;
+		x = pointer_y + bb->off_x;
+		y = bb->max_y - pointer_x;
 		break;
 	}
-	x = clamp(x, hf_w, bb->sw - hf_w);
-	y = clamp(y, hf_h, bb->sh - hf_h);
+	x = clamp(x, hf_w, bb->max_x - hf_w);
+	y = clamp(y, hf_h, bb->max_y - hf_h);
 
-	x += bb->off_x - hf_w;
-	y += bb->off_y - hf_h;
-
-	req->x = x;
-	req->y = y;
+	req->x = x - hf_w;
+	req->y = y - hf_h;
 }
 
 static int bbulk_draw_pointer(struct kmscon_text *txt, unsigned int pointer_x,
@@ -562,12 +559,13 @@ static int bbulk_draw_pointer(struct kmscon_text *txt, unsigned int pointer_x,
 	struct video_blend_req req;
 	struct kmscon_glyph *bb_glyph;
 	struct tsm_screen_cell pointer_cell = {0};
+	unsigned int fw2 = FONT_WIDTH(txt) / 2;
+	unsigned int fh2 = FONT_HEIGHT(txt) / 2;
+
 	pointer_cell.ch = 'I';
 
-	pointer_x = min(pointer_x, txt->cols * FONT_WIDTH(txt) - (FONT_WIDTH(txt) / 2));
-	pointer_y = min(pointer_y, txt->rows * FONT_HEIGHT(txt) - (FONT_HEIGHT(txt) / 2));
-
-	mark_damaged(txt, bb, pointer_x, pointer_y);
+	pointer_x = clamp(pointer_x, fw2, txt->cols * FONT_WIDTH(txt) - fw2);
+	pointer_y = clamp(pointer_y, fh2, txt->rows * FONT_HEIGHT(txt) - fh2);
 
 	bb_glyph = find_glyph(txt, &pointer_cell);
 	if (!bb_glyph)
@@ -577,6 +575,7 @@ static int bbulk_draw_pointer(struct kmscon_text *txt, unsigned int pointer_x,
 	req.w = bb_glyph->buf.width;
 	req.h = bb_glyph->buf.height;
 	set_pointer_coordinate(bb, txt, &req, pointer_x, pointer_y);
+	mark_damaged(txt, bb, pointer_x, pointer_y);
 
 	req.fr = bb->attr.fr;
 	req.fg = bb->attr.fg;
