@@ -543,12 +543,12 @@ static int fb_video_wake_up(struct video *video)
 	return 0;
 }
 
-struct video_module fbdev_module = {.name = "fbdev",
-				    .owner = NULL,
-				    .ops = {
-					    .init = fb_video_init,
-					    .destroy = fb_video_destroy,
-					    .poll = NULL,
-					    .sleep = fb_video_sleep,
-					    .wake_up = fb_video_wake_up,
-				    }};
+struct video_ops fbdev_module = {
+	.name = "fbdev",
+	.owner = NULL,
+	.init = fb_video_init,
+	.destroy = fb_video_destroy,
+	.poll = NULL,
+	.sleep = fb_video_sleep,
+	.wake_up = fb_video_wake_up,
+};

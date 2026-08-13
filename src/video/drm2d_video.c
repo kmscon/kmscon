@@ -326,15 +326,12 @@ static int drm2d_video_wake_up(struct video *video)
 	return 0;
 }
 
-struct video_module drm2d_module = {
+struct video_ops drm2d_module = {
 	.name = "drm2d",
 	.owner = NULL,
-	.ops =
-		{
-			.init = drm2d_video_init,
-			.destroy = drm2d_video_destroy,
-			.poll = drm2d_video_poll,
-			.sleep = drm2d_video_sleep,
-			.wake_up = drm2d_video_wake_up,
-		},
+	.init = drm2d_video_init,
+	.destroy = drm2d_video_destroy,
+	.poll = drm2d_video_poll,
+	.sleep = drm2d_video_sleep,
+	.wake_up = drm2d_video_wake_up,
 };

@@ -693,15 +693,12 @@ static int drm3d_video_wake_up(struct video *video)
 }
 
 SHL_EXPORT
-struct video_module drm3d_module = {
+struct video_ops drm3d_module = {
 	.name = "drm3d",
 	.owner = NULL,
-	.ops =
-		{
-			.init = drm3d_video_init,
-			.destroy = drm3d_video_destroy,
-			.poll = drm3d_video_poll,
-			.sleep = drm3d_video_sleep,
-			.wake_up = drm3d_video_wake_up,
-		},
+	.init = drm3d_video_init,
+	.destroy = drm3d_video_destroy,
+	.poll = drm3d_video_poll,
+	.sleep = drm3d_video_sleep,
+	.wake_up = drm3d_video_wake_up,
 };
