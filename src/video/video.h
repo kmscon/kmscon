@@ -74,15 +74,14 @@ enum display_dpms {
 	DPMS_UNKNOWN,
 };
 
-enum video_action {
-	VIDEO_NEW,
-	VIDEO_GONE,
-	VIDEO_REFRESH,
-};
+typedef void (*video_new_display_cb)(void *data, struct display *disp);
+typedef void (*video_refresh_display_cb)(void *data, struct display *disp);
+typedef void (*video_remove_display_cb)(void *data, struct display *disp);
 
-struct video_hotplug {
-	struct display *display;
-	int action;
+struct video_cb {
+	video_new_display_cb new_disp;
+	video_refresh_display_cb refresh_disp;
+	video_remove_display_cb remove_disp;
 };
 
 struct video_buffer {
@@ -116,7 +115,6 @@ struct video_rect {
 	int32_t y2;
 };
 
-typedef void (*video_cb)(struct video *video, struct video_hotplug *arg, void *data);
 typedef void (*display_pageflip_cb)(void *unused, void *unused2, void *data);
 
 /* misc */
@@ -167,13 +165,12 @@ bool display_has_damage(struct display *disp);
 /* video interface */
 
 int video_new(struct video **out, struct ev_eloop *eloop, int fd, const char *backend,
-	      unsigned int desired_width, unsigned int desired_height, bool use_original);
+	      struct video_cb *cb, void *data, unsigned int desired_width,
+	      unsigned int desired_height, bool use_original);
 void video_ref(struct video *video);
 void video_unref(struct video *video);
 
 struct display *video_get_displays(struct video *video);
-int video_register_cb(struct video *video, video_cb cb, void *data);
-void video_unregister_cb(struct video *video, video_cb cb, void *data);
 
 int video_register(const struct video_module *ops);
 void video_unregister(const char *name);

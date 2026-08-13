@@ -1209,7 +1209,7 @@ static void vt_timeout(struct ev_timer *timer, uint64_t exp, void *data)
 		shl_dlist_for_each(iter, &video->displays)
 		{
 			disp = shl_dlist_entry(iter, struct display, list);
-			VIDEO_CB(video, disp, VIDEO_REFRESH);
+			disp->video->cb->refresh_disp(disp->video->cb_data, disp);
 		}
 	}
 }

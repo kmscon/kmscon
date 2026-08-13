@@ -130,7 +130,8 @@ struct video {
 	struct shl_register_record *record;
 
 	struct shl_dlist displays;
-	struct shl_hook *hook;
+	struct video_cb *cb;
+	void *cb_data;
 
 	bool use_original;
 	unsigned int desired_width;
@@ -144,11 +145,4 @@ static inline bool video_need_hotplug(const struct video *video)
 {
 	return video->flags & VIDEO_HOTPLUG;
 }
-
-#define VIDEO_CB(vid, disp, act)                                                                   \
-	shl_hook_call((vid)->hook, (vid),                                                          \
-		      &(struct video_hotplug){                                                     \
-			      .display = (disp),                                                   \
-			      .action = (act),                                                     \
-		      })
 #endif /* VIDEO_INTERNAL_H */

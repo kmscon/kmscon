@@ -151,7 +151,7 @@ void display_ready(struct display *disp)
 		return;
 
 	disp->flags |= DISPLAY_INUSE;
-	VIDEO_CB(disp->video, disp, VIDEO_NEW);
+	disp->video->cb->new_disp(disp->video->cb_data, disp);
 }
 
 SHL_EXPORT
@@ -160,7 +160,7 @@ void display_unbind(struct display *disp)
 	if (!disp || !disp->video)
 		return;
 	if (disp->flags & DISPLAY_INUSE)
-		VIDEO_CB(disp->video, disp, VIDEO_GONE);
+		disp->video->cb->remove_disp(disp->video->cb_data, disp);
 	shl_dlist_unlink(&disp->list);
 	display_unref(disp);
 }
@@ -405,7 +405,8 @@ bool display_has_damage(struct display *disp)
 
 SHL_EXPORT
 int video_new(struct video **out, struct ev_eloop *eloop, int fd, const char *backend,
-	      unsigned int desired_width, unsigned int desired_height, bool use_original)
+	      struct video_cb *cb, void *data, unsigned int desired_width,
+	      unsigned int desired_height, bool use_original)
 {
 	struct shl_register_record *record;
 	const char *name = backend ? backend : "<default>";
@@ -435,17 +436,15 @@ int video_new(struct video **out, struct ev_eloop *eloop, int fd, const char *ba
 
 	video->record = record;
 	video->mod = record->data;
+	video->cb = cb;
+	video->cb_data = data;
 
 	video->eloop = eloop;
 	shl_dlist_init(&video->displays);
 
-	ret = shl_hook_new(&video->hook);
-	if (ret)
-		goto err_free;
-
 	ret = VIDEO_CALL(video->mod->ops.init, 0, video, fd);
 	if (ret)
-		goto err_hook;
+		goto err_free;
 
 	video->desired_width = desired_width;
 	video->desired_height = desired_height;
@@ -455,8 +454,6 @@ int video_new(struct video **out, struct ev_eloop *eloop, int fd, const char *ba
 	*out = video;
 	return 0;
 
-err_hook:
-	shl_hook_free(video->hook);
 err_free:
 	free(video);
 err_unref:
@@ -489,7 +486,6 @@ void video_unref(struct video *video)
 	}
 
 	VIDEO_CALL(video->mod->ops.destroy, 0, video);
-	shl_hook_free(video->hook);
 	ev_eloop_unref(video->eloop);
 	shl_register_record_unref(video->record);
 	free(video);
@@ -502,24 +498,6 @@ struct display *video_get_displays(struct video *video)
 		return NULL;
 
 	return shl_dlist_entry(video->displays.next, struct display, list);
-}
-
-SHL_EXPORT
-int video_register_cb(struct video *video, video_cb cb, void *data)
-{
-	if (!video || !cb)
-		return -EINVAL;
-
-	return shl_hook_add_cast(video->hook, cb, data, false);
-}
-
-SHL_EXPORT
-void video_unregister_cb(struct video *video, video_cb cb, void *data)
-{
-	if (!video || !cb)
-		return;
-
-	shl_hook_rm_cast(video->hook, cb, data);
 }
 
 /**
