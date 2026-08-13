@@ -75,8 +75,6 @@ enum display_dpms {
 };
 
 enum video_action {
-	VIDEO_WAKE_UP,
-	VIDEO_SLEEP,
 	VIDEO_NEW,
 	VIDEO_GONE,
 	VIDEO_REFRESH,
