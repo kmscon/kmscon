@@ -574,6 +574,8 @@ static int bbulk_draw_pointer(struct kmscon_text *txt, unsigned int pointer_x,
 		return -ENOMEM;
 
 	req.buf = &bb_glyph->buf;
+	req.w = bb_glyph->buf.width;
+	req.h = bb_glyph->buf.height;
 	set_pointer_coordinate(bb, txt, &req, pointer_x, pointer_y);
 
 	req.fr = bb->attr.fr;
