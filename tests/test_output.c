@@ -204,13 +204,14 @@ int main(int argc, char **argv)
 		goto err_fail;
 	}
 
-	ret = video_new(&video, eloop, fd, mode, output_conf.desired_width,
+	ret = video_new(&video, eloop, fd, mode, NULL, NULL, output_conf.desired_width,
 			output_conf.desired_height, false);
 	if (ret) {
 		if (!output_conf.fbdev) {
 			log_notice("cannot create drm device; trying drm2d mode");
-			ret = video_new(&video, eloop, fd, "drm2d", output_conf.desired_width,
-					output_conf.desired_height, false);
+			ret = video_new(&video, eloop, fd, "drm2d", NULL, NULL,
+					output_conf.desired_width, output_conf.desired_height,
+					false);
 			if (ret)
 				goto err_exit;
 		} else {

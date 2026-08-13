@@ -301,8 +301,9 @@ static void seat_prev(struct kmscon_seat *seat)
 	seat_switch(seat, prev);
 }
 
-static void seat_add_display(struct kmscon_seat *seat, struct display *disp)
+static void seat_new_display(void *data, struct display *disp)
 {
+	struct kmscon_seat *seat = data;
 	struct kmscon_display *d;
 
 	log_debug("add display %s to seat %s", display_name(disp), seat->name);
@@ -319,12 +320,32 @@ static void seat_add_display(struct kmscon_seat *seat, struct display *disp)
 	activate_display(d);
 }
 
-static void seat_remove_display(struct kmscon_seat *seat, struct kmscon_display *d)
+static struct kmscon_display *seat_get_display(struct kmscon_seat *seat, struct display *disp)
+{
+	struct shl_dlist *iter;
+	struct kmscon_display *d;
+
+	shl_dlist_for_each(iter, &seat->displays)
+	{
+		d = shl_dlist_entry(iter, struct kmscon_display, list);
+		if (d->disp == disp)
+			return d;
+	}
+	return NULL;
+}
+
+static void seat_remove_display(void *data, struct display *disp)
 {
 	struct shl_dlist *iter, *tmp;
 	struct kmscon_session *s;
+	struct kmscon_display *d;
+	struct kmscon_seat *seat = data;
 
-	log_debug("remove display %s from seat %s", display_name(d->disp), seat->name);
+	log_debug("remove display %s from seat %s", display_name(disp), seat->name);
+
+	d = seat_get_display(seat, disp);
+	if (!d)
+		return;
 
 	shl_dlist_unlink(&d->list);
 
@@ -340,26 +361,18 @@ static void seat_remove_display(struct kmscon_seat *seat, struct kmscon_display 
 	free(d);
 }
 
-static struct kmscon_display *seat_get_display(struct kmscon_seat *seat, struct display *disp)
-{
-	struct shl_dlist *iter;
-	struct kmscon_display *d;
-
-	shl_dlist_for_each(iter, &seat->displays)
-	{
-		d = shl_dlist_entry(iter, struct kmscon_display, list);
-		if (d->disp == disp)
-			return d;
-	}
-	return NULL;
-}
-
-static void seat_refresh_display(struct kmscon_seat *seat, struct kmscon_display *d)
+static void seat_refresh_display(void *data, struct display *disp)
 {
 	struct shl_dlist *iter;
 	struct kmscon_session *s;
+	struct kmscon_display *d;
+	struct kmscon_seat *seat = data;
 
-	log_debug("refresh display %s from seat %s", display_name(d->disp), seat->name);
+	log_debug("refresh display %s from seat %s", display_name(disp), seat->name);
+
+	d = seat_get_display(seat, disp);
+	if (!d)
+		return;
 
 	if (d->activated) {
 		shl_dlist_for_each(iter, &seat->sessions)
@@ -845,30 +858,6 @@ void kmscon_seat_free(struct kmscon_seat *seat)
 	free(seat);
 }
 
-static void kmscon_seat_video_event(struct video *video, struct video_hotplug *ev, void *data)
-{
-	struct kmscon_video *vid = data;
-	struct kmscon_display *d;
-
-	log_debug("video event %d on video device %s on seat %s", ev->action, vid->node,
-		  vid->seat->name);
-	if (ev->action == VIDEO_NEW)
-		return seat_add_display(vid->seat, ev->display);
-
-	d = seat_get_display(vid->seat, ev->display);
-	if (!d)
-		return;
-
-	switch (ev->action) {
-	case VIDEO_GONE:
-		seat_remove_display(vid->seat, d);
-		break;
-	case VIDEO_REFRESH:
-		seat_refresh_display(vid->seat, d);
-		break;
-	}
-}
-
 static bool kmscon_seat_gpu_is_ignored(struct kmscon_seat *seat, unsigned int type, bool drm_backed,
 				       bool primary, bool aux, const char *node)
 {
@@ -911,6 +900,12 @@ static bool kmscon_seat_gpu_is_ignored(struct kmscon_seat *seat, unsigned int ty
 	return false;
 }
 
+static struct video_cb seat_video_cb = {
+	.new_disp = seat_new_display,
+	.refresh_disp = seat_refresh_display,
+	.remove_disp = seat_remove_display,
+};
+
 static int seat_video_init(struct kmscon_video *vid)
 {
 	struct kmscon_seat *seat = vid->seat;
@@ -945,30 +940,21 @@ static int seat_video_init(struct kmscon_video *vid)
 		return vid->fd;
 	}
 
-	ret = video_new(&vid->video, seat->eloop, vid->fd, backend, width, height,
-			seat->conf->use_original_mode);
+	ret = video_new(&vid->video, seat->eloop, vid->fd, backend, &seat_video_cb, seat, width,
+			height, seat->conf->use_original_mode);
 	if (ret && backend == be_drm3d) {
 		log_info("cannot create drm3d device %s on seat %s (%d); trying drm2d mode",
 			 vid->node, seat->name, ret);
-		ret = video_new(&vid->video, seat->eloop, vid->fd, be_drm2d, width, height,
-				seat->conf->use_original_mode);
+		ret = video_new(&vid->video, seat->eloop, vid->fd, be_drm2d, &seat_video_cb, seat,
+				width, height, seat->conf->use_original_mode);
 	}
 	if (ret) {
 		log_error("cannot create video device %s on seat %s: %d", vid->node, seat->name,
 			  ret);
 		goto err_close;
 	}
-
-	ret = video_register_cb(vid->video, kmscon_seat_video_event, vid);
-	if (ret) {
-		log_error("cannot register video callback for device %s on seat %s: %d", vid->node,
-			  seat->name, ret);
-		goto err_video;
-	}
 	return video_wake_up(vid->video);
 
-err_video:
-	video_unref(vid->video);
 err_close:
 	uterm_vt_close_device(seat->vt, vid->fd, vid->fd_id);
 	return ret;
@@ -1023,7 +1009,6 @@ static void kmscon_seat_remove_video(struct kmscon_seat *seat, void *data)
 {
 	struct kmscon_video *vid = data;
 	struct display *disp;
-	struct kmscon_display *d;
 
 	if (!seat || !vid)
 		return;
@@ -1032,14 +1017,11 @@ static void kmscon_seat_remove_video(struct kmscon_seat *seat, void *data)
 
 	uterm_monitor_set_dev_data(vid->udev, NULL);
 	shl_dlist_unlink(&vid->list);
-	video_unregister_cb(vid->video, kmscon_seat_video_event, vid);
 
 	if (vid->video) {
 		disp = video_get_displays(vid->video);
 		while (disp) {
-			d = seat_get_display(seat, disp);
-			if (d)
-				seat_remove_display(seat, d);
+			seat_remove_display(seat, disp);
 			disp = display_next(disp);
 		}
 		video_unref(vid->video);
