@@ -572,8 +572,6 @@ void video_sleep(struct video *video)
 		return;
 
 	log_debug("go asleep");
-
-	VIDEO_CB(video, NULL, VIDEO_SLEEP);
 	video->flags &= ~VIDEO_AWAKE;
 	VIDEO_CALL(video->mod->ops.sleep, 0, video);
 }
@@ -597,7 +595,6 @@ int video_wake_up(struct video *video)
 	}
 
 	video->flags |= VIDEO_AWAKE;
-	VIDEO_CB(video, NULL, VIDEO_WAKE_UP);
 	return 0;
 }
 
