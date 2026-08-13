@@ -72,8 +72,6 @@ struct video_module {
 	const struct video_ops ops;
 };
 
-#define VIDEO_CALL(func, els, ...) (func ? func(__VA_ARGS__) : els)
-
 /* display */
 
 #define DISPLAY_ONLINE 0x01
