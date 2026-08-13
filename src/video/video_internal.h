@@ -59,17 +59,13 @@ struct display_ops {
 };
 
 struct video_ops {
+	const char *name;
+	struct shl_module *owner;
 	int (*init)(struct video *video, int fd);
 	void (*destroy)(struct video *video);
 	int (*poll)(struct video *video);
 	void (*sleep)(struct video *video);
 	int (*wake_up)(struct video *video);
-};
-
-struct video_module {
-	const char *name;
-	struct shl_module *owner;
-	const struct video_ops ops;
 };
 
 /* display */
@@ -135,7 +131,7 @@ struct video {
 	unsigned int desired_width;
 	unsigned int desired_height;
 
-	const struct video_module *mod;
+	const struct video_ops *ops;
 	void *data;
 };
 

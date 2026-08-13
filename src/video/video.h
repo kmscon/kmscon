@@ -57,7 +57,7 @@
 
 struct display;
 struct video;
-struct video_module;
+struct video_ops;
 
 enum display_state {
 	DISPLAY_ACTIVE,
@@ -170,7 +170,7 @@ int video_new(struct video **out, struct ev_eloop *eloop, int fd, const char *ba
 void video_ref(struct video *video);
 void video_unref(struct video *video);
 
-int video_register(const struct video_module *ops);
+int video_register(const struct video_ops *ops);
 void video_unregister(const char *name);
 void video_sleep(struct video *video);
 int video_wake_up(struct video *video);
@@ -178,7 +178,7 @@ bool video_is_awake(struct video *video);
 void video_poll(struct video *video);
 
 #ifdef BUILD_ENABLE_VIDEO_DRM2D
-extern struct video_module drm2d_module;
+extern struct video_ops drm2d_module;
 
 static inline void video_register_drm2d(void)
 {
@@ -190,7 +190,7 @@ static inline void video_register_drm2d(void) {}
 #endif
 
 #ifdef BUILD_ENABLE_VIDEO_FBDEV
-extern struct video_module fbdev_module;
+extern struct video_ops fbdev_module;
 
 static inline void video_register_fbdev(void)
 {

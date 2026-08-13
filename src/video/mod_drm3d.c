@@ -34,7 +34,7 @@
 #include "shl/module_interface.h"
 #include "video_internal.h"
 
-extern struct video_module drm3d_module;
+extern struct video_ops drm3d_module;
 
 #define LOG_SUBSYSTEM "mod_drm3d"
 

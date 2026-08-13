@@ -38,7 +38,6 @@
 #include "shl/eloop.h"
 #include "shl/hook.h"
 #include "shl/log.h"
-#include "shl/misc.h"
 #include "shl/module.h"
 #include "shl/register.h"
 #include "video.h"
@@ -50,12 +49,11 @@ static struct shl_register video_reg = SHL_REGISTER_INIT(video_reg);
 
 static inline void video_destroy(void *data)
 {
-	const struct video_module *ops = data;
+	const struct video_ops *ops = data;
 
 	shl_module_unref(ops->owner);
 }
 
-SHL_EXPORT
 const char *dpms_to_name(enum display_dpms dpms)
 {
 	switch (dpms) {
@@ -109,7 +107,6 @@ err_free:
 	return ret;
 }
 
-SHL_EXPORT
 void display_ref(struct display *disp)
 {
 	if (!disp || !disp->ref)
@@ -118,7 +115,6 @@ void display_ref(struct display *disp)
 	++disp->ref;
 }
 
-SHL_EXPORT
 void display_unref(struct display *disp)
 {
 	if (!disp || !disp->ref || --disp->ref)
@@ -132,7 +128,6 @@ void display_unref(struct display *disp)
 	free(disp);
 }
 
-SHL_EXPORT
 int display_bind(struct display *disp)
 {
 	if (!disp || !disp->video)
@@ -144,7 +139,6 @@ int display_bind(struct display *disp)
 	return 0;
 }
 
-SHL_EXPORT
 void display_ready(struct display *disp)
 {
 	if (!disp || !disp->video || disp->flags & DISPLAY_INUSE)
@@ -154,7 +148,6 @@ void display_ready(struct display *disp)
 	disp->video->cb->new_disp(disp->video->cb_data, disp);
 }
 
-SHL_EXPORT
 void display_unbind(struct display *disp)
 {
 	if (!disp || !disp->video)
@@ -165,33 +158,28 @@ void display_unbind(struct display *disp)
 	display_unref(disp);
 }
 
-SHL_EXPORT
 bool display_is_drm(struct display *disp)
 {
 	return (disp->flags & DISPLAY_DITHERING) == 0;
 }
 
-SHL_EXPORT
 bool display_has_opengl(struct display *disp)
 {
 	return (disp->flags & DISPLAY_OPENGL) != 0;
 }
 
-SHL_EXPORT
 bool display_supports_damage(struct display *disp)
 {
 	return (disp->flags & DISPLAY_DAMAGE) != 0;
 }
 
-SHL_EXPORT
 const char *display_backend_name(struct display *disp)
 {
-	if (disp && disp->video && disp->video->mod)
-		return disp->video->mod->name;
+	if (disp && disp->video && disp->video->ops)
+		return disp->video->ops->name;
 	return "Unknown";
 }
 
-SHL_EXPORT
 const char *display_name(struct display *disp)
 {
 	if (disp && disp->name)
@@ -199,7 +187,6 @@ const char *display_name(struct display *disp)
 	return "Unknown";
 }
 
-SHL_EXPORT
 struct video *display_video(struct display *disp)
 {
 	if (!disp)
@@ -207,7 +194,6 @@ struct video *display_video(struct display *disp)
 	return disp->video;
 }
 
-SHL_EXPORT
 int display_register_pageflip(struct display *disp, display_pageflip_cb cb, void *data)
 {
 	if (!disp)
@@ -216,7 +202,6 @@ int display_register_pageflip(struct display *disp, display_pageflip_cb cb, void
 	return shl_hook_add_cast(disp->hook, cb, data, false);
 }
 
-SHL_EXPORT
 void display_unregister_pageflip(struct display *disp, display_pageflip_cb cb, void *data)
 {
 	if (!disp)
@@ -225,7 +210,6 @@ void display_unregister_pageflip(struct display *disp, display_pageflip_cb cb, v
 	shl_hook_rm_cast(disp->hook, cb, data);
 }
 
-SHL_EXPORT
 unsigned int display_get_width(struct display *disp)
 {
 	if (!disp)
@@ -234,7 +218,6 @@ unsigned int display_get_width(struct display *disp)
 	return disp->width;
 }
 
-SHL_EXPORT
 unsigned int display_get_height(struct display *disp)
 {
 	if (!disp)
@@ -243,7 +226,6 @@ unsigned int display_get_height(struct display *disp)
 	return disp->height;
 }
 
-SHL_EXPORT
 int display_get_state(struct display *disp)
 {
 	if (!disp || !disp->video)
@@ -256,7 +238,6 @@ int display_get_state(struct display *disp)
 	return DISPLAY_ASLEEP;
 }
 
-SHL_EXPORT
 int display_set_dpms(struct display *disp, enum display_dpms dpms)
 {
 	if (!disp || !display_is_online(disp) || !video_is_awake(disp->video))
@@ -266,7 +247,6 @@ int display_set_dpms(struct display *disp, enum display_dpms dpms)
 	return 0;
 }
 
-SHL_EXPORT
 enum display_dpms display_get_dpms(const struct display *disp)
 {
 	if (!disp || !disp->video)
@@ -275,7 +255,6 @@ enum display_dpms display_get_dpms(const struct display *disp)
 	return disp->dpms;
 }
 
-SHL_EXPORT
 int display_use(struct display *disp)
 {
 	if (!disp || !display_is_online(disp) || !disp->ops->use)
@@ -284,7 +263,6 @@ int display_use(struct display *disp)
 	return disp->ops->use(disp);
 }
 
-SHL_EXPORT
 int display_swap(struct display *disp)
 {
 	if (!disp || !display_is_online(disp) || !video_is_awake(disp->video))
@@ -294,7 +272,6 @@ int display_swap(struct display *disp)
 	return 0;
 }
 
-SHL_EXPORT
 bool display_is_swapping(struct display *disp)
 {
 	if (!disp || !disp->ops->is_swapping)
@@ -303,7 +280,6 @@ bool display_is_swapping(struct display *disp)
 	return disp->ops->is_swapping(disp);
 }
 
-SHL_EXPORT
 int display_clear(struct display *disp, uint8_t r, uint8_t g, uint8_t b)
 {
 	if (!disp || !display_is_online(disp) || !video_is_awake(disp->video) || !disp->ops->clear)
@@ -312,7 +288,6 @@ int display_clear(struct display *disp, uint8_t r, uint8_t g, uint8_t b)
 	return disp->ops->clear(disp, r, g, b);
 }
 
-SHL_EXPORT
 int display_blend(struct display *disp, const struct video_blend_req *req)
 {
 	if (!disp || !display_is_online(disp) || !video_is_awake(disp->video))
@@ -323,7 +298,6 @@ int display_blend(struct display *disp, const struct video_blend_req *req)
 	return -EOPNOTSUPP;
 }
 
-SHL_EXPORT
 void display_set_need_redraw(struct display *disp)
 {
 	if (!disp || !display_is_online(disp))
@@ -332,7 +306,6 @@ void display_set_need_redraw(struct display *disp)
 	disp->flags |= DISPLAY_NEED_REDRAW;
 }
 
-SHL_EXPORT
 bool display_need_redraw(struct display *disp)
 {
 	if (!disp || !display_is_online(disp) || !video_is_awake(disp->video))
@@ -341,7 +314,6 @@ bool display_need_redraw(struct display *disp)
 	return (disp->flags & DISPLAY_NEED_REDRAW) != 0;
 }
 
-SHL_EXPORT
 int display_setup_cursor(struct display *disp, const uint32_t *pixels, unsigned int width,
 			 unsigned int height, int hot_x, int hot_y)
 {
@@ -353,14 +325,12 @@ int display_setup_cursor(struct display *disp, const uint32_t *pixels, unsigned 
 	return -EOPNOTSUPP;
 }
 
-SHL_EXPORT
 void display_destroy_cursor(struct display *disp)
 {
 	if (disp && disp->ops->destroy_cursor)
 		disp->ops->destroy_cursor(disp);
 }
 
-SHL_EXPORT
 int display_show_cursor(struct display *disp, int32_t x, int32_t y)
 {
 	if (!disp || !display_is_online(disp) || !video_is_awake(disp->video))
@@ -371,7 +341,6 @@ int display_show_cursor(struct display *disp, int32_t x, int32_t y)
 	return -EOPNOTSUPP;
 }
 
-SHL_EXPORT
 int display_hide_cursor(struct display *disp)
 {
 	if (!disp || !display_is_online(disp) || !video_is_awake(disp->video))
@@ -382,7 +351,6 @@ int display_hide_cursor(struct display *disp)
 	return -EOPNOTSUPP;
 }
 
-SHL_EXPORT
 void display_set_cursor_offset(struct display *disp, int32_t x, int32_t y)
 {
 	if (!disp || !display_is_online(disp) || !video_is_awake(disp->video))
@@ -392,7 +360,6 @@ void display_set_cursor_offset(struct display *disp, int32_t x, int32_t y)
 		disp->ops->set_cursor_offset(disp, x, y);
 }
 
-SHL_EXPORT
 void display_set_damage(struct display *disp, size_t n_rect, struct video_rect *damages)
 {
 	if (!disp || !display_is_online(disp) || !video_is_awake(disp->video))
@@ -402,7 +369,6 @@ void display_set_damage(struct display *disp, size_t n_rect, struct video_rect *
 		disp->ops->set_damage(disp, n_rect, damages);
 }
 
-SHL_EXPORT
 bool display_has_damage(struct display *disp)
 {
 	if (!disp || !display_is_online(disp) || !video_is_awake(disp->video))
@@ -413,7 +379,6 @@ bool display_has_damage(struct display *disp)
 	return false;
 }
 
-SHL_EXPORT
 int video_new(struct video **out, struct ev_eloop *eloop, int fd, const char *backend,
 	      struct video_cb *cb, void *data, unsigned int desired_width,
 	      unsigned int desired_height, bool use_original)
@@ -445,14 +410,14 @@ int video_new(struct video **out, struct ev_eloop *eloop, int fd, const char *ba
 	video->ref = 1;
 
 	video->record = record;
-	video->mod = record->data;
+	video->ops = record->data;
 	video->cb = cb;
 	video->cb_data = data;
 
 	video->eloop = eloop;
 	shl_dlist_init(&video->displays);
 
-	ret = video->mod->ops.init(video, fd);
+	ret = video->ops->init(video, fd);
 	if (ret)
 		goto err_free;
 
@@ -471,7 +436,6 @@ err_unref:
 	return ret;
 }
 
-SHL_EXPORT
 void video_ref(struct video *video)
 {
 	if (!video || !video->ref)
@@ -480,7 +444,6 @@ void video_ref(struct video *video)
 	++video->ref;
 }
 
-SHL_EXPORT
 void video_unref(struct video *video)
 {
 	struct display *disp;
@@ -495,7 +458,7 @@ void video_unref(struct video *video)
 		display_unbind(disp);
 	}
 
-	video->mod->ops.destroy(video);
+	video->ops->destroy(video);
 	ev_eloop_unref(video->eloop);
 	shl_register_record_unref(video->record);
 	free(video);
@@ -510,8 +473,8 @@ void video_unref(struct video *video)
  *
  * Returns: 0 on success, negative error code on failure
  */
-SHL_EXPORT
-int video_register(const struct video_module *ops)
+
+int video_register(const struct video_ops *ops)
 {
 	int ret;
 
@@ -537,14 +500,12 @@ int video_register(const struct video_module *ops)
  * This unregisters the video-backend that is registered with name @name. If
  * @name is not found, nothing is done.
  */
-SHL_EXPORT
 void video_unregister(const char *name)
 {
 	log_debug("unregister backend %s", name);
 	shl_register_remove(&video_reg, name);
 }
 
-SHL_EXPORT
 void video_sleep(struct video *video)
 {
 	if (!video || !video_is_awake(video))
@@ -552,11 +513,10 @@ void video_sleep(struct video *video)
 
 	log_debug("go asleep");
 	video->flags &= ~VIDEO_AWAKE;
-	if (video->mod->ops.sleep)
-		video->mod->ops.sleep(video);
+	if (video->ops->sleep)
+		video->ops->sleep(video);
 }
 
-SHL_EXPORT
 int video_wake_up(struct video *video)
 {
 	int ret = 0;
@@ -568,8 +528,8 @@ int video_wake_up(struct video *video)
 
 	log_debug("wake up");
 
-	if (video->mod->ops.wake_up)
-		ret = video->mod->ops.wake_up(video);
+	if (video->ops->wake_up)
+		ret = video->ops->wake_up(video);
 	if (ret) {
 		video->flags &= ~VIDEO_AWAKE;
 		return ret;
@@ -579,15 +539,13 @@ int video_wake_up(struct video *video)
 	return 0;
 }
 
-SHL_EXPORT
 bool video_is_awake(struct video *video)
 {
 	return video && (video->flags & VIDEO_AWAKE);
 }
 
-SHL_EXPORT
 void video_poll(struct video *video)
 {
-	if (video && video->mod->ops.poll)
-		video->mod->ops.poll(video);
+	if (video && video->ops->poll)
+		video->ops->poll(video);
 }
