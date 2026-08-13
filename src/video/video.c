@@ -200,12 +200,11 @@ const char *display_name(struct display *disp)
 }
 
 SHL_EXPORT
-struct display *display_next(struct display *disp)
+struct video *display_video(struct display *disp)
 {
-	if (!disp || !disp->video || disp->list.next == &disp->video->displays)
+	if (!disp)
 		return NULL;
-
-	return shl_dlist_entry(disp->list.next, struct display, list);
+	return disp->video;
 }
 
 SHL_EXPORT
@@ -489,15 +488,6 @@ void video_unref(struct video *video)
 	ev_eloop_unref(video->eloop);
 	shl_register_record_unref(video->record);
 	free(video);
-}
-
-SHL_EXPORT
-struct display *video_get_displays(struct video *video)
-{
-	if (!video || shl_dlist_empty(&video->displays))
-		return NULL;
-
-	return shl_dlist_entry(video->displays.next, struct display, list);
 }
 
 /**
