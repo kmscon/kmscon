@@ -130,7 +130,7 @@ bool display_has_opengl(struct display *disp);
 bool display_supports_damage(struct display *disp);
 const char *display_backend_name(struct display *disp);
 const char *display_name(struct display *disp);
-struct display *display_next(struct display *disp);
+struct video *display_video(struct display *disp);
 
 int display_register_pageflip(struct display *disp, display_pageflip_cb cb, void *data);
 void display_unregister_pageflip(struct display *disp, display_pageflip_cb cb, void *data);
@@ -169,8 +169,6 @@ int video_new(struct video **out, struct ev_eloop *eloop, int fd, const char *ba
 	      unsigned int desired_height, bool use_original);
 void video_ref(struct video *video);
 void video_unref(struct video *video);
-
-struct display *video_get_displays(struct video *video);
 
 int video_register(const struct video_module *ops);
 void video_unregister(const char *name);

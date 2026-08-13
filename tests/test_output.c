@@ -37,6 +37,7 @@
  * $ ./test_output something
  */
 
+#include "shl/dlist.h"
 static void print_help();
 
 #include <errno.h>
@@ -51,6 +52,7 @@ static void print_help();
 #include "shl/log.h"
 #include "test_include.h"
 #include "video/video.h"
+#include "video/video_internal.h"
 
 /* eloop object */
 static struct ev_eloop *eloop;
@@ -65,32 +67,33 @@ struct {
 
 static int blit_outputs(struct video *video)
 {
-	struct display *iter;
-	int j, ret;
+	struct shl_dlist *iter;
+	struct display *display;
+	int ret;
 
-	j = 0;
-	iter = video_get_displays(video);
-	for (; iter; iter = display_next(iter)) {
-		log_notice("Activating display %d %p...", j, iter);
-		ret = display_set_dpms(iter, DPMS_ON);
+	shl_dlist_for_each(iter, &video->displays)
+	{
+		display = shl_dlist_entry(iter, struct display, list);
+		log_notice("Activating display %s...", display_name(display));
+		ret = display_set_dpms(display, DPMS_ON);
 		if (ret)
 			log_err("Cannot set DPMS to ON: %d", ret);
-
-		++j;
 	}
 
-	iter = video_get_displays(video);
-	for (; iter; iter = display_next(iter)) {
-		if (display_get_state(iter) != DISPLAY_ACTIVE)
+	shl_dlist_for_each(iter, &video->displays)
+	{
+		display = shl_dlist_entry(iter, struct display, list);
+
+		if (display_get_state(display) != DISPLAY_ACTIVE)
 			continue;
 
-		ret = display_clear(iter, 0xff, 0xff, 0xff);
+		ret = display_clear(display, 0xff, 0xff, 0xff);
 		if (ret) {
 			log_err("cannot fill framebuffer");
 			continue;
 		}
 
-		ret = display_swap(iter);
+		ret = display_swap(display);
 		if (ret) {
 			log_err("Cannot swap screen: %d", ret);
 			continue;
@@ -108,18 +111,16 @@ static int blit_outputs(struct video *video)
 
 static int list_outputs(struct video *video)
 {
-	struct display *iter;
-	int i;
+	struct shl_dlist *iter;
+	struct display *display;
 
 	log_notice("List of Outputs:");
 
-	i = 0;
-	iter = video_get_displays(video);
-	for (; iter; iter = display_next(iter)) {
-		log_notice("Output %d:", i++);
-		log_notice("  active: %d", display_get_state(iter));
+	shl_dlist_for_each(iter, &video->displays)
+	{
+		display = shl_dlist_entry(iter, struct display, list);
+		log_notice(" display %s active %d", display->name, display_get_state(display));
 	}
-
 	log_notice("End of Output list");
 
 	return 0;
