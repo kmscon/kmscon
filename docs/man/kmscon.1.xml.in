@@ -651,7 +651,7 @@
         <term><option>--font-engine {engine}</option></term>
         <listitem>
           <para>Specify the font rendering engine. Available engines are
-                `freetype', `pango', `unifont', and `8x16'. (default: freetype)</para>
+                `freetype', `pango', `unifont', `psf', and `8x16'. (default: freetype)</para>
         </listitem>
       </varlistentry>
 
@@ -665,7 +665,7 @@
       <varlistentry>
         <term><option>--font-name {name}</option></term>
         <listitem>
-          <para>Name of the font to be used, note that Fontconfig fallback may
+          <para>Name (or path for psf) of the font to be used, note that Fontconfig fallback may
                 be used if the `freetype' or `pango' font rendering engine is specified.
                 (default: monospace)</para>
         </listitem>
