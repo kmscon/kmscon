@@ -22,6 +22,8 @@ option('renderer_gltex', type: 'feature', value: 'auto',
   description: 'gltex renderer')
 
 # font backends
+option('font_psf', type: 'feature', value: 'auto',
+  description: 'PC Screen font backend')
 option('font_unifont', type: 'feature', value: 'auto',
   description: 'unifont font backend')
 option('font_freetype', type: 'feature', value: 'auto',

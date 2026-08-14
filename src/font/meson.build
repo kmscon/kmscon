@@ -37,6 +37,20 @@ unifont_bin = custom_target(
 #
 # Fonts Modules
 #
+if enable_font_psf
+    mod_psf = shared_module(
+        'mod-psf',
+        [
+            'font_psf.c',
+            'mod_psf.c',
+        ],
+        name_prefix: '',
+        dependencies: [shl_deps],
+        install: true,
+        install_dir: moduledir,
+    )
+endif
+
 if enable_font_unifont
     mod_unifont = shared_module(
         'mod-unifont',

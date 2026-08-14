@@ -114,6 +114,7 @@ bool kmscon_font_has_glyph(struct kmscon_font *font, uint32_t ch);
 /* modularized backends */
 
 extern struct kmscon_font_ops kmscon_font_8x16_ops;
+extern struct kmscon_font_ops kmscon_font_psf_ops;
 extern struct kmscon_font_ops kmscon_font_unifont_ops;
 extern struct kmscon_font_ops kmscon_font_pango_ops;
 extern struct kmscon_font_ops kmscon_font_freetype_ops;
