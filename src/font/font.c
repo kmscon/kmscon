@@ -221,7 +221,7 @@ int kmscon_font_find(struct kmscon_font **out, const struct kmscon_font_attr *at
 		goto err_free;
 
 	log_debug("using: be: %s nm: %s b: %d size %ux%u", font->ops->name, font->attr.name,
-		  font->attr.bold, font->attr.height, font->attr.width);
+		  font->attr.bold, font->attr.width, font->attr.height);
 	*out = font;
 	return 0;
 
