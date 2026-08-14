@@ -126,6 +126,7 @@ foreach name, reqs : {
     'video_drm2d': [libdrm_deps],
     'video_drm3d': [libdrm_deps, gbm_deps, egl_deps, glesv2_deps],
     'renderer_gltex': [glesv2_deps],
+    'font_psf': [],
     'font_unifont': [],
     'font_freetype': [freetype_deps, fontconfig_deps],
     'font_pango': [pango_deps],

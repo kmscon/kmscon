@@ -120,7 +120,7 @@ void kmscon_font_unregister(const char *name)
 	shl_register_remove(&font_reg, name);
 }
 
-static const char *default_font[] = {"freetype", "pango", "unifont", "8x16"};
+static const char *default_font[] = {"freetype", "pango", "unifont", "psf", "8x16"};
 
 static int init_font(struct kmscon_font *font, struct shl_register_record *record,
 		     const struct kmscon_font_attr *attr)
