@@ -45,7 +45,7 @@ if enable_font_psf
             'mod_psf.c',
         ],
         name_prefix: '',
-        dependencies: [shl_deps],
+        dependencies: [shl_deps, zlib_deps],
         install: true,
         install_dir: moduledir,
     )

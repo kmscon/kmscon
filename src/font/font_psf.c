@@ -38,20 +38,26 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <zlib.h>
 #include "font.h"
 #include "shl/log.h"
 
 #define LOG_SUBSYSTEM "font_psf"
 
+#define IS_GZ_MAGIC(m) (m[0] == 0x1f && m[1] == 0x8B)
 #define IS_PSF1_MAGIC(m) (m[0] == 0x36 && m[1] == 0x04)
 #define IS_PSF2_MAGIC(m) (m[0] == 0x72 && m[1] == 0xb5 && m[2] == 0x4a && m[3] == 0x86)
 
 #define FREAD(f, to, size, err, ...)                                                               \
-	if (fread(to, 1, (size), f) < (size)) {                                                    \
+	if (_fread(f, to, size) < (size)) {                                                        \
 		log_error(err);                                                                    \
 		__VA_ARGS__                                                                        \
 		goto err_file;                                                                     \
 	}
+
+typedef int (*fseek_t)(void *, long int, int);
+typedef int (*fread_t)(void *, void *, unsigned);
+typedef int (*fclose_t)(void *);
 
 typedef struct {
 	uint32_t glyphs;
@@ -62,11 +68,20 @@ typedef struct {
 	uint8_t data[];
 } psf_font_t;
 
+static int fread_(void *src, void *dst, unsigned size)
+{
+	return fread(dst, 1, size, src);
+}
+
 static int kmscon_font_psf_init(struct kmscon_font *out, const struct kmscon_font_attr *attr)
 {
 	unsigned char magic[4];
 	psf_font_t *font = NULL;
 	uint32_t glyphs, step, height, width;
+
+	fseek_t _fseek = (fseek_t)fseek;
+	fread_t _fread = (fread_t)fread_;
+	fclose_t _fclose = (fclose_t)fclose;
 
 	void *font_file = fopen(attr->name, "rb");
 	if (!font_file) {
@@ -76,13 +91,26 @@ static int kmscon_font_psf_init(struct kmscon_font *out, const struct kmscon_fon
 
 	FREAD(font_file, &magic, 4, "failed read magic");
 
+	if (IS_GZ_MAGIC(magic)) {
+		_fseek(font_file, 0, SEEK_SET);
+		font_file = gzdopen(fileno(font_file), "rb");
+		if (!font_file) {
+			log_error("failed open font as gz: %s", attr->name);
+			return 1;
+		}
+		_fseek = (fseek_t)gzseek;
+		_fread = (fread_t)gzread;
+		_fclose = (fclose_t)gzclose;
+		FREAD(font_file, &magic, 4, "failed read magic");
+	}
+
 	if (IS_PSF1_MAGIC(magic)) {
 		glyphs = (magic[2] & 0x01) ? 512 : 256;
 		width = 8;
 		height = magic[3];
 		step = height;
 	} else if (IS_PSF2_MAGIC(magic)) {
-		fseek(font_file, 16, SEEK_SET);
+		_fseek(font_file, 16, SEEK_SET);
 		FREAD(font_file, &glyphs, 4, "failed read glyphs");
 		FREAD(font_file, &step, 4, "failed read step");
 		FREAD(font_file, &height, 4, "failed read height");
@@ -103,7 +131,7 @@ static int kmscon_font_psf_init(struct kmscon_font *out, const struct kmscon_fon
 	font->width = width;
 
 	FREAD(font_file, font->data, glyphs * step, "file is too short to store all font glyphs");
-	fclose(font_file);
+	_fclose(font_file);
 
 	memcpy(out->attr.name, attr->name, strlen(attr->name));
 
@@ -124,7 +152,7 @@ static int kmscon_font_psf_init(struct kmscon_font *out, const struct kmscon_fon
 	return 0;
 
 err_file:
-	fclose(font_file);
+	_fclose(font_file);
 	return 1;
 }
 
