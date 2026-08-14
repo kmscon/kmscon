@@ -24,8 +24,9 @@ For video output at least one of the following is required:
 
 #### Fonts
 For font handling the following is required:
-- **8x16**: The 8x16 font is a static built-in font which does not require external dependencies.
-- [unifont](https://unifoundry.com/unifont/index.html):Embed unifont in kmscon, this requires no external dependencies.
+- **8x16**: static built-in font which does not require external dependencies.
+- [psf](https://aeb.win.tue.nl/linux/kbd/font-formats-1.html): bitmap font backend, this requires no external dependencies, but you need to provide a path to a psf file that kmscon can read.
+- [unifont](https://unifoundry.com/unifont/index.html): embed unifont in kmscon, this requires no external dependencies.
 - [freetype](https://freetype.org/): lightweight font rendering, using only freetype2 and fontconfig.
 - [pango](https://gitlab.gnome.org/GNOME/pango): drawing text with Pango requires: glib, pango, fontconfig, freetype2 and more
 
@@ -78,6 +79,7 @@ explicitly enable it via command line:
 |`video_fbdev`| `auto` | Linux fbdev video backend |
 |`video_drm2d`| `auto` | Linux DRM software-rendering backend |
 |`video_drm3d`| `auto` | Linux DRM hardware-rendering backend |
+|`font_psf`| `auto` | PC Screen font renderer, support psf1/psf2 |
 |`font_unifont`| `auto` | Static built-in font, with integer scaling (Unicode Unifont) |
 |`font_freetype`| `auto` | Freetype2 based scalable font renderer, also handle bitmap fonts |
 |`font_pango`| `auto` | Pango based scalable font renderer |
