@@ -287,6 +287,8 @@ static void copy_mono(struct video_buffer *buf, FT_GlyphSlot glyph, unsigned int
 	uint8_t *dst = buf->data;
 	int i, j, w, h;
 
+	if (top + map->rows > buf->height)
+		top = buf->height - map->rows;
 	if (top < 0)
 		top = 0;
 	if (left < 0)
