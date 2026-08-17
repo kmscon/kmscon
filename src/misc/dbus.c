@@ -78,7 +78,8 @@ static void set_env_from_locale1_properties(DBusConnection *conn, const char *pr
 	dbus_message_unref(msg);
 
 	if (dbus_error_has_name(&error, DBUS_ERROR_UNKNOWN_INTERFACE) ||
-	    dbus_error_has_name(&error, DBUS_ERROR_UNKNOWN_PROPERTY)) {
+	    dbus_error_has_name(&error, DBUS_ERROR_UNKNOWN_PROPERTY) ||
+	    dbus_error_has_name(&error, DBUS_ERROR_SERVICE_UNKNOWN)) {
 		/* This is normal if the interface is not supported by the system */
 		dbus_error_free(&error);
 		return;
