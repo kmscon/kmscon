@@ -129,11 +129,16 @@ struct addr_book *issue_network_gen_book(void)
 	struct sockaddr_nl sa;
 	char buf[BUF_SIZE];
 	struct iovec iov = {buf, sizeof(buf)};
-	struct msghdr msg = {&sa, sizeof(sa), &iov, 1, NULL, 0, 0};
+	struct msghdr msg = {0};
 	struct req req;
 	bool end_of_dump = false;
 	int status;
 	int nl_fd;
+
+	msg.msg_name = &sa;
+	msg.msg_namelen = sizeof(sa);
+	msg.msg_iov = &iov;
+	msg.msg_iovlen = 1;
 
 	book = calloc(1, sizeof(struct addr_book));
 	if (!book)
