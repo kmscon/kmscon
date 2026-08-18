@@ -430,7 +430,7 @@ static struct gl_glyph *find_glyph(struct kmscon_text *txt, const struct tsm_scr
 		ch = ' ';
 
 	if (!kmscon_font_has_glyph(font, ch))
-		ch = 0x25a1;
+		ch = FONT_REPLACEMENT_CHAR;
 
 	id = kmscon_glyph_id(ch, cell->attr2.u8);
 

@@ -284,7 +284,7 @@ struct kmscon_glyph *kmscon_font_render(struct kmscon_font *font, uint32_t ch)
 
 	glyph = font->ops->render(font, ch);
 	if (!glyph)
-		glyph = font->ops->render(font, 0x25a1);
+		glyph = font->ops->render(font, FONT_REPLACEMENT_CHAR);
 	if (!glyph)
 		glyph = font->ops->render(font, '?');
 	return glyph;
