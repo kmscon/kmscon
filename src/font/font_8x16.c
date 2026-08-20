@@ -115,14 +115,13 @@ static struct kmscon_glyph *new_glyph(uint32_t ch, const struct kmscon_font_attr
 	glyph->double_width = false;
 	glyph->buf.width = w;
 	glyph->buf.height = h;
-	glyph->buf.stride = w;
 
 	for (i = 0; i < h; i++) {
 		for (j = 0; j < w; j++) {
 			k = i / scale;
 			l = j / scale;
 			c = apply_attr((uint8_t)font_data[k], attr, k == 15);
-			glyph->buf.data[i * glyph->buf.stride + j] = unfold(c & (1 << (7 - l)));
+			glyph->buf.data[i * glyph->buf.width + j] = unfold(c & (1 << (7 - l)));
 		}
 	}
 	return glyph;

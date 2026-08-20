@@ -258,16 +258,16 @@ static struct kmscon_glyph *bbulk_rotate_glyph(struct kmscon_glyph *glyph,
 			for (j = 0; j < buf->width; j++) {
 				dst[j * width + (width - i - 1)] = src[j];
 			}
-			src += buf->stride;
+			src += buf->width;
 		}
 		break;
 	case OR_UPSIDE_DOWN:
-		src += (buf->height - 1) * buf->stride;
+		src += (buf->height - 1) * buf->width;
 		for (i = 0; i < buf->height; i++) {
 			for (j = 0; j < buf->width; j++)
 				dst[j] = src[buf->width - j - 1];
 			dst += width;
-			src -= buf->stride;
+			src -= buf->width;
 		}
 		break;
 	case OR_LEFT:
@@ -275,12 +275,11 @@ static struct kmscon_glyph *bbulk_rotate_glyph(struct kmscon_glyph *glyph,
 			for (j = 0; j < buf->width; j++) {
 				dst[(height - j - 1) * width + i] = src[j];
 			}
-			src += buf->stride;
+			src += buf->width;
 		}
 	}
 	rglyph->buf.width = width;
 	rglyph->buf.height = height;
-	rglyph->buf.stride = width;
 	rglyph->double_width = glyph->double_width;
 
 err_free:

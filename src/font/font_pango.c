@@ -180,11 +180,10 @@ static struct kmscon_glyph *get_glyph(struct face *face, const uint32_t ch,
 	glyph->double_width = cwidth == 2;
 	glyph->buf.width = face->real_attr.width * cwidth;
 	glyph->buf.height = face->real_attr.height;
-	glyph->buf.stride = glyph->buf.width;
 
 	bitmap.rows = glyph->buf.height;
 	bitmap.width = glyph->buf.width;
-	bitmap.pitch = glyph->buf.stride;
+	bitmap.pitch = glyph->buf.width;
 	bitmap.num_grays = 256;
 	bitmap.pixel_mode = FT_PIXEL_MODE_GRAY;
 	bitmap.buffer = glyph->buf.data;

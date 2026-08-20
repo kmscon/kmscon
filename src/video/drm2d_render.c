@@ -112,7 +112,7 @@ int drm2d_display_blend(struct display *disp, const struct video_blend_req *req)
 			((uint32_t *)dst)[i] = out;
 		}
 		dst += rb->stride;
-		src += req->buf->stride;
+		src += req->buf->width;
 	}
 	return 0;
 }

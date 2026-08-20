@@ -48,7 +48,6 @@ struct kmscon_glyph *kmscon_font_render(struct kmscon_font *font, const uint32_t
 	g = malloc(sizeof(*g) + FAKE_CELL_W * FAKE_CELL_W);
 	memset(g, 0, sizeof(*g) + FAKE_CELL_W * FAKE_CELL_W);
 	g->buf.width = g->buf.height = FAKE_CELL_W;
-	g->buf.stride = g->buf.width;
 	return g;
 }
 
@@ -67,9 +66,9 @@ int kmscon_rotate_glyph(struct kmscon_glyph *vb, const struct kmscon_glyph *glyp
 	if (!vb || !glyph)
 		return -EINVAL;
 	*vb = *glyph;
-	if (glyph->buf.stride == 0 || glyph->buf.height == 0)
+	if (glyph->buf.width == 0 || glyph->buf.height == 0)
 		return 0;
-	size_t buf_size = glyph->buf.stride * glyph->buf.height;
+	size_t buf_size = glyph->buf.width * glyph->buf.height;
 	memset(vb->buf.data, 0x11, buf_size);
 	return 0;
 }

@@ -299,15 +299,15 @@ static void copy_mono(struct video_buffer *buf, FT_GlyphSlot glyph, unsigned int
 
 	for (i = 0; i < h; i++) {
 		for (j = 0; j < w; j++)
-			dst[j + top * buf->stride + left] =
+			dst[j + top * buf->width + left] =
 				!!(src[j / 8] & (1 << (7 - (j % 8)))) * 0xff;
 
-		dst += buf->stride;
+		dst += buf->width;
 		src += map->pitch;
 	}
 	if (underline)
 		for (j = 0; j < buf->width; j++)
-			buf->data[(buf->height - 1) * buf->stride + j] = 0xff;
+			buf->data[(buf->height - 1) * buf->width + j] = 0xff;
 }
 
 static void draw_underline(struct video_buffer *buf, FT_Face face)
@@ -328,7 +328,7 @@ static void draw_underline(struct video_buffer *buf, FT_Face face)
 
 	for (i = position; i < position + thickness; i++)
 		for (j = 0; j < buf->width; j++)
-			buf->data[i * buf->stride + j] = 0xff;
+			buf->data[i * buf->width + j] = 0xff;
 }
 
 static void copy_glyph(struct video_buffer *buf, FT_Face face, FT_Bitmap *map, bool underline)
@@ -362,10 +362,10 @@ static void copy_glyph(struct video_buffer *buf, FT_Face face, FT_Bitmap *map, b
 	if (width <= 0 || height <= 0)
 		goto underline;
 
-	dst = buf->data + left + top * buf->stride;
+	dst = buf->data + left + top * buf->width;
 	for (i = 0; i < height; i++) {
 		memcpy(dst, &map->buffer[(i + top_src) * map->pitch + left_src], width);
-		dst += buf->stride;
+		dst += buf->width;
 	}
 
 underline:
@@ -404,7 +404,6 @@ static struct kmscon_glyph *render_glyph(FT_Face face, FT_UInt index, uint32_t c
 	glyph->double_width = cwidth == 2;
 	glyph->buf.width = attr->width * cwidth;
 	glyph->buf.height = attr->height;
-	glyph->buf.stride = glyph->buf.width;
 
 	if (face->glyph->bitmap.pixel_mode == FT_PIXEL_MODE_MONO)
 		copy_mono(&glyph->buf, face->glyph, face->size->metrics.ascender >> 6,

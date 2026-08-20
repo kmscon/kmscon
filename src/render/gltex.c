@@ -58,11 +58,6 @@
 
 #define LOG_SUBSYSTEM "text_gltex"
 
-/* thanks khronos for breaking backwards compatibility.. */
-#if !defined(GL_UNPACK_ROW_LENGTH) && defined(GL_UNPACK_ROW_LENGTH_EXT)
-#define GL_UNPACK_ROW_LENGTH GL_UNPACK_ROW_LENGTH_EXT
-#endif
-
 struct atlas {
 	struct shl_dlist list;
 
@@ -97,7 +92,6 @@ struct gl_glyph {
 struct gltex {
 	struct shl_hashtable *glyphs;
 	unsigned int max_tex_size;
-	bool supports_rowlen;
 	bool previous_overflow;
 
 	struct shl_dlist atlases;
@@ -188,7 +182,6 @@ static int gltex_set(struct kmscon_text *txt)
 	const char *vert, *frag;
 	static char *attr[] = {"position", "texture_position", "fgcolor", "bgcolor"};
 	GLint s;
-	const char *ext;
 
 	if (!display_has_opengl(txt->disp))
 		return -EINVAL;
@@ -249,15 +242,6 @@ static int gltex_set(struct kmscon_text *txt)
 	gt->max_tex_size = s;
 
 	gl_clear_error();
-
-	ext = (const char *)glGetString(GL_EXTENSIONS);
-	if (ext && strstr((const char *)ext, "GL_EXT_unpack_subimage")) {
-		gt->supports_rowlen = true;
-	} else {
-		log_warning("your GL implementation does not support GL_EXT_unpack_subimage, "
-			    "glyph-rendering may be slower than usual");
-	}
-
 	return 0;
 
 err_shader:
@@ -412,10 +396,7 @@ static struct gl_glyph *find_glyph(struct kmscon_text *txt, const struct tsm_scr
 	struct gltex *gt = txt->data;
 	struct atlas *atlas;
 	struct gl_glyph *glglyph;
-	int i;
 	GLenum err;
-	uint8_t *packed_data, *dst;
-	const uint8_t *src;
 	struct kmscon_font *font = txt->font;
 	unsigned int num;
 	struct kmscon_glyph *glyph;
@@ -453,49 +434,12 @@ static struct gl_glyph *find_glyph(struct kmscon_text *txt, const struct tsm_scr
 	if (!atlas)
 		goto err_free;
 
-	/* Funnily, not all OpenGLESv2 implementations support specifying the
-	 * stride of a texture. Therefore, we then need to create a
-	 * temporary image with a stride equal to the image width for loading
-	 * the texture. This may slow down loading new glyphs but doesn't affect
-	 * overall rendering performance. But driver developers should really
-	 * add this! */
-
 	gl_clear_error();
 
 	glBindTexture(GL_TEXTURE_2D, atlas->tex);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-	if (!gt->supports_rowlen) {
-		if (GLYPH_STRIDE(glyph) == GLYPH_WIDTH(glyph)) {
-			glTexSubImage2D(GL_TEXTURE_2D, 0, FONT_WIDTH(txt) * atlas->fill, 0,
-					GLYPH_WIDTH(glyph), GLYPH_HEIGHT(glyph), GL_ALPHA,
-					GL_UNSIGNED_BYTE, GLYPH_DATA(glyph));
-		} else {
-			packed_data = malloc(GLYPH_WIDTH(glyph) * GLYPH_HEIGHT(glyph));
-			if (!packed_data) {
-				log_error("cannot allocate memory for glyph storage");
-				goto err_free;
-			}
-
-			src = GLYPH_DATA(glyph);
-			dst = packed_data;
-			for (i = 0; i < GLYPH_HEIGHT(glyph); ++i) {
-				memcpy(dst, src, GLYPH_WIDTH(glyph));
-				dst += GLYPH_WIDTH(glyph);
-				src += GLYPH_STRIDE(glyph);
-			}
-
-			glTexSubImage2D(GL_TEXTURE_2D, 0, FONT_WIDTH(txt) * atlas->fill, 0,
-					GLYPH_WIDTH(glyph), GLYPH_HEIGHT(glyph), GL_ALPHA,
-					GL_UNSIGNED_BYTE, packed_data);
-			free(packed_data);
-		}
-	} else {
-		glPixelStorei(GL_UNPACK_ROW_LENGTH, GLYPH_STRIDE(glyph));
-		glTexSubImage2D(GL_TEXTURE_2D, 0, FONT_WIDTH(txt) * atlas->fill, 0,
-				GLYPH_WIDTH(glyph), GLYPH_HEIGHT(glyph), GL_ALPHA, GL_UNSIGNED_BYTE,
-				GLYPH_DATA(glyph));
-		glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-	}
+	glTexSubImage2D(GL_TEXTURE_2D, 0, FONT_WIDTH(txt) * atlas->fill, 0, GLYPH_WIDTH(glyph),
+			GLYPH_HEIGHT(glyph), GL_ALPHA, GL_UNSIGNED_BYTE, GLYPH_DATA(glyph));
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 
 	/* Check for GL-errors
