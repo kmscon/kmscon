@@ -174,7 +174,7 @@ int fbdev_display_blend(struct display *disp, const struct video_blend_req *req)
 				((uint32_t *)dst)[i] = val;
 			}
 			dst += fbdev->stride;
-			src += req->buf->stride;
+			src += req->buf->width;
 		}
 	} else if (fbdev->Bpp == 2) {
 		while (height--) {
@@ -199,7 +199,7 @@ int fbdev_display_blend(struct display *disp, const struct video_blend_req *req)
 				((uint16_t *)dst)[i] = xrgb32_to_device(disp, val);
 			}
 			dst += fbdev->stride;
-			src += req->buf->stride;
+			src += req->buf->width;
 		}
 	} else if (fbdev->Bpp == 3) {
 		while (height--) {
@@ -225,7 +225,7 @@ int fbdev_display_blend(struct display *disp, const struct video_blend_req *req)
 				write_24bit(&dst[i * 3], full);
 			}
 			dst += fbdev->stride;
-			src += req->buf->stride;
+			src += req->buf->width;
 		}
 	} else if (fbdev->Bpp == 4) {
 		while (height--) {
@@ -250,7 +250,7 @@ int fbdev_display_blend(struct display *disp, const struct video_blend_req *req)
 				((uint32_t *)dst)[i] = xrgb32_to_device(disp, val);
 			}
 			dst += fbdev->stride;
-			src += req->buf->stride;
+			src += req->buf->width;
 		}
 	} else {
 		log_warning("invalid Bpp");

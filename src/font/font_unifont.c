@@ -131,7 +131,6 @@ static struct kmscon_glyph *new_glyph(const struct kmscon_font_attr *attr, const
 	g->double_width = (cwidth == 2);
 	g->buf.width = cwidth * attr->width;
 	g->buf.height = attr->height;
-	g->buf.stride = g->buf.width;
 
 	/* Unpack the glyph and apply scaling */
 	for (i = 0; i < 16; i++) {
@@ -148,9 +147,9 @@ static struct kmscon_glyph *new_glyph(const struct kmscon_font_attr *attr, const
 			}
 		}
 		for (k = 1; k < scale; k++) {
-			memcpy(&g->buf.data[off], &g->buf.data[i * scale * g->buf.stride],
-			       g->buf.stride);
-			off += g->buf.stride;
+			memcpy(&g->buf.data[off], &g->buf.data[i * scale * g->buf.width],
+			       g->buf.width);
+			off += g->buf.width;
 		}
 	}
 	return g;

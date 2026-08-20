@@ -84,10 +84,13 @@ struct video_cb {
 	video_remove_display_cb remove_disp;
 };
 
+/* All font rendering uses 1 byte of alpha per pixel
+ * It is then used to blend foreground and background colors
+ * So the stride is always equal to width
+ */
 struct video_buffer {
 	unsigned int width;
 	unsigned int height;
-	unsigned int stride;
 	uint8_t data[];
 };
 
