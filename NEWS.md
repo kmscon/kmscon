@@ -1,5 +1,52 @@
 = KMSCON Release News =
 
+## CHANGES with 10.0.2
+### Important Notes
+* kmscon now supports network escape code for /etc/issue, so it's enabled again, and agetty is not used by default.
+* kmscon now supports asciicast, to display an ascii animation before the login.
+* kmscon can now use PC Screen Font format (That is used by the kernel and fbcon), but doesn't support unicode for that font yet.
+
+## New features
+* terminal: add asciicast playback by @jtollet in https://github.com/kmscon/kmscon/pull/448
+* conf: Add a blink option by @kdj0c in https://github.com/kmscon/kmscon/pull/454
+* docs: Add missing blink configuration option to kmscon.conf.example by @zwenna in https://github.com/kmscon/kmscon/pull/458
+* drm: recover safely from failed atomic modesets by @jtollet in https://github.com/kmscon/kmscon/pull/460
+* Update external links, use HTTPS where applicable by @zwenna in https://github.com/kmscon/kmscon/pull/462
+* Updates to the COPYING file, mostly removing references to third party sources by @zwenna in https://github.com/kmscon/kmscon/pull/463
+* Refactoring, misc and uterm by @kdj0c in https://github.com/kmscon/kmscon/pull/456
+* Issue file: Handle networking with \4 \6 \a \A by @kdj0c in https://github.com/kmscon/kmscon/pull/466
+* COPYING: include the OFL-1.1 license for unifont by @kdj0c in https://github.com/kmscon/kmscon/pull/467
+* ci: enforce correct meson formatting by @1ace in https://github.com/kmscon/kmscon/pull/470
+* misc fixes around libtsm by @1ace in https://github.com/kmscon/kmscon/pull/471
+* issue: handle unavailable network addresses by @jtollet in https://github.com/kmscon/kmscon/pull/472
+* issue: consume oversized escape parameters by @jtollet in https://github.com/kmscon/kmscon/pull/473
+* Add an editorconfig file by @zwenna in https://github.com/kmscon/kmscon/pull/469
+* tests/meson: fix formatting by @1ace in https://github.com/kmscon/kmscon/pull/480
+* docs/meson: simplify man pages files names by @1ace in https://github.com/kmscon/kmscon/pull/479
+* term: don't open pty when there are no screen by @kdj0c in https://github.com/kmscon/kmscon/pull/477
+* Drop agetty, and use internal issue parser by default by @kdj0c in https://github.com/kmscon/kmscon/pull/482
+* 8x16: Add scaling, bold and underline to 8x16 font by @kdj0c in https://github.com/kmscon/kmscon/pull/485
+* seat: Fix segfault in uterm_monitor_set_dev_data() by @kdj0c in https://github.com/kmscon/kmscon/pull/478
+* input: Fix mouse button order by @kdj0c in https://github.com/kmscon/kmscon/pull/486
+* misc: Fix modifiers check for keyboard shortcut by @kdj0c in https://github.com/kmscon/kmscon/pull/492
+* Add cursor style support by @kdj0c in https://github.com/kmscon/kmscon/pull/487
+* bbulk: Fix mouse soft cursor by @kdj0c in https://github.com/kmscon/kmscon/pull/494
+* bbulk: fix mouse software cursor when rotated. by @kdj0c in https://github.com/kmscon/kmscon/pull/495
+* text: fix cursor outside of the screen by @kdj0c in https://github.com/kmscon/kmscon/pull/497
+* freetype: Fix top if it may crop the glyph for bitmap fonts by @kdj0c in https://github.com/kmscon/kmscon/pull/498
+* A few refactor in the video code. by @kdj0c in https://github.com/kmscon/kmscon/pull/496
+* dbus: silence DBUS_ERROR_SERVICE_UNKNOWN errors by @perryprog in https://github.com/kmscon/kmscon/pull/499
+* fix(msghdr initialization): avoid paddings by @IHateGameDev in https://github.com/kmscon/kmscon/pull/501
+* Font psf backend by @IHateGameDev in https://github.com/kmscon/kmscon/pull/500
+* fonts: use replacement char macro by @kdj0c in https://github.com/kmscon/kmscon/pull/502
+* Remove stride in glyph buffer by @kdj0c in https://github.com/kmscon/kmscon/pull/503
+* text: invert color for full block cursor by @kdj0c in https://github.com/kmscon/kmscon/pull/505
+
+## New Contributors
+* @zwenna made their first contribution in https://github.com/kmscon/kmscon/pull/458
+* @perryprog made their first contribution in https://github.com/kmscon/kmscon/pull/499
+* @IHateGameDev made their first contribution in https://github.com/kmscon/kmscon/pull/501
+
 ## CHANGES with 10.0.1
 ### Important Notes
 * libseat has still some issues, so libseat support is not built by default. you need to add `-Dlibseat=enabled` to the meson configuration to enable it, and start with `--libseat`.
