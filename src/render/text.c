@@ -441,16 +441,16 @@ static bool is_underline(enum tsm_screen_cursor_style style)
 		style == TSM_SCREEN_CURSOR_UNDERLINE_STEADY);
 }
 
-#define CURSOR_STYLES 7
-static const uint32_t cursor_char[CURSOR_STYLES] = {
-	FONT_FULL_BLOCK, // default
-	FONT_FULL_BLOCK, // block blink
-	FONT_FULL_BLOCK, // block steady
-	0,		 // underline blink
-	0,		 // underline steady
-	FONT_VBAR,	 // vbar blink
-	FONT_VBAR,	 // vbar steady
-};
+static bool is_block(enum tsm_screen_cursor_style style)
+{
+	return (style == TSM_SCREEN_CURSOR_DEFAULT || style == TSM_SCREEN_CURSOR_BLOCK_BLINK ||
+		style == TSM_SCREEN_CURSOR_BLOCK_STEADY);
+}
+
+static bool is_vbar(enum tsm_screen_cursor_style style)
+{
+	return (style == TSM_SCREEN_CURSOR_VBAR_BLINK || style == TSM_SCREEN_CURSOR_VBAR_STEADY);
+}
 
 /**
  * kmscon_text_draw:
@@ -486,8 +486,12 @@ int kmscon_text_draw(struct kmscon_text *txt, struct tsm_screen *con, bool curso
 		if (is_underline(style)) {
 			cursor.cell.attr2.underline = !cells[offset].attr2.underline;
 			cursor.cell.ch = cells[offset].ch;
-		} else if (style < CURSOR_STYLES)
-			cursor.cell.ch = cursor_char[style];
+		} else if (is_block(style)) {
+			cursor.cell.fg = cells[offset].bg;
+			cursor.cell.bg = cells[offset].fg;
+			cursor.cell.ch = cells[offset].ch;
+		} else if (is_vbar(style))
+			cursor.cell.ch = FONT_VBAR;
 	}
 	return txt->ops->draw(txt, cells, &cursor);
 }
