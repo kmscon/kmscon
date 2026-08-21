@@ -1015,7 +1015,7 @@ static void kmscon_seat_remove_video(struct kmscon_seat *seat, void *data)
 {
 	struct kmscon_video *vid = data;
 	struct kmscon_display *d;
-	struct shl_dlist *iter;
+	struct shl_dlist *iter, *tmp;
 
 	if (!seat || !vid)
 		return;
@@ -1026,7 +1026,7 @@ static void kmscon_seat_remove_video(struct kmscon_seat *seat, void *data)
 	shl_dlist_unlink(&vid->list);
 
 	if (vid->video) {
-		shl_dlist_for_each(iter, &seat->displays)
+		shl_dlist_for_each_safe(iter, tmp, &seat->displays)
 		{
 			d = shl_dlist_entry(iter, struct kmscon_display, list);
 			if (display_video(d->disp) == vid->video)
