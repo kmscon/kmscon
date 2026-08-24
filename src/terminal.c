@@ -588,6 +588,47 @@ static bool terminal_update_size_largest(struct kmscon_terminal *term)
 	return max_cells > 0;
 }
 
+/*
+ * In scaled mode, we find the minimum cols/rows among all screens
+ * and directly scale up the font height on larger screens to match.
+ */
+static bool terminal_update_size_scaled(struct kmscon_terminal *term)
+{
+	struct shl_dlist *iter;
+	struct screen *scr;
+	unsigned int min_cols = UINT_MAX, min_rows = UINT_MAX;
+
+	shl_dlist_for_each(iter, &term->screens)
+	{
+		scr = shl_dlist_entry(iter, struct screen, list);
+		min_cols = min(min_cols, kmscon_text_get_cols(scr->txt));
+		min_rows = min(min_rows, kmscon_text_get_rows(scr->txt));
+	}
+	if (!min_cols || min_cols == UINT_MAX)
+		return false;
+
+	term->min_cols = min_cols;
+	term->min_rows = min_rows;
+
+	shl_dlist_for_each(iter, &term->screens)
+	{
+		struct kmscon_font_attr attr = term->font_attr;
+		struct kmscon_font *font;
+
+		scr = shl_dlist_entry(iter, struct screen, list);
+		attr.height = min(attr.height * kmscon_text_get_cols(scr->txt) / min_cols,
+				  attr.height * kmscon_text_get_rows(scr->txt) / min_rows);
+
+		if (attr.height > term->font_attr.height &&
+		    !kmscon_font_find(&font, &attr, term->conf->font_engine)) {
+			kmscon_text_set(scr->txt, font, scr->disp);
+			kmscon_font_unref(font);
+			refresh_hw_cursor(scr);
+		}
+	}
+	return true;
+}
+
 static bool terminal_update_size(struct kmscon_terminal *term)
 {
 	struct shl_dlist *iter;
@@ -596,6 +637,8 @@ static bool terminal_update_size(struct kmscon_terminal *term)
 
 	if (term->conf->multi_monitor && !strcmp(term->conf->multi_monitor, "largest")) {
 		ret = terminal_update_size_largest(term);
+	} else if (term->conf->multi_monitor && !strcmp(term->conf->multi_monitor, "scaled")) {
+		ret = terminal_update_size_scaled(term);
 	} else {
 		ret = terminal_update_size_clone(term);
 	}
