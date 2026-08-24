@@ -62,6 +62,7 @@ struct screen {
 	bool pending;
 	bool hw_cursor;
 	bool enabled;
+	bool scaled;
 };
 
 struct kmscon_pointer {
@@ -136,7 +137,16 @@ static void draw_pointer(struct screen *scr)
 	if (!scr->term->pointer.visible || scr->hw_cursor)
 		return;
 
-	kmscon_text_draw_pointer(scr->txt, scr->term->pointer.x, scr->term->pointer.y);
+	if (scr->scaled) {
+		int32_t x, y;
+
+		x = (scr->term->pointer.x * (int32_t)FONT_WIDTH(scr->txt)) / scr->term->font->width;
+		y = (scr->term->pointer.y * (int32_t)FONT_HEIGHT(scr->txt)) /
+		    scr->term->font->height;
+
+		kmscon_text_draw_pointer(scr->txt, x, y);
+	} else
+		kmscon_text_draw_pointer(scr->txt, scr->term->pointer.x, scr->term->pointer.y);
 }
 
 static inline uint32_t argb(uint8_t a, uint8_t r, uint8_t g, uint8_t b)
@@ -362,8 +372,7 @@ static bool has_kms_display(struct kmscon_terminal *term)
 
 /*
  * Align the pointer maximum to the minimum width and height of all screens
- * according to their orientation, as kmscon only support mirroring, and one
- * terminal size for all screens.
+ * according to their orientation, as kmscon only support mirroring.
  */
 static void update_pointer_max_all(struct kmscon_terminal *term)
 {
@@ -577,6 +586,74 @@ static bool terminal_update_size_largest(struct kmscon_terminal *term)
 	return max_cells > 0;
 }
 
+static void scale_screen(struct screen *scr, unsigned int scaled_height)
+{
+	struct kmscon_font *font;
+
+retry:
+	log_debug("scaling display %s %d -> %d", display_name(scr->disp), scr->term->font->height,
+		  scaled_height);
+	if (kmscon_font_find(&font, scr->term->conf->font_name, scaled_height,
+			     scr->term->conf->font_engine))
+		return;
+
+	if (kmscon_text_get_cols(scr->txt, font->width) < scr->term->cols ||
+	    kmscon_text_get_rows(scr->txt, font->height) < scr->term->rows) {
+		log_debug("scaling would truncate, reducing height to %d", scaled_height);
+		kmscon_font_unref(font);
+		if (scaled_height <= scr->term->font->increase_step)
+			return;
+		scaled_height -= scr->term->font->increase_step;
+		if (scaled_height <= scr->term->font_size)
+			return;
+		goto retry;
+	}
+
+	if (font->height == scr->term->font->height) {
+		kmscon_font_unref(font);
+		return;
+	}
+	if (kmscon_text_set(scr->txt, font)) {
+		kmscon_font_unref(font);
+		return;
+	}
+	scr->scaled = true;
+	kmscon_font_unref(font);
+}
+
+/*
+ * In scaled mode, we find the minimum cols/rows among all screens
+ * and directly scale up the font height on larger screens to match.
+ */
+static bool terminal_update_size_scaled(struct kmscon_terminal *term)
+{
+	struct shl_dlist *iter;
+	struct screen *scr;
+	unsigned int height = term->font->height;
+
+	terminal_update_size_clone(term);
+
+	shl_dlist_for_each(iter, &term->screens)
+	{
+		unsigned int scaled_height;
+		unsigned int h, w;
+
+		scr = shl_dlist_entry(iter, struct screen, list);
+		scr->scaled = false;
+
+		h = (kmscon_text_get_cols(scr->txt, term->font->width) * height) / term->cols;
+		w = (kmscon_text_get_rows(scr->txt, term->font->height) * height) / term->rows;
+		scaled_height = min(h, w);
+
+		if (scaled_height > height)
+			scale_screen(scr, scaled_height);
+		if (!scr->scaled)
+			kmscon_text_set(scr->txt, term->font);
+		refresh_hw_cursor(scr);
+	}
+	return true;
+}
+
 static bool terminal_update_size(struct kmscon_terminal *term)
 {
 	struct shl_dlist *iter;
@@ -585,6 +662,8 @@ static bool terminal_update_size(struct kmscon_terminal *term)
 
 	if (term->conf->multi_monitor && !strcmp(term->conf->multi_monitor, "largest")) {
 		ret = terminal_update_size_largest(term);
+	} else if (term->conf->multi_monitor && !strcmp(term->conf->multi_monitor, "scaled")) {
+		ret = terminal_update_size_scaled(term);
 	} else {
 		ret = terminal_update_size_clone(term);
 	}
@@ -597,6 +676,7 @@ static bool terminal_update_size(struct kmscon_terminal *term)
 		if (scr->enabled)
 			kmscon_text_resize(scr->txt, term->cols, term->rows);
 	}
+	log_notice("Resized terminal to %ux%u\n", term->cols, term->rows);
 	return true;
 }
 
@@ -1026,12 +1106,27 @@ static void hw_cursor_show(struct kmscon_terminal *term, int32_t x, int32_t y)
 {
 	struct shl_dlist *iter;
 	struct screen *scr;
+	int fw = term->font->width ? term->font->width : 1;
+	int fh = term->font->height ? term->font->height : 1;
 
 	shl_dlist_for_each(iter, &term->screens)
 	{
+		int32_t sx, sy;
+
 		scr = shl_dlist_entry(iter, struct screen, list);
-		if (scr->hw_cursor)
-			text_show_cursor(scr->txt, x, y);
+		if (scr->hw_cursor) {
+			if (!scr->scaled)
+				text_show_cursor(scr->txt, x, y);
+			else {
+				sx = (x * (int32_t)FONT_WIDTH(scr->txt)) / fw;
+				sy = (y * (int32_t)FONT_HEIGHT(scr->txt)) / fh;
+				if (sx >= FONT_WIDTH(scr->txt) * scr->txt->cols)
+					sx = FONT_WIDTH(scr->txt) * scr->txt->cols - 1;
+				if (sy >= FONT_HEIGHT(scr->txt) * scr->txt->rows)
+					sy = FONT_HEIGHT(scr->txt) * scr->txt->rows - 1;
+				text_show_cursor(scr->txt, sx, sy);
+			}
+		}
 	}
 }
 
