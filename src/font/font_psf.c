@@ -274,18 +274,30 @@ static struct kmscon_glyph *kmscon_font_psf_render(struct kmscon_font *kfont, ui
 
 static unicode_table_t unicode_table_init()
 {
-	unicode_table_t ut = malloc(4 + 256 * sizeof(uint16_t));
+	unicode_table_t ut = malloc(sizeof(*ut) + 256 * sizeof(uint16_t));
 	if (!ut)
 		return NULL;
 	ut->cap = 256;
 	return ut;
 }
 
-static void unicode_table_add(unicode_table_t *self, uint32_t code, uint16_t ch)
+static uint8_t unicode_table_add(unicode_table_t *self, uint32_t code, uint16_t ch)
 {
 	if (code >= (*self)->cap)
-		*self = realloc(*self, ((*self)->cap = (4 + code + 128) * sizeof(uint16_t)));
+		*self = realloc(*self, (sizeof(**self) + ((*self)->cap = code + 128) * 2));
+
+	if (!*self) {
+		log_error("failed realloc unicode table");
+		return 1;
+	}
+
 	(*self)->data[code] = ch;
+	return 0;
+}
+
+static uint8_t utf8_len(uint8_t c)
+{
+	return (c & 0x80) == 0 ? 0 : (c & 0xE0) == 0xC0 ? 1 : (c & 0xF0) == 0xE0 ? 2 : 3;
 }
 
 unicode_table_t unicode_table_parse(void *file, uint8_t psf)
@@ -295,7 +307,12 @@ unicode_table_t unicode_table_parse(void *file, uint8_t psf)
 	uint32_t ucode_idx = 0;
 	uint32_t ucode_size;
 	uint16_t ch = 0;
-	uint32_t code;
+
+	union {
+		uint16_t psf1;
+		uint32_t psf2;
+		uint8_t map[4];
+	} code;
 
 	unicode_table_t unicode_table = unicode_table_init();
 	if (!unicode_table) {
@@ -303,25 +320,48 @@ unicode_table_t unicode_table_parse(void *file, uint8_t psf)
 		return 0;
 	}
 
-read:
 	while ((ucode_size = _fread(file, &ucode, UCODE_SIZE))) {
-		if (psf) { /* TODO psf2 */
-		} else {
+		if (psf)
 			while (ucode_idx < ucode_size) {
-				switch ((code = *(uint16_t *)(ucode + ucode_idx))) {
+				code.psf2 = 0;
+				switch ((code.map[0] = ucode[ucode_idx++])) {
+				case 0xfe:
+				case 0xff:
+					ch++;
+					break;
+				default:
+					uint8_t i = utf8_len(code.map[0]);
+					if (i) {
+						code.psf2 =
+							((uint32_t)(code.map[0] & (0xFF >> (2 + i)))
+							 << i * 6);
+
+						for (; i; i--)
+							code.psf2 |=
+								((uint32_t)(ucode[ucode_idx++] &
+									    0x3f)
+								 << (i - 1) * 6);
+					}
+
+					if (unicode_table_add(&unicode_table, code.psf2, ch))
+						return NULL;
+				}
+			}
+		else
+			while (ucode_idx < ucode_size) {
+				code.map[0] = ucode[ucode_idx++];
+				code.map[1] = ucode[ucode_idx++];
+				switch ((code.psf1)) {
 				case 0xfffe:
 				case 0xffff:
 					ch++;
 					break;
 				default:
-					unicode_table_add(&unicode_table,
-							  *(uint16_t *)(ucode + ucode_idx), ch);
+					if (unicode_table_add(&unicode_table, code.psf1, ch))
+						return NULL;
 				}
-				ucode_idx += 2;
 			}
-			ucode_idx = 0;
-			goto read;
-		}
+		ucode_idx = 0;
 	}
 	return unicode_table;
 }
