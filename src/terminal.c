@@ -134,10 +134,19 @@ static void coord_to_cell(struct kmscon_terminal *term, int32_t x, int32_t y, un
 
 static void draw_pointer(struct screen *scr)
 {
+	int32_t x, y;
+	int fw, fh;
+
 	if (!scr->term->pointer.visible || scr->hw_cursor)
 		return;
 
-	kmscon_text_draw_pointer(scr->txt, scr->term->pointer.x, scr->term->pointer.y);
+	fw = scr->term->font->attr.width ? scr->term->font->attr.width : 1;
+	fh = scr->term->font->attr.height ? scr->term->font->attr.height : 1;
+
+	x = (scr->term->pointer.x * (int32_t)FONT_WIDTH(scr->txt)) / fw;
+	y = (scr->term->pointer.y * (int32_t)FONT_HEIGHT(scr->txt)) / fh;
+
+	kmscon_text_draw_pointer(scr->txt, x, y);
 }
 
 static inline uint32_t argb(uint8_t a, uint8_t r, uint8_t g, uint8_t b)
@@ -236,14 +245,13 @@ static uint32_t *generate_ibeam_cursor(unsigned int font_height, unsigned int *w
 
 static void setup_hw_cursor(struct screen *scr)
 {
-	struct kmscon_terminal *term = scr->term;
 	bool rotate = scr->txt->orientation == OR_LEFT || scr->txt->orientation == OR_RIGHT;
 	unsigned int beam_h;
 	unsigned int beam_w;
 	uint32_t *pixels;
 	int ret;
 
-	pixels = generate_ibeam_cursor(term->font->attr.height, &beam_w, &beam_h, rotate);
+	pixels = generate_ibeam_cursor(FONT_HEIGHT(scr->txt), &beam_w, &beam_h, rotate);
 	if (!pixels)
 		return;
 
@@ -601,6 +609,7 @@ static bool terminal_update_size_scaled(struct kmscon_terminal *term)
 	shl_dlist_for_each(iter, &term->screens)
 	{
 		scr = shl_dlist_entry(iter, struct screen, list);
+		kmscon_text_set(scr->txt, term->font, scr->disp);
 		min_cols = min(min_cols, kmscon_text_get_cols(scr->txt));
 		min_rows = min(min_rows, kmscon_text_get_rows(scr->txt));
 	}
@@ -1079,12 +1088,19 @@ static void hw_cursor_show(struct kmscon_terminal *term, int32_t x, int32_t y)
 {
 	struct shl_dlist *iter;
 	struct screen *scr;
+	int fw = term->font->attr.width ? term->font->attr.width : 1;
+	int fh = term->font->attr.height ? term->font->attr.height : 1;
 
 	shl_dlist_for_each(iter, &term->screens)
 	{
+		int32_t sx, sy;
+
 		scr = shl_dlist_entry(iter, struct screen, list);
-		if (scr->hw_cursor)
-			text_show_cursor(scr->txt, x, y);
+		if (scr->hw_cursor) {
+			sx = (x * (int32_t)FONT_WIDTH(scr->txt)) / fw;
+			sy = (y * (int32_t)FONT_HEIGHT(scr->txt)) / fh;
+			text_show_cursor(scr->txt, sx, sy);
+		}
 	}
 }
 
