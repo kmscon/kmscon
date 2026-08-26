@@ -255,7 +255,7 @@
           <para>Colon-separated list of issue files and directories to read, ordered
                 by precedence. It implements uapi masking, so if there are multiple files,
                 with the same name, only the first will be parsed.
-                (default: "/etc/issue:/etc/issue.d:/run/issue:/run/issue.d:/usr/lib/issue:/usr/lib/issue.d")   
+                (default: "/etc/issue:/etc/issue.d:/run/issue:/run/issue.d:/usr/lib/issue:/usr/lib/issue.d")
           </para>
         </listitem>
       </varlistentry>
@@ -619,7 +619,7 @@
       </varlistentry>
 
       <varlistentry>
-        <term><option>--multi-monitor {clone,largest}</option></term>
+        <term><option>--multi-monitor {clone,largest,scaled}</option></term>
         <listitem>
           <para>When there are multiple monitors, this option controls how the monitors are
           used.</para>
@@ -627,6 +627,8 @@
           used to determine the size.</para>
           <para>`largest': The largest monitor will be used to determine the size. The other
           monitors will be disabled. If multiple monitors have the largest size, they will all be used.</para>
+          <para>`scaled': All monitors will display the same number of columns and rows
+          based on the smallest monitor, with larger monitors scaling up their font size to fill the screen.</para>
           <para>default: clone</para>
         </listitem>
       </varlistentry>
