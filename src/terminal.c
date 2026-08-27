@@ -604,34 +604,34 @@ static bool terminal_update_size_scaled(struct kmscon_terminal *term)
 {
 	struct shl_dlist *iter;
 	struct screen *scr;
-	unsigned int min_cols = UINT_MAX, min_rows = UINT_MAX;
-
-	shl_dlist_for_each(iter, &term->screens)
-	{
-		scr = shl_dlist_entry(iter, struct screen, list);
-		kmscon_text_set(scr->txt, term->font, scr->disp);
-		min_cols = min(min_cols, kmscon_text_get_cols(scr->txt));
-		min_rows = min(min_rows, kmscon_text_get_rows(scr->txt));
-	}
-	if (!min_cols || min_cols == UINT_MAX)
-		return false;
-
-	term->min_cols = min_cols;
-	term->min_rows = min_rows;
-
+	unsigned int step = term->font->increase_step;
+	terminal_update_size_clone(term);
 	shl_dlist_for_each(iter, &term->screens)
 	{
 		struct kmscon_font_attr attr = term->font_attr;
 		struct kmscon_font *font;
 
 		scr = shl_dlist_entry(iter, struct screen, list);
-		attr.height = min(attr.height * kmscon_text_get_cols(scr->txt) / min_cols,
-				  attr.height * kmscon_text_get_rows(scr->txt) / min_rows);
+		attr.height = (min(attr.height * kmscon_text_get_cols(scr->txt) / term->min_cols,
+				   attr.height * kmscon_text_get_rows(scr->txt) / term->min_rows) *
+			       step) /
+			      step;
 
 		if (attr.height > term->font_attr.height &&
 		    !kmscon_font_find(&font, &attr, term->conf->font_engine)) {
 			kmscon_text_set(scr->txt, font, scr->disp);
 			kmscon_font_unref(font);
+			if (kmscon_text_get_cols(scr->txt) < term->min_cols ||
+			    kmscon_text_get_rows(scr->txt) < term->min_rows) {
+				attr.height -= step;
+				if (attr.height > term->font_attr.height &&
+				    !kmscon_font_find(&font, &attr, term->conf->font_engine)) {
+					kmscon_text_set(scr->txt, font, scr->disp);
+					kmscon_font_unref(font);
+				} else {
+					kmscon_text_set(scr->txt, term->font, scr->disp);
+				}
+			}
 			refresh_hw_cursor(scr);
 		}
 	}
