@@ -177,6 +177,7 @@ static int seat_go_foreground(struct kmscon_seat *seat)
 		if (!vid->video) {
 			ret = seat_video_init(vid);
 			if (ret) {
+				uterm_monitor_set_dev_data(vid->udev, NULL);
 				shl_dlist_unlink(&vid->list);
 				free(vid->node);
 				free(vid);
