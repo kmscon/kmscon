@@ -691,7 +691,8 @@ static void seat_monitor_free_dev(void *data, enum uterm_monitor_dev_type type, 
 static void seat_monitor_hotplug_dev(void *data, enum uterm_monitor_dev_type type, void *dev_data)
 {
 	if (type == UTERM_MONITOR_DRM || type == UTERM_MONITOR_FBDEV)
-		kmscon_seat_poll_video(dev_data);
+		if (dev_data)
+			kmscon_seat_poll_video(dev_data);
 }
 
 static struct uterm_monitor_cb seat_monitor_cb = {
@@ -1043,6 +1044,9 @@ static void kmscon_seat_remove_video(struct kmscon_seat *seat, void *data)
 static void kmscon_seat_poll_video(void *data)
 {
 	struct kmscon_video *vid = data;
+
+	if (!vid)
+		return;
 
 	log_debug("poll video device %s on seat %s", vid->node, vid->seat->name);
 	video_poll(vid->video);
