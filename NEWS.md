@@ -1,4 +1,11 @@
 = KMSCON Release News =
+## CHANGES with 10.0.3
+* seat: Fix use after free in kmscon_seat_remove_video() by @kdj0c in https://github.com/kmscon/kmscon/pull/507
+* Fix use-after-free crash in seat_go_foreground by @jgroman in https://github.com/kmscon/kmscon/pull/512
+* seat: Fix NULL pointer dereference in seat_monitor_hotplug_dev by @jgroman in https://github.com/kmscon/kmscon/pull/513
+
+## New Contributors
+* @jgroman made their first contribution in https://github.com/kmscon/kmscon/pull/512
 
 ## CHANGES with 10.0.2
 ### Important Notes
