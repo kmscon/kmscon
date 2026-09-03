@@ -59,7 +59,6 @@ struct screen {
 	struct display *disp;
 	struct kmscon_text *txt;
 
-	bool swapping;
 	bool pending;
 	bool hw_cursor;
 	bool enabled;
@@ -274,7 +273,7 @@ static void disable_screen(struct screen *scr)
 	int ret;
 
 	log_debug("Disabling screen %s", display_name(scr->disp));
-	if (scr->swapping)
+	if (display_is_swapping(scr->disp))
 		scr->pending = true;
 	else {
 		log_info("Disabling screen %s", display_name(scr->disp));
@@ -290,7 +289,6 @@ static void disable_screen(struct screen *scr)
 				scr->pending = true;
 			}
 		}
-		scr->swapping = true;
 	}
 	scr->enabled = false;
 }
@@ -319,13 +317,8 @@ static void do_redraw_screen(struct screen *scr)
 	kmscon_text_render(scr->txt);
 
 	ret = display_swap(scr->disp);
-	if (ret) {
-		if (ret != -EBUSY)
-			log_warning("cannot swap display [%s] %d", display_name(scr->disp), ret);
-		return;
-	}
-
-	scr->swapping = true;
+	if (ret && ret != -EBUSY)
+		log_warning("cannot swap display [%s] %d", display_name(scr->disp), ret);
 }
 
 static void redraw_screen(struct screen *scr)
@@ -333,7 +326,7 @@ static void redraw_screen(struct screen *scr)
 	if (!scr->term->awake || !scr->enabled)
 		return;
 
-	if (scr->swapping)
+	if (display_is_swapping(scr->disp))
 		scr->pending = true;
 	else
 		do_redraw_screen(scr);
@@ -420,8 +413,6 @@ static void redraw_all_text(struct kmscon_terminal *term)
 	shl_dlist_for_each(iter, &term->screens)
 	{
 		scr = shl_dlist_entry(iter, struct screen, list);
-		if (display_is_swapping(scr->disp))
-			scr->swapping = true;
 		redraw_screen(scr);
 	}
 }
@@ -430,7 +421,6 @@ static void display_pageflip(void *unused, void *unused2, void *data)
 {
 	struct screen *scr = data;
 
-	scr->swapping = false;
 	if (scr->pending)
 		do_redraw_screen(scr);
 }
