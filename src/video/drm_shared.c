@@ -1268,6 +1268,7 @@ int drm_video_init(struct video *video, int fd, const struct display_ops *displa
 	version = drmGetVersion(fd);
 	log_info("new drm device via %s, using driver %s\n", vdrm->name,
 		 version ? version->name : "Unknown");
+	drmFreeVersion(version);
 
 	ret = drmSetClientCap(vdrm->fd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1);
 	if (ret) {
@@ -1280,12 +1281,6 @@ int drm_video_init(struct video *video, int fd, const struct display_ops *displa
 		log_warn("Device %s doesn't support atomic modesetting, using legacy", vdrm->name);
 		vdrm->legacy = true;
 	}
-	/* Force legacy pageflip on vmwgfx, as atomic modesetting freeze with vmwgfx */
-	if (version && !strcmp(version->name, "vmwgfx")) {
-		log_warn("Using legacy pageflip with vmwgfx on device %s", vdrm->name);
-		vdrm->legacy = true;
-	}
-	drmFreeVersion(version);
 
 	/* support hardware cursor on VM */
 	ret = drmSetClientCap(vdrm->fd, DRM_CLIENT_CAP_CURSOR_PLANE_HOTSPOT, 1);
