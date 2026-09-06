@@ -905,8 +905,9 @@ static void zoom_out(struct kmscon_terminal *term)
 static void input_event(struct input *input, struct input_key_event *ev, void *data)
 {
 	struct kmscon_terminal *term = data;
+	uint32_t ms = tsm_screen_get_cursor_blinking_rate_ms(term->console);
 	struct itimerspec blink_interval = {
-		.it_interval = {0, BLINK_TIMER_NS},
+		.it_interval = {ms / 1000, (ms % 1000) * 1000000L},
 		.it_value = {BLINK_CURSOR_TYPING, 0},
 	};
 

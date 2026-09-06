@@ -2,7 +2,7 @@
 directory = libtsm
 
 url = https://github.com/kmscon/libtsm
-revision = v4.7.0
+revision = fd642c98c0fb1d245896ae9f09b5726551a58ab4
 depth = 1
 
 [provide]
