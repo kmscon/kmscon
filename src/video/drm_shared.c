@@ -1216,7 +1216,7 @@ static int set_drm_master(struct drm_video *vdrm)
 
 	ret = drmSetMaster(vdrm->fd);
 	if (ret)
-		log_err("Cannot set drm master for %s", vdrm->name);
+		log_err("Cannot set drm master for %s (Error %d)", vdrm->name, ret);
 	else
 		vdrm->master = true;
 	return ret;
