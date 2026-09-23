@@ -6,6 +6,7 @@ render_srcs = [
 ]
 
 render_dep = [
+    font_deps,
     shl_deps,
     libtsm_deps,
     video_deps,
