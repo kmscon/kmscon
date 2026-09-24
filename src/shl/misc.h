@@ -552,37 +552,4 @@ static inline uint32_t shl_get_ascii(struct xkb_state *state, uint32_t keycode,
 	return XKB_KEY_NoSymbol;
 }
 
-static inline bool shl_grab_matches(unsigned int ev_mods, unsigned int ev_num_syms,
-				    const uint32_t *ev_syms, unsigned int grab_mods,
-				    unsigned int grab_num_syms, const uint32_t *grab_syms)
-{
-	if (ev_mods != grab_mods)
-		return false;
-
-	if (grab_num_syms != 0) {
-		if (ev_num_syms != grab_num_syms)
-			return false;
-		if (memcmp(ev_syms, grab_syms, sizeof(uint32_t) * ev_num_syms))
-			return false;
-	}
-
-	return true;
-}
-
-static inline bool shl_grab_has_match(unsigned int ev_mods, unsigned int ev_num_syms,
-				      const uint32_t *ev_syms, unsigned int grab_num,
-				      const unsigned int *grab_mods,
-				      const unsigned int *grab_num_syms, uint32_t **grab_syms)
-{
-	unsigned int i;
-
-	for (i = 0; i < grab_num; ++i) {
-		if (shl_grab_matches(ev_mods, ev_num_syms, ev_syms, grab_mods[i], grab_num_syms[i],
-				     grab_syms[i]))
-			return true;
-	}
-
-	return false;
-}
-
 #endif /* SHL_MISC_H */

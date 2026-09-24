@@ -1087,3 +1087,32 @@ const struct conf_type conf_grab = {
 	.parse = conf_parse_grab,
 	.copy = conf_copy_grab,
 };
+
+static bool grab_matches(unsigned int ev_mods, unsigned int ev_num_syms, const uint32_t *ev_syms,
+			 unsigned int grab_mods, unsigned int grab_num_syms,
+			 const uint32_t *grab_syms)
+{
+	if (ev_mods != grab_mods)
+		return false;
+
+	if (grab_num_syms != 0) {
+		if (ev_num_syms != grab_num_syms)
+			return false;
+		if (memcmp(ev_syms, grab_syms, sizeof(uint32_t) * ev_num_syms))
+			return false;
+	}
+
+	return true;
+}
+
+bool conf_grab_matches(const struct conf_grab *grab, unsigned int ev_mods, unsigned int ev_num_syms,
+		       const uint32_t *ev_syms)
+{
+	unsigned int i;
+	for (i = 0; i < grab->num; i++) {
+		if (grab_matches(ev_mods, ev_num_syms, ev_syms, grab->mods[i], grab->num_syms[i],
+				 grab->keysyms[i]))
+			return true;
+	}
+	return false;
+}

@@ -35,6 +35,7 @@
 #include "conf.h"
 #include "config.h"
 #include "issue.h"
+#include "shl/dlist.h"
 #include "shl/githead.h"
 #include "shl/log.h"
 #include "shl/misc.h"
