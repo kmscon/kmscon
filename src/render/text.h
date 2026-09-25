@@ -106,6 +106,9 @@ void kmscon_text_unref(struct kmscon_text *txt);
 
 int kmscon_text_set(struct kmscon_text *txt, struct kmscon_font *font);
 void kmscon_text_unset(struct kmscon_text *txt);
+
+unsigned int kmscon_text_get_width(struct kmscon_text *txt);
+unsigned int kmscon_text_get_height(struct kmscon_text *txt);
 unsigned int kmscon_text_get_cols(struct kmscon_text *txt, unsigned int font_width);
 unsigned int kmscon_text_get_rows(struct kmscon_text *txt, unsigned int font_height);
 

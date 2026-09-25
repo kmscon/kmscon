@@ -312,24 +312,40 @@ void kmscon_text_resize(struct kmscon_text *txt, unsigned int cols, unsigned int
 		txt->ops->resize(txt, cols, rows);
 }
 
+unsigned int kmscon_text_get_width(struct kmscon_text *txt)
+{
+	if (!txt)
+		return 0;
+	if (txt->orientation == OR_NORMAL || txt->orientation == OR_UPSIDE_DOWN)
+		return display_get_width(txt->disp);
+	else
+		return display_get_height(txt->disp);
+}
+
+unsigned int kmscon_text_get_height(struct kmscon_text *txt)
+{
+	if (!txt)
+		return 0;
+	if (txt->orientation == OR_NORMAL || txt->orientation == OR_UPSIDE_DOWN)
+		return display_get_height(txt->disp);
+	else
+		return display_get_width(txt->disp);
+}
+
 unsigned int kmscon_text_get_cols(struct kmscon_text *txt, unsigned int font_width)
 {
 	if (!txt || !font_width)
 		return 0;
-	if (txt->orientation == OR_NORMAL || txt->orientation == OR_UPSIDE_DOWN)
-		return display_get_width(txt->disp) / font_width;
-	else
-		return display_get_height(txt->disp) / font_width;
+
+	return kmscon_text_get_width(txt) / font_width;
 }
 
 unsigned int kmscon_text_get_rows(struct kmscon_text *txt, unsigned int font_height)
 {
 	if (!txt || !font_height)
 		return 0;
-	if (txt->orientation == OR_NORMAL || txt->orientation == OR_UPSIDE_DOWN)
-		return display_get_height(txt->disp) / font_height;
-	else
-		return display_get_width(txt->disp) / font_height;
+
+	return kmscon_text_get_height(txt) / font_height;
 }
 
 /**
