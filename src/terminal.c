@@ -366,42 +366,53 @@ static bool has_kms_display(struct kmscon_terminal *term)
 	return false;
 }
 
+static unsigned int term_min_width(struct kmscon_terminal *term)
+{
+	unsigned int width = UINT_MAX;
+	struct screen *scr;
+
+	dlist_for_each_entry(scr, &term->screens, list)
+	{
+		unsigned int w = kmscon_text_get_width(scr->txt);
+
+		if (!scr->enabled)
+			continue;
+		if (w < width)
+			width = w;
+	}
+	return width;
+}
+
+static unsigned int term_min_height(struct kmscon_terminal *term)
+{
+	unsigned int height = UINT_MAX;
+	struct screen *scr;
+
+	dlist_for_each_entry(scr, &term->screens, list)
+	{
+		unsigned int h = kmscon_text_get_height(scr->txt);
+		if (!scr->enabled)
+			continue;
+		if (h < height)
+			height = h;
+	}
+	return height;
+}
+
 /*
  * Align the pointer maximum to the minimum width and height of all screens
  * according to their orientation, as kmscon only support mirroring.
  */
 static void update_pointer_max_all(struct kmscon_terminal *term)
 {
-	struct screen *scr;
-	unsigned int max_x = INT_MAX;
-	unsigned int max_y = INT_MAX;
-	unsigned int sw, sh;
+	unsigned int width = term_min_width(term);
+	unsigned int height = term_min_height(term);
 
 	if (!term->awake)
 		return;
 
-	dlist_for_each_entry(scr, &term->screens, list)
-	{
-		if (!scr->enabled)
-			continue;
-
-		if (scr->txt->orientation == OR_NORMAL || scr->txt->orientation == OR_UPSIDE_DOWN) {
-			sw = display_get_width(scr->disp);
-			sh = display_get_height(scr->disp);
-		} else {
-			sw = display_get_height(scr->disp);
-			sh = display_get_width(scr->disp);
-		}
-		if (!sw || !sh)
-			continue;
-
-		if (sw < max_x)
-			max_x = sw;
-		if (sh < max_y)
-			max_y = sh;
-	}
-	if (max_x < INT_MAX && max_y < INT_MAX)
-		input_set_pointer_max(term->input, max_x, max_y);
+	if (width < INT_MAX && height < INT_MAX)
+		input_set_pointer_max(term->input, width, height);
 }
 
 static void display_pageflip(void *unused, void *unused2, void *data)
