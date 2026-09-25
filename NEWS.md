@@ -1,10 +1,42 @@
 = KMSCON Release News =
+
+## CHANGES with 10.0.4
+### Important Notes
+* kmscon changed the default font size to 0, which means it will adjust the font size based on the monitors.
+The font size is now the maximum height of the font cell in pixels. So if you have set `font-size` in your `kmscon.conf`,
+it might be smaller with this new release, and you will need some adjustments.
+
+### Changes
+* drm_shared: Use legacy modesetting with vmwgfx driver by @kdj0c in https://github.com/kmscon/kmscon/pull/515
+* Fix EBUSY error handling in pageflip by @kdj0c in https://github.com/kmscon/kmscon/pull/516
+* Font refactor by @kdj0c in https://github.com/kmscon/kmscon/pull/519
+* Implement `scaled` as a multi-monitor option by @DhruvaSambrani in https://github.com/kmscon/kmscon/pull/509
+* cursor blinking rate feature by @fnnFox in https://github.com/kmscon/kmscon/pull/517
+* Refactor dlist.h by @kdj0c in https://github.com/kmscon/kmscon/pull/520
+* Feat/psf unicode table by @IHateGameDev in https://github.com/kmscon/kmscon/pull/510
+* fix(psf font out): init width and height by @IHateGameDev in https://github.com/kmscon/kmscon/pull/525
+* log: Simplify logging, remove timestamp, and level for notice and info. by @kdj0c in https://github.com/kmscon/kmscon/pull/523
+* gltex: Add render dependency by @kdj0c in https://github.com/kmscon/kmscon/pull/527
+* fix(gltex): kmscon_font dep by @IHateGameDev in https://github.com/kmscon/kmscon/pull/528
+* Correct the wrong key sysmbols in the kmscon.conf.example by @suikan4github in https://github.com/kmscon/kmscon/pull/529
+* drm_shared: Fix hotplug by @kdj0c in https://github.com/kmscon/kmscon/pull/530
+* run kmsconvt@.service after systemd-vconsole-setup by @kdj0c in https://github.com/kmscon/kmscon/pull/532
+* Default font size by @kdj0c in https://github.com/kmscon/kmscon/pull/531
+* config: multi-monitor, default to scaled. by @kdj0c in https://github.com/kmscon/kmscon/pull/533
+* build: Update libtsm dependency to v4.8.0 by @kdj0c in https://github.com/kmscon/kmscon/pull/534
+* drm_shared: Add max retry to the wakeup timeout by @kdj0c in https://github.com/kmscon/kmscon/pull/535
+
+### New Contributors
+* @DhruvaSambrani made their first contribution in https://github.com/kmscon/kmscon/pull/509
+* @fnnFox made their first contribution in https://github.com/kmscon/kmscon/pull/517
+* @suikan4github made their first contribution in https://github.com/kmscon/kmscon/pull/529
+
 ## CHANGES with 10.0.3
 * seat: Fix use after free in kmscon_seat_remove_video() by @kdj0c in https://github.com/kmscon/kmscon/pull/507
 * Fix use-after-free crash in seat_go_foreground by @jgroman in https://github.com/kmscon/kmscon/pull/512
 * seat: Fix NULL pointer dereference in seat_monitor_hotplug_dev by @jgroman in https://github.com/kmscon/kmscon/pull/513
 
-## New Contributors
+### New Contributors
 * @jgroman made their first contribution in https://github.com/kmscon/kmscon/pull/512
 
 ## CHANGES with 10.0.2
@@ -13,7 +45,7 @@
 * kmscon now supports asciicast, to display an ascii animation before the login.
 * kmscon can now use PC Screen Font format (That is used by the kernel and fbcon), but doesn't support unicode for that font yet.
 
-## New features
+### New features
 * terminal: add asciicast playback by @jtollet in https://github.com/kmscon/kmscon/pull/448
 * conf: Add a blink option by @kdj0c in https://github.com/kmscon/kmscon/pull/454
 * docs: Add missing blink configuration option to kmscon.conf.example by @zwenna in https://github.com/kmscon/kmscon/pull/458
@@ -49,7 +81,7 @@
 * Remove stride in glyph buffer by @kdj0c in https://github.com/kmscon/kmscon/pull/503
 * text: invert color for full block cursor by @kdj0c in https://github.com/kmscon/kmscon/pull/505
 
-## New Contributors
+### New Contributors
 * @zwenna made their first contribution in https://github.com/kmscon/kmscon/pull/458
 * @perryprog made their first contribution in https://github.com/kmscon/kmscon/pull/499
 * @IHateGameDev made their first contribution in https://github.com/kmscon/kmscon/pull/501
@@ -60,7 +92,7 @@
 * kmscon built-in issue support is still lacking network escape code (\4 \6 \a \A), so the default is to use agetty. You can edit kmsconvt@tty, remove the `--login` option, and add `--issue` to use the built-in issue support.
 * Dynamic keyboard layout support, kmscon listen to the locale1 dbus variables, and updates the keyboard layout accordingly. You can use `localectl set-keymap` to change the keyboard layout on the fly.
 
-## What's Changed
+### What's Changed
 * fix zlib cross-compiling errors by @aduskett in https://github.com/kmscon/kmscon/pull/402
 * RFC: Update default issue search path with util-linux defaults by @Vogtinator in https://github.com/kmscon/kmscon/pull/408
 * freetype: Enable light hinting by @Vogtinator in https://github.com/kmscon/kmscon/pull/412
@@ -89,7 +121,7 @@
 * terminfo: don't use ansi+*** macro as they may not be present by @kdj0c in https://github.com/kmscon/kmscon/pull/447
 * issue: implement uapi masking by @kdj0c in https://github.com/kmscon/kmscon/pull/449
 
-## New Contributors
+### New Contributors
 * @Vogtinator made their first contribution in https://github.com/kmscon/kmscon/pull/408
 * @e-Gyi-qO made their first contribution in https://github.com/kmscon/kmscon/pull/421
 
@@ -126,7 +158,7 @@
 * Fix dpms off by @kdj0c in https://github.com/kmscon/kmscon/pull/399
 * terminal: Free selection buffer on exit by @kdj0c in https://github.com/kmscon/kmscon/pull/400
 
-## New Contributors
+### New Contributors
 * @awsms made their first contribution in https://github.com/kmscon/kmscon/pull/370
 * @mscaletjlb made their first contribution in https://github.com/kmscon/kmscon/pull/381
 * @WhyNotHugo made their first contribution in https://github.com/kmscon/kmscon/pull/387
