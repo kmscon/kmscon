@@ -119,6 +119,7 @@ struct drm_video {
 	void *data;
 	struct shl_timer *timer;
 	struct ev_timer *vt_timer;
+	uint32_t vt_timeout_retries;
 	bool legacy;
 	bool master;
 	bool cursor_hotspot;

@@ -48,6 +48,8 @@
 
 #define LOG_SUBSYSTEM "drm_shared"
 
+#define MAX_VT_TIMEOUT_RETRIES 20
+
 static void modeset_drm_object_fini(struct drm_object *obj);
 static void modeset_get_object_properties(int fd, struct drm_object *obj, uint32_t type);
 static int set_drm_object_property(drmModeAtomicReq *req, struct drm_object *obj, const char *name,
@@ -1192,6 +1194,13 @@ static void vt_timeout(struct ev_timer *timer, uint64_t exp, void *data)
 		{
 			disp->video->cb->refresh_disp(disp->video->cb_data, disp);
 		}
+	} else {
+		vdrm->vt_timeout_retries++;
+		if (vdrm->vt_timeout_retries > MAX_VT_TIMEOUT_RETRIES) {
+			log_err("vt_timeout: failed to wake up after %d retries\n",
+				MAX_VT_TIMEOUT_RETRIES);
+			ev_timer_update(vdrm->vt_timer, NULL);
+		}
 	}
 }
 
@@ -1200,8 +1209,10 @@ void drm_video_arm_vt_timer(struct video *video)
 	struct drm_video *vdrm = video->data;
 	struct itimerspec spec;
 
+	vdrm->vt_timeout_retries = 0;
+
 	spec.it_value.tv_sec = 0;
-	spec.it_value.tv_nsec = 20L * 1000L * 1000L; /* 20ms */
+	spec.it_value.tv_nsec = 50L * 1000L * 1000L; /* 50ms */
 	spec.it_interval = spec.it_value;
 
 	ev_timer_update(vdrm->vt_timer, &spec);
