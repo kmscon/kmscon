@@ -59,18 +59,22 @@
 #xkb-repeat-rate=65
 
 ## Keyboard Shortcuts
+## Control keys are not case insensitive. Ex: <Ctrl>, <ctrl>, <CTRL>
+## Other keys are case sensitive, and follow the keysim-name[] of the
+## xkbcommon library.
+## https://github.com/xkbcommon/libxkbcommon/blob/master/src/keysym-names.h
 #grab-scroll-up=<Shift>Up
 #grab-scroll-down=<Shift>Down
 #grab-page-up=<Shift>Prior
 #grab-page-down=<Shift>Next
-#grab-zoom-in=<Ctrl>Plus
-#grab-zoom-out=<Ctrl>Minus
+#grab-zoom-in=<Ctrl>plus
+#grab-zoom-out=<Ctrl>minus
 #grab-session-next=<Ctrl><Logo>Right
 #grab-session-prev=<Ctrl><Logo>Left
 #grab-session-close=<Ctrl><Logo>BackSpace
 #grab-terminal-new=<Ctrl><Logo>Return
-#grab-rotate-cw=<Logo>Plus
-#grab-rotate-ccw=<Logo>Minus
+#grab-rotate-cw=<Logo>plus
+#grab-rotate-ccw=<Logo>minus
 ## Reboot system (disabled by default)
 ## Reboot behavior follows /proc/sys/kernel/ctrl-alt-del:
 ##   0 (default): graceful reboot (sends SIGINT to init)
