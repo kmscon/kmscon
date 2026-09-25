@@ -60,7 +60,7 @@
 
 ## Keyboard Shortcuts
 ## Control keys are not case insensitive. Ex: <Ctrl>, <ctrl>, <CTRL>
-## Other keys are case sensitive, and follow the keysim-name[] of the
+## Other keys are case sensitive, and follow the keysym_names[] of the
 ## xkbcommon library.
 ## https://github.com/xkbcommon/libxkbcommon/blob/master/src/keysym-names.h
 #grab-scroll-up=<Shift>Up
