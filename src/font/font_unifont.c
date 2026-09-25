@@ -224,7 +224,7 @@ static int kmscon_font_unifont_init(struct kmscon_font *out, const char *unused_
 		       _binary_font_unifont_data_size - 4) != Z_OK)
 		goto err_free_data;
 
-	scale = (height + 8) / 16;
+	scale = height / 16;
 	if (!scale)
 		scale = 1;
 
