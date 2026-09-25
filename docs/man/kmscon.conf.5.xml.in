@@ -494,7 +494,7 @@ font-name=Ubuntu Mono
           monitors will be disabled. If multiple monitors have the largest size, they will all be used.</para>
           <para>`scaled': All monitors will display the same number of columns and rows based on
           the smallest monitor, with larger monitors scaling up their font size to fill the screen.</para>
-          <para>default: clone</para>
+          <para>default: scaled</para>
         </listitem>
       </varlistentry>
 
