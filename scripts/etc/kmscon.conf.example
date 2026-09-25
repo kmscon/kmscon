@@ -33,8 +33,8 @@
 ## Force a specific mode for all monitors, widthxheight
 #mode=1024x768
 
-## Multi monitor configuration [clone, largest, scaled], default is clone.
-#multi-monitor=clone
+## Multi monitor configuration [clone, largest, scaled], default is scaled.
+#multi-monitor=scaled
 
 ## Screen rotation, can be [normal, left, upside-down, right]
 #rotate=left
