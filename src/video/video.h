@@ -74,11 +74,14 @@ enum display_dpms {
 	DPMS_UNKNOWN,
 };
 
+typedef bool (*video_get_mode_cb)(void *data, const char *gpu, const char *connector,
+				  unsigned int *width, unsigned int *height, unsigned int *rate);
 typedef void (*video_new_display_cb)(void *data, struct display *disp);
 typedef void (*video_refresh_display_cb)(void *data, struct display *disp);
 typedef void (*video_remove_display_cb)(void *data, struct display *disp);
 
 struct video_cb {
+	video_get_mode_cb get_mode;
 	video_new_display_cb new_disp;
 	video_refresh_display_cb refresh_disp;
 	video_remove_display_cb remove_disp;
@@ -168,8 +171,7 @@ bool display_has_damage(struct display *disp);
 /* video interface */
 
 int video_new(struct video **out, struct ev_eloop *eloop, int fd, const char *backend,
-	      struct video_cb *cb, void *data, unsigned int desired_width,
-	      unsigned int desired_height, bool use_original, const char *pathname);
+	      struct video_cb *cb, void *data, bool use_original, const char *pathname);
 void video_ref(struct video *video);
 void video_unref(struct video *video);
 

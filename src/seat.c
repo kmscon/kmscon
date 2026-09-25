@@ -35,6 +35,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/reboot.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include "conf.h"
 #include "config.h"
@@ -296,6 +297,48 @@ static void seat_prev(struct kmscon_seat *seat)
 		prev = NULL;
 
 	seat_switch(seat, prev);
+}
+
+static bool seat_get_mode(void *data, const char *gpu, const char *connector, unsigned int *width,
+			  unsigned int *height, unsigned int *rate)
+{
+	struct kmscon_seat *seat = data;
+	struct kmscon_conf_mode *mode;
+	int i;
+
+	// First pass, GPU and connector name match
+	for (i = 0; i < seat->conf->mode_count; i++) {
+		mode = &seat->conf->modes[i];
+		if (mode->gpu[0] && strcmp(mode->gpu, gpu) == 0 && mode->connector[0] &&
+		    strcmp(mode->connector, connector) == 0) {
+			*width = mode->width;
+			*height = mode->height;
+			*rate = mode->refresh_rate;
+			return true;
+		}
+	}
+	// Second pass, connector name matches
+	for (i = 0; i < seat->conf->mode_count; i++) {
+		mode = &seat->conf->modes[i];
+		if (!mode->gpu[0] && mode->connector[0] &&
+		    strcmp(mode->connector, connector) == 0) {
+			*width = mode->width;
+			*height = mode->height;
+			*rate = mode->refresh_rate;
+			return true;
+		}
+	}
+	// Third pass, no GPU nor connector name
+	for (i = 0; i < seat->conf->mode_count; i++) {
+		mode = &seat->conf->modes[i];
+		if (!mode->gpu[0] && !mode->connector[0]) {
+			*width = mode->width;
+			*height = mode->height;
+			*rate = mode->refresh_rate;
+			return true;
+		}
+	}
+	return false;
 }
 
 static void seat_new_display(void *data, struct display *disp)
@@ -894,6 +937,7 @@ static bool kmscon_seat_gpu_is_ignored(struct kmscon_seat *seat, unsigned int ty
 }
 
 static struct video_cb seat_video_cb = {
+	.get_mode = seat_get_mode,
 	.new_disp = seat_new_display,
 	.refresh_disp = seat_refresh_display,
 	.remove_disp = seat_remove_display,
@@ -902,8 +946,6 @@ static struct video_cb seat_video_cb = {
 static int seat_video_init(struct kmscon_video *vid)
 {
 	struct kmscon_seat *seat = vid->seat;
-	unsigned int width = 0;
-	unsigned int height = 0;
 	const char *backend;
 	int ret;
 
@@ -916,29 +958,21 @@ static int seat_video_init(struct kmscon_video *vid)
 		backend = be_fbdev;
 	}
 
-	if (seat->conf->mode != NULL) {
-		int items_parsed = sscanf(seat->conf->mode, "%ux%u", &width, &height);
-		if (items_parsed != 2) {
-			log_warning("The argument to --mode is not in the format <width>x<height>. "
-				    "Ignoring");
-			width = 0;
-			height = 0;
-		}
-	}
-
 	vid->fd = uterm_vt_open_device(seat->vt, vid->node, &vid->fd_id);
 	if (vid->fd < 0) {
 		log_error("cannot open video device %s on seat %s: %d", vid->node, seat->name,
 			  vid->fd);
 		return vid->fd;
 	}
-	ret = video_new(&vid->video, seat->eloop, vid->fd, backend, &seat_video_cb, seat, width,
-			height, seat->conf->use_original_mode, vid->pathname);
+
+	ret = video_new(&vid->video, seat->eloop, vid->fd, backend, &seat_video_cb, seat,
+			seat->conf->use_original_mode, vid->pathname);
 	if (ret && backend == be_drm3d) {
 		log_info("cannot create drm3d device %s on seat %s (%d); trying drm2d mode",
 			 vid->node, seat->name, ret);
 		ret = video_new(&vid->video, seat->eloop, vid->fd, be_drm2d, &seat_video_cb, seat,
-				width, height, seat->conf->use_original_mode, vid->pathname);
+
+				seat->conf->use_original_mode, vid->pathname);
 	}
 	if (ret) {
 		log_error("cannot create video device %s on seat %s: %d", vid->node, seat->name,

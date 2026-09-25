@@ -145,6 +145,15 @@ int display_bind(struct display *disp)
 }
 
 SHL_EXPORT
+bool display_get_mode(struct video *video, const char *gpu, const char *connector,
+		      unsigned int *width, unsigned int *height, unsigned int *rate)
+{
+	if (video->cb->get_mode)
+		return video->cb->get_mode(video->cb_data, gpu, connector, width, height, rate);
+	return false;
+}
+
+SHL_EXPORT
 void display_ready(struct display *disp)
 {
 	if (!disp || !disp->video || disp->flags & DISPLAY_INUSE)
@@ -415,8 +424,7 @@ bool display_has_damage(struct display *disp)
 
 SHL_EXPORT
 int video_new(struct video **out, struct ev_eloop *eloop, int fd, const char *backend,
-	      struct video_cb *cb, void *data, unsigned int desired_width,
-	      unsigned int desired_height, bool use_original, const char *pathname)
+	      struct video_cb *cb, void *data, bool use_original, const char *pathname)
 {
 	struct shl_register_record *record;
 	const char *name = backend ? backend : "<default>";
@@ -458,8 +466,6 @@ int video_new(struct video **out, struct ev_eloop *eloop, int fd, const char *ba
 	if (ret)
 		goto err_free;
 
-	video->desired_width = desired_width;
-	video->desired_height = desired_height;
 	video->use_original = use_original;
 
 	ev_eloop_ref(video->eloop);
