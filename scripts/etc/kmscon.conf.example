@@ -43,6 +43,7 @@
 ## font-engine, can be [freetype, pango, psf, unifont, 8x16], by default kmscon tries in this order.
 #font-engine=freetype
 ## The font size is the height of the font in pixels. For psf, unifont and 8x16, only integer scaling is supported.
+## The default value is 0, which will auto-detect the font size based on the monitor resolution.
 #font-size=18
 ## font-name is only for freetype/pango. For psf, it's the path of the psf or psf.gz file. Unifont and 8x16 uses their own bitmap.
 #font-name=Hack Nerd Font
