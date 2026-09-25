@@ -180,7 +180,7 @@ static int kmscon_font_psf_init(struct kmscon_font *out, const char *name,
 	}
 	_fclose(font_file);
 
-	font->scale = (query_height + (height / 2)) / height;
+	font->scale = query_height / height;
 	if (!font->scale)
 		font->scale = 1;
 	out->data = font;

@@ -59,7 +59,7 @@ static int kmscon_font_8x16_init(struct kmscon_font *out, const char *unused_nam
 
 	log_debug("loading static 8x16 font");
 
-	scale = (height + 8) / 16;
+	scale = height / 16;
 	if (!scale)
 		scale = 1;
 
