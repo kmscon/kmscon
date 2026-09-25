@@ -1439,7 +1439,6 @@ int drm_video_hotplug(struct video *video, bool read_dpms, bool modeset)
 	int ret, i, dpms;
 	struct dlist *tmp;
 	bool needs_modeset = modeset;
-	bool found = false;
 
 	if (!video_is_awake(video) || !video_need_hotplug(video))
 		return 0;
@@ -1458,6 +1457,8 @@ int drm_video_hotplug(struct video *video, bool read_dpms, bool modeset)
 	}
 
 	for (i = 0; i < res->count_connectors; ++i) {
+		bool found = false;
+
 		conn = drmModeGetConnector(vdrm->fd, res->connectors[i]);
 		if (!conn)
 			continue;
