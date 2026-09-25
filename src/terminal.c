@@ -503,6 +503,29 @@ static void mouse_event(struct tsm_vte *vte, enum tsm_mouse_track_mode track_mod
 	tsm_screen_selection_reset(term->console);
 }
 
+static unsigned int terminal_get_font_size(struct kmscon_terminal *term)
+{
+	unsigned int width, height, font_height;
+
+	if (term->font_size)
+		return term->font_size;
+
+	/* Font size is not set yet, try to find the better default */
+	width = term_min_width(term);
+	height = term_min_height(term);
+
+	if (!width || !height || width == UINT_MAX || height == UINT_MAX)
+		return 16;
+
+	// Max 120 characters per line, assuming font width is half the font height
+	font_height = (2 * width) / 120;
+	// at least 40 lines
+	if (font_height > height / 40)
+		font_height = height / 40;
+
+	return font_height < 16 ? 16 : font_height;
+}
+
 /*
  * We support multiple monitors per terminal. In clone mode, we use the smallest cols/rows that are
  * provided so wider monitors will have black margins.
@@ -589,7 +612,7 @@ retry:
 		if (scaled_height <= scr->term->font->increase_step)
 			return;
 		scaled_height -= scr->term->font->increase_step;
-		if (scaled_height <= scr->term->font_size)
+		if (scaled_height <= scr->term->font->height)
 			return;
 		goto retry;
 	}
@@ -785,13 +808,21 @@ int terminal_add_display(struct kmscon_terminal *term, struct display *disp)
 		goto err_cb;
 	}
 
+	dlist_link(&term->screens, &scr->list);
+	/* Update default font size if not set */
+	if (!term->font_size) {
+		if (font_set(term, terminal_get_font_size(term))) {
+			log_err("cannot set font size: %d", ret);
+			goto err_link;
+		}
+		font_update_all(term);
+	}
+
 	ret = kmscon_text_set(scr->txt, term->font);
 	if (ret) {
 		log_error("cannot set text-renderer parameters");
 		goto err_text;
 	}
-
-	dlist_link(&term->screens, &scr->list);
 
 	log_notice("Display [%s] with backend [%s] text renderer [%s] font engine [%s]\n",
 		   display_name(disp), display_backend_name(disp), scr->txt->ops->name,
@@ -811,6 +842,8 @@ int terminal_add_display(struct kmscon_terminal *term, struct display *disp)
 
 err_text:
 	kmscon_text_unref(scr->txt);
+err_link:
+	dlist_unlink(&scr->list);
 err_cb:
 	display_unregister_pageflip(scr->disp, display_pageflip, scr);
 err_free:
@@ -831,8 +864,13 @@ static void free_screen(struct screen *scr, bool update)
 	display_unref(scr->disp);
 	free(scr);
 
-	if (!update)
+	if (!update || dlist_empty(&term->screens))
 		return;
+
+	// if font size is not set, adjust the size of the remaining displays.
+	if (!term->font_size)
+		if (!font_set(term, terminal_get_font_size(term)))
+			font_update_all(term);
 
 	update_pointer_max_all(term);
 	terminal_update_size_notify(term);
@@ -856,6 +894,9 @@ static void zoom_in(struct kmscon_terminal *term)
 {
 	unsigned int new_size;
 
+	if (term->font_size == 0)
+		term->font_size = terminal_get_font_size(term);
+
 	if (term->font_size > 150) // don't allow zoom in beyond 150
 		return;
 
@@ -870,6 +911,9 @@ static void zoom_in(struct kmscon_terminal *term)
 static void zoom_out(struct kmscon_terminal *term)
 {
 	unsigned int new_size;
+
+	if (term->font_size == 0)
+		term->font_size = terminal_get_font_size(term);
 
 	if (term->font_size <= term->font->increase_step)
 		return;
@@ -1383,7 +1427,7 @@ struct kmscon_terminal *terminal_new(struct kmscon_session *session, unsigned in
 		goto err_vte;
 
 	term->font_size = term->conf->font_size;
-	ret = font_set(term, term->font_size);
+	ret = font_set(term, terminal_get_font_size(term));
 	if (ret)
 		goto err_vte;
 

@@ -660,7 +660,7 @@
       <varlistentry>
         <term><option>--font-size {pixels}</option></term>
         <listitem>
-          <para>Font size in pixels. (default: 16)</para>
+          <para>Font height in pixels. 0 will auto-detect (default: 0)</para>
         </listitem>
       </varlistentry>
 
