@@ -61,8 +61,6 @@ struct {
 	bool fbdev;
 	bool test;
 	char *dev;
-	unsigned int desired_width;
-	unsigned int desired_height;
 } output_conf;
 
 static int blit_outputs(struct video *video)
@@ -163,8 +161,6 @@ struct conf_option options[] = {
 	CONF_OPTION_BOOL(0, "fbdev", &output_conf.fbdev, false),
 	CONF_OPTION_BOOL(0, "test", &output_conf.test, false),
 	CONF_OPTION_STRING(0, "dev", &output_conf.dev, NULL),
-	CONF_OPTION_UINT(0, "desired-width", &output_conf.desired_width, 0),
-	CONF_OPTION_UINT(0, "desired-height", &output_conf.desired_height, 0),
 };
 
 int main(int argc, char **argv)
@@ -199,14 +195,11 @@ int main(int argc, char **argv)
 		goto err_fail;
 	}
 
-	ret = video_new(&video, eloop, fd, mode, NULL, NULL, output_conf.desired_width,
-			output_conf.desired_height, false);
+	ret = video_new(&video, eloop, fd, mode, NULL, NULL, false, NULL);
 	if (ret) {
 		if (!output_conf.fbdev) {
 			log_notice("cannot create drm device; trying drm2d mode");
-			ret = video_new(&video, eloop, fd, "drm2d", NULL, NULL,
-					output_conf.desired_width, output_conf.desired_height,
-					false);
+			ret = video_new(&video, eloop, fd, "drm2d", NULL, NULL, false, NULL);
 			if (ret)
 				goto err_exit;
 		} else {

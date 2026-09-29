@@ -35,8 +35,8 @@
 #define CONF_CONF_H
 
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdlib.h>
-#include "shl/misc.h"
 
 struct conf_type;
 struct conf_option;
@@ -107,13 +107,6 @@ struct conf_grab {
 	uint32_t **keysyms;
 };
 
-static inline bool conf_grab_matches(const struct conf_grab *grab, unsigned int ev_mods,
-				     unsigned int ev_num_syms, const uint32_t *ev_syms)
-{
-	return shl_grab_has_match(ev_mods, ev_num_syms, ev_syms, grab->num, grab->mods,
-				  grab->num_syms, grab->keysyms);
-}
-
 #define CONF_SINGLE_GRAB(_mods, _sym)                                                              \
 	{                                                                                          \
 		.num = 1,                                                                          \
@@ -129,6 +122,9 @@ static inline bool conf_grab_matches(const struct conf_grab *grab, unsigned int 
 		.num_syms = (unsigned int[]){1, 1},                                                \
 		.keysyms = (uint32_t *[]){(uint32_t[]){(_sym1)}, (uint32_t[]){(_sym2)}},           \
 	}
+
+bool conf_grab_matches(const struct conf_grab *grab, unsigned int ev_mods, unsigned int ev_num_syms,
+		       const uint32_t *ev_syms);
 /*
  * Configuration Context
  * A configuration context is initialized with an array of config-options and

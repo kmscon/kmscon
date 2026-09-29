@@ -27,7 +27,7 @@
 ## Enable 3d rendering, using gltex with drm3d instead of bbulk with drm2d
 #hwaccel
 
-## Use original mode (enabled by default)
+## Use original mode (disabled by default)
 #use-original-mode
 
 ## Force a specific mode for all monitors, widthxheight

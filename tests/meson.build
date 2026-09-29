@@ -76,3 +76,11 @@ test_issue_parameter = executable(
     dependencies: [libtsm_deps, shl_deps],
 )
 test('test_issue_parameter', test_issue_parameter)
+
+test_conf = executable(
+    'test_conf',
+    'test_conf.c',
+    include_directories: [src_inc, misc_inc],
+    dependencies: [shl_deps],
+)
+test('test_conf', test_conf)

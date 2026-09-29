@@ -34,9 +34,8 @@
 #include <libtsm.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include <stdlib.h>
+#include <stdint.h>
 #include "conf.h"
-#include "shl/dlist.h"
 
 enum kmscon_conf_gpu_selection {
 	KMSCON_GPU_ALL,
@@ -45,6 +44,15 @@ enum kmscon_conf_gpu_selection {
 };
 
 typedef uint8_t palette_t[TSM_COLOR_NUM][3];
+
+#define MAX_DISPLAY_NAME_LEN 64
+struct kmscon_conf_mode {
+	char gpu[MAX_DISPLAY_NAME_LEN];
+	char connector[MAX_DISPLAY_NAME_LEN];
+	uint32_t width;
+	uint32_t height;
+	uint32_t refresh_rate;
+};
 
 struct kmscon_conf_t {
 	/* header information */
@@ -171,8 +179,9 @@ struct kmscon_conf_t {
 	unsigned int gpus;
 	/* use current KMS video mode to avoid modesetting */
 	bool use_original_mode;
-	/* screen resolution */
-	char *mode;
+	/* Precise configuration of each display */
+	unsigned int mode_count;
+	struct kmscon_conf_mode *modes;
 	/* multiple monitors */
 	char *multi_monitor;
 	/* orientation/rotation of output */

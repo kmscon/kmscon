@@ -590,7 +590,7 @@
       <varlistentry>
         <term><option>--use-original-mode</option></term>
         <listitem>
-          <para>Use original KMS mode to prevent modesetting. (default: on)</para>
+          <para>Use original KMS mode to prevent modesetting, only for drm devices. (default: off)</para>
 
           <para>This option is incompatible with --mode.</para>
         </listitem>
@@ -604,8 +604,6 @@
           any effect; if there is no supported mode that matches exactly, or if there is
           an error when using the desired mode, then the default mode (first valid mode
           found) will be used.</para>
-
-          <para>--use-original-mode must be disabled in order to use this option.</para>
 
           <para>Modesetting is only supported in DRM mode, so this option does
           nothing with fbdev. However, fbset can still be used to externally set

@@ -52,8 +52,8 @@ enum uterm_monitor_dev_flag {
 };
 
 typedef void (*uterm_new_dev_cb)(const char *node, enum uterm_monitor_dev_type type,
-				 enum uterm_monitor_dev_flag flags, void *data,
-				 struct uterm_monitor_dev *dev);
+				 enum uterm_monitor_dev_flag flags, const char *pathname,
+				 void *data, struct uterm_monitor_dev *dev);
 typedef void (*uterm_free_dev_cb)(void *data, enum uterm_monitor_dev_type type, void *dev_data);
 typedef void (*uterm_hotplug_dev_cb)(void *data, enum uterm_monitor_dev_type type, void *dev_data);
 

@@ -48,6 +48,7 @@
 #include "shl/dlist.h"
 #include "shl/eloop.h"
 #include "shl/log.h"
+#include "shl/misc.h"
 #include "terminal.h"
 #include "video/video.h"
 

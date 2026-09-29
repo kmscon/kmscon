@@ -145,6 +145,15 @@ int display_bind(struct display *disp)
 }
 
 SHL_EXPORT
+bool display_get_mode(struct video *video, const char *gpu, const char *connector,
+		      unsigned int *width, unsigned int *height, unsigned int *rate)
+{
+	if (video->cb->get_mode)
+		return video->cb->get_mode(video->cb_data, gpu, connector, width, height, rate);
+	return false;
+}
+
+SHL_EXPORT
 void display_ready(struct display *disp)
 {
 	if (!disp || !disp->video || disp->flags & DISPLAY_INUSE)
@@ -415,8 +424,7 @@ bool display_has_damage(struct display *disp)
 
 SHL_EXPORT
 int video_new(struct video **out, struct ev_eloop *eloop, int fd, const char *backend,
-	      struct video_cb *cb, void *data, unsigned int desired_width,
-	      unsigned int desired_height, bool use_original)
+	      struct video_cb *cb, void *data, bool use_original, const char *pathname)
 {
 	struct shl_register_record *record;
 	const char *name = backend ? backend : "<default>";
@@ -448,6 +456,8 @@ int video_new(struct video **out, struct ev_eloop *eloop, int fd, const char *ba
 	video->ops = record->data;
 	video->cb = cb;
 	video->cb_data = data;
+	if (pathname)
+		video->pathname = strdup(pathname);
 
 	video->eloop = eloop;
 	dlist_init(&video->displays);
@@ -456,15 +466,15 @@ int video_new(struct video **out, struct ev_eloop *eloop, int fd, const char *ba
 	if (ret)
 		goto err_free;
 
-	video->desired_width = desired_width;
-	video->desired_height = desired_height;
+	video->use_original = use_original;
 
 	ev_eloop_ref(video->eloop);
-	log_info("new device %p", video);
+	log_info("new device %s", video->pathname);
 	*out = video;
 	return 0;
 
 err_free:
+	free(video->pathname);
 	free(video);
 err_unref:
 	shl_register_record_unref(record);
@@ -489,7 +499,7 @@ void video_unref(struct video *video)
 	if (!video || !video->ref || --video->ref)
 		return;
 
-	log_info("free device %p", video);
+	log_info("free device %s", video->pathname);
 
 	dlist_for_each_entry_safe(disp, tmp, &video->displays, list)
 	{
@@ -499,6 +509,7 @@ void video_unref(struct video *video)
 	video->ops->destroy(video);
 	ev_eloop_unref(video->eloop);
 	shl_register_record_unref(video->record);
+	free(video->pathname);
 	free(video);
 }
 

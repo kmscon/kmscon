@@ -35,6 +35,7 @@
 #include "conf.h"
 #include "config.h"
 #include "issue.h"
+#include "shl/dlist.h"
 #include "shl/githead.h"
 #include "shl/log.h"
 #include "shl/misc.h"
@@ -488,6 +489,86 @@ static const struct conf_type conf_gpus = {
 };
 
 /*
+ * Display configuration type
+ */
+static void conf_default_modes(struct conf_option *opt)
+{
+	opt->type->free(opt);
+}
+
+static void conf_free_modes(struct conf_option *opt)
+{
+	struct kmscon_conf_t *conf = KMSCON_CONF_FROM_FIELD(opt->mem, modes);
+
+	free(conf->modes);
+	conf->mode_count = 0;
+	conf->modes = NULL;
+}
+
+static int conf_parse_modes(struct conf_option *opt, bool on, const char *arg)
+{
+	struct kmscon_conf_t *conf = KMSCON_CONF_FROM_FIELD(opt->mem, modes);
+	char gpu[MAX_DISPLAY_NAME_LEN] = {0};
+	char connector[MAX_DISPLAY_NAME_LEN] = {0};
+	unsigned int width = 0;
+	unsigned int height = 0;
+	unsigned int refresh_rate = 0;
+	struct kmscon_conf_mode *mode, *new;
+	int matched;
+
+	matched = sscanf(arg, "%63[^[][%63[^]]]%dx%d@%d", gpu, connector, &width, &height,
+			 &refresh_rate);
+	if (matched < 2) {
+		memset(gpu, 0, sizeof(gpu));
+		memset(connector, 0, sizeof(connector));
+		matched =
+			sscanf(arg, "[%63[^]]]%dx%d@%d", connector, &width, &height, &refresh_rate);
+	}
+	if (matched < 2) {
+		memset(connector, 0, sizeof(connector));
+		matched = sscanf(arg, "%dx%d@%d", &width, &height, &refresh_rate);
+	}
+	if (matched < 2 || width == 0 || height == 0)
+		return -EINVAL;
+
+	printf("matched:%d gpu=%s connector=%s width=%u height=%u refresh_rate=%u\n", matched, gpu,
+	       connector, width, height, refresh_rate);
+
+	new = realloc(conf->modes, (conf->mode_count + 1) * sizeof(struct kmscon_conf_mode));
+	if (!new)
+		return -ENOMEM;
+	conf->modes = new;
+	mode = &conf->modes[conf->mode_count];
+	conf->mode_count++;
+	strncpy(mode->gpu, gpu, sizeof(mode->gpu));
+	strncpy(mode->connector, connector, sizeof(mode->connector));
+	mode->width = width;
+	mode->height = height;
+	mode->refresh_rate = refresh_rate;
+	return 0;
+}
+
+static int conf_copy_modes(struct conf_option *opt, const struct conf_option *src)
+{
+	struct kmscon_conf_t *conf_dst = KMSCON_CONF_FROM_FIELD(opt->mem, modes);
+	struct kmscon_conf_t *conf_src = KMSCON_CONF_FROM_FIELD(src->mem, modes);
+
+	conf_dst->mode_count = conf_src->mode_count;
+	conf_dst->modes = malloc(conf_dst->mode_count * sizeof(struct kmscon_conf_mode));
+	memcpy(conf_dst->modes, conf_src->modes,
+	       conf_dst->mode_count * sizeof(struct kmscon_conf_mode));
+	return 0;
+}
+
+static const struct conf_type conf_modes = {
+	.flags = CONF_HAS_ARG,
+	.set_default = conf_default_modes,
+	.free = conf_free_modes,
+	.parse = conf_parse_modes,
+	.copy = conf_copy_modes,
+};
+
+/*
  * Color type
  * The color parser parses three comma-separated numbers into an RGB color.
  */
@@ -794,8 +875,8 @@ int kmscon_conf_new(struct conf_ctx **out)
 		CONF_OPTION_BOOL(0, "hwaccel", &conf->hwaccel, false),
 		CONF_OPTION(0, 0, "gpus", &conf_gpus, NULL, NULL, NULL, &conf->gpus,
 			    (void *)KMSCON_GPU_ALL),
-		CONF_OPTION_BOOL(0, "use-original-mode", &conf->use_original_mode, true),
-		CONF_OPTION_STRING(0, "mode", &conf->mode, NULL),
+		CONF_OPTION_BOOL(0, "use-original-mode", &conf->use_original_mode, false),
+		CONF_OPTION(0, 0, "mode", &conf_modes, NULL, NULL, NULL, &conf->modes, NULL),
 		CONF_OPTION_STRING(0, "multi-monitor", &conf->multi_monitor, "scaled"),
 		CONF_OPTION_STRING(0, "rotate", &conf->rotate, "normal"),
 
@@ -894,7 +975,7 @@ int kmscon_conf_load_main(struct conf_ctx *ctx, int argc, char **argv)
 	/* You can't set a mode, and use_original_mode at the same time
 	 * specified mode takes priority.
 	 */
-	if (conf->use_original_mode && conf->mode != NULL) {
+	if (conf->use_original_mode && conf->mode_count != 0) {
 		log_error("Cannot use --mode if --use-original-mode is enabled. Try "
 			  "--no-use-original-mode.\n");
 		conf->use_original_mode = false;
