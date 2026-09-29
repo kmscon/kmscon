@@ -130,7 +130,7 @@ static void free_input(struct uterm_monitor *mon)
 }
 
 static void monitor_new_dev(const char *node, enum uterm_monitor_dev_type type,
-			    enum uterm_monitor_dev_flag flags, void *data,
+			    enum uterm_monitor_dev_flag flags, const char *pathname, void *data,
 			    struct uterm_monitor_dev *udev)
 {
 	void *dev_data;

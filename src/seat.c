@@ -73,6 +73,7 @@ struct kmscon_video {
 	struct video *video;
 	struct uterm_monitor_dev *udev;
 	char *node;
+	char *pathname;
 	int fd;
 	int fd_id;
 	bool drm;
@@ -113,7 +114,7 @@ const char be_fbdev[] = "fbdev";
 static int seat_video_init(struct kmscon_video *vid);
 static int kmscon_seat_add_video(struct kmscon_seat *seat, enum uterm_monitor_dev_type type,
 				 enum uterm_monitor_dev_flag flags, const char *node,
-				 struct uterm_monitor_dev *udev);
+				 const char *pathname, struct uterm_monitor_dev *udev);
 static void kmscon_seat_remove_video(struct kmscon_seat *seat, void *data);
 static void kmscon_seat_poll_video(void *data);
 
@@ -639,15 +640,15 @@ static void kmscon_seat_remove_input(struct kmscon_seat *seat, void *data)
 }
 
 static void seat_monitor_new_dev(const char *node, enum uterm_monitor_dev_type type,
-				 enum uterm_monitor_dev_flag flags, void *data,
-				 struct uterm_monitor_dev *udev)
+				 enum uterm_monitor_dev_flag flags, const char *pathname,
+				 void *data, struct uterm_monitor_dev *udev)
 {
 	struct kmscon_seat *seat = data;
 
 	switch (type) {
 	case UTERM_MONITOR_DRM:
 	case UTERM_MONITOR_FBDEV:
-		kmscon_seat_add_video(seat, type, flags, node, udev);
+		kmscon_seat_add_video(seat, type, flags, node, pathname, udev);
 		break;
 	case UTERM_MONITOR_INPUT:
 		log_debug("new input device %s", node);
@@ -931,14 +932,13 @@ static int seat_video_init(struct kmscon_video *vid)
 			  vid->fd);
 		return vid->fd;
 	}
-
 	ret = video_new(&vid->video, seat->eloop, vid->fd, backend, &seat_video_cb, seat, width,
-			height, seat->conf->use_original_mode);
+			height, seat->conf->use_original_mode, vid->pathname);
 	if (ret && backend == be_drm3d) {
 		log_info("cannot create drm3d device %s on seat %s (%d); trying drm2d mode",
 			 vid->node, seat->name, ret);
 		ret = video_new(&vid->video, seat->eloop, vid->fd, be_drm2d, &seat_video_cb, seat,
-				width, height, seat->conf->use_original_mode);
+				width, height, seat->conf->use_original_mode, vid->pathname);
 	}
 	if (ret) {
 		log_error("cannot create video device %s on seat %s: %d", vid->node, seat->name,
@@ -954,7 +954,7 @@ err_close:
 
 static int kmscon_seat_add_video(struct kmscon_seat *seat, enum uterm_monitor_dev_type type,
 				 enum uterm_monitor_dev_flag flags, const char *node,
-				 struct uterm_monitor_dev *udev)
+				 const char *pathname, struct uterm_monitor_dev *udev)
 {
 	struct kmscon_video *vid;
 	int ret = -ENOMEM;
@@ -979,6 +979,9 @@ static int kmscon_seat_add_video(struct kmscon_seat *seat, enum uterm_monitor_de
 	if (!vid->node)
 		goto err_free;
 
+	if (pathname)
+		vid->pathname = strdup(pathname);
+
 	uterm_monitor_set_dev_data(udev, vid);
 
 	if (seat->awake) {
@@ -990,6 +993,7 @@ static int kmscon_seat_add_video(struct kmscon_seat *seat, enum uterm_monitor_de
 	return 0;
 
 err_node:
+	free(vid->pathname);
 	uterm_monitor_set_dev_data(udev, NULL);
 	free(vid->node);
 err_free:
@@ -1020,6 +1024,7 @@ static void kmscon_seat_remove_video(struct kmscon_seat *seat, void *data)
 		video_unref(vid->video);
 		uterm_vt_close_device(seat->vt, vid->fd, vid->fd_id);
 	}
+	free(vid->pathname);
 	free(vid->node);
 	free(vid);
 }

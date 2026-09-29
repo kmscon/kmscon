@@ -126,6 +126,7 @@ struct video {
 	struct dlist displays;
 	struct video_cb *cb;
 	void *cb_data;
+	char *pathname;
 
 	bool use_original;
 	unsigned int desired_width;

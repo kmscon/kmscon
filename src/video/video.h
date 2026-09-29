@@ -169,7 +169,7 @@ bool display_has_damage(struct display *disp);
 
 int video_new(struct video **out, struct ev_eloop *eloop, int fd, const char *backend,
 	      struct video_cb *cb, void *data, unsigned int desired_width,
-	      unsigned int desired_height, bool use_original);
+	      unsigned int desired_height, bool use_original, const char *pathname);
 void video_ref(struct video *video);
 void video_unref(struct video *video);
 
