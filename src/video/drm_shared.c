@@ -1383,10 +1383,12 @@ static void bind_display(struct video *video, drmModeRes *res, drmModeConnector 
 	struct drm_video *vdrm = video->data;
 	struct display *disp;
 	struct drm_display *ddrm;
-	const char *name;
+	const char *type_name;
+	char name[64];
 	int ret;
 
-	name = drmModeGetConnectorTypeName(conn->connector_type);
+	type_name = drmModeGetConnectorTypeName(conn->connector_type);
+	snprintf(name, sizeof(name), "%s-%d", type_name, conn->connector_type_id);
 
 	ret = display_new(&disp, vdrm->display_ops, video, name);
 	if (ret)
