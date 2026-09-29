@@ -458,6 +458,7 @@ int video_new(struct video **out, struct ev_eloop *eloop, int fd, const char *ba
 
 	video->desired_width = desired_width;
 	video->desired_height = desired_height;
+	video->use_original = use_original;
 
 	ev_eloop_ref(video->eloop);
 	log_info("new device %p", video);
