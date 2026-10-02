@@ -255,6 +255,9 @@ static int modeset_find_plane(int fd, struct display *disp)
 			drmModeObjectPropertiesPtr props =
 				drmModeObjectGetProperties(fd, plane_id, DRM_MODE_OBJECT_PLANE);
 
+			if (!props)
+				continue;
+
 			plane_type = get_property_value(fd, props, "type");
 			if (!found_primary && plane_type == DRM_PLANE_TYPE_PRIMARY) {
 				found_primary = true;
@@ -311,7 +314,7 @@ static void modeset_clear_cursor(drmModeAtomicReq *req, int fd)
 		}
 		drmModeObjectPropertiesPtr props =
 			drmModeObjectGetProperties(fd, plane_id, DRM_MODE_OBJECT_PLANE);
-		if (get_property_value(fd, props, "type") == DRM_PLANE_TYPE_CURSOR) {
+		if (props && get_property_value(fd, props, "type") == DRM_PLANE_TYPE_CURSOR) {
 			uint32_t prop_id = get_property_id(fd, props, "CRTC_ID");
 
 			if (drmModeAtomicAddProperty(req, plane_id, prop_id, 0) < 0)
