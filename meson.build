@@ -94,6 +94,7 @@ freetype_deps = dependency(
 )
 fontconfig_deps = dependency(
     'fontconfig',
+    version: '>=2.16.0',  # FcConfigSetFontSetFilter()
     disabler: true,
     required: get_option('font_freetype'),
 )

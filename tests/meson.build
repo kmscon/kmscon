@@ -76,3 +76,19 @@ test_issue_parameter = executable(
     dependencies: [libtsm_deps, shl_deps],
 )
 test('test_issue_parameter', test_issue_parameter)
+
+if enable_font_freetype
+    test_font_freetype = executable(
+        'test_font_freetype',
+        'test_font_freetype.c',
+        include_directories: src_inc,
+        dependencies: [
+            libtsm_deps,
+            freetype_deps,
+            fontconfig_deps,
+            threads_deps,
+            shl_deps,
+        ],
+    )
+    test('test_font_freetype', test_font_freetype)
+endif

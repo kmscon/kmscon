@@ -204,6 +204,19 @@ err:
 	return -EINVAL;
 }
 
+static FcBool _fc_monospace_font_filter_func(const FcPattern *pat, void *user_data)
+{
+	int spacing;
+
+	if (FcPatternGetInteger(pat, FC_SPACING, 0, &spacing) == FcResultMatch) {
+		if (spacing == FC_SPACING_CHARCELL || spacing == FC_SPACING_MONO ||
+		    spacing == FC_SPACING_DUAL)
+			return FcTrue;
+	}
+	/* non-monospace font doesn't have FC_SPACING property */
+	return FcFalse;
+}
+
 static int kmscon_font_freetype_init(struct kmscon_font *out, const char *name, unsigned int height)
 {
 	struct ft_data *ftf;
@@ -220,6 +233,7 @@ static int kmscon_font_freetype_init(struct kmscon_font *out, const char *name, 
 		log_err("Failed to initialize FreeType\n");
 		goto err_free;
 	}
+	FcConfigSetFontSetFilter(NULL, _fc_monospace_font_filter_func, NULL, NULL);
 	if (prepare_font(ftf->ft, &ftf->regular, name, height, false, out))
 		goto err_done;
 
