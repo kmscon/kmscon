@@ -1285,10 +1285,6 @@ void terminal_refresh_displays(struct kmscon_terminal *term)
 
 void terminal_activate(struct kmscon_terminal *term)
 {
-	// Don't open pty yet if there are no screens.
-	if (dlist_empty(&term->screens))
-		return;
-
 	term->awake = true;
 	if (term->conf->blink) {
 		ev_timer_enable(term->blink_timer);
