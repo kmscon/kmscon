@@ -274,7 +274,7 @@ install_data(
 if enable_libseat
     install_data(
         'scripts/pam/kmscon',
-        install_dir: get_option('sysconfdir') / 'pam.d',
+        install_dir: prefix / get_option('libdir') / 'pam.d',
         rename: 'kmscon',
     )
 endif
