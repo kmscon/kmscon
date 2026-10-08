@@ -99,7 +99,7 @@ struct kmscon_text_ops {
 int kmscon_text_register(const struct kmscon_text_ops *ops);
 void kmscon_text_unregister(const char *name);
 
-int kmscon_text_new(struct kmscon_text **out, const char *backend, const char *rotate,
+int kmscon_text_new(struct kmscon_text **out, const char *backend, enum Orientation orientation,
 		    struct display *disp);
 void kmscon_text_ref(struct kmscon_text *txt);
 void kmscon_text_unref(struct kmscon_text *txt);

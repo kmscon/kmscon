@@ -139,11 +139,11 @@ static int new_text(struct kmscon_text *text, const char *backend)
  * kmscon_text_new:
  * @out: A pointer to the new text-renderer is stored here
  * @backend: Backend to use or NULL for default backend
- * @rotate: Orientation ("normal", "upside-down", "right" or "left") to use for output
+ * @orientation: Orientation to use for output
  *
  * Returns: 0 on success, error code on failure
  */
-int kmscon_text_new(struct kmscon_text **out, const char *backend, const char *rotate,
+int kmscon_text_new(struct kmscon_text **out, const char *backend, enum Orientation orientation,
 		    struct display *disp)
 {
 	struct kmscon_text *text;
@@ -158,23 +158,7 @@ int kmscon_text_new(struct kmscon_text **out, const char *backend, const char *r
 		return -ENOMEM;
 	}
 
-	text->orientation = OR_NORMAL;
-
-	if (rotate) {
-		if (strncmp(rotate, "normal", 6) == 0) {
-			text->orientation = OR_NORMAL;
-			log_debug("using: orientation: normal");
-		} else if (strncmp(rotate, "right", 5) == 0) {
-			text->orientation = OR_RIGHT;
-			log_debug("using: orientation: right");
-		} else if (strncmp(rotate, "upside-down", 8) == 0) {
-			text->orientation = OR_UPSIDE_DOWN;
-			log_debug("using: orientation: upside-down");
-		} else if (strncmp(rotate, "left", 4) == 0) {
-			text->orientation = OR_LEFT;
-			log_debug("using: orientation: left");
-		}
-	}
+	text->orientation = orientation;
 
 	ret = new_text(text, backend);
 	if (ret) {

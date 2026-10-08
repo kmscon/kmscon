@@ -60,6 +60,7 @@ struct screen {
 	struct display *disp;
 	struct kmscon_text *txt;
 
+	bool config_enabled;
 	bool pending;
 	bool hw_cursor;
 	bool enabled;
@@ -404,6 +405,21 @@ static unsigned int term_min_height(struct kmscon_terminal *term)
 }
 
 /*
+ * Returns true if all available screen are configured to be disabled
+ */
+static bool term_force_enable(struct kmscon_terminal *term)
+{
+	struct screen *scr;
+
+	dlist_for_each_entry(scr, &term->screens, list)
+	{
+		if (scr->config_enabled)
+			return false;
+	}
+	return true;
+}
+
+/*
  * Align the pointer maximum to the minimum width and height of all screens
  * according to their orientation, as kmscon only support mirroring.
  */
@@ -567,10 +583,15 @@ static void terminal_update_size_clone(struct kmscon_terminal *term)
 	struct screen *scr;
 	unsigned int min_cols = UINT_MAX;
 	unsigned int min_rows = UINT_MAX;
+	bool force_enable = term_force_enable(term);
 
 	dlist_for_each_entry(scr, &term->screens, list)
 	{
 		unsigned int cols, rows;
+
+		if (!force_enable && !scr->config_enabled)
+			continue;
+
 		cols = kmscon_text_get_cols(scr->txt, term->font->width);
 		if (cols && cols < min_cols)
 			min_cols = cols;
@@ -587,6 +608,16 @@ static void terminal_update_size_clone(struct kmscon_terminal *term)
 
 	term->cols = min_cols;
 	term->rows = min_rows;
+
+	dlist_for_each_entry(scr, &term->screens, list)
+	{
+		if (!force_enable && !scr->config_enabled)
+			disable_screen(scr);
+		else if (!scr->enabled) {
+			log_info("Enabling screen %s", display_name(scr->disp));
+			scr->enabled = true;
+		}
+	}
 }
 
 /*
@@ -598,11 +629,16 @@ static void terminal_update_size_largest(struct kmscon_terminal *term)
 	struct screen *scr;
 	unsigned int rows, cols, cells;
 	unsigned int max_cells = 0;
+	bool ignore_disabled = term_force_enable(term);
 
 	dlist_for_each_entry(scr, &term->screens, list)
 	{
+		if (!ignore_disabled && !scr->config_enabled)
+			continue;
+
 		rows = kmscon_text_get_rows(scr->txt, term->font->height);
 		cols = kmscon_text_get_cols(scr->txt, term->font->width);
+
 		cells = rows * cols;
 		if (cells > max_cells) {
 			max_cells = cells;
@@ -614,7 +650,8 @@ static void terminal_update_size_largest(struct kmscon_terminal *term)
 	{
 		rows = kmscon_text_get_rows(scr->txt, term->font->height);
 		cols = kmscon_text_get_cols(scr->txt, term->font->width);
-		if (rows != term->rows || cols != term->cols)
+		if (rows != term->rows || cols != term->cols ||
+		    (!ignore_disabled && !scr->config_enabled))
 			disable_screen(scr);
 		else if (!scr->enabled) {
 			log_info("Enabling screen %s", display_name(scr->disp));
@@ -777,9 +814,10 @@ static void rotate_ccw_all(struct kmscon_terminal *term)
 int terminal_add_display(struct kmscon_terminal *term, struct display *disp)
 {
 	struct screen *scr;
-	int ret;
 	const char *be, *gpu, *connector;
+	enum Orientation orientation;
 	bool opengl;
+	int ret;
 
 	dlist_for_each_entry(scr, &term->screens, list)
 	{
@@ -800,6 +838,8 @@ int terminal_add_display(struct kmscon_terminal *term, struct display *disp)
 	gpu = video_name(display_video(disp));
 	connector = display_name(disp);
 
+	config_get_screen(term->conf, gpu, connector, &orientation, &scr->config_enabled);
+
 	ret = display_register_pageflip(scr->disp, display_pageflip, scr);
 	if (ret) {
 		log_error("cannot register display callback: %d", ret);
@@ -812,7 +852,7 @@ int terminal_add_display(struct kmscon_terminal *term, struct display *disp)
 	else
 		be = "bbulk";
 
-	ret = kmscon_text_new(&scr->txt, be, term->conf->rotate, scr->disp);
+	ret = kmscon_text_new(&scr->txt, be, orientation, scr->disp);
 	if (ret) {
 		log_error("cannot create text-renderer");
 		goto err_cb;

@@ -35,6 +35,7 @@
 #include "conf.h"
 #include "config.h"
 #include "issue.h"
+#include "render/text.h"
 #include "shl/dlist.h"
 #include "shl/githead.h"
 #include "shl/log.h"
@@ -181,16 +182,24 @@ static void print_help()
 		"\t                                      available\n"
 		"\t    --gpus={all,aux,primary}  [all]   GPU selection mode\n"
 		"\t    --use-original-mode       [off]   Use original KMS video mode\n"
-		"\t    --mode <width>x<height>   [0x0]  Set the desired mode for the\n"
-		"\t                                     output. If the specified mode is\n"
-		"\t                                     not available or encounters an\n"
-		"\t                                     error, a default mode will be used.\n"
-		"\t                                     This option is incompatible with\n"
-		"\t                                     --use-original-mode.\n"
-		"\t    --rotate <orientation>  [normal] normal, right, upside-down, left\n"
+		"\t    --mode <gpu>[<connector>]<width>x<height>@<rate>\n"
+		"\t                                      Set the desired mode for the\n"
+		"\t                                      gpu/connector. It can be specified\n"
+		"\t                                      multiple time, for different monitors\n"
+		"\t                                      GPU, connector and rate are optional\n"
+		"\t                                      If the specified mode is\n"
+		"\t                                      not available or encounters an\n"
+		"\t                                      error, a default mode will be used.\n"
+		"\t                                      This option is incompatible with\n"
+		"\t                                      --use-original-mode.\n"
+		"\t    --screen <gpu>[<connector>]<orientation|disabled>\n"
+		"\t                                      Specify how to use each screen.\n"
+		"\t                                      Set the orientation, or just disable\n"
+		"\t                                      a monitor. GPU and connector are\n"
+		"\t                                      optional\n"
 		"\n"
 		"Font Options:\n"
-		"\t    --font-engine <engine>  [pango]\n"
+		"\t    --font-engine <engine>  [freetype]\n"
 		"\t                              Font rendering engine\n"
 		"\t    --font-size <pixels>    [0]\n"
 		"\t                              Font size in pixels, 0 means auto\n"
@@ -487,6 +496,255 @@ static const struct conf_type conf_gpus = {
 	.parse = conf_parse_gpus,
 	.copy = conf_copy_gpus,
 };
+
+/*
+ * Display configuration type
+ */
+static void conf_default_modes(struct conf_option *opt)
+{
+	opt->type->free(opt);
+}
+
+static void conf_free_modes(struct conf_option *opt)
+{
+	struct kmscon_conf_t *conf = KMSCON_CONF_FROM_FIELD(opt->mem, modes);
+
+	free(conf->modes);
+	conf->mode_count = 0;
+	conf->modes = NULL;
+}
+
+static int conf_parse_modes(struct conf_option *opt, bool on, const char *arg)
+{
+	struct kmscon_conf_t *conf = KMSCON_CONF_FROM_FIELD(opt->mem, modes);
+	char gpu[MAX_DISPLAY_NAME_LEN] = {0};
+	char connector[MAX_DISPLAY_NAME_LEN] = {0};
+	unsigned int width = 0;
+	unsigned int height = 0;
+	unsigned int refresh_rate = 0;
+	struct kmscon_conf_mode *mode, *new;
+	int matched;
+
+	matched = sscanf(arg, "%63[^[][%63[^]]]%dx%d@%d", gpu, connector, &width, &height,
+			 &refresh_rate);
+	if (matched < 2) {
+		memset(gpu, 0, sizeof(gpu));
+		memset(connector, 0, sizeof(connector));
+		matched =
+			sscanf(arg, "[%63[^]]]%dx%d@%d", connector, &width, &height, &refresh_rate);
+	}
+	if (matched < 2) {
+		memset(connector, 0, sizeof(connector));
+		matched = sscanf(arg, "%dx%d@%d", &width, &height, &refresh_rate);
+	}
+	if (matched < 2 || width == 0 || height == 0)
+		return -EINVAL;
+
+	log_debug("matched:%d gpu=%s connector=%s width=%u height=%u refresh_rate=%u\n", matched,
+		  gpu, connector, width, height, refresh_rate);
+
+	new = realloc(conf->modes, (conf->mode_count + 1) * sizeof(struct kmscon_conf_mode));
+	if (!new)
+		return -ENOMEM;
+	conf->modes = new;
+	mode = &conf->modes[conf->mode_count];
+	conf->mode_count++;
+	strncpy(mode->gpu, gpu, sizeof(mode->gpu));
+	strncpy(mode->connector, connector, sizeof(mode->connector));
+	mode->width = width;
+	mode->height = height;
+	mode->refresh_rate = refresh_rate;
+	return 0;
+}
+
+static int conf_copy_modes(struct conf_option *opt, const struct conf_option *src)
+{
+	struct kmscon_conf_t *conf_dst = KMSCON_CONF_FROM_FIELD(opt->mem, modes);
+	struct kmscon_conf_t *conf_src = KMSCON_CONF_FROM_FIELD(src->mem, modes);
+
+	conf_dst->mode_count = conf_src->mode_count;
+	conf_dst->modes = malloc(conf_dst->mode_count * sizeof(struct kmscon_conf_mode));
+	memcpy(conf_dst->modes, conf_src->modes,
+	       conf_dst->mode_count * sizeof(struct kmscon_conf_mode));
+	return 0;
+}
+
+static const struct conf_type conf_modes = {
+	.flags = CONF_HAS_ARG,
+	.set_default = conf_default_modes,
+	.free = conf_free_modes,
+	.parse = conf_parse_modes,
+	.copy = conf_copy_modes,
+};
+
+bool config_get_mode(struct kmscon_conf_t *conf, const char *gpu, const char *connector,
+		     unsigned int *width, unsigned int *height, unsigned int *rate)
+{
+	struct kmscon_conf_mode *mode;
+	int i;
+
+	// First pass, GPU and connector name match
+	for (i = 0; i < conf->mode_count; i++) {
+		mode = &conf->modes[i];
+		if (mode->gpu[0] && strcmp(mode->gpu, gpu) == 0 && mode->connector[0] &&
+		    strcmp(mode->connector, connector) == 0) {
+			*width = mode->width;
+			*height = mode->height;
+			*rate = mode->refresh_rate;
+			return true;
+		}
+	}
+	// Second pass, connector name matches
+	for (i = 0; i < conf->mode_count; i++) {
+		mode = &conf->modes[i];
+		if (!mode->gpu[0] && mode->connector[0] &&
+		    strcmp(mode->connector, connector) == 0) {
+			*width = mode->width;
+			*height = mode->height;
+			*rate = mode->refresh_rate;
+			return true;
+		}
+	}
+	// Third pass, no GPU nor connector name
+	for (i = 0; i < conf->mode_count; i++) {
+		mode = &conf->modes[i];
+		if (!mode->gpu[0] && !mode->connector[0]) {
+			*width = mode->width;
+			*height = mode->height;
+			*rate = mode->refresh_rate;
+			return true;
+		}
+	}
+	return false;
+}
+
+/*
+ * Screen configuration type
+ */
+static void conf_default_screens(struct conf_option *opt)
+{
+	opt->type->free(opt);
+}
+
+static void conf_free_screens(struct conf_option *opt)
+{
+	struct kmscon_conf_t *conf = KMSCON_CONF_FROM_FIELD(opt->mem, screens);
+
+	free(conf->screens);
+	conf->screen_count = 0;
+	conf->screens = NULL;
+}
+
+static int conf_parse_screens(struct conf_option *opt, bool on, const char *arg)
+{
+	struct kmscon_conf_t *conf = KMSCON_CONF_FROM_FIELD(opt->mem, screens);
+	char gpu[MAX_DISPLAY_NAME_LEN] = {0};
+	char connector[MAX_DISPLAY_NAME_LEN] = {0};
+	char config[MAX_DISPLAY_NAME_LEN] = {0};
+	enum Orientation orientation = OR_NORMAL;
+	bool enabled = true;
+
+	struct kmscon_conf_screen *screen, *new;
+	int matched = 0;
+
+	if (arg[0] == '[') {
+		matched = sscanf(arg, "[%63[^]]]%63s", connector, config);
+		if (!matched)
+			return -EINVAL;
+	} else if (strchr(arg, '[')) {
+		matched = sscanf(arg, "%63[^[][%63[^]]]%63s", gpu, connector, config);
+		if (!matched)
+			return -EINVAL;
+	} else if (strlen(arg) < MAX_DISPLAY_NAME_LEN - 1) {
+		strncpy(config, arg, sizeof(config));
+	}
+
+	log_debug("matched:%d gpu=%s connector=%s config %s\n", matched, gpu, connector, config);
+
+	if (!strcmp(config, "normal"))
+		orientation = OR_NORMAL;
+	else if (!strcmp(config, "left"))
+		orientation = OR_LEFT;
+	else if (!strcmp(config, "right"))
+		orientation = OR_RIGHT;
+	else if (!strcmp(config, "upside-down"))
+		orientation = OR_UPSIDE_DOWN;
+	else if (!strcmp(config, "disabled"))
+		enabled = false;
+	else
+		return -EINVAL;
+
+	new = realloc(conf->screens, (conf->screen_count + 1) * sizeof(struct kmscon_conf_mode));
+	if (!new)
+		return -ENOMEM;
+	conf->screens = new;
+	screen = &conf->screens[conf->screen_count];
+	conf->screen_count++;
+	strncpy(screen->gpu, gpu, sizeof(screen->gpu));
+	strncpy(screen->connector, connector, sizeof(screen->connector));
+	screen->orientation = orientation;
+	screen->enabled = enabled;
+	return 0;
+}
+
+static int conf_copy_screens(struct conf_option *opt, const struct conf_option *src)
+{
+	struct kmscon_conf_t *conf_dst = KMSCON_CONF_FROM_FIELD(opt->mem, screens);
+	struct kmscon_conf_t *conf_src = KMSCON_CONF_FROM_FIELD(src->mem, screens);
+
+	conf_dst->screen_count = conf_src->screen_count;
+	conf_dst->screens = malloc(conf_dst->screen_count * sizeof(struct kmscon_conf_screen));
+	memcpy(conf_dst->screens, conf_src->screens,
+	       conf_dst->screen_count * sizeof(struct kmscon_conf_screen));
+	return 0;
+}
+
+static const struct conf_type conf_screens = {
+	.flags = CONF_HAS_ARG,
+	.set_default = conf_default_screens,
+	.free = conf_free_screens,
+	.parse = conf_parse_screens,
+	.copy = conf_copy_screens,
+};
+
+void config_get_screen(struct kmscon_conf_t *conf, const char *gpu, const char *connector,
+		       enum Orientation *orientation, bool *enabled)
+{
+	struct kmscon_conf_screen *screen;
+	int i;
+
+	// First pass, GPU and connector name match
+	for (i = 0; i < conf->screen_count; i++) {
+		screen = &conf->screens[i];
+		if (screen->gpu[0] && strcmp(screen->gpu, gpu) == 0 && screen->connector[0] &&
+		    strcmp(screen->connector, connector) == 0) {
+			*orientation = screen->orientation;
+			*enabled = screen->enabled;
+			return;
+		}
+	}
+	// Second pass, connector name matches
+	for (i = 0; i < conf->screen_count; i++) {
+		screen = &conf->screens[i];
+		if (!screen->gpu[0] && screen->connector[0] &&
+		    strcmp(screen->connector, connector) == 0) {
+			*orientation = screen->orientation;
+			*enabled = screen->enabled;
+			return;
+		}
+	}
+	// Third pass, no GPU nor connector name
+	for (i = 0; i < conf->screen_count; i++) {
+		screen = &conf->screens[i];
+		if (!screen->gpu[0] && !screen->connector[0]) {
+			*orientation = screen->orientation;
+			*enabled = screen->enabled;
+			return;
+		}
+	}
+	*orientation = OR_NORMAL;
+	*enabled = true;
+}
 
 /*
  * Color type
@@ -796,9 +1054,9 @@ int kmscon_conf_new(struct conf_ctx **out)
 		CONF_OPTION(0, 0, "gpus", &conf_gpus, NULL, NULL, NULL, &conf->gpus,
 			    (void *)KMSCON_GPU_ALL),
 		CONF_OPTION_BOOL(0, "use-original-mode", &conf->use_original_mode, false),
-		CONF_OPTION_STRING(0, "mode", &conf->mode, NULL),
+		CONF_OPTION(0, 0, "mode", &conf_modes, NULL, NULL, NULL, &conf->modes, NULL),
 		CONF_OPTION_STRING(0, "multi-monitor", &conf->multi_monitor, "scaled"),
-		CONF_OPTION_STRING(0, "rotate", &conf->rotate, "normal"),
+		CONF_OPTION(0, 0, "screen", &conf_screens, NULL, NULL, NULL, &conf->screens, false),
 
 		/* Font Options */
 		CONF_OPTION_STRING(0, "font-engine", &conf->font_engine, NULL),
@@ -895,7 +1153,7 @@ int kmscon_conf_load_main(struct conf_ctx *ctx, int argc, char **argv)
 	/* You can't set a mode, and use_original_mode at the same time
 	 * specified mode takes priority.
 	 */
-	if (conf->use_original_mode && conf->mode != NULL) {
+	if (conf->use_original_mode && conf->mode_count != 0) {
 		log_error("Cannot use --mode if --use-original-mode is enabled. Try "
 			  "--no-use-original-mode.\n");
 		conf->use_original_mode = false;

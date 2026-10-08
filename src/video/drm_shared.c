@@ -1342,9 +1342,14 @@ static void init_modes(struct display *disp, drmModeConnector *conn)
 	struct drm_display *ddrm = disp->data;
 	drmModeCrtc *current_crtc;
 	drmModeModeInfoPtr mode;
+	unsigned int width, height, rate;
+	bool specified_mode;
 	int i;
 
 	current_crtc = get_current_crtc(vdrm->fd, conn->encoder_id);
+
+	specified_mode =
+		display_get_mode(video, video->pathname, disp->name, &width, &height, &rate);
 
 	for (i = 0; i < conn->count_modes; ++i) {
 		mode = &conn->modes[i];
@@ -1358,9 +1363,11 @@ static void init_modes(struct display *disp, drmModeConnector *conn)
 		    memcmp(&conn->modes[i], &current_crtc->mode, sizeof(conn->modes[i])) == 0)
 			ddrm->original_mode = *mode;
 
-		if (is_mode_null(&ddrm->desired_mode) && video->desired_width != 0 &&
-		    video->desired_height != 0 && mode->hdisplay == video->desired_width &&
-		    mode->vdisplay == video->desired_height)
+		log_debug("MODE %d %dx%d@%d", i, mode->hdisplay, mode->vdisplay, mode->vrefresh);
+
+		if (specified_mode && is_mode_null(&ddrm->desired_mode) &&
+		    mode->hdisplay == width && mode->vdisplay == height &&
+		    (!rate || mode->vrefresh == rate))
 			ddrm->desired_mode = *mode;
 	}
 	if (current_crtc)

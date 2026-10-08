@@ -103,6 +103,8 @@ int display_new(struct display **out, const struct display_ops *ops, struct vide
 		const char *name);
 int display_bind(struct display *disp);
 void display_unbind(struct display *disp);
+bool display_get_mode(struct video *video, const char *gpu, const char *connector,
+		      unsigned int *width, unsigned int *height, unsigned int *rate);
 void display_ready(struct display *disp);
 
 #define PAGEFLIP_CB(disp) shl_hook_call((disp)->hook, (disp), NULL)
@@ -129,8 +131,6 @@ struct video {
 	char *pathname;
 
 	bool use_original;
-	unsigned int desired_width;
-	unsigned int desired_height;
 
 	const struct video_ops *ops;
 	void *data;
