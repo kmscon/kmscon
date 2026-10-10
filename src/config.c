@@ -190,7 +190,7 @@ static void print_help()
 		"\t    --rotate <orientation>  [normal] normal, right, upside-down, left\n"
 		"\n"
 		"Font Options:\n"
-		"\t    --font-engine <engine>  [pango]\n"
+		"\t    --font-engine <engine>  [freetype]\n"
 		"\t                              Font rendering engine\n"
 		"\t    --font-size <pixels>    [0]\n"
 		"\t                              Font size in pixels, 0 means auto\n"
