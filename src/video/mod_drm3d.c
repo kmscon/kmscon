@@ -45,7 +45,7 @@ static int kmscon_drm3d_load(void)
 	drm3d_module.owner = SHL_THIS_MODULE;
 	ret = video_register(&drm3d_module);
 	if (ret) {
-		log_error("cannot register drm3d font");
+		log_error("cannot register drm3d video backend");
 		return ret;
 	}
 	return 0;
