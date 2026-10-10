@@ -146,6 +146,7 @@ static void vt_libseat_disable(struct libseat *libseat, void *data)
 
 	vt_cb_deactivate(&vt->base, false);
 	tty_deactivate(vt);
+	libseat_disable_seat(libseat);
 }
 
 static void vt_libseat_event(struct ev_fd *fd, int mask, void *data)
