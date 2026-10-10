@@ -140,7 +140,7 @@ static int display_allocfb(struct display *disp)
 
 free_rb0:
 	destroy_rb(vdrm->fd, &d2d->rb[0]);
-	return 0;
+	return ret;
 }
 
 static void display_freefb(struct display *disp)
