@@ -72,6 +72,8 @@ static void notify_event(struct input_dev *dev, uint16_t type, uint16_t code, in
 	}
 }
 
+static void input_sleep_dev(struct input_dev *dev);
+
 static void input_data_dev(struct ev_fd *fd, int mask, void *data)
 {
 	struct input_dev *dev = data;
@@ -80,8 +82,11 @@ static void input_data_dev(struct ev_fd *fd, int mask, void *data)
 	int i;
 
 	if (mask & (EV_HUP | EV_ERR)) {
-		log_debug("EOF on %s", dev->node);
-		input_free_dev(dev);
+		/* Revoked (e.g. by the seat manager on VT switch) or unplugged.
+		 * Keep the device; it's reopened on wake-up and real removal is
+		 * reported by the udev monitor. */
+		log_debug("HUP on %s, closing", dev->node);
+		input_sleep_dev(dev);
 		return;
 	}
 

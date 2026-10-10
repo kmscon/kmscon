@@ -146,6 +146,7 @@ static void vt_libseat_disable(struct libseat *libseat, void *data)
 
 	vt_cb_deactivate(&vt->base, false);
 	tty_deactivate(vt);
+	libseat_disable_seat(libseat);
 }
 
 static void vt_libseat_event(struct ev_fd *fd, int mask, void *data)
@@ -175,6 +176,9 @@ static int vt_libseat_activate(struct uterm_vt *base)
 	struct uterm_vt_libseat *vt = to_libseat(base);
 
 	tty_activate(vt);
+	/* Deliver enable_seat if it was already queued while opening the seat. */
+	if (libseat_dispatch(vt->libseat, 0) < 0)
+		log_warning("libseat dispatch failed: %m");
 	return 0;
 }
 
