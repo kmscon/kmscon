@@ -209,8 +209,7 @@ static FcBool _fc_monospace_font_filter_func(const FcPattern *pat, void *user_da
 	int spacing;
 
 	if (FcPatternGetInteger(pat, FC_SPACING, 0, &spacing) == FcResultMatch) {
-		if (spacing == FC_SPACING_CHARCELL || spacing == FC_SPACING_MONO ||
-		    spacing == FC_SPACING_DUAL)
+		if (spacing == FC_CHARCELL || spacing == FC_MONO || spacing == FC_DUAL)
 			return FcTrue;
 	}
 	/* non-monospace font doesn't have FC_SPACING property */
