@@ -45,8 +45,7 @@ void shl_module_unref(struct shl_module *module) {}
 
 static bool spacing_is_monospace(int spacing)
 {
-	return spacing == FC_SPACING_CHARCELL || spacing == FC_SPACING_MONO ||
-	       spacing == FC_SPACING_DUAL;
+	return spacing == FC_CHARCELL || spacing == FC_MONO || spacing == FC_DUAL;
 }
 
 /* --- 1. unit test of the filter predicate --- */
@@ -64,20 +63,20 @@ static void test_filter_unit(void)
 	FcPattern *pat;
 
 	/* Monospace spacings must be accepted. */
-	pat = pattern_with_spacing(FC_SPACING_CHARCELL);
+	pat = pattern_with_spacing(FC_CHARCELL);
 	assert(_fc_monospace_font_filter_func(pat, NULL) == FcTrue);
 	FcPatternDestroy(pat);
 
-	pat = pattern_with_spacing(FC_SPACING_MONO);
+	pat = pattern_with_spacing(FC_MONO);
 	assert(_fc_monospace_font_filter_func(pat, NULL) == FcTrue);
 	FcPatternDestroy(pat);
 
-	pat = pattern_with_spacing(FC_SPACING_DUAL);
+	pat = pattern_with_spacing(FC_DUAL);
 	assert(_fc_monospace_font_filter_func(pat, NULL) == FcTrue);
 	FcPatternDestroy(pat);
 
 	/* A proportional font (e.g. Vazirmatn) must be rejected. */
-	pat = pattern_with_spacing(FC_SPACING_PROPORTIONAL);
+	pat = pattern_with_spacing(FC_PROPORTIONAL);
 	assert(_fc_monospace_font_filter_func(pat, NULL) == FcFalse);
 	FcPatternDestroy(pat);
 
@@ -123,7 +122,7 @@ static int unfiltered_proportional_count(uint32_t ch)
 	int count = 0;
 
 	for (int i = 0; fs && i < fs->nfont; i++) {
-		int spacing = FC_SPACING_PROPORTIONAL;
+		int spacing = FC_PROPORTIONAL;
 
 		if (ch) {
 			FcCharSet *cs;
