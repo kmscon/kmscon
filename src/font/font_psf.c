@@ -203,7 +203,8 @@ static void kmscon_font_psf_destroy(struct kmscon_font *kfont)
 {
 	psf_font_t *font = kfont->data;
 	log_debug("unloading psf font");
-	unicode_table_exit(&font->unicode_table);
+	if (font->has_unicode_table)
+		unicode_table_exit(&font->unicode_table);
 	free(font);
 }
 
