@@ -175,6 +175,9 @@ static int vt_libseat_activate(struct uterm_vt *base)
 	struct uterm_vt_libseat *vt = to_libseat(base);
 
 	tty_activate(vt);
+	/* Deliver enable_seat if it was already queued while opening the seat. */
+	if (libseat_dispatch(vt->libseat, 0) < 0)
+		log_warning("libseat dispatch failed: %m");
 	return 0;
 }
 
