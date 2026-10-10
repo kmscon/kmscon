@@ -400,7 +400,7 @@ static int aftercheck_login(struct conf_option *opt, int argc, char **argv, int 
 		conf->argv = t;
 		ret = argc - idx;
 	} else if (!conf->argv) {
-		ret = shl_dup_array_size(&t, def_argv, sizeof(def_argv) / sizeof(*def_argv));
+		ret = shl_dup_array(&t, def_argv);
 		if (ret)
 			return ret;
 
