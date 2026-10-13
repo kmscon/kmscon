@@ -159,6 +159,7 @@ static int bbulk_set(struct kmscon_text *txt)
 	bb->cell_flags = malloc(sizeof(*bb->cell_flags) * bb->cell_count);
 	if (!bb->cell_flags)
 		goto free_prev;
+	memset(bb->cell_flags, 0, sizeof(*bb->cell_flags) * bb->cell_count);
 
 	bb->damage_rects = malloc(sizeof(*bb->damage_rects) * max_damage_rects);
 	if (!bb->damage_rects)
@@ -369,6 +370,8 @@ static int bbulk_draw_cell(struct kmscon_text *txt, const struct tsm_screen_cell
 
 	// left cell overflow on this cell.
 	if ((cell->ch == 0 || cell->ch == ' ') && posx && bb->cell_flags[offset - 1].double_width) {
+		/* an overflow cell never starts a wide glyph: drop the stale flag */
+		bb->cell_flags[offset].double_width = 0;
 		if (cur_cell->ch == ID_OVERFLOW) {
 			bb->cell_flags[offset].damaged = 0;
 			return 0;
