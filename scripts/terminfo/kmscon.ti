@@ -73,6 +73,9 @@ kmscon|KMS Console,
 # Cursor Visibility
   civis=\E[?25l, cnorm=\E[?25h,
 
+# Cursor Shape
+  Se=\E[0 q, Ss=\E[%p1%d q,
+
 # Input Keys
   kbs=^?, kcub1=\E[D, kcud1=\E[B,
   kcuf1=\E[C, kcuu1=\E[A, kcbt=\E[Z,
