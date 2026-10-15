@@ -47,8 +47,8 @@ struct kmscon_font_ops;
 #define KMSCON_FONT_DEFAULT_PPI 72
 
 #define FONT_REPLACEMENT_CHAR 0x25a1
-#define FONT_FULL_BLOCK 0x2588
-#define FONT_VBAR 0x258e
+#define FONT_FULL_BLOCK 0x2588 // Full Block
+#define FONT_VBAR 0x258f       // Left One Eighth Block
 
 struct kmscon_font_attr {
 	bool bold;
