@@ -157,6 +157,10 @@ static void test_monospace_fallback_set(void)
 	prop_total = unfiltered_proportional_count(0);
 	prop_arabic = unfiltered_proportional_count(ARABIC_ALEF);
 
+	/* If no fonts are installed, don't go further in the tests */
+	if (!prop_total || !prop_arabic)
+		return;
+
 	/* Register and look up the backend exactly as kmscon does at runtime;
 	 * init() installs the monospace filter as a side effect. */
 	ret = kmscon_font_register(&kmscon_font_freetype_ops);
