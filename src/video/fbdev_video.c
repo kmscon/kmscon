@@ -449,6 +449,15 @@ static void intro_idle_event(struct ev_eloop *eloop, void *unused, void *data)
 		ev_eloop_rm_timer(dfb->vblank_timer);
 		return;
 	}
+
+	/* The display is created after video_wake_up() already ran, so activate
+	 * it now if the video device is awake. */
+	if (video->flags & VIDEO_AWAKE) {
+		ret = display_activate_force(disp, false);
+		if (ret)
+			log_warning("cannot activate fbdev display: %d", ret);
+	}
+
 	display_ready(disp);
 	display_unref(disp);
 }
