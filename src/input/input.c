@@ -51,6 +51,7 @@
 #define NLONGS(n) (((n) + LONG_BIT - 1) / LONG_BIT)
 
 static void input_free_dev(struct input_dev *dev);
+static void input_hangup_dev(struct input_dev *dev);
 
 static void notify_event(struct input_dev *dev, uint16_t type, uint16_t code, int32_t value)
 {
@@ -97,10 +98,10 @@ static void input_data_dev(struct ev_fd *fd, int mask, void *data)
 			if (errno == EWOULDBLOCK)
 				break;
 			log_warn("reading from %s failed (%d): %m", dev->node, errno);
-			input_free_dev(dev);
+			input_hangup_dev(dev);
 		} else if (len == 0) {
 			log_debug("EOF on %s", dev->node);
-			input_free_dev(dev);
+			input_hangup_dev(dev);
 		} else if (len % sizeof(*ev)) {
 			log_warn("invalid input_event on %s", dev->node);
 		} else {
@@ -199,6 +200,22 @@ static void input_sleep_dev(struct input_dev *dev)
 	ev_eloop_rm_fd(dev->fd);
 	dev->fd = NULL;
 	input_close_dev(dev);
+}
+
+/*
+ * The fd is dead. This can be an unplug, but also the seat manager
+ * revoking the device when it disables our seat; in the latter case the
+ * device must be re-opened on the next wake. Keep initialized devices
+ * asleep instead of freeing them so input_wake_up_dev can re-open them.
+ * Genuine unplugs are removed through the udev monitor, and devices that
+ * cannot be re-opened are dropped by input_wake_up.
+ */
+static void input_hangup_dev(struct input_dev *dev)
+{
+	if (dev->initialized)
+		input_sleep_dev(dev);
+	else
+		input_free_dev(dev);
 }
 
 static int input_init_keyboard(struct input_dev *dev)
