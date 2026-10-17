@@ -395,7 +395,7 @@ static int input_init_dev(struct input *input, struct input_dev *dev)
 	dev->capabilities = probe_device_capabilities(dev->rfd, input, name);
 	if (!input_can_use(input, dev->capabilities)) {
 		ret = -ENOTSUP;
-		log_debug("ignoring non-useful device %s [%s]", dev->node, name);
+		log_debug("ignoring %s [%s]", dev->node, name);
 		goto err_close;
 	}
 
@@ -412,7 +412,7 @@ static int input_init_dev(struct input *input, struct input_dev *dev)
 
 	dev->initialized = true;
 
-	log_info("Using device %s [%s] as %s%s\n", dev->node, name,
+	log_info("Using %s [%s] as %s%s\n", dev->node, name,
 		 (dev->capabilities & DEVICE_HAS_KEYS) ? "keyboard" : "",
 		 pointer_kind_name(dev->pointer.kind));
 

@@ -50,8 +50,6 @@ int shl_module_open(struct shl_module **out, const char *file)
 	if (!out || !file)
 		return -EINVAL;
 
-	log_debug("opening module %s", file);
-
 	handle = dlopen(file, RTLD_NOW);
 	if (!handle) {
 		log_error("cannot open module %s (%d): %s", file, errno, dlerror());
@@ -78,8 +76,6 @@ int shl_module_open(struct shl_module **out, const char *file)
 		goto err_unload;
 	}
 
-	log_debug("Initializing module: %s", file);
-
 	module->ref = 1;
 	module->loaded = false;
 	module->handle = handle;
@@ -90,10 +86,8 @@ int shl_module_open(struct shl_module **out, const char *file)
 		goto err_unload;
 	}
 
-	log_debug("  Date: %s %s", module->info.date, module->info.time);
-	log_debug("  GIT: %s", module->info.githead);
-	log_debug("  Hooks: %p %p %p %p", module->info.init, module->info.load, module->info.unload,
-		  module->info.exit);
+	log_debug("%s GIT %s Date: %s %s", module->file, module->info.githead, module->info.date,
+		  module->info.time);
 
 	if (module->info.init) {
 		ret = module->info.init();
@@ -144,8 +138,6 @@ int shl_module_load(struct shl_module *module)
 
 	if (module->loaded)
 		return -EALREADY;
-
-	log_debug("loading module %s", module->file);
 
 	if (module->info.load)
 		ret = module->info.load();

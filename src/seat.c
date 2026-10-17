@@ -637,7 +637,6 @@ static void seat_monitor_new_dev(const char *node, enum uterm_monitor_dev_type t
 		kmscon_seat_add_video(seat, type, flags, node, pathname, udev);
 		break;
 	case UTERM_MONITOR_INPUT:
-		log_debug("new input device %s", node);
 		kmscon_seat_add_input(seat, udev, node);
 		break;
 	}
