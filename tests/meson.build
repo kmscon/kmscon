@@ -92,3 +92,12 @@ if enable_font_freetype
     )
     test('test_font_freetype', test_font_freetype)
 endif
+
+test_conf = executable(
+    'test_conf',
+    'test_conf.c',
+    include_directories: [src_inc, misc_inc],
+    dependencies: [libtsm_deps, shl_deps],
+)
+test('test_conf', test_conf)
+

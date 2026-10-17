@@ -32,12 +32,22 @@
 
 ## Force a specific mode for all monitors, widthxheight
 #mode=1024x768
+## Force a specific mode for a specific gpu/connector
+#mode=pci-00d.00.0[HDMI-A-1]1920x1080@144
+## You can find the gpu/connector name using journalctl -u kmsconvt@* | grep Display
+## This parameter can be specified multiple times to set different modes for
+## different gpus/connectors.
 
 ## Multi monitor configuration [clone, largest, scaled], default is scaled.
 #multi-monitor=scaled
 
-## Screen rotation, can be [normal, left, upside-down, right]
-#rotate=left
+## Screen configuration, can be [normal, left, upside-down, right, disabled]
+## Default all screens to rotate left
+#screen=left
+## Specific screen to be upside-down
+#screen=pci-00d.00.0[HDMI-A-1]upside-down
+## Disable HDMI-A-1
+#screen=[HDMI-A-1]disabled
 
 ## Fonts
 ## font-engine, can be [freetype, pango, psf, unifont, 8x16], by default kmscon tries in this order.

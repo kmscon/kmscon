@@ -479,7 +479,21 @@ font-name=Ubuntu Mono
       <varlistentry>
         <term><option>mode</option></term>
         <listitem>
-          <para>Set the resolution to {width}x{height}</para>
+          <para>Set the desired output mode. The given width, rate and height must match
+          a supported mode exactly for this option to have any effect; if there is no
+          supported mode that matches exactly, or if there is an error when using the
+          desired mode, then the default mode (first valid mode found) will be used.
+          Gpu, connector, and rate are optional, but if gpu is specified the connector
+          must also be specified.
+          You can find the name of the gpu and connector looking at kmscon logs.
+          journalctl -u kmsconvt@* | grep display
+          This parameter can be specified multiple times to set different modes for
+          different gpus/connectors.
+          </para>
+
+          <para>Modesetting is only supported in DRM mode, so this option does
+          nothing with fbdev. However, fbset can still be used to externally set
+          the mode when fbdev is in use.</para>
         </listitem>
       </varlistentry>
 
@@ -499,9 +513,16 @@ font-name=Ubuntu Mono
       </varlistentry>
 
       <varlistentry>
-        <term><option>rotate</option></term>
+        <term><option>screen {gpu}[{connector}]{config}</option></term>
         <listitem>
-          <para>Orientation of output to use. (default: normal)</para>
+          <para>Select the desired screen configuration. gpu and connector are optional.
+          config is one of 'normal', 'upside-down', 'left', 'right' and 'disabled'.
+          If config is 'disabled' kmscon won't use this display, unless it is the only
+          available display.
+          If gpu/connector are not specified, this will apply to all available displays.
+          You can specify multiple screen configurations, to setup different configurations
+          for different displays.
+          </para>
         </listitem>
       </varlistentry>
 
