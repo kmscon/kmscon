@@ -28,6 +28,7 @@
 #include <linux/kd.h>
 #include <linux/major.h>
 #include <linux/vt.h>
+#include <signal.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <sys/sysmacros.h>
@@ -47,6 +48,10 @@ struct uterm_vt_libseat {
 	int tty_fd;
 	int tty_num;
 	int saved_kbmode;
+	/* seat manager has granted us device access (enable_seat received) */
+	bool seat_enabled;
+	/* we control VT switching via VT_PROCESS + SIGUSR1/SIGUSR2 */
+	bool vt_signals;
 };
 
 static struct uterm_vt_libseat *to_libseat(struct uterm_vt *vt)
@@ -63,6 +68,7 @@ static int open_tty(struct uterm_vt_libseat *vt, const char *vt_path)
 {
 	int fd, ret;
 	struct stat st;
+	struct vt_mode mode;
 
 	fd = open(vt_path, O_RDWR | O_NOCTTY | O_CLOEXEC);
 	if (fd < 0) {
@@ -86,13 +92,42 @@ static int open_tty(struct uterm_vt_libseat *vt, const char *vt_path)
 	if (vt->saved_kbmode == K_OFF)
 		vt->saved_kbmode = K_UNICODE;
 
+	/*
+	 * Take control of VT switching so the kernel signals us with
+	 * SIGUSR1/SIGUSR2 when our VT is acquired/released. seatd has no
+	 * notion of VTs and eagerly enables its first client, so without
+	 * these signals we cannot know when our VT actually becomes visible.
+	 * If this fails, fall back to activating as soon as the seat is
+	 * enabled (the previous behavior).
+	 */
+	memset(&mode, 0, sizeof(mode));
+	mode.mode = VT_PROCESS;
+	mode.acqsig = SIGUSR1;
+	mode.relsig = SIGUSR2;
+	if (ioctl(fd, VT_SETMODE, &mode) < 0) {
+		log_warning("cannot take control of VT %d switching (%d): %m; "
+			    "falling back to eager activation",
+			    vt->tty_num, errno);
+		vt->vt_signals = false;
+	} else {
+		vt->vt_signals = true;
+	}
+
 	return 0;
 }
 
 static void close_tty(struct uterm_vt_libseat *vt)
 {
+	struct vt_mode mode;
+
 	if (vt->tty_fd <= 0)
 		return;
+
+	if (vt->vt_signals) {
+		memset(&mode, 0, sizeof(mode));
+		mode.mode = VT_AUTO;
+		ioctl(vt->tty_fd, VT_SETMODE, &mode);
+	}
 
 	ioctl(vt->tty_fd, KDSKBMODE, vt->saved_kbmode);
 	ioctl(vt->tty_fd, KDSETMODE, KD_TEXT);
@@ -128,11 +163,96 @@ static void tty_deactivate(struct uterm_vt_libseat *vt)
 	ioctl(vt->tty_fd, KDSETMODE, KD_TEXT);
 }
 
+/* Check whether our VT is the currently visible one. */
+static bool vt_is_active(struct uterm_vt_libseat *vt)
+{
+	struct vt_stat vts;
+
+	if (ioctl(vt->tty_fd, VT_GETSTATE, &vts) < 0) {
+		log_warning("cannot get current VT state (%d): %m", errno);
+		return false;
+	}
+	return vts.v_active == vt->tty_num;
+}
+
+/*
+ * SIGUSR1: the kernel switched to our VT. Acknowledge the acquire and go
+ * foreground. If the seat manager has not enabled us yet, stay background;
+ * the enable callback will find the VT active and activate us then.
+ */
+static void vt_sig_enter(struct ev_eloop *eloop, struct signalfd_siginfo *info, void *data)
+{
+	struct uterm_vt_libseat *vt = data;
+
+	if (!vt_is_active(vt)) {
+		return;
+	}
+
+	ioctl(vt->tty_fd, VT_RELDISP, VT_ACKACQ);
+
+	if (vt->base.active) {
+		return;
+	}
+
+	if (!vt->seat_enabled) {
+		return;
+	}
+
+	tty_activate(vt);
+	vt_cb_activate(&vt->base);
+}
+
+/*
+ * SIGUSR2: the kernel is about to switch away from our VT. Go background
+ * (which drops DRM master so the console and other sessions can redraw),
+ * restore text mode and acknowledge the release. Refuse the switch if
+ * deactivation fails.
+ */
+static void vt_sig_leave(struct ev_eloop *eloop, struct signalfd_siginfo *info, void *data)
+{
+	struct uterm_vt_libseat *vt = data;
+	int ret;
+
+	if (!vt_is_active(vt)) {
+		return;
+	}
+
+	if (vt->base.active) {
+		ret = vt_cb_deactivate(&vt->base, false);
+		if (ret) {
+			ioctl(vt->tty_fd, VT_RELDISP, 0);
+			return;
+		}
+	}
+
+	tty_deactivate(vt);
+	ioctl(vt->tty_fd, VT_RELDISP, 1);
+}
+
 static void vt_libseat_enable(struct libseat *libseat, void *data)
 {
 	struct uterm_vt_libseat *vt = data;
 
 	log_debug("libseat: seat enabled");
+	vt->seat_enabled = true;
+
+	/* the tty may already be gone if this event fires during teardown */
+	if (vt->tty_fd < 0) {
+		return;
+	}
+
+	/*
+	 * seatd enables its first client right at connect time, even when
+	 * our VT is not visible. Going foreground then would modeset the
+	 * live display underneath the console or another session, so only
+	 * activate if our VT is actually the foreground one; otherwise wait
+	 * for the kernel VT acquire signal.
+	 */
+	if (vt->vt_signals && !vt_is_active(vt)) {
+		log_notice("seat enabled but VT %d is not foreground, staying in background",
+			   vt->tty_num);
+		return;
+	}
 
 	tty_activate(vt);
 	vt_cb_activate(&vt->base);
@@ -143,6 +263,7 @@ static void vt_libseat_disable(struct libseat *libseat, void *data)
 	struct uterm_vt_libseat *vt = data;
 
 	log_debug("libseat: seat disabled");
+	vt->seat_enabled = false;
 
 	vt_cb_deactivate(&vt->base, false);
 	tty_deactivate(vt);
@@ -173,6 +294,11 @@ static void vt_libseat_destroy(struct uterm_vt *base)
 {
 	struct uterm_vt_libseat *vt = to_libseat(base);
 
+	if (vt->vt_signals) {
+		ev_eloop_unregister_signal_cb(vt->base.eloop, SIGUSR1, vt_sig_enter, vt);
+		ev_eloop_unregister_signal_cb(vt->base.eloop, SIGUSR2, vt_sig_leave, vt);
+	}
+
 	close_tty(vt);
 	ev_eloop_rm_fd(vt->libseat_efd);
 	libseat_close_seat(vt->libseat);
@@ -181,6 +307,18 @@ static void vt_libseat_destroy(struct uterm_vt *base)
 static int vt_libseat_activate(struct uterm_vt *base)
 {
 	struct uterm_vt_libseat *vt = to_libseat(base);
+
+	/*
+	 * With VT switching under our control, switching to our VT is all it
+	 * takes; the acquire signal handler performs the actual activation.
+	 */
+	if (vt->vt_signals) {
+		if (ioctl(vt->tty_fd, VT_ACTIVATE, vt->tty_num) < 0) {
+			log_warning("cannot activate VT %d (%d): %m", vt->tty_num, errno);
+			return -EFAULT;
+		}
+		return 0;
+	}
 
 	tty_activate(vt);
 	return 0;
@@ -323,6 +461,18 @@ static void vt_libseat_input(struct input *input, struct input_key_event *ev, vo
 		return;
 
 	log_debug("switching to VT %d via libseat", id);
+
+	if (vt->vt_signals) {
+		/*
+		 * seatd cannot switch VTs by itself, so switch directly.
+		 * The release/acquire signal handlers take care of
+		 * deactivating us and activating the other session.
+		 */
+		if (ioctl(vt->tty_fd, VT_ACTIVATE, id) < 0)
+			log_warning("cannot switch to VT %d (%d): %m", id, errno);
+		return;
+	}
+
 	vt_cb_deactivate(&vt->base, false);
 	libseat_switch_session(vt->libseat, id);
 }
@@ -355,6 +505,7 @@ struct uterm_vt *uterm_vt_libseat_new(struct ev_eloop *eloop, struct input *inpu
 {
 	struct uterm_vt_libseat *vt;
 	int libseat_fd;
+	struct vt_mode mode;
 	int ret;
 
 	vt = malloc(sizeof(*vt));
@@ -368,6 +519,24 @@ struct uterm_vt *uterm_vt_libseat_new(struct ev_eloop *eloop, struct input *inpu
 	if (vt_name) {
 		if (open_tty(vt, vt_name) < 0)
 			goto err_free;
+
+		if (vt->vt_signals) {
+			ret = ev_eloop_register_signal_cb(eloop, SIGUSR1, vt_sig_enter, vt);
+			if (!ret)
+				ret = ev_eloop_register_signal_cb(eloop, SIGUSR2, vt_sig_leave,
+								  vt);
+			if (ret) {
+				log_warning("cannot register VT signal handlers: %d; "
+					    "falling back to eager activation",
+					    ret);
+				ev_eloop_unregister_signal_cb(eloop, SIGUSR1, vt_sig_enter, vt);
+				ev_eloop_unregister_signal_cb(eloop, SIGUSR2, vt_sig_leave, vt);
+				memset(&mode, 0, sizeof(mode));
+				mode.mode = VT_AUTO;
+				ioctl(vt->tty_fd, VT_SETMODE, &mode);
+				vt->vt_signals = false;
+			}
+		}
 	}
 	libseat_set_log_handler(log_libseat);
 	libseat_set_log_level(LIBSEAT_LOG_LEVEL_INFO);
