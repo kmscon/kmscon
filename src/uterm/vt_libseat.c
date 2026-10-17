@@ -211,21 +211,50 @@ static const char *vt_libseat_get_name(struct uterm_vt *base)
 {
 	struct uterm_vt_libseat *vt = to_libseat(base);
 
+	/* seatd serves a single seat named "seat0"; we may not be connected yet */
+	if (!vt->libseat)
+		return "seat0";
+
 	return libseat_seat_name(vt->libseat);
 }
+
+/*
+ * Open a device through the seat manager with a short retry loop. kmscon
+ * processes udev device events faster than the seat manager finishes
+ * claiming the devices (especially right after the seat is opened or on
+ * hotplug), so a transient ENODEV/EACCES/EBUSY must not drop the device
+ * for the lifetime of the process.
+ */
+static int open_device_retry(struct uterm_vt_libseat *vt, const char *node, int *fd_id)
+{
+	int fd;
+
+	for (int attempts = 0; attempts < 20; attempts++) {
+		*fd_id = libseat_open_device(vt->libseat, node, &fd);
+		if (*fd_id >= 0) {
+			return fd;
+		}
+		if (errno != ENODEV && errno != EACCES && errno != EBUSY)
+			break;
+		usleep(100000);
+	}
+
+	log_warning("cannot open device %s via libseat (%d): %m", node, errno);
+	return -EFAULT;
+}
+
 static int vt_libseat_open_device(struct uterm_vt *base, const char *node, int *fd_id)
 {
 	struct uterm_vt_libseat *vt = to_libseat(base);
-	int fd;
 
 	log_debug("opening device %s via libseat", node);
 
-	*fd_id = libseat_open_device(vt->libseat, node, &fd);
-	if (*fd_id < 0) {
-		log_warning("cannot open device %s via libseat (%d): %m", node, errno);
-		return -EFAULT;
+	if (!vt->libseat) {
+		log_warning("cannot open device %s: not connected to seat manager", node);
+		return -ENODEV;
 	}
-	return fd;
+
+	return open_device_retry(vt, node, fd_id);
 }
 
 static void vt_libseat_close_device(struct uterm_vt *base, int fd, int fd_id)
@@ -234,7 +263,8 @@ static void vt_libseat_close_device(struct uterm_vt *base, int fd, int fd_id)
 
 	log_debug("closing device %d via libseat", fd_id);
 
-	libseat_close_device(vt->libseat, fd_id);
+	if (vt->libseat)
+		libseat_close_device(vt->libseat, fd_id);
 	close(fd);
 }
 
@@ -300,16 +330,15 @@ static void vt_libseat_input(struct input *input, struct input_key_event *ev, vo
 static int vt_libseat_open(const char *node, int *fd_id, void *data)
 {
 	struct uterm_vt_libseat *vt = data;
-	int fd;
 
 	log_debug("opening device %s via libseat", node);
 
-	*fd_id = libseat_open_device(vt->libseat, node, &fd);
-	if (*fd_id < 0) {
-		log_warning("cannot open device %s via libseat (%d): %m", node, errno);
-		return -EFAULT;
+	if (!vt->libseat) {
+		log_warning("cannot open device %s: not connected to seat manager", node);
+		return -ENODEV;
 	}
-	return fd;
+
+	return open_device_retry(vt, node, fd_id);
 }
 
 static void vt_libseat_close(int fd, int fd_id, void *data)
@@ -318,7 +347,8 @@ static void vt_libseat_close(int fd, int fd_id, void *data)
 
 	log_debug("closing device %d via libseat", fd_id);
 
-	libseat_close_device(vt->libseat, fd_id);
+	if (vt->libseat)
+		libseat_close_device(vt->libseat, fd_id);
 	close(fd);
 }
 
