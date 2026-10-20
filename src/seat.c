@@ -1035,6 +1035,8 @@ static void kmscon_seat_poll_video(void *data)
 
 int kmscon_seat_startup(struct kmscon_seat *seat)
 {
+	int ret;
+
 	if (!seat)
 		return -ENODEV;
 
@@ -1042,6 +1044,17 @@ int kmscon_seat_startup(struct kmscon_seat *seat)
 	if (!seat->current_sess) {
 		log_error("cannot create new session on seat %s", seat->name);
 		return -ENOMEM;
+	}
+
+	/*
+	 * With --switchvt, activation below initiates the VT switch; waiting
+	 * here would deadlock. Without it, the service manager is responsible
+	 * for activating the requested VT first.
+	 */
+	if (seat->conf->vt && !seat->conf->switchvt) {
+		ret = uterm_vt_wait(seat->vt);
+		if (ret)
+			return ret;
 	}
 
 	if (seat->conf->switchvt || uterm_vt_get_num(seat->vt) == 0)

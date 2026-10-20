@@ -54,10 +54,11 @@ static struct uterm_vt_libseat *to_libseat(struct uterm_vt *vt)
 	return shl_offsetof(vt, struct uterm_vt_libseat, base);
 }
 
+static int seat_connect(struct uterm_vt_libseat *vt);
+
 /*
- * Open the TTY for our VT. Called once after seat_wait_for_vt determines
- * which VT seatd assigned to us. The fd is kept for the lifetime of the
- * seat and used by activate/deactivate to toggle KD_GRAPHICS and K_OFF.
+ * Open the configured TTY. The fd is kept for the lifetime of the seat and
+ * used by activate/deactivate to toggle KD_GRAPHICS and K_OFF.
  */
 static int open_tty(struct uterm_vt_libseat *vt, const char *vt_path)
 {
@@ -91,7 +92,7 @@ static int open_tty(struct uterm_vt_libseat *vt, const char *vt_path)
 
 static void close_tty(struct uterm_vt_libseat *vt)
 {
-	if (vt->tty_fd <= 0)
+	if (vt->tty_fd < 0)
 		return;
 
 	ioctl(vt->tty_fd, KDSKBMODE, vt->saved_kbmode);
@@ -162,18 +163,69 @@ static const struct libseat_seat_listener libseat_listener = {
 	.disable_seat = vt_libseat_disable,
 };
 
+static int seat_connect(struct uterm_vt_libseat *vt)
+{
+	int libseat_fd;
+	int ret;
+
+	if (vt->libseat)
+		return 0;
+
+	/*
+	 * Open libseat. If another client is still being disabled (race
+	 * between VT_WAITACTIVE and seatd processing the switch), retry
+	 * briefly.
+	 */
+	for (int attempts = 0; attempts < 50; attempts++) {
+		vt->libseat = libseat_open_seat(&libseat_listener, vt);
+		if (vt->libseat)
+			break;
+		if (errno != EBUSY && errno != EBADF) {
+			log_error("cannot open libseat: %m");
+			return -errno;
+		}
+		if (attempts == 0)
+			log_info("seat busy, waiting for previous client to release...");
+		usleep(100000);
+	}
+	if (!vt->libseat) {
+		log_error("cannot open libseat after retries: %m");
+		return -errno;
+	}
+	log_notice("libseat seat opened successfully");
+
+	libseat_fd = libseat_get_fd(vt->libseat);
+	ret = ev_eloop_new_fd(vt->base.eloop, &vt->libseat_efd, libseat_fd, EV_READABLE,
+			      vt_libseat_event, vt);
+	if (ret) {
+		log_error("cannot register libseat fd with eloop: %d", ret);
+		libseat_close_seat(vt->libseat);
+		vt->libseat = NULL;
+		return ret;
+	}
+
+	return 0;
+}
+
 static void vt_libseat_destroy(struct uterm_vt *base)
 {
 	struct uterm_vt_libseat *vt = to_libseat(base);
 
 	close_tty(vt);
-	ev_eloop_rm_fd(vt->libseat_efd);
-	libseat_close_seat(vt->libseat);
+	if (vt->libseat_efd)
+		ev_eloop_rm_fd(vt->libseat_efd);
+	if (vt->libseat)
+		libseat_close_seat(vt->libseat);
 }
 
 static int vt_libseat_activate(struct uterm_vt *base)
 {
 	struct uterm_vt_libseat *vt = to_libseat(base);
+	int ret;
+
+	ret = seat_connect(vt);
+	if (ret)
+		return ret;
 
 	tty_activate(vt);
 	/* Deliver enable_seat if it was already queued while opening the seat. */
@@ -190,11 +242,28 @@ static int vt_libseat_deactivate(struct uterm_vt *base)
 	return 0;
 }
 
+static int vt_libseat_wait(struct uterm_vt *base)
+{
+	struct uterm_vt_libseat *vt = to_libseat(base);
+
+	if (vt->tty_fd >= 0 && vt->tty_num > 0) {
+		log_info("waiting for VT %d to become active", vt->tty_num);
+		while (ioctl(vt->tty_fd, VT_WAITACTIVE, vt->tty_num) < 0) {
+			if (errno == EINTR)
+				continue;
+			log_warning("cannot wait for VT %d (%d): %m", vt->tty_num, errno);
+			return -EFAULT;
+		}
+	}
+
+	return seat_connect(vt);
+}
+
 static void vt_libseat_bell(struct uterm_vt *base)
 {
 	struct uterm_vt_libseat *vt = to_libseat(base);
 
-	if (vt->tty_fd <= 0)
+	if (vt->tty_fd < 0)
 		return;
 
 	if (write(vt->tty_fd, "\a", 1) != 1)
@@ -272,6 +341,7 @@ static const struct uterm_vt_ops vt_libseat_ops = {
 	.destroy = vt_libseat_destroy,
 	.activate = vt_libseat_activate,
 	.deactivate = vt_libseat_deactivate,
+	.wait = vt_libseat_wait,
 	.bell = vt_libseat_bell,
 	.get_num = vt_libseat_get_num,
 	.get_name = vt_libseat_get_name,
@@ -356,7 +426,6 @@ struct uterm_vt *uterm_vt_libseat_new(struct ev_eloop *eloop, struct input *inpu
 				      const char *vt_name)
 {
 	struct uterm_vt_libseat *vt;
-	int libseat_fd;
 	int ret;
 
 	vt = calloc(1, sizeof(*vt));
@@ -365,6 +434,7 @@ struct uterm_vt *uterm_vt_libseat_new(struct ev_eloop *eloop, struct input *inpu
 	vt->base.eloop = eloop;
 	vt->base.input = input;
 	vt->base.ops = &vt_libseat_ops;
+	vt->tty_fd = -1;
 
 	if (vt_name) {
 		if (open_tty(vt, vt_name) < 0)
@@ -372,51 +442,23 @@ struct uterm_vt *uterm_vt_libseat_new(struct ev_eloop *eloop, struct input *inpu
 	}
 	libseat_set_log_handler(log_libseat);
 	libseat_set_log_level(LIBSEAT_LOG_LEVEL_INFO);
-	/*
-	 * Open libseat. If another client is still being disabled (race
-	 * between VT_WAITACTIVE and seatd processing the switch), retry
-	 * briefly.
-	 */
-	for (int attempts = 0; attempts < 50; attempts++) {
-		vt->libseat = libseat_open_seat(&libseat_listener, vt);
-		if (vt->libseat)
-			break;
-		if (errno != EBUSY && errno != EBADF) {
-			log_error("cannot open libseat: %m");
-			ret = -errno;
-			goto err_close_tty;
-		}
-		if (attempts == 0)
-			log_info("seat busy, waiting for previous client to release...");
-		usleep(100000);
-	}
-	if (!vt->libseat) {
-		log_error("cannot open libseat after retries: %m");
-		ret = -errno;
-		goto err_close_tty;
-	}
-	log_notice("libseat seat opened successfully");
-
-	libseat_fd = libseat_get_fd(vt->libseat);
-	ret = ev_eloop_new_fd(vt->base.eloop, &vt->libseat_efd, libseat_fd, EV_READABLE,
-			      vt_libseat_event, vt);
-	if (ret) {
-		log_error("cannot register libseat fd with eloop: %d", ret);
-		goto err_libseat;
-	}
 
 	input_set_device_ops(input, vt_libseat_open, vt_libseat_close, vt);
 
 	ret = input_register_key_cb(input, vt_libseat_input, vt);
 	if (ret)
-		goto err_libseat_fd;
+		goto err_close_tty;
+
+	if (!vt_name) {
+		ret = seat_connect(vt);
+		if (ret)
+			goto err_input;
+	}
 
 	return &vt->base;
 
-err_libseat_fd:
-	ev_eloop_rm_fd(vt->libseat_efd);
-err_libseat:
-	libseat_close_seat(vt->libseat);
+err_input:
+	input_unregister_key_cb(input, vt_libseat_input, vt);
 err_close_tty:
 	close_tty(vt);
 err_free:
