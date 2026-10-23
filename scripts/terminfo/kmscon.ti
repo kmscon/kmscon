@@ -62,6 +62,11 @@ kmscon|KMS Console,
   setaf=\E[%?%p1%{8}%<%t3%p1%d%e%p1%{16}%<%t9%p1%{8}%-%d%e38;5;%p1%d%;m,
   op=\E[39;49m,
 
+# 24-bit Direct Color ("user defined" capabilities)
+  Tc,
+  setrgbb=\E[48;2;%p1%d;%p2%d;%p3%d;m,
+  setrgbf=\E[38;2;%p1%d;%p2%d;%p3%d;m,
+
 # Scrolling and Margins
   csr=\E[%i%p1%d;%p2%dr,
   indn=\E[%p1%dS, rin=\E[%p1%dT,
