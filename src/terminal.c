@@ -1344,6 +1344,8 @@ void terminal_refresh_displays(struct kmscon_terminal *term)
 
 void terminal_activate(struct kmscon_terminal *term)
 {
+	struct screen *scr;
+
 	term->awake = true;
 	if (term->conf->blink) {
 		ev_timer_enable(term->blink_timer);
@@ -1353,6 +1355,13 @@ void terminal_activate(struct kmscon_terminal *term)
 		terminal_open(term);
 	else
 		kmscon_asciinema_resume(term->asciinema);
+
+	/* The displays' HW cursor is shared: another terminal may have replaced
+	 * or freed it */
+	dlist_for_each_entry(scr, &term->screens, list)
+	{
+		refresh_hw_cursor(scr);
+	}
 
 	terminal_refresh_displays(term);
 }
