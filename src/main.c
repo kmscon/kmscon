@@ -90,8 +90,8 @@ static void destroy_app(struct kmscon_app *app)
 	ev_eloop_unregister_signal_cb(app->eloop, SIGPIPE, app_sig_ignore, app);
 	ev_eloop_unregister_signal_cb(app->eloop, SIGINT, app_sig_generic, app);
 	ev_eloop_unregister_signal_cb(app->eloop, SIGTERM, app_sig_generic, app);
-	ev_eloop_unref(app->eloop);
 	kmscon_dbus_free(app->dbus);
+	ev_eloop_unref(app->eloop);
 }
 
 static void update_xkb_layout(const char *model, const char *layout, const char *variant,
