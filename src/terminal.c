@@ -1688,6 +1688,15 @@ bool terminal_is_active(struct kmscon_terminal *term)
 	return term->awake;
 }
 
+/* The process started on the terminal (login), or 0 if none runs */
+pid_t terminal_get_child(struct kmscon_terminal *term)
+{
+	if (!term->opened)
+		return 0;
+
+	return kmscon_pty_get_child(term->pty);
+}
+
 int terminal_get_owner(struct kmscon_terminal *term, uid_t *uid)
 {
 	if (!term->opened)

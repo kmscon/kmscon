@@ -768,6 +768,14 @@ int kmscon_pty_get_slave_name(struct kmscon_pty *pty, char *buf, size_t len)
 	return ptsname_r(pty->fd, buf, len);
 }
 
+pid_t kmscon_pty_get_child(struct kmscon_pty *pty)
+{
+	if (!pty || !pty_is_open(pty))
+		return 0;
+
+	return pty->child;
+}
+
 static int proc_get_uid(pid_t pid, uid_t *uid)
 {
 	char path[64], line[256];

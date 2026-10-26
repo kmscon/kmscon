@@ -74,6 +74,7 @@ void kmscon_pty_kill(struct kmscon_pty *pty, int signum);
 void kmscon_pty_resize(struct kmscon_pty *pty, unsigned short width, unsigned short height);
 
 int kmscon_pty_get_slave_name(struct kmscon_pty *pty, char *buf, size_t len);
+pid_t kmscon_pty_get_child(struct kmscon_pty *pty);
 int kmscon_pty_get_owner(struct kmscon_pty *pty, uid_t *uid);
 
 #endif /* KMSCON_PTY_H */

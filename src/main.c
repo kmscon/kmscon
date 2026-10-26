@@ -54,6 +54,13 @@ struct kmscon_app {
 	struct kmscon_dbus *dbus;
 };
 
+static void logind_lock(pid_t leader, uid_t uid, bool lock, void *data)
+{
+	struct kmscon_app *app = data;
+
+	kmscon_seat_logind_lock(app->seat, leader, uid, lock);
+}
+
 static int setup_seat(struct kmscon_app *app)
 {
 	int ret;
@@ -65,6 +72,13 @@ static int setup_seat(struct kmscon_app *app)
 	}
 	app->seat_ctx = kmscon_seat_get_conf(app->seat);
 	app->seat_conf = conf_ctx_get_mem(app->seat_ctx);
+
+	if (app->dbus && app->seat_conf->lock_argv) {
+		kmscon_seat_set_dbus(app->seat, app->dbus);
+		ret = kmscon_dbus_listen_logind(app->dbus, logind_lock, app);
+		if (ret)
+			log_warning("cannot listen to logind: %d", ret);
+	}
 
 	return kmscon_seat_startup(app->seat);
 }

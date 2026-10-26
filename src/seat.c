@@ -38,6 +38,7 @@
 #include <unistd.h>
 #include "conf.h"
 #include "config.h"
+#include "dbus.h"
 #include "input/input.h"
 #include "monitor.h"
 #include "seat.h"
@@ -107,6 +108,8 @@ struct kmscon_seat {
 	/* DPMS timeout management */
 	struct ev_timer *dpms_timer;
 	bool dpms_blanked;
+
+	struct kmscon_dbus *dbus;
 };
 
 const char be_drm3d[] = "drm3d";
@@ -543,8 +546,19 @@ static void seat_pointer_event(struct input *input, struct input_pointer_event *
  * terminal instead, which runs lock-cmd as the session owner.
  */
 
-/* Lock @sess for the user logged in on it */
-static int session_lock(struct kmscon_session *sess)
+/* logind knows it if login registered a session, otherwise guess from /proc */
+static int session_get_owner(struct kmscon_session *sess, uid_t *uid)
+{
+	pid_t leader = terminal_get_child(sess->term);
+
+	if (leader > 0 && !kmscon_dbus_get_session_owner(sess->seat->dbus, leader, uid))
+		return 0;
+
+	return terminal_get_owner(sess->term, uid);
+}
+
+/* Lock @sess for its owner, or for @owner if logind already told who it is */
+static int session_lock(struct kmscon_session *sess, const uid_t *owner)
 {
 	struct kmscon_seat *seat = sess->seat;
 	struct kmscon_terminal *lock;
@@ -566,10 +580,14 @@ static int session_lock(struct kmscon_session *sess)
 		return -EBUSY;
 	}
 
-	ret = terminal_get_owner(sess->term, &uid);
-	if (ret) {
-		log_debug("nobody is logged in on session %p, not locking it", sess);
-		return ret;
+	if (owner) {
+		uid = *owner;
+	} else {
+		ret = session_get_owner(sess, &uid);
+		if (ret) {
+			log_debug("nobody is logged in on session %p, not locking it", sess);
+			return ret;
+		}
 	}
 
 	ret = terminal_new_lock(&lock, sess, sess->term, uterm_vt_get_num(seat->vt), seat->conf_ctx,
@@ -592,6 +610,7 @@ static int session_lock(struct kmscon_session *sess)
 		terminal_activate(lock);
 	}
 
+	kmscon_dbus_set_locked_hint(seat->dbus, terminal_get_child(sess->term), true);
 	log_info("locked session %p on seat %s for uid %u", sess, seat->name, uid);
 	return 0;
 }
@@ -616,6 +635,7 @@ static void session_unlock(struct kmscon_session *sess)
 	if (active)
 		terminal_activate(sess->term);
 
+	kmscon_dbus_set_locked_hint(sess->seat->dbus, terminal_get_child(sess->term), false);
 	log_info("unlocked session %p", sess);
 }
 
@@ -648,11 +668,34 @@ static void seat_lock(struct kmscon_seat *seat)
 
 	dlist_for_each_entry(s, &seat->sessions, list)
 	{
-		if (!session_lock(s))
+		if (!session_lock(s, NULL))
 			++num;
 	}
 
 	log_info("lock requested on seat %s, %u session(s) locked", seat->name, num);
+}
+
+/* logind asked to lock or unlock the session led by @leader */
+void kmscon_seat_logind_lock(struct kmscon_seat *seat, pid_t leader, uid_t uid, bool lock)
+{
+	struct kmscon_session *s;
+
+	dlist_for_each_entry(s, &seat->sessions, list)
+	{
+		if (terminal_get_child(s->term) != leader)
+			continue;
+
+		if (lock)
+			session_lock(s, &uid);
+		else
+			session_unlock(s);
+		return;
+	}
+}
+
+void kmscon_seat_set_dbus(struct kmscon_seat *seat, struct kmscon_dbus *dbus)
+{
+	seat->dbus = dbus;
 }
 
 static void seat_input_event(struct input *input, struct input_key_event *ev, void *data)

@@ -57,6 +57,7 @@ void terminal_refresh_displays(struct kmscon_terminal *term);
 void terminal_activate(struct kmscon_terminal *term);
 void terminal_deactivate(struct kmscon_terminal *term);
 bool terminal_is_active(struct kmscon_terminal *term);
+pid_t terminal_get_child(struct kmscon_terminal *term);
 int terminal_get_owner(struct kmscon_terminal *term, uid_t *uid);
 
 #endif /* KMSCON_TERMINAL_H */
