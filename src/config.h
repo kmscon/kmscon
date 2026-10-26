@@ -177,6 +177,8 @@ struct kmscon_conf_t {
 	struct conf_grab *grab_rotate_ccw;
 	/* reboot system grab */
 	struct conf_grab *grab_reboot;
+	/* lock sessions grab */
+	struct conf_grab *grab_lock;
 
 	/* Video Options */
 	/* use DRM if available */
