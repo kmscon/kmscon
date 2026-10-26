@@ -257,6 +257,16 @@ font-name=Ubuntu Mono
       </varlistentry>
 
       <varlistentry>
+        <term><option>lock-cmd</option></term>
+        <listitem>
+          <para>Unlock program run as the owner of a locked terminal, given
+                by its absolute path, for example /usr/bin/vlock -c. Locking
+                is off while it is unset. See the Locking section of
+                kmscon(1). (default: unset)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
         <term><option>xkb-model</option></term>
         <listitem>
           <para>Set XkbModel for input devices. (default: unset)</para>
@@ -445,6 +455,16 @@ font-name=Ubuntu Mono
                 is performed after syncing disk buffers.
                 Example: grab-reboot=&lt;Ctrl&gt;&lt;Alt&gt;Delete
                 (default: disabled)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>grab-lock</option></term>
+        <listitem>
+          <para>Lock every terminal of this kmscon instance where a user is
+                logged in. The shortcut does nothing while lock-cmd is unset.
+                See the Locking section of kmscon(1).
+                (default: &lt;Ctrl&gt;&lt;Logo&gt;l)</para>
         </listitem>
       </varlistentry>
 
