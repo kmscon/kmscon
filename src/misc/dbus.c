@@ -153,6 +153,7 @@ struct kmscon_dbus *kmscon_dbus_new(struct ev_eloop *eloop)
 	if (dbus_error_is_set(&error)) {
 		log_debug("Connection Error: %s\n", error.message);
 		dbus_error_free(&error);
+		free(dbus);
 		return NULL;
 	}
 	return dbus;
