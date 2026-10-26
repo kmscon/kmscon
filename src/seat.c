@@ -576,6 +576,11 @@ static void seat_input_event(struct input *input, struct input_key_event *ev, vo
 			seat_switch(seat, s);
 		return;
 	}
+	if (conf_grab_matches(seat->conf->grab_lock, ev->mods, ev->num_syms, ev->keysyms)) {
+		ev->handled = true;
+		log_warn("TO DO implement locking");
+		return;
+	}
 	if (seat->conf->grab_reboot &&
 	    conf_grab_matches(seat->conf->grab_reboot, ev->mods, ev->num_syms, ev->keysyms)) {
 		ev->handled = true;
