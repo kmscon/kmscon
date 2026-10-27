@@ -36,6 +36,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/wait.h>
 #include "asciinema.h"
 #include "conf.h"
 #include "config.h"
@@ -114,10 +115,18 @@ struct kmscon_terminal {
 	bool cursor_blinking;
 
 	struct kmscon_asciinema *asciinema;
+
+	/* Set on lock terminals only, which run the unlock helper instead of the
+	 * login process: the terminal hidden behind this one. It starts with its
+	 * zoom and rotation, and follows the changes made while locked. */
+	struct kmscon_terminal *follower;
+	struct ev_timer *respawn_timer;
 };
 
 #define BLINK_TIMER_NS (500 * 1000 * 1000) // Blinking interval 500ms
 #define BLINK_CURSOR_TYPING 1		   // After keypress, wait 1s before blinking the cursor
+
+#define LOCK_RESPAWN_DELAY 5 // Delay in seconds before restarting a failed unlock helper
 
 static void coord_to_cell(struct kmscon_terminal *term, int32_t x, int32_t y, unsigned int *posx,
 			  unsigned int *posy)
@@ -491,6 +500,10 @@ static void osc_event(struct tsm_vte *vte, const char *osc_string, size_t osc_le
 {
 	struct kmscon_terminal *term = data;
 
+	/* The unlock helper must not hand the display to anything */
+	if (term->follower)
+		return;
+
 	if (strcmp(osc_string, "setBackground") == 0) {
 		log_info("Got OSC setBackground");
 		kmscon_session_set_background(term->session);
@@ -780,6 +793,50 @@ static void terminal_update_size_notify(struct kmscon_terminal *term)
 	update_pointer_max_all(term);
 }
 
+static struct screen *find_screen(struct kmscon_terminal *term, struct display *disp)
+{
+	struct screen *scr;
+
+	dlist_for_each_entry(scr, &term->screens, list)
+	{
+		if (scr->disp == disp)
+			return scr;
+	}
+	return NULL;
+}
+
+static void sync_follower(struct kmscon_terminal *term)
+{
+	struct kmscon_terminal *follower = term->follower;
+	struct screen *scr, *fscr;
+	enum Orientation orientation;
+
+	if (!follower || !term->font)
+		return;
+
+	follower->auto_font_size = term->auto_font_size;
+	if (follower->font != term->font) {
+		kmscon_font_ref(term->font);
+		kmscon_font_unref(follower->font);
+		follower->font = term->font;
+		follower->font_size = term->font_size;
+		font_update_all(follower);
+	}
+
+	dlist_for_each_entry(fscr, &follower->screens, list)
+	{
+		scr = find_screen(term, fscr->disp);
+		if (!scr)
+			continue;
+		orientation = kmscon_text_get_orientation(scr->txt);
+		if (orientation != kmscon_text_get_orientation(fscr->txt)) {
+			kmscon_text_rotate(fscr->txt, orientation);
+			refresh_hw_cursor(fscr);
+		}
+	}
+	terminal_update_size_notify(follower);
+}
+
 static void rotate_cw_screen(struct screen *scr)
 {
 	unsigned int orientation = kmscon_text_get_orientation(scr->txt);
@@ -797,6 +854,7 @@ static void rotate_cw_all(struct kmscon_terminal *term)
 		rotate_cw_screen(scr);
 	}
 	terminal_update_size_notify(term);
+	sync_follower(term);
 }
 
 static void rotate_ccw_screen(struct screen *scr)
@@ -819,20 +877,18 @@ static void rotate_ccw_all(struct kmscon_terminal *term)
 		rotate_ccw_screen(scr);
 	}
 	terminal_update_size_notify(term);
+	sync_follower(term);
 }
 
 int terminal_add_display(struct kmscon_terminal *term, struct display *disp)
 {
-	struct screen *scr;
+	struct screen *scr, *fscr;
 	const char *be, *gpu, *connector;
 	enum Orientation orientation;
 	int ret;
 
-	dlist_for_each_entry(scr, &term->screens, list)
-	{
-		if (scr->disp == disp)
-			return 0;
-	}
+	if (find_screen(term, disp))
+		return 0;
 
 	scr = calloc(1, sizeof(*scr));
 	if (!scr) {
@@ -847,6 +903,11 @@ int terminal_add_display(struct kmscon_terminal *term, struct display *disp)
 	connector = display_name(disp);
 
 	config_get_screen(term->conf, gpu, connector, &orientation, &scr->config_enabled);
+
+	/* A lock terminal is shown with the rotation of the terminal it hides */
+	fscr = term->follower ? find_screen(term->follower, disp) : NULL;
+	if (fscr)
+		orientation = kmscon_text_get_orientation(fscr->txt);
 
 	ret = display_register_pageflip(scr->disp, display_pageflip, scr);
 	if (ret) {
@@ -911,13 +972,10 @@ void terminal_rm_display(struct kmscon_terminal *term, struct display *disp)
 {
 	struct screen *scr;
 
-	dlist_for_each_entry(scr, &term->screens, list)
-	{
-		if (scr->disp == disp) {
-			log_debug("removed display %s from terminal %p", display_name(disp), term);
-			free_screen(scr, true);
-			return;
-		}
+	scr = find_screen(term, disp);
+	if (scr) {
+		log_debug("removed display %s from terminal %p", display_name(disp), term);
+		free_screen(scr, true);
 	}
 }
 
@@ -926,6 +984,8 @@ static void zoom_in(struct kmscon_terminal *term)
 	unsigned int new_size;
 
 	term->auto_font_size = false; // don't auto-adjust font size anymore
+	if (term->follower)
+		term->follower->auto_font_size = false;
 
 	if (term->font_size > 150 || !term->font_size) // don't allow zoom in beyond 150
 		return;
@@ -935,6 +995,7 @@ static void zoom_in(struct kmscon_terminal *term)
 		return;
 	font_update_all(term);
 	terminal_update_size_notify(term);
+	sync_follower(term);
 }
 
 static void zoom_out(struct kmscon_terminal *term)
@@ -942,6 +1003,8 @@ static void zoom_out(struct kmscon_terminal *term)
 	unsigned int new_size;
 
 	term->auto_font_size = false; // don't auto-adjust font size anymore
+	if (term->follower)
+		term->follower->auto_font_size = false;
 
 	if (term->font_size <= term->font->increase_step)
 		return;
@@ -952,6 +1015,7 @@ static void zoom_out(struct kmscon_terminal *term)
 		return;
 	font_update_all(term);
 	terminal_update_size_notify(term);
+	sync_follower(term);
 }
 
 static void input_event(struct input *input, struct input_key_event *ev, void *data)
@@ -1312,7 +1376,7 @@ static int terminal_open(struct kmscon_terminal *term)
 		return ret;
 
 	term->opened = true;
-	if (term->conf->issue)
+	if (term->conf->issue && !term->follower)
 		kmscon_issue_write(term);
 	asciinema_start(term);
 
@@ -1344,6 +1408,8 @@ void terminal_refresh_displays(struct kmscon_terminal *term)
 
 void terminal_activate(struct kmscon_terminal *term)
 {
+	struct screen *scr;
+
 	term->awake = true;
 	if (term->conf->blink) {
 		ev_timer_enable(term->blink_timer);
@@ -1353,6 +1419,13 @@ void terminal_activate(struct kmscon_terminal *term)
 		terminal_open(term);
 	else
 		kmscon_asciinema_resume(term->asciinema);
+
+	/* The displays' HW cursor is shared: another terminal may have replaced
+	 * or freed it */
+	dlist_for_each_entry(scr, &term->screens, list)
+	{
+		refresh_hw_cursor(scr);
+	}
 
 	terminal_refresh_displays(term);
 }
@@ -1372,7 +1445,11 @@ void terminal_destroy(struct kmscon_terminal *term)
 {
 	log_debug("free terminal object %p", term);
 
+	/* The unlock helper runs as the user and may ignore the hangup */
+	if (term->follower)
+		kmscon_pty_kill(term->pty, SIGKILL);
 	terminal_close(term);
+	ev_eloop_rm_timer(term->respawn_timer);
 	rm_all_screens(term);
 	ev_eloop_rm_timer(term->blink_timer);
 	ev_eloop_rm_timer(term->blink_cursor);
@@ -1400,11 +1477,56 @@ static void pty_input(struct kmscon_pty *pty, const char *u8, size_t len, void *
 	}
 }
 
-static void pty_exit(struct kmscon_pty *pty, bool restart, void *data)
+static void lock_respawn_event(struct ev_timer *timer, uint64_t num, void *data)
+{
+	struct kmscon_terminal *term = data;
+
+	terminal_open(term);
+}
+
+static void lock_exit(struct kmscon_terminal *term, int status)
+{
+	struct itimerspec spec = {0};
+	char msg[160];
+	int len;
+
+	if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
+		log_info("unlock helper succeeded");
+		kmscon_session_unlock_request(term->session);
+		return;
+	}
+
+	/* Fail closed: the session stays locked and the helper is restarted. */
+	if (WIFSIGNALED(status))
+		log_warning("unlock helper killed by signal %d, restarting in %ds",
+			    WTERMSIG(status), LOCK_RESPAWN_DELAY);
+	else
+		log_warning("unlock helper exited with status %d, restarting in %ds",
+			    WEXITSTATUS(status), LOCK_RESPAWN_DELAY);
+	len = snprintf(msg, sizeof(msg),
+		       "\r\nkmscon: the unlock helper failed, restarting it in %d seconds\r\n",
+		       LOCK_RESPAWN_DELAY);
+	tsm_vte_input(term->vte, msg, len);
+	redraw_all(term);
+
+	spec.it_value.tv_sec = LOCK_RESPAWN_DELAY;
+	ev_timer_update(term->respawn_timer, &spec);
+}
+
+static void pty_exit(struct kmscon_pty *pty, bool restart, int status, void *data)
 {
 	struct kmscon_terminal *term = data;
 
 	terminal_close(term);
+
+	if (term->follower) {
+		lock_exit(term, status);
+		return;
+	}
+
+	/* The user logged out (or the login prompt timed out), there is
+	 * nothing left to protect behind a lock */
+	kmscon_session_unlock_request(term->session);
 
 	if (restart) {
 		terminal_open(term);
@@ -1428,9 +1550,38 @@ static void write_event(struct tsm_vte *vte, const char *u8, size_t len, void *d
 	kmscon_pty_write(term->pty, u8, len);
 }
 
-struct kmscon_terminal *terminal_new(struct kmscon_session *session, unsigned int vtnr,
-				     struct conf_ctx *conf_ctx, struct ev_eloop *eloop,
-				     struct input *input, const char *seat_name)
+static int setup_lock_pty(struct kmscon_terminal *term, const char *seat_name, unsigned int vtnr,
+			  uid_t uid)
+{
+	int ret;
+
+	/* Always reset the environment, the helper runs as the user */
+	ret = kmscon_pty_set_conf(term->pty, term->conf->term, "truecolor", term->conf->lock_argv,
+				  seat_name, vtnr, true, term->conf->backspace_delete, false,
+				  false);
+	if (ret)
+		return ret;
+
+	ret = kmscon_pty_set_user(term->pty, uid);
+	if (ret)
+		return ret;
+
+	/* Refuse to lock if the helper cannot run, the session would stay
+	 * locked for good. */
+	if (!kmscon_pty_can_exec(term->pty)) {
+		log_warning("cannot lock session: the owner cannot read and execute lock-cmd '%s'",
+			    term->conf->lock_argv[0]);
+		return -EACCES;
+	}
+
+	return ev_eloop_new_timer(term->eloop, &term->respawn_timer, NULL, lock_respawn_event,
+				  term);
+}
+
+static int terminal_create(struct kmscon_terminal **out, struct kmscon_session *session,
+			   unsigned int vtnr, struct conf_ctx *conf_ctx, struct ev_eloop *eloop,
+			   struct input *input, const char *seat_name,
+			   struct kmscon_terminal *follower, uid_t uid)
 {
 	struct kmscon_terminal *term;
 	struct itimerspec blink_interval = {
@@ -1441,9 +1592,10 @@ struct kmscon_terminal *terminal_new(struct kmscon_session *session, unsigned in
 
 	term = calloc(1, sizeof(*term));
 	if (!term)
-		return NULL;
+		return -ENOMEM;
 
 	term->ref = 1;
+	term->follower = follower;
 	term->session = session;
 	term->eloop = eloop;
 	term->input = input;
@@ -1476,22 +1628,32 @@ struct kmscon_terminal *terminal_new(struct kmscon_session *session, unsigned in
 	if (ret)
 		goto err_vte;
 
-	term->font_size = term->conf->font_size;
-	if (term->font_size) {
-		ret = font_set(term, term->font_size);
-		if (ret)
-			goto err_vte;
+	if (follower) {
+		term->font_size = follower->font_size;
+		term->auto_font_size = follower->auto_font_size;
+		term->font = follower->font;
+		kmscon_font_ref(term->font);
 	} else {
-		term->auto_font_size = true;
+		term->font_size = term->conf->font_size;
+		if (term->font_size) {
+			ret = font_set(term, term->font_size);
+			if (ret)
+				goto err_vte;
+		} else {
+			term->auto_font_size = true;
+		}
 	}
 
 	ret = kmscon_pty_new(&term->pty, pty_input, pty_exit, term);
 	if (ret)
 		goto err_font;
 
-	ret = kmscon_pty_set_conf(term->pty, term->conf->term, "truecolor", term->conf->argv,
-				  seat_name, vtnr, term->conf->reset_env,
-				  term->conf->backspace_delete, term->conf->oneshot);
+	if (follower)
+		ret = setup_lock_pty(term, seat_name, vtnr, uid);
+	else
+		ret = kmscon_pty_set_conf(term->pty, term->conf->term, "truecolor",
+					  term->conf->argv, seat_name, vtnr, term->conf->reset_env,
+					  term->conf->backspace_delete, term->conf->oneshot, true);
 	if (ret)
 		goto err_pty;
 
@@ -1519,7 +1681,7 @@ struct kmscon_terminal *terminal_new(struct kmscon_session *session, unsigned in
 		if (ret)
 			goto err_blink;
 	}
-	if (term->conf->asciicast) {
+	if (term->conf->asciicast && !follower) {
 		ret = kmscon_asciinema_new(&term->asciinema, term->eloop, term->conf->asciicast,
 					   term->conf->asciicast_loop, asciinema_write, term);
 		if (ret)
@@ -1529,7 +1691,8 @@ struct kmscon_terminal *terminal_new(struct kmscon_session *session, unsigned in
 	ev_eloop_ref(term->eloop);
 	input_ref(term->input);
 	log_debug("new terminal object %p", term);
-	return term;
+	*out = term;
+	return 0;
 
 err_blink:
 	ev_eloop_rm_timer(term->blink_timer);
@@ -1540,6 +1703,7 @@ err_input:
 err_ptyfd:
 	ev_eloop_rm_fd(term->ptyfd);
 err_pty:
+	ev_eloop_rm_timer(term->respawn_timer);
 	kmscon_pty_unref(term->pty);
 err_font:
 	kmscon_font_unref(term->font);
@@ -1549,5 +1713,45 @@ err_con:
 	tsm_screen_unref(term->console);
 err_free:
 	free(term);
-	return NULL;
+	return ret;
+}
+
+struct kmscon_terminal *terminal_new(struct kmscon_session *session, unsigned int vtnr,
+				     struct conf_ctx *conf_ctx, struct ev_eloop *eloop,
+				     struct input *input, const char *seat_name)
+{
+	struct kmscon_terminal *term;
+
+	if (terminal_create(&term, session, vtnr, conf_ctx, eloop, input, seat_name, NULL, 0))
+		return NULL;
+	return term;
+}
+
+int terminal_new_lock(struct kmscon_terminal **out, struct kmscon_session *session,
+		      struct kmscon_terminal *locked, unsigned int vtnr, struct conf_ctx *conf_ctx,
+		      struct ev_eloop *eloop, struct input *input, const char *seat_name, uid_t uid)
+{
+	return terminal_create(out, session, vtnr, conf_ctx, eloop, input, seat_name, locked, uid);
+}
+
+bool terminal_is_active(struct kmscon_terminal *term)
+{
+	return term->awake;
+}
+
+/* The process started on the terminal (login), or 0 if none runs */
+pid_t terminal_get_child(struct kmscon_terminal *term)
+{
+	if (!term->opened)
+		return 0;
+
+	return kmscon_pty_get_child(term->pty);
+}
+
+int terminal_get_owner(struct kmscon_terminal *term, uid_t *uid)
+{
+	if (!term->opened)
+		return -ENOENT;
+
+	return kmscon_pty_get_owner(term->pty, uid);
 }

@@ -105,6 +105,17 @@ Kmscon queries and setups system locale settings before starting if built with d
 Otherwise, you can change locale settings via `--xkb-{model,layout,variant,options}` command line options.
 See `man kmscon` for more information.
 
+### Locking terminals
+
+Locking needs an unlock program, set with the `lock-cmd` option, for example `lock-cmd=/usr/bin/vlock -c`. It runs as the owner of each locked terminal, so each one asks for its own owner's password.
+`<Ctrl><Logo>l` (option `grab-lock`) then locks every terminal of the kmscon instance where a user is logged in.
+If kmscon is built with dbus support, it also locks a terminal when logind asks for it
+(`loginctl lock-session`, `loginctl lock-sessions`, `IdleAction=lock`), unlocks it on `loginctl unlock-session`,
+and tells logind whether a session is locked.
+To lock before suspend, enable `kmscon-lock-on-sleep.service`. It runs `loginctl lock-sessions`, which also asks
+GUI sessions to lock, and the system may suspend before the lock screen is drawn.
+See `man kmscon` for more information.
+
 ### Config file
 
 The default configuration file is `/etc/kmscon/kmscon.conf`. Any command line option can be put in the config file in

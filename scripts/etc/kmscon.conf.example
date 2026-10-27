@@ -91,6 +91,9 @@
 ##   0 (default): graceful reboot (sends SIGINT to init)
 ##   >0: immediate hard reboot after syncing disk buffers
 #grab-reboot=<Ctrl><Alt>Delete
+## Lock all logged in terminals of this kmscon instance (only when lock-cmd
+## is set). Each terminal asks for the password of its owner
+#grab-lock=<Ctrl><Logo>l
 
 ## Enable mouse
 #mouse
@@ -128,6 +131,11 @@
 
 ## Blinking cursor and text with blink attribute (enabled by default)
 #blink
+
+## Unlock helper run as the owner of a locked terminal. The terminal is
+## unlocked when it exits with status 0. Unset by default, which disables
+## locking. For example, with vlock:
+#lock-cmd=/usr/bin/vlock -c
 
 ## Colors palette, one of [solarized, solarized-black, solarized-white,
 ## soft-black, base16-dark, base16-light, vga, legacy, custom]

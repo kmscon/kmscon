@@ -266,6 +266,16 @@ foreach filename, kwargs : {
     )
 endforeach
 
+# Locks the terminals before sleep, through logind
+if enable_dbus
+    install_data(
+        'scripts/systemd/kmscon-lock-on-sleep.service.in',
+        install_dir: systemdsystemunitdir,
+        install_mode: 'rw-r--r--',
+        rename: 'kmscon-lock-on-sleep.service',
+    )
+endif
+
 # kmscon.conf
 install_data(
     'scripts/etc/kmscon.conf.example',

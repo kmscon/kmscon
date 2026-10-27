@@ -1,0 +1,11 @@
+[Unit]
+Description=Lock kmscon terminals before sleep
+Documentation=man:kmscon(1)
+Before=sleep.target
+
+[Service]
+Type=oneshot
+ExecStart=loginctl lock-sessions
+
+[Install]
+WantedBy=sleep.target

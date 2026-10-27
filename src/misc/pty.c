@@ -25,15 +25,20 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <grp.h>
 #include <inttypes.h>
 #include <pthread.h>
 #include <pty.h>
+#include <pwd.h>
 #include <signal.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/signalfd.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
 #include <termios.h>
 #include <time.h>
 #include <unistd.h>
@@ -72,6 +77,17 @@ struct kmscon_pty {
 	bool env_reset;
 	bool backspace_delete;
 	bool oneshot;
+	/* when false, the pty's owner restarts the child itself */
+	bool respawn_limit;
+
+	/* when user is set, the child runs as this user */
+	uid_t uid;
+	gid_t gid;
+	gid_t *groups;
+	int ngroups;
+	char *user;
+	char *home;
+	char *shell;
 
 	time_t last_spawn_time;
 	int retry_count;
@@ -132,6 +148,10 @@ void kmscon_pty_unref(struct kmscon_pty *pty)
 
 	log_debug("free pty object");
 	kmscon_pty_close(pty);
+	free(pty->shell);
+	free(pty->home);
+	free(pty->groups);
+	free(pty->user);
 	free(pty->vtnr);
 	free(pty->seat);
 	free(pty->argv);
@@ -144,7 +164,7 @@ void kmscon_pty_unref(struct kmscon_pty *pty)
 
 int kmscon_pty_set_conf(struct kmscon_pty *pty, const char *term, const char *colorterm,
 			char **argv, const char *seat, unsigned int vtnr, bool do_reset,
-			bool backspace, bool oneshot)
+			bool backspace, bool oneshot, bool respawn_limit)
 {
 	char *vt;
 
@@ -154,6 +174,7 @@ int kmscon_pty_set_conf(struct kmscon_pty *pty, const char *term, const char *co
 	pty->env_reset = do_reset;
 	pty->backspace_delete = backspace;
 	pty->oneshot = oneshot;
+	pty->respawn_limit = respawn_limit;
 
 	if (term) {
 		pty->term = strdup(term);
@@ -180,6 +201,92 @@ int kmscon_pty_set_conf(struct kmscon_pty *pty, const char *term, const char *co
 	return 0;
 }
 
+int kmscon_pty_set_user(struct kmscon_pty *pty, uid_t uid)
+{
+	struct passwd *pw;
+
+	if (!pty)
+		return -EINVAL;
+
+	/* Without root, kmscon can only run children as its own user */
+	if (geteuid() != 0 && uid != geteuid()) {
+		log_err("cannot run a child as uid %u: kmscon does not run as root", uid);
+		return -EPERM;
+	}
+
+	/* Resolve the user here, as NSS lookups are not safe after fork(). */
+	errno = 0;
+	pw = getpwuid(uid);
+	if (!pw) {
+		log_err("cannot find user with uid %u", uid);
+		return errno ? -errno : -ENOENT;
+	}
+
+	pty->uid = pw->pw_uid;
+	pty->gid = pw->pw_gid;
+	pty->home = strdup(pw->pw_dir ? pw->pw_dir : "/");
+	pty->shell = strdup(pw->pw_shell ? pw->pw_shell : "/bin/sh");
+	if (!pty->home || !pty->shell)
+		return -ENOMEM;
+
+	/* The groups initgroups() would give, for setgroups() in the child */
+	getgrouplist(pw->pw_name, pw->pw_gid, NULL, &pty->ngroups);
+	pty->groups = calloc(pty->ngroups, sizeof(*pty->groups));
+	if (!pty->groups)
+		return -ENOMEM;
+	if (getgrouplist(pw->pw_name, pw->pw_gid, pty->groups, &pty->ngroups) < 0)
+		return -EINVAL;
+
+	/* Set last: a non-NULL user means the child switches to this user */
+	pty->user = strdup(pw->pw_name);
+	if (!pty->user)
+		return -ENOMEM;
+	return 0;
+}
+
+/* Runs in forked children, so only async-signal-safe calls. Nothing to do when
+ * kmscon already runs as that user, as with libseat. */
+static int switch_user(struct kmscon_pty *pty)
+{
+	if (!pty->user || pty->uid == geteuid())
+		return 0;
+
+	if (setgroups(pty->ngroups, pty->groups) < 0 || setgid(pty->gid) < 0 ||
+	    setuid(pty->uid) < 0)
+		return -errno;
+	return 0;
+}
+
+/* Checked in a child set up like the real one, same user and directory, so the
+ * kernel applies the same path lookup and permissions */
+bool kmscon_pty_can_exec(struct kmscon_pty *pty)
+{
+	struct stat st;
+	int status;
+	pid_t pid;
+
+	if (!pty || !pty->argv)
+		return false;
+
+	pid = fork();
+	if (pid < 0)
+		return false;
+	if (!pid) {
+		if (switch_user(pty))
+			_exit(EXIT_FAILURE);
+		if (pty->user && chdir(pty->home) < 0 && chdir("/") < 0)
+			_exit(EXIT_FAILURE);
+		if (stat(pty->argv[0], &st) || !S_ISREG(st.st_mode) ||
+		    access(pty->argv[0], R_OK | X_OK))
+			_exit(EXIT_FAILURE);
+		_exit(EXIT_SUCCESS);
+	}
+
+	if (waitpid(pid, &status, 0) < 0)
+		return false;
+	return WIFEXITED(status) && WEXITSTATUS(status) == EXIT_SUCCESS;
+}
+
 int kmscon_pty_get_fd(struct kmscon_pty *pty)
 {
 	if (!pty)
@@ -201,10 +308,36 @@ static bool pty_is_open(struct kmscon_pty *pty)
 	return pty->fd >= 0;
 }
 
-static void __attribute__((noreturn)) exec_child(const char *term, const char *colorterm,
-						 char **argv, const char *seat, const char *vtnr,
-						 bool env_reset, bool drm)
+static void drop_privileges(struct kmscon_pty *pty)
 {
+	if (!pty->user)
+		return;
+
+	/* Give the user its terminal, like login does */
+	if (fchown(STDIN_FILENO, pty->uid, -1) < 0)
+		log_warn("cannot change owner of pty slave: %m");
+
+	if (switch_user(pty)) {
+		log_err("cannot switch to user %s: %m", pty->user);
+		exit(EXIT_FAILURE);
+	}
+
+	setenv("USER", pty->user, 1);
+	setenv("LOGNAME", pty->user, 1);
+	setenv("HOME", pty->home, 1);
+	setenv("SHELL", pty->shell, 1);
+	if (chdir(pty->home) < 0 && chdir("/") < 0)
+		log_warn("cannot change directory: %m");
+}
+
+static void __attribute__((noreturn)) exec_child(struct kmscon_pty *pty, bool drm)
+{
+	const char *term = pty->term;
+	const char *colorterm = pty->colorterm;
+	char **argv = pty->argv;
+	const char *seat = pty->seat;
+	const char *vtnr = pty->vtnr;
+	bool env_reset = pty->env_reset;
 	char **env;
 	char **def_argv;
 	char **argv_parsed;
@@ -242,6 +375,8 @@ static void __attribute__((noreturn)) exec_child(const char *term, const char *c
 	} else {
 		setenv("TERM_SESSION_TYPE", "fb", 1);
 	}
+	drop_privileges(pty);
+
 	ret = shl_replace_array_with_env(&argv_parsed, argv);
 	if (ret)
 		argv_parsed = argv;
@@ -369,8 +504,7 @@ static int pty_spawn(struct kmscon_pty *pty, int master, unsigned short width,
 		return -errno;
 	case 0:
 		setup_child(master, pty->backspace_delete, &ws);
-		exec_child(pty->term, pty->colorterm, pty->argv, pty->seat, pty->vtnr,
-			   pty->env_reset, drm);
+		exec_child(pty, drm);
 		exit(EXIT_FAILURE);
 	default:
 		log_debug("forking child %d", pid);
@@ -485,15 +619,20 @@ static void sig_child(struct ev_eloop *eloop, struct ev_child_data *chld, void *
 
 	log_info("child exited: pid: %u status: %d", chld->pid, chld->status);
 
+	if (!pty->respawn_limit) {
+		pty->exit_cb(pty, true, chld->status, pty->data);
+		return;
+	}
+
 	if (pty->retry_count == MAX_RETRY_COUNT) {
 		log_err("reached max retry attempts for login process %d retries in %d seconds",
 			MAX_RETRY_COUNT, MAX_RETRY_TIME);
-		pty->exit_cb(pty, false, pty->data);
+		pty->exit_cb(pty, false, chld->status, pty->data);
 		return;
 	}
 	if (pty->oneshot) {
 		log_info("oneshot is enabled, exiting kmscon...");
-		pty->exit_cb(pty, false, pty->data);
+		pty->exit_cb(pty, false, chld->status, pty->data);
 		return;
 	}
 
@@ -505,7 +644,7 @@ static void sig_child(struct ev_eloop *eloop, struct ev_child_data *chld, void *
 	} else {
 		pty->retry_count = 0;
 	}
-	pty->exit_cb(pty, true, pty->data);
+	pty->exit_cb(pty, true, chld->status, pty->data);
 }
 
 int kmscon_pty_open(struct kmscon_pty *pty, unsigned short width, unsigned short height, bool drm)
@@ -610,12 +749,122 @@ void kmscon_pty_signal(struct kmscon_pty *pty, int signum)
 	log_debug("send signal %d to child", signum);
 }
 
+/* kmscon_pty_signal() cannot do this: the kernel only forwards SIGINT, SIGQUIT
+ * and SIGTSTP through TIOCSIG */
+void kmscon_pty_kill(struct kmscon_pty *pty, int signum)
+{
+	if (!pty || !pty_is_open(pty) || pty->child <= 0)
+		return;
+
+	if (kill(pty->child, signum) < 0)
+		log_warn("cannot send signal %d to child %d: %m", signum, pty->child);
+}
+
 int kmscon_pty_get_slave_name(struct kmscon_pty *pty, char *buf, size_t len)
 {
 	if (!pty || !buf || !len || !pty_is_open(pty))
 		return -EINVAL;
 
 	return ptsname_r(pty->fd, buf, len);
+}
+
+pid_t kmscon_pty_get_child(struct kmscon_pty *pty)
+{
+	if (!pty || !pty_is_open(pty))
+		return 0;
+
+	return pty->child;
+}
+
+static int proc_get_uid(pid_t pid, uid_t *uid)
+{
+	char path[64], line[256];
+	unsigned int val;
+	FILE *f;
+	int ret = -ENOENT;
+
+	snprintf(path, sizeof(path), "/proc/%d/status", pid);
+	f = fopen(path, "re");
+	if (!f)
+		return -errno;
+
+	while (fgets(line, sizeof(line), f)) {
+		if (sscanf(line, "Uid: %u", &val) == 1) {
+			*uid = val;
+			ret = 0;
+			break;
+		}
+	}
+	fclose(f);
+	return ret;
+}
+
+/* First child of @pid, or 0 if it has none. The kernel lists the children
+ * of a thread in /proc/<pid>/task/<tid>/children; login is single-threaded. */
+static pid_t proc_find_child(pid_t pid)
+{
+	static bool warned;
+	char path[64];
+	FILE *f;
+	int child, err;
+
+	snprintf(path, sizeof(path), "/proc/%d/task/%d/children", pid, pid);
+	f = fopen(path, "re");
+	if (!f) {
+		err = errno;
+		/* Without CONFIG_PROC_CHILDREN nobody is ever seen as logged in. The
+		 * file is also missing if @pid just exited, so check the task exists. */
+		snprintf(path, sizeof(path), "/proc/%d/task/%d", pid, pid);
+		if (err == ENOENT && !warned && !access(path, F_OK)) {
+			log_warn("%s/children does not exist, the kernel lacks "
+				 "CONFIG_PROC_CHILDREN: terminals cannot be locked",
+				 path);
+			warned = true;
+		}
+		return 0;
+	}
+	if (fscanf(f, "%d", &child) != 1)
+		child = 0;
+	fclose(f);
+	return child;
+}
+
+static bool login_forks(struct kmscon_pty *pty)
+{
+	char path[64], comm[16];
+	bool ret = false;
+	FILE *f;
+
+	/* Not argv[0]: a wrapper script may exec login, as NixOS does */
+	snprintf(path, sizeof(path), "/proc/%d/comm", pty->child);
+	f = fopen(path, "re");
+	if (!f)
+		return false;
+	if (fgets(comm, sizeof(comm), f))
+		ret = !strcmp(comm, "login\n");
+	fclose(f);
+	return ret;
+}
+
+/* login (util-linux and shadow) runs the user's shell in a child once logged
+ * in. Other programs count as logged in as soon as they run. */
+int kmscon_pty_get_owner(struct kmscon_pty *pty, uid_t *uid)
+{
+	pid_t pid;
+
+	if (!pty || !uid)
+		return -EINVAL;
+	if (!pty_is_open(pty) || pty->child <= 0)
+		return -ENOENT;
+
+	pid = pty->child;
+	if (login_forks(pty)) {
+		pid = proc_find_child(pty->child);
+		if (!pid)
+			return -ENOENT;
+	}
+
+	return proc_get_uid(pid, uid);
 }
 
 void kmscon_pty_resize(struct kmscon_pty *pty, unsigned short width, unsigned short height)
