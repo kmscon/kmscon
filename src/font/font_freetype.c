@@ -43,8 +43,10 @@ struct ft_font {
 	char *name;
 	/* FontSet and Pattern are used for fallback glyphs */
 	FcFontSet *fc;
+	FcFontSet *fc_unfiltered;
 	FcPattern *pattern;
 	FT_Face fallback;
+	FcFontSet *fallback_src;
 	int fallback_index;
 };
 
@@ -52,6 +54,8 @@ struct ft_data {
 	FT_Library ft;
 	struct ft_font regular;
 	struct ft_font bold;
+	FcConfig *mono;
+	FcConfig *fallback;
 };
 
 static void free_ft_font(struct ft_font *ftfont)
@@ -64,12 +68,16 @@ static void free_ft_font(struct ft_font *ftfont)
 	if (ftfont->fc)
 		FcFontSetDestroy(ftfont->fc);
 	ftfont->fc = NULL;
+	if (ftfont->fc_unfiltered)
+		FcFontSetDestroy(ftfont->fc_unfiltered);
+	ftfont->fc_unfiltered = NULL;
 	if (ftfont->pattern)
 		FcPatternDestroy(ftfont->pattern);
 	ftfont->pattern = NULL;
 	if (ftfont->fallback)
 		FT_Done_Face(ftfont->fallback);
 	ftfont->fallback = NULL;
+	ftfont->fallback_src = NULL;
 	ftfont->fallback_index = -1;
 }
 
@@ -180,10 +188,12 @@ static void compute_font_size(struct ft_font *ftfont, unsigned int query_height,
 	}
 }
 
-static int prepare_font(FT_Library ft, struct ft_font *ftfont, const char *name,
+static int prepare_font(struct ft_data *ftdata, struct ft_font *ftfont, const char *name,
 			unsigned int height, bool bold, struct kmscon_font *font)
 {
 	FcResult result;
+	bool is_default = strcmp(name, KMSCON_FONT_DEFAULT_NAME) == 0;
+	FcConfig *cfg;
 
 	ftfont->pattern = FcNameParse((const FcChar8 *)name);
 	if (!ftfont->pattern)
@@ -196,24 +206,44 @@ static int prepare_font(FT_Library ft, struct ft_font *ftfont, const char *name,
 	FcPatternAddInteger(ftfont->pattern, FC_SPACING, FC_MONO);
 	FcPatternAddInteger(ftfont->pattern, FC_SPACING, FC_DUAL);
 
-	if (!FcConfigSubstitute(NULL, ftfont->pattern, FcMatchPattern)) {
+	/*
+	 * For the default "monospace" request, select from the monospace-filtered
+	 * config so proportional fonts can't break column alignment. When the user
+	 * explicitly configured a font, select from the unfiltered config instead:
+	 * some usable monospace-ish fonts (e.g. Noto Sans Mono CJK) are not tagged
+	 * with FC_SPACING and would otherwise be filtered out.
+	 */
+	cfg = is_default ? ftdata->mono : ftdata->fallback;
+
+	if (!FcConfigSubstitute(cfg, ftfont->pattern, FcMatchPattern)) {
 		log_err("%s: failed to do config substitution", name);
 		goto err;
 	}
 
 	FcDefaultSubstitute(ftfont->pattern);
 
-	ftfont->fc = FcFontSort(NULL, ftfont->pattern, FcTrue, NULL, &result);
+	ftfont->fc = FcFontSort(cfg, ftfont->pattern, FcTrue, NULL, &result);
 	if (result != FcResultMatch) {
 		log_err("%s: failed to match font", name);
 		goto err;
 	}
 
-	if (prepare_face(ft, ftfont))
+	/*
+	 * Keep an unfiltered set around so glyphs that no monospace font covers
+	 * (e.g. CJK) can still be rendered on the default config, instead of tofu.
+	 * Only needed when the primary set is the filtered one; an explicitly
+	 * configured font already matched against the unfiltered config.
+	 */
+	if (is_default)
+		ftfont->fc_unfiltered =
+			FcFontSort(ftdata->fallback, ftfont->pattern, FcTrue, NULL, &result);
+
+	if (prepare_face(ftdata->ft, ftfont))
 		goto err;
 
 	ftfont->fallback_index = -1;
 	ftfont->fallback = NULL;
+	ftfont->fallback_src = NULL;
 	return 0;
 err:
 	free_ft_font(ftfont);
@@ -248,14 +278,20 @@ static int kmscon_font_freetype_init(struct kmscon_font *out, const char *name, 
 		goto err_free;
 	}
 	FcConfigSetFontSetFilter(NULL, _fc_monospace_font_filter_func, NULL, NULL);
-	if (prepare_font(ftf->ft, &ftf->regular, name, height, false, out))
+	ftf->mono = FcConfigReference(FcConfigGetCurrent());
+	ftf->fallback = FcInitLoadConfigAndFonts();
+	if (!ftf->mono || !ftf->fallback) {
+		log_err("Failed to load fontconfig configuration\n");
+		goto err_done;
+	}
+	if (prepare_font(ftf, &ftf->regular, name, height, false, out))
 		goto err_done;
 
 	compute_font_size(&ftf->regular, height, &out->width, &out->height);
 	if (out->width == 0 || out->height == 0)
 		goto err_free_reg;
 
-	if (prepare_font(ftf->ft, &ftf->bold, name, height, true, out))
+	if (prepare_font(ftf, &ftf->bold, name, height, true, out))
 		goto err_free_reg;
 
 	compute_font_size(&ftf->bold, height, &bold_width, &bold_height);
@@ -276,6 +312,10 @@ static int kmscon_font_freetype_init(struct kmscon_font *out, const char *name, 
 err_free_reg:
 	free_ft_font(&ftf->regular);
 err_done:
+	if (ftf->mono)
+		FcConfigDestroy(ftf->mono);
+	if (ftf->fallback)
+		FcConfigDestroy(ftf->fallback);
 	FT_Done_FreeType(ftf->ft);
 err_free:
 	free(ftf);
@@ -289,6 +329,10 @@ static void kmscon_font_freetype_destroy(struct kmscon_font *font)
 	log_debug("unloading freetype font");
 	free_ft_font(&ftf->regular);
 	free_ft_font(&ftf->bold);
+	if (ftf->mono)
+		FcConfigDestroy(ftf->mono);
+	if (ftf->fallback)
+		FcConfigDestroy(ftf->fallback);
 	FT_Done_FreeType(ftf->ft);
 	free(ftf);
 	font->data = NULL;
@@ -454,7 +498,7 @@ static void select_font_size(struct kmscon_font *font, FT_Face face)
 	} while (face->size->metrics.height >> 6 > font->height && height > 10);
 }
 
-static FT_Face prepare_tmp_face(FT_Library ft, struct ft_font *font, int fallback)
+static FT_Face prepare_tmp_face(FT_Library ft, FcPattern *base, FcFontSet *fc, int fallback)
 {
 	FcChar8 *path;
 	FT_Error err;
@@ -463,7 +507,7 @@ static FT_Face prepare_tmp_face(FT_Library ft, struct ft_font *font, int fallbac
 	FT_Face face = NULL;
 	FcChar8 *full_name = NULL;
 
-	pattern = FcFontRenderPrepare(NULL, font->pattern, font->fc->fonts[fallback]);
+	pattern = FcFontRenderPrepare(NULL, base, fc->fonts[fallback]);
 	if (!pattern)
 		return NULL;
 
@@ -486,16 +530,41 @@ err_pattern:
 	return face;
 }
 
-static int get_fallback(uint32_t ch, struct ft_font *ftf)
+static int get_fallback(uint32_t ch, FcFontSet *fc)
 {
 	int i;
 
-	for (i = 0; i < ftf->fc->nfont; i++) {
+	for (i = 0; fc && i < fc->nfont; i++) {
 		FcCharSet *cs;
-		if (FcPatternGetCharSet(ftf->fc->fonts[i], FC_CHARSET, 0, &cs) == FcResultMatch)
+		if (FcPatternGetCharSet(fc->fonts[i], FC_CHARSET, 0, &cs) == FcResultMatch)
 			if (FcCharSetHasChar(cs, ch))
 				return i;
 	}
+	return -ENOENT;
+}
+
+/*
+ * Find a font covering @ch, following fontconfig's own ranking so the
+ * locale-preferred font wins (e.g. Noto Sans Mono CJK for CJK locales).
+ *
+ * For the default request that means the unfiltered set (fc_unfiltered): the
+ * monospace filter drops usable fonts that fontconfig doesn't tag as monospace
+ * (Noto Sans Mono CJK), and searching the filtered set first would instead pick
+ * whatever monospace-tagged font merely happens to sit higher in it. The soft
+ * FC_SPACING preference on the pattern still ranks real monospace fonts first,
+ * so a proportional font is only ever reached when nothing else covers @ch.
+ * When the user configured a font explicitly, fc is already the unfiltered sort.
+ */
+static int find_fallback(struct ft_font *ftf, uint32_t ch, FcFontSet **fc_out)
+{
+	FcFontSet *set = ftf->fc_unfiltered ? ftf->fc_unfiltered : ftf->fc;
+	int index = get_fallback(ch, set);
+
+	if (index >= 0) {
+		*fc_out = set;
+		return index;
+	}
+
 	return -ENOENT;
 }
 
@@ -505,11 +574,12 @@ static bool kmscon_font_freetype_has_glyph(struct kmscon_font *font, struct kmsc
 	struct ft_data *ftd = font->data;
 	struct ft_font *ftfont = attr->bold ? &ftd->bold : &ftd->regular;
 	FT_UInt glyph_index = FT_Get_Char_Index(ftfont->face, ch);
+	FcFontSet *set;
 
 	if (glyph_index)
 		return true;
 
-	return get_fallback(ch, ftfont) >= 0;
+	return find_fallback(ftfont, ch, &set) >= 0;
 }
 
 static struct kmscon_glyph *kmscon_font_freetype_render(struct kmscon_font *font,
@@ -518,25 +588,27 @@ static struct kmscon_glyph *kmscon_font_freetype_render(struct kmscon_font *font
 	struct ft_data *ftd = font->data;
 	struct ft_font *ftfont = attr->bold ? &ftd->bold : &ftd->regular;
 	FT_UInt glyph_index = FT_Get_Char_Index(ftfont->face, ch);
+	FcFontSet *set;
 	int fallback_index;
 
 	if (glyph_index)
 		return render_glyph(font, ftfont->face, glyph_index, ch, attr);
 
 	/* Fallback, if the glyph is not found in the regular font */
-	fallback_index = get_fallback(ch, ftfont);
+	fallback_index = find_fallback(ftfont, ch, &set);
 	if (fallback_index < 0)
 		return NULL;
 
-	if (ftfont->fallback_index != fallback_index) {
+	if (ftfont->fallback_index != fallback_index || ftfont->fallback_src != set) {
 		if (ftfont->fallback)
 			FT_Done_Face(ftfont->fallback);
 		ftfont->fallback = NULL;
 		ftfont->fallback_index = fallback_index;
+		ftfont->fallback_src = set;
 	}
 
 	if (!ftfont->fallback) {
-		ftfont->fallback = prepare_tmp_face(ftd->ft, ftfont, fallback_index);
+		ftfont->fallback = prepare_tmp_face(ftd->ft, ftfont->pattern, set, fallback_index);
 		if (!ftfont->fallback)
 			return NULL;
 		select_font_size(font, ftfont->fallback);

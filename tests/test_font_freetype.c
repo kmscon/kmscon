@@ -213,12 +213,267 @@ static void test_monospace_fallback_set(void)
 	kmscon_font_unregister(kmscon_font_freetype_ops.name);
 }
 
+/* --- 3. automatic language fallback through the unfiltered set --- */
+
+/* Surrogates and noncharacters aren't real glyphs; a font charset may still
+ * list them, so don't pick them as the test code point. */
+static bool is_real_scalar(uint32_t ch)
+{
+	if (ch >= 0xD800u && ch <= 0xDFFFu) /* surrogate */
+		return false;
+	if (ch >= 0xFDD0u && ch <= 0xFDEFu) /* noncharacter block */
+		return false;
+	if ((ch & 0xFFFEu) == 0xFFFEu) /* U+xxFFFE / U+xxFFFF */
+		return false;
+	return true;
+}
+
+/*
+ * Scan the unfiltered set for a code point that only a filter-rejected font
+ * covers, i.e. one the strict monospace set (fc) cannot render. This is exactly
+ * the #596 shape (CJK via Noto Sans Mono CJK). Returns 0 if none exists.
+ */
+static uint32_t find_mono_uncovered_char(struct ft_font *ftf)
+{
+	for (int i = 0; ftf->fc_unfiltered && i < ftf->fc_unfiltered->nfont; i++) {
+		FcPattern *pat = ftf->fc_unfiltered->fonts[i];
+		FcChar32 page, next, map[FC_CHARSET_MAP_SIZE];
+		FcCharSet *cs;
+
+		/* Only fonts the filter drops can add coverage the strict set lacks. */
+		if (_fc_monospace_font_filter_func(pat, NULL) != FcFalse)
+			continue;
+		if (FcPatternGetCharSet(pat, FC_CHARSET, 0, &cs) != FcResultMatch)
+			continue;
+
+		for (page = FcCharSetFirstPage(cs, map, &next); page != FC_CHARSET_DONE;
+		     page = FcCharSetNextPage(cs, map, &next)) {
+			for (int j = 0; j < FC_CHARSET_MAP_SIZE; j++) {
+				for (int b = 0; b < 32 && map[j] >> b; b++) {
+					uint32_t ch = page + j * 32 + b;
+
+					if ((map[j] & (1u << b)) && is_real_scalar(ch) &&
+					    get_fallback(ch, ftf->fc) < 0)
+						return ch;
+				}
+			}
+		}
+	}
+	return 0;
+}
+
+/*
+ * The #596 regression: with the default "monospace" request, a code point whose
+ * only coverage is a font the monospace filter drops (e.g. CJK via Noto Sans
+ * Mono CJK, which omits FC_SPACING) must still be renderable. The backend keeps
+ * an unfiltered set (ft_font.fc_unfiltered) for exactly this, consulted only
+ * when no monospace font covers the glyph.
+ */
+static void test_auto_language_fallback(void)
+{
+	struct kmscon_font *font = NULL;
+	struct kmscon_font_attr attr = {0};
+	struct ft_data *ftd;
+	FcFontSet *set = NULL;
+	uint32_t ch;
+	int idx, ret;
+
+	ret = kmscon_font_register(&kmscon_font_freetype_ops);
+	assert(ret == 0);
+	ret = kmscon_font_find(&font, KMSCON_FONT_DEFAULT_NAME, 20, "freetype");
+	assert(ret == 0 && font);
+
+	ftd = font->data;
+	assert(ftd);
+
+	/* The unfiltered set must be built for the default request and be a
+	 * superset of the strict one -- it is what carries the extra coverage. */
+	assert(ftd->regular.fc_unfiltered);
+	assert(ftd->regular.fc_unfiltered->nfont >= ftd->regular.fc->nfont);
+
+	/* Pick a code point covered by the unfiltered set but not the strict one.
+	 * If none exists (minimal font set, or every script has a monospace font)
+	 * there is nothing to guard -- skip. */
+	ch = find_mono_uncovered_char(&ftd->regular);
+	if (!ch) {
+		fprintf(stderr, "note: no code point exercises the unfiltered "
+				"fallback; skipping\n");
+		goto out;
+	}
+
+	/* find_fallback must resolve it, and specifically through the unfiltered
+	 * set (not the strict one, which was just shown not to cover it). */
+	idx = find_fallback(&ftd->regular, ch, &set);
+	assert(idx >= 0);
+	assert(set == ftd->regular.fc_unfiltered);
+
+	/* The public has_glyph() must agree -- this is what keeps CJK off tofu. */
+	assert(kmscon_font_freetype_has_glyph(font, &attr, ch));
+
+	fprintf(stderr,
+		"kmscon auto language fallback: U+%04X resolved via the "
+		"unfiltered set\n",
+		ch);
+
+out:
+	kmscon_font_unref(font);
+	kmscon_font_unregister(kmscon_font_freetype_ops.name);
+}
+
+/* First real scalar code point covered by @fc, or 0. */
+static uint32_t first_covered_char(FcFontSet *fc)
+{
+	for (int i = 0; fc && i < fc->nfont; i++) {
+		FcChar32 page, next, map[FC_CHARSET_MAP_SIZE];
+		FcCharSet *cs;
+
+		if (FcPatternGetCharSet(fc->fonts[i], FC_CHARSET, 0, &cs) != FcResultMatch)
+			continue;
+		for (page = FcCharSetFirstPage(cs, map, &next); page != FC_CHARSET_DONE;
+		     page = FcCharSetNextPage(cs, map, &next)) {
+			for (int j = 0; j < FC_CHARSET_MAP_SIZE; j++)
+				for (int b = 0; b < 32 && map[j] >> b; b++)
+					if ((map[j] & (1u << b)) &&
+					    is_real_scalar(page + j * 32 + b))
+						return page + j * 32 + b;
+		}
+	}
+	return 0;
+}
+
+/*
+ * Regression guard for the fallback-ordering fix (issue #596 follow-up): even
+ * when the strict monospace set covers a glyph, fallback must follow
+ * fontconfig's own ranking (the unfiltered set) instead of hard-preferring the
+ * filtered set. Without the fix, a lesser monospace-tagged font sitting in the
+ * filtered set (e.g. Droid Sans Japanese) would be chosen over the
+ * locale-preferred Noto Sans Mono CJK that fontconfig ranks first.
+ */
+static void test_fallback_follows_fontconfig_order(void)
+{
+	struct kmscon_font *font = NULL;
+	struct ft_data *ftd;
+	FcFontSet *set = NULL;
+	uint32_t ch;
+	int idx, ret;
+
+	ret = kmscon_font_register(&kmscon_font_freetype_ops);
+	assert(ret == 0);
+	ret = kmscon_font_find(&font, KMSCON_FONT_DEFAULT_NAME, 20, "freetype");
+	assert(ret == 0 && font);
+
+	ftd = font->data;
+	assert(ftd && ftd->regular.fc_unfiltered);
+
+	/* A glyph the strict (filtered) set itself covers -- the case where the old
+	 * code would have returned a font from fc. */
+	ch = first_covered_char(ftd->regular.fc);
+	if (!ch) {
+		fprintf(stderr, "note: strict set covers nothing; skipping\n");
+		goto out;
+	}
+
+	/* The fix: fallback is resolved against the unfiltered, fontconfig-ranked
+	 * set, not the filtered one. */
+	idx = find_fallback(&ftd->regular, ch, &set);
+	assert(idx >= 0);
+	assert(set == ftd->regular.fc_unfiltered);
+
+	fprintf(stderr,
+		"kmscon fallback order: U+%04X resolved via the unfiltered "
+		"(fontconfig-ranked) set\n",
+		ch);
+
+out:
+	kmscon_font_unref(font);
+	kmscon_font_unregister(kmscon_font_freetype_ops.name);
+}
+
+/* --- 4. explicitly configured fonts bypass the filter --- */
+
+/* Copy the first FC_FAMILY of @pat, or NULL. Caller frees. */
+static char *first_family(FcPattern *pat)
+{
+	FcChar8 *family = NULL;
+
+	if (FcPatternGetString(pat, FC_FAMILY, 0, &family) != FcResultMatch)
+		return NULL;
+	return strdup((const char *)family);
+}
+
+/* Does any FC_FAMILY value of @pat match @family case-insensitively? */
+static bool pattern_has_family(FcPattern *pat, const char *family)
+{
+	FcChar8 *val = NULL;
+
+	for (int i = 0; FcPatternGetString(pat, FC_FAMILY, i, &val) == FcResultMatch; i++) {
+		if (strcasecmp((const char *)val, family) == 0)
+			return true;
+	}
+	return false;
+}
+
+/*
+ * A user who names a font in the config means it: even a proportional font
+ * (which the monospace filter would drop) must be honored as the primary face.
+ * Discover an installed proportional family from an unfiltered config, request
+ * it by name, and check it really was selected.
+ */
+static void test_configured_font_bypasses_filter(void)
+{
+	FcConfig *cfg;
+	FcFontSet *sys;
+	char *family = NULL;
+	struct kmscon_font *font = NULL;
+	struct ft_data *ftd;
+	int ret;
+
+	/* Find, in a fresh unfiltered config, a font the monospace filter would
+	 * reject (proportional, including the common "no FC_SPACING at all" case). */
+	cfg = FcInitLoadConfigAndFonts();
+	assert(cfg);
+	sys = FcConfigGetFonts(cfg, FcSetSystem);
+	for (int i = 0; sys && i < sys->nfont && !family; i++) {
+		if (_fc_monospace_font_filter_func(sys->fonts[i], NULL) == FcFalse)
+			family = first_family(sys->fonts[i]);
+	}
+	FcConfigDestroy(cfg);
+
+	if (!family) {
+		fprintf(stderr, "note: no filter-rejected font installed; skipping\n");
+		return;
+	}
+
+	ret = kmscon_font_register(&kmscon_font_freetype_ops);
+	assert(ret == 0);
+	ret = kmscon_font_find(&font, family, 20, "freetype");
+	assert(ret == 0 && font);
+
+	ftd = font->data;
+	assert(ftd && ftd->regular.fc && ftd->regular.fc->nfont > 0);
+
+	/* The selected primary carries the requested family AND is itself a font
+	 * the filter would drop -- so the strict monospace config could never have
+	 * returned it. That is the bypass. */
+	assert(pattern_has_family(ftd->regular.fc->fonts[0], family));
+	assert(_fc_monospace_font_filter_func(ftd->regular.fc->fonts[0], NULL) == FcFalse);
+
+	fprintf(stderr, "kmscon configured font bypass: [%s] honored as primary\n", family);
+
+	free(family);
+	kmscon_font_unref(font);
+	kmscon_font_unregister(kmscon_font_freetype_ops.name);
+}
+
 int main(void)
 {
 	assert(FcInit());
 
 	test_filter_unit();
 	test_monospace_fallback_set();
+	test_auto_language_fallback();
+	test_fallback_follows_fontconfig_order();
+	test_configured_font_bypasses_filter();
 
 	FcFini();
 	return 0;
