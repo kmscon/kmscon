@@ -58,7 +58,6 @@ void uterm_vt_close_device(struct uterm_vt *vt, int fd, int fd_id);
 
 int uterm_vt_activate(struct uterm_vt *vt);
 int uterm_vt_deactivate(struct uterm_vt *vt);
-int uterm_vt_wait(struct uterm_vt *vt);
 void uterm_vt_retry(struct uterm_vt *vt);
 unsigned int uterm_vt_get_num(struct uterm_vt *vt);
 void uterm_vt_bell(struct uterm_vt *vt);

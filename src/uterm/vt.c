@@ -155,18 +155,6 @@ int uterm_vt_deactivate(struct uterm_vt *vt)
 }
 
 SHL_EXPORT
-int uterm_vt_wait(struct uterm_vt *vt)
-{
-	if (!vt)
-		return -EINVAL;
-
-	if (vt->ops->wait)
-		return vt->ops->wait(vt);
-
-	return 0;
-}
-
-SHL_EXPORT
 int uterm_vt_restore(struct uterm_vt *vt)
 {
 	if (!vt)

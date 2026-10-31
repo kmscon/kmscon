@@ -10,7 +10,6 @@ struct uterm_vt_ops {
 	void (*destroy)(struct uterm_vt *vt);
 	int (*activate)(struct uterm_vt *vt);
 	int (*deactivate)(struct uterm_vt *vt);
-	int (*wait)(struct uterm_vt *vt);
 	void (*input)(struct uterm_vt *vt, struct input_key_event *ev);
 	void (*retry)(struct uterm_vt *vt);
 	unsigned int (*get_num)(struct uterm_vt *vt);
