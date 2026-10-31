@@ -242,23 +242,6 @@ static int vt_libseat_deactivate(struct uterm_vt *base)
 	return 0;
 }
 
-static int vt_libseat_wait(struct uterm_vt *base)
-{
-	struct uterm_vt_libseat *vt = to_libseat(base);
-
-	if (vt->tty_fd >= 0 && vt->tty_num > 0) {
-		log_info("waiting for VT %d to become active", vt->tty_num);
-		while (ioctl(vt->tty_fd, VT_WAITACTIVE, vt->tty_num) < 0) {
-			if (errno == EINTR)
-				continue;
-			log_warning("cannot wait for VT %d (%d): %m", vt->tty_num, errno);
-			return -EFAULT;
-		}
-	}
-
-	return seat_connect(vt);
-}
-
 static void vt_libseat_bell(struct uterm_vt *base)
 {
 	struct uterm_vt_libseat *vt = to_libseat(base);
@@ -341,7 +324,6 @@ static const struct uterm_vt_ops vt_libseat_ops = {
 	.destroy = vt_libseat_destroy,
 	.activate = vt_libseat_activate,
 	.deactivate = vt_libseat_deactivate,
-	.wait = vt_libseat_wait,
 	.bell = vt_libseat_bell,
 	.get_num = vt_libseat_get_num,
 	.get_name = vt_libseat_get_name,

@@ -96,6 +96,7 @@ struct kmscon_seat {
 	size_t session_count;
 	struct dlist sessions;
 
+	bool monitoring;
 	bool awake;
 	bool foreground;
 	bool exiting;
@@ -377,6 +378,11 @@ static void seat_vt_activate(struct uterm_vt *vt, void *data)
 	struct kmscon_seat *seat = data;
 
 	log_debug("VT %d activated on seat %s", uterm_vt_get_num(vt), seat->name);
+
+	if (!seat->monitoring) {
+		uterm_monitor_scan(seat->mon, seat->name);
+		seat->monitoring = true;
+	}
 
 	if (seat_go_awake(seat))
 		return;
@@ -1035,8 +1041,6 @@ static void kmscon_seat_poll_video(void *data)
 
 int kmscon_seat_startup(struct kmscon_seat *seat)
 {
-	int ret;
-
 	if (!seat)
 		return -ENODEV;
 
@@ -1046,23 +1050,11 @@ int kmscon_seat_startup(struct kmscon_seat *seat)
 		return -ENOMEM;
 	}
 
-	/*
-	 * With --switchvt, activation below initiates the VT switch; waiting
-	 * here would deadlock. Without it, the service manager is responsible
-	 * for activating the requested VT first.
-	 */
-	if (seat->conf->vt && !seat->conf->switchvt) {
-		ret = uterm_vt_wait(seat->vt);
-		if (ret)
-			return ret;
-	}
-
-	if (seat->conf->switchvt || uterm_vt_get_num(seat->vt) == 0)
+	if (seat->conf->switchvt || uterm_vt_get_num(seat->vt) == 0) {
 		uterm_vt_activate(seat->vt);
-
-	log_debug("scanning for devices...");
-	uterm_monitor_scan(seat->mon, seat->name);
-
+		uterm_monitor_scan(seat->mon, seat->name);
+		seat->monitoring = true;
+	}
 	return 0;
 }
 

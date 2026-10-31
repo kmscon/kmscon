@@ -562,23 +562,6 @@ static void real_retry(struct uterm_vt *base)
 	}
 }
 
-static int real_wait(struct uterm_vt *base)
-{
-	struct uterm_vt_real *vt = to_real(base);
-
-	if (vt->base.hup)
-		return -EPIPE;
-
-	while (ioctl(vt->real_fd, VT_WAITACTIVE, vt->real_num) < 0) {
-		if (errno == EINTR)
-			continue;
-		log_warning("cannot wait for VT %d (%d): %m", vt->real_num, errno);
-		return -EFAULT;
-	}
-
-	return 0;
-}
-
 static void real_bell(struct uterm_vt *base)
 {
 	struct uterm_vt_real *vt = to_real(base);
@@ -607,7 +590,6 @@ static const struct uterm_vt_ops real_ops = {
 	.destroy = real_destroy,
 	.activate = real_activate,
 	.deactivate = real_deactivate,
-	.wait = real_wait,
 	.retry = real_retry,
 	.bell = real_bell,
 	.restore = real_restore,
