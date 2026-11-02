@@ -380,7 +380,7 @@ static void seat_vt_activate(struct uterm_vt *vt, void *data)
 	log_debug("VT %d activated on seat %s", uterm_vt_get_num(vt), seat->name);
 
 	if (!seat->monitoring) {
-		uterm_monitor_scan(seat->mon, seat->name);
+		uterm_monitor_scan(seat->mon);
 		seat->monitoring = true;
 	}
 
@@ -748,7 +748,7 @@ int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf,
 
 	input_set_compose(seat->input, find_locale(), seat->conf->xkb_compose_file);
 
-	ret = uterm_monitor_new(&seat->mon, seat->eloop, &seat_monitor_cb, seat);
+	ret = uterm_monitor_new(&seat->mon, seat->eloop, seat->name, &seat_monitor_cb, seat);
 	if (ret) {
 		log_error("cannot create device monitor: %d", ret);
 		goto err_conf;
@@ -1052,7 +1052,7 @@ int kmscon_seat_startup(struct kmscon_seat *seat)
 
 	if (seat->conf->switchvt || uterm_vt_get_num(seat->vt) == 0) {
 		uterm_vt_activate(seat->vt);
-		uterm_monitor_scan(seat->mon, seat->name);
+		uterm_monitor_scan(seat->mon);
 		seat->monitoring = true;
 	}
 	return 0;
