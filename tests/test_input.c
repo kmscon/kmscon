@@ -221,7 +221,7 @@ int main(int argc, char **argv)
 		goto err_exit;
 	}
 
-	ret = uterm_monitor_new(&mon, eloop, &monitor_cb, NULL);
+	ret = uterm_monitor_new(&mon, eloop, "seat0", &monitor_cb, NULL);
 	if (ret)
 		goto err_exit;
 
@@ -235,7 +235,7 @@ int main(int argc, char **argv)
 	if (ret)
 		goto err_signal;
 
-	uterm_monitor_scan(mon, "seat0");
+	uterm_monitor_scan(mon);
 	ev_eloop_run(eloop, -1);
 
 	ret = system("stty echo");

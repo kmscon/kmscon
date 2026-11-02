@@ -499,7 +499,7 @@ static void monitor_udev_event(struct ev_fd *fd, int mask, void *data)
 }
 
 SHL_EXPORT
-int uterm_monitor_new(struct uterm_monitor **out, struct ev_eloop *eloop,
+int uterm_monitor_new(struct uterm_monitor **out, struct ev_eloop *eloop, const char *name,
 		      struct uterm_monitor_cb *cb, void *data)
 {
 	struct uterm_monitor *mon;
@@ -523,12 +523,17 @@ int uterm_monitor_new(struct uterm_monitor **out, struct ev_eloop *eloop,
 		ret = -EFAULT;
 		goto err_free;
 	}
+	mon->seat_name = strdup(name);
+	if (!mon->seat_name) {
+		ret = -ENOMEM;
+		goto err_udev;
+	}
 
 	mon->umon = udev_monitor_new_from_netlink(mon->udev, "udev");
 	if (!mon->umon) {
 		log_err("cannot create udev monitor");
 		ret = -EFAULT;
-		goto err_udev;
+		goto err_free_name;
 	}
 
 	ret = udev_monitor_filter_add_match_subsystem_devtype(mon->umon, "drm", "drm_minor");
@@ -595,6 +600,8 @@ int uterm_monitor_new(struct uterm_monitor **out, struct ev_eloop *eloop,
 
 err_umon:
 	udev_monitor_unref(mon->umon);
+err_free_name:
+	free(mon->seat_name);
 err_udev:
 	udev_unref(mon->udev);
 err_free:
@@ -635,7 +642,7 @@ void uterm_monitor_unref(struct uterm_monitor *mon)
 }
 
 SHL_EXPORT
-void uterm_monitor_scan(struct uterm_monitor *mon, const char *seat_name)
+void uterm_monitor_scan(struct uterm_monitor *mon)
 {
 	struct udev_enumerate *e;
 	struct udev_list_entry *entry;
@@ -645,8 +652,6 @@ void uterm_monitor_scan(struct uterm_monitor *mon, const char *seat_name)
 
 	if (!mon)
 		return;
-
-	mon->seat_name = strdup(seat_name);
 
 	e = udev_enumerate_new(mon->udev);
 	if (!e) {
