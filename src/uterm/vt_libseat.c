@@ -28,6 +28,8 @@
 #include <linux/kd.h>
 #include <linux/major.h>
 #include <linux/vt.h>
+#include <shl/dlist.h>
+#include <signal.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <sys/sysmacros.h>
@@ -36,6 +38,7 @@
 #include "shl/misc.h"
 #include "vt.h"
 #include "vt_internal.h"
+#include "vt_real.h"
 
 #define LOG_SUBSYSTEM "libseat"
 
@@ -44,9 +47,14 @@ struct uterm_vt_libseat {
 
 	struct libseat *libseat;
 	struct ev_fd *libseat_efd;
+
+	/* The following only if real VT are used */
 	int tty_fd;
 	int tty_num;
 	int saved_kbmode;
+
+	/* If using a VT but our VT is not active, wait for it to become active */
+	bool wait_active;
 };
 
 static struct uterm_vt_libseat *to_libseat(struct uterm_vt *vt)
@@ -63,23 +71,13 @@ static int seat_connect(struct uterm_vt_libseat *vt);
 static int open_tty(struct uterm_vt_libseat *vt, const char *vt_path)
 {
 	int fd, ret;
-	struct stat st;
 
-	fd = open(vt_path, O_RDWR | O_NOCTTY | O_CLOEXEC);
+	fd = vt_open_tty(vt_path, &vt->tty_num);
 	if (fd < 0) {
 		log_warning("cannot open VT %s: %m", vt_path);
 		return -errno;
 	}
-
 	vt->tty_fd = fd;
-
-	ret = fstat(fd, &st);
-	if (ret) {
-		log_error("cannot introspect tty %s (%d): %m", vt_path, errno);
-		close(fd);
-		return -errno;
-	}
-	vt->tty_num = minor(st.st_rdev);
 
 	ret = ioctl(fd, KDGKBMODE, &vt->saved_kbmode);
 	if (ret)
@@ -87,6 +85,22 @@ static int open_tty(struct uterm_vt_libseat *vt, const char *vt_path)
 	if (vt->saved_kbmode == K_OFF)
 		vt->saved_kbmode = K_UNICODE;
 
+	if (vt_get_active(vt->tty_fd) == vt->tty_num)
+		return 0;
+
+	/*
+	 * Take control of VT switching so the kernel signals us with
+	 * SIGUSR1/SIGUSR2 when our VT becomes active/inactive.
+	 */
+	if (vt_set_mode_sig(vt->tty_fd) < 0) {
+		log_warning("cannot take control of VT %d switching (%d): %m; "
+			    "falling back to eager activation",
+			    vt->tty_num, errno);
+		return 0;
+	}
+
+	log_debug("Our VT is not the current active VT, so waiting");
+	vt->wait_active = true;
 	return 0;
 }
 
@@ -95,11 +109,15 @@ static void close_tty(struct uterm_vt_libseat *vt)
 	if (vt->tty_fd < 0)
 		return;
 
+	if (vt->wait_active)
+		vt_set_mode_auto(vt->tty_fd);
+
 	ioctl(vt->tty_fd, KDSKBMODE, vt->saved_kbmode);
 	ioctl(vt->tty_fd, KDSETMODE, KD_TEXT);
 	close(vt->tty_fd);
 	vt->tty_fd = -1;
 }
+
 /*
  * Set KD_GRAPHICS and K_OFF on our VT. Called when our session is enabled.
  *
@@ -129,11 +147,65 @@ static void tty_deactivate(struct uterm_vt_libseat *vt)
 	ioctl(vt->tty_fd, KDSETMODE, KD_TEXT);
 }
 
+static void vt_sig_leave(struct ev_eloop *eloop, struct signalfd_siginfo *info, void *data);
+/*
+ * SIGUSR1: the kernel switched to our VT. Acknowledge the acquire event.
+ * connect to libseat, and then callback that this VT is active.
+ */
+static void vt_sig_enter(struct ev_eloop *eloop, struct signalfd_siginfo *info, void *data)
+{
+	struct uterm_vt_libseat *vt = data;
+
+	ioctl(vt->tty_fd, VT_RELDISP, VT_ACKACQ);
+
+	ev_eloop_unregister_signal_cb(vt->base.eloop, SIGUSR1, vt_sig_enter, vt);
+	ev_eloop_unregister_signal_cb(vt->base.eloop, SIGUSR2, vt_sig_leave, vt);
+
+	if (!vt->wait_active)
+		log_err("VT %d activated without waiting for it", vt->tty_num);
+
+	vt->wait_active = false;
+	vt_set_mode_auto(vt->tty_fd);
+
+	seat_connect(vt);
+
+	tty_activate(vt);
+	vt_cb_activate(&vt->base);
+}
+
+/*
+ * SIGUSR2: the kernel is about to switch away from our VT.
+ * So wait for our VT to become active again
+ */
+static void vt_sig_leave(struct ev_eloop *eloop, struct signalfd_siginfo *info, void *data)
+{
+	struct uterm_vt_libseat *vt = data;
+
+	if (vt->wait_active)
+		log_warn("Leaving VT while waiting for it to become active");
+	vt->wait_active = true;
+
+	ioctl(vt->tty_fd, VT_RELDISP, 1);
+}
+
 static void vt_libseat_enable(struct libseat *libseat, void *data)
 {
 	struct uterm_vt_libseat *vt = data;
 
 	log_debug("libseat: seat enabled");
+
+	/* the tty may already be gone if this event fires during teardown */
+	if (vt->tty_fd < 0)
+		return;
+
+	/*
+	 * If waiting for our current VT to activate, log a notice and return.
+	 */
+	if (vt->wait_active) {
+		log_notice("seat enabled but VT %d is not foreground, staying in background",
+			   vt->tty_num);
+		return;
+	}
 
 	tty_activate(vt);
 	vt_cb_activate(&vt->base);
@@ -207,9 +279,23 @@ static int seat_connect(struct uterm_vt_libseat *vt)
 	return 0;
 }
 
+static void libseat_idle_activate(struct ev_eloop *eloop, void *unused, void *data)
+{
+	struct uterm_vt_libseat *vt = data;
+
+	ev_eloop_unregister_idle_cb(eloop, libseat_idle_activate, vt, EV_NORMAL);
+	vt_cb_activate(&vt->base);
+}
+
 static void vt_libseat_destroy(struct uterm_vt *base)
 {
 	struct uterm_vt_libseat *vt = to_libseat(base);
+
+	if (vt->wait_active) {
+		ev_eloop_unregister_signal_cb(vt->base.eloop, SIGUSR1, vt_sig_enter, vt);
+		ev_eloop_unregister_signal_cb(vt->base.eloop, SIGUSR2, vt_sig_leave, vt);
+	}
+	ev_eloop_unregister_idle_cb(vt->base.eloop, libseat_idle_activate, vt, EV_NORMAL);
 
 	close_tty(vt);
 	if (vt->libseat_efd)
@@ -222,6 +308,18 @@ static int vt_libseat_activate(struct uterm_vt *base)
 {
 	struct uterm_vt_libseat *vt = to_libseat(base);
 	int ret;
+
+	/*
+	 * If the current active VT is not our VT, just switch to it, the signal
+	 * callback will do the rest
+	 */
+	if (vt->wait_active) {
+		if (ioctl(vt->tty_fd, VT_ACTIVATE, vt->tty_num) < 0) {
+			log_warning("cannot activate VT %d (%d): %m", vt->tty_num, errno);
+			return -EFAULT;
+		}
+		return 0;
+	}
 
 	ret = seat_connect(vt);
 	if (ret)
@@ -371,7 +469,7 @@ static void vt_libseat_input(struct input *input, struct input_key_event *ev, vo
 			return;
 	}
 
-	if (!id || id == vt->tty_num)
+	if (!id || id == vt->tty_num || vt->wait_active)
 		return;
 
 	log_debug("switching to VT %d via libseat", id);
@@ -404,6 +502,21 @@ static void vt_libseat_close(int fd, int fd_id, void *data)
 	close(fd);
 }
 
+static int vt_register_signals(struct uterm_vt_libseat *vt)
+{
+	int ret;
+
+	ret = ev_eloop_register_signal_cb(vt->base.eloop, SIGUSR1, vt_sig_enter, vt);
+	if (ret)
+		return ret;
+
+	ret = ev_eloop_register_signal_cb(vt->base.eloop, SIGUSR2, vt_sig_leave, vt);
+	if (ret)
+		ev_eloop_unregister_signal_cb(vt->base.eloop, SIGUSR1, vt_sig_enter, vt);
+
+	return ret;
+}
+
 struct uterm_vt *uterm_vt_libseat_new(struct ev_eloop *eloop, struct input *input,
 				      const char *vt_name)
 {
@@ -421,6 +534,14 @@ struct uterm_vt *uterm_vt_libseat_new(struct ev_eloop *eloop, struct input *inpu
 	if (vt_name) {
 		if (open_tty(vt, vt_name) < 0)
 			goto err_free;
+
+		if (vt->wait_active) {
+			if (vt_register_signals(vt)) {
+				log_warning("cannot register VT signal handlers"
+					    "falling back to eager activation");
+				vt->wait_active = false;
+			}
+		}
 	}
 	libseat_set_log_handler(log_libseat);
 	libseat_set_log_level(LIBSEAT_LOG_LEVEL_INFO);
@@ -431,10 +552,14 @@ struct uterm_vt *uterm_vt_libseat_new(struct ev_eloop *eloop, struct input *inpu
 	if (ret)
 		goto err_close_tty;
 
-	if (!vt_name) {
+	if (!vt->wait_active) {
 		ret = seat_connect(vt);
 		if (ret)
 			goto err_input;
+		/* Wait for the seat to finish its initialization before calling
+		 * the activate callback
+		 */
+		ev_eloop_register_idle_cb(vt->base.eloop, libseat_idle_activate, vt, EV_NORMAL);
 	}
 
 	return &vt->base;

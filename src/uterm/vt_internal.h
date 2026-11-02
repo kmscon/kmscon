@@ -2,7 +2,6 @@
 #define UTERM_VT_INTERNAL_H
 
 #include "input/input.h"
-#include "shl/dlist.h"
 #include "shl/eloop.h"
 #include "vt.h"
 
