@@ -74,6 +74,7 @@
 #include "shl/misc.h"
 #include "vt.h"
 #include "vt_internal.h"
+#include "vt_real.h"
 
 #define LOG_SUBSYSTEM "vt"
 
@@ -109,16 +110,15 @@ static void real_delayed(struct ev_eloop *eloop, void *unused, void *data)
 static void real_sig_enter(struct ev_eloop *eloop, struct signalfd_siginfo *info, void *data)
 {
 	struct uterm_vt_real *vt = data;
-	struct vt_stat vts;
-	int ret;
+	int active_tty;
 
-	ret = ioctl(vt->real_fd, VT_GETSTATE, &vts);
-	if (ret) {
+	active_tty = vt_get_active(vt->real_fd);
+	if (active_tty < 0) {
 		log_warning("cannot get current VT state (%d): %m", errno);
 		return;
 	}
 
-	if (vts.v_active != vt->real_num)
+	if (active_tty != vt->real_num)
 		return;
 
 	if (vt->real_delayed) {
@@ -139,17 +139,16 @@ static void real_sig_enter(struct ev_eloop *eloop, struct signalfd_siginfo *info
 static void real_sig_leave(struct ev_eloop *eloop, struct signalfd_siginfo *info, void *data)
 {
 	struct uterm_vt_real *vt = data;
-	struct vt_stat vts;
-	int ret;
+	int ret, active_tty;
 	bool active;
 
-	ret = ioctl(vt->real_fd, VT_GETSTATE, &vts);
-	if (ret) {
+	active_tty = vt_get_active(vt->real_fd);
+	if (active_tty < 0) {
 		log_warning("cannot get current VT state (%d): %m", errno);
 		return;
 	}
 
-	if (vts.v_active != vt->real_num)
+	if (active_tty != vt->real_num)
 		return;
 
 	log_debug("leaving VT %d %p due to VT signal", vt->real_num, vt);
@@ -191,12 +190,12 @@ static void real_vt_input(struct ev_fd *fd, int mask, void *data)
 	}
 }
 
-static int open_tty(const char *dev, int *tty_fd, int *tty_num)
+int vt_open_tty(const char *dev, int *tty_num)
 {
 	int fd, ret, id;
 	struct stat st;
 
-	if (!dev || !tty_fd || !tty_num)
+	if (!dev || !tty_num)
 		return -EINVAL;
 
 	log_notice("using tty %s\n", dev);
@@ -204,39 +203,33 @@ static int open_tty(const char *dev, int *tty_fd, int *tty_num)
 	fd = open(dev, O_RDWR | O_NOCTTY | O_CLOEXEC);
 	if (fd < 0) {
 		log_err("cannot open tty %s (%d): %m", dev, errno);
-		return -errno;
+		return fd;
 	}
 
 	ret = fstat(fd, &st);
 	if (ret) {
 		log_error("cannot introspect tty %s (%d): %m", dev, errno);
 		close(fd);
-		return -errno;
+		return ret;
 	}
 	id = minor(st.st_rdev);
 	log_debug("new tty ID is %d", id);
-
-	*tty_fd = fd;
 	*tty_num = id;
-	return 0;
+	return fd;
 }
 
 static int real_restore(struct uterm_vt *base)
 {
 	struct uterm_vt_real *vt = to_real(base);
 	int ret;
-	struct vt_mode mode = {0};
 
 	if (ioctl(vt->real_fd, KDSETMODE, KD_GRAPHICS)) {
 		log_err("cannot put VT in graphics mode (%d): %m", errno);
 		ret = -errno;
 		return ret;
 	}
-	mode.mode = VT_PROCESS;
-	mode.acqsig = SIGUSR1;
-	mode.relsig = SIGUSR2;
 
-	if (ioctl(vt->real_fd, VT_SETMODE, &mode)) {
+	if (vt_set_mode_sig(vt->real_fd)) {
 		log_err("cannot take control of vt handling (%d): %m", errno);
 		ret = -errno;
 		return ret;
@@ -257,15 +250,14 @@ static int real_restore(struct uterm_vt *base)
 
 static int real_open(struct uterm_vt_real *vt, const char *vt_name)
 {
-	struct vt_mode mode = {0};
-	struct vt_stat vts;
-	int ret, err;
+	int fd, ret, err, active_tty;
 
 	log_debug("open vt %p", vt);
 
-	ret = open_tty(vt_name, &vt->real_fd, &vt->real_num);
-	if (ret)
-		return ret;
+	fd = vt_open_tty(vt_name, &vt->real_num);
+	if (fd < 0)
+		return -EINVAL;
+	vt->real_fd = fd;
 
 	ret = ev_eloop_new_fd(vt->base.eloop, &vt->real_efd, vt->real_fd, EV_READABLE,
 			      real_vt_input, vt);
@@ -274,13 +266,13 @@ static int real_open(struct uterm_vt_real *vt, const char *vt_name)
 
 	/* Get the number of the VT which is active now, so we have something
 	 * to switch back to in uterm_vt_deactivate(). */
-	ret = ioctl(vt->real_fd, VT_GETSTATE, &vts);
-	if (ret) {
+	active_tty = vt_get_active(vt->real_fd);
+	if (active_tty < 0) {
 		log_warn("cannot find the currently active VT (%d): %m", errno);
 		ret = -EFAULT;
 		goto err_eloop;
 	}
-	vt->real_saved_num = vts.v_active;
+	vt->real_saved_num = active_tty;
 	vt->real_target = -1;
 
 	if (ioctl(vt->real_fd, KDSETMODE, KD_GRAPHICS)) {
@@ -289,11 +281,7 @@ static int real_open(struct uterm_vt_real *vt, const char *vt_name)
 		goto err_eloop;
 	}
 
-	mode.mode = VT_PROCESS;
-	mode.acqsig = SIGUSR1;
-	mode.relsig = SIGUSR2;
-
-	if (ioctl(vt->real_fd, VT_SETMODE, &mode)) {
+	if (vt_set_mode_sig(vt->real_fd)) {
 		log_err("cannot take control of vt handling (%d): %m", errno);
 		ret = -errno;
 		goto err_text;
@@ -323,7 +311,7 @@ static int real_open(struct uterm_vt_real *vt, const char *vt_name)
 	if (ret)
 		log_warning("cannot set VT KBMODE to K_OFF (%d): %m", errno);
 
-	if (vts.v_active == vt->real_num) {
+	if (active_tty == vt->real_num) {
 		ret = ev_eloop_register_idle_cb(vt->base.eloop, real_delayed, vt, EV_NORMAL);
 		if (ret) {
 			log_error("cannot register idle cb for VT switch");
@@ -340,9 +328,7 @@ err_kbdmode:
 	if (err)
 		log_error("cannot reset VT KBMODE to %d (%d): %m", vt->real_kbmode, errno);
 err_setmode:
-	memset(&mode, 0, sizeof(mode));
-	mode.mode = VT_AUTO;
-	err = ioctl(vt->real_fd, VT_SETMODE, &mode);
+	err = vt_set_mode_auto(vt->real_fd);
 	if (err)
 		log_warning("cannot reset VT %d to VT_AUTO mode (%d): %m", vt->real_num, errno);
 err_text:
@@ -359,7 +345,6 @@ err_fd:
 
 static void real_close(struct uterm_vt_real *vt)
 {
-	struct vt_mode mode = {0};
 	int ret;
 
 	log_debug("closing VT %d", vt->real_num);
@@ -377,8 +362,8 @@ static void real_close(struct uterm_vt_real *vt)
 	if (ret && !vt->base.hup)
 		log_error("cannot reset VT KBMODE to %d (%d): %m", vt->real_kbmode, errno);
 
-	mode.mode = VT_AUTO;
-	ret = ioctl(vt->real_fd, VT_SETMODE, &mode);
+	ret = vt_set_mode_auto(vt->real_fd);
+
 	if (ret && !vt->base.hup)
 		log_warning("cannot reset VT %d to VT_AUTO mode (%d): %m", vt->real_num, errno);
 
@@ -404,16 +389,16 @@ static void real_close(struct uterm_vt_real *vt)
 static int real_activate(struct uterm_vt *base)
 {
 	struct uterm_vt_real *vt = to_real(base);
-	int ret;
-	struct vt_stat vts;
+	int ret, active_tty;
 
 	if (vt->base.hup)
 		return -EPIPE;
 
-	ret = ioctl(vt->real_fd, VT_GETSTATE, &vts);
-	if (ret)
+	active_tty = vt_get_active(vt->real_fd);
+
+	if (active_tty < 0)
 		log_warn("cannot find current VT (%d): %m", errno);
-	else if (vts.v_active == vt->real_num)
+	else if (active_tty == vt->real_num)
 		return 0;
 
 	if (vt->base.active)
@@ -447,19 +432,18 @@ static int real_activate(struct uterm_vt *base)
 static int real_deactivate(struct uterm_vt *base)
 {
 	struct uterm_vt_real *vt = to_real(base);
-	int ret;
-	struct vt_stat vts;
+	int ret, active_tty;
 
 	if (vt->base.hup)
 		return -EPIPE;
 
-	ret = ioctl(vt->real_fd, VT_GETSTATE, &vts);
-	if (ret) {
+	active_tty = vt_get_active(vt->real_fd);
+	if (active_tty < 0) {
 		log_warn("cannot find current VT (%d): %m", errno);
 		return -EFAULT;
 	}
 
-	if (vts.v_active != vt->real_num || vts.v_active == vt->real_saved_num)
+	if (active_tty != vt->real_num || active_tty == vt->real_saved_num)
 		return 0;
 
 	if (!vt->base.active)
@@ -482,19 +466,19 @@ static void real_input(struct input *input, struct input_key_event *ev, void *da
 {
 	struct uterm_vt_real *vt = data;
 	int id;
-	struct vt_stat vts;
-	int ret;
+	int ret, active_tty;
 
 	if (ev->handled || !vt->base.active || vt->base.hup)
 		return;
 
-	ret = ioctl(vt->real_fd, VT_GETSTATE, &vts);
-	if (ret) {
+	active_tty = vt_get_active(vt->real_fd);
+
+	if (active_tty < 0) {
 		log_warn("cannot find current VT (%d): %m", errno);
 		return;
 	}
 
-	if (vts.v_active != vt->real_num)
+	if (active_tty != vt->real_num)
 		return;
 
 	id = 0;
@@ -529,19 +513,18 @@ static void real_input(struct input *input, struct input_key_event *ev, void *da
 static void real_retry(struct uterm_vt *base)
 {
 	struct uterm_vt_real *vt = to_real(base);
-	struct vt_stat vts;
-	int ret;
+	int ret, active_tty;
 
 	if (vt->base.hup)
 		return;
 
-	ret = ioctl(vt->real_fd, VT_GETSTATE, &vts);
-	if (ret) {
+	active_tty = vt_get_active(vt->real_fd);
+	if (active_tty < 0) {
 		log_warn("cannot find current VT (%d): %m", errno);
 		return;
 	}
 
-	if (vts.v_active != vt->real_num || vt->real_target < 0)
+	if (active_tty != vt->real_num || vt->real_target < 0)
 		return;
 
 	/* hard limit of 2-3 seconds for asynchronous/pending VT-switches */
