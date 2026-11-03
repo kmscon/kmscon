@@ -296,6 +296,7 @@ static void vt_libseat_destroy(struct uterm_vt *base)
 		ev_eloop_unregister_signal_cb(vt->base.eloop, SIGUSR2, vt_sig_leave, vt);
 	}
 	ev_eloop_unregister_idle_cb(vt->base.eloop, libseat_idle_activate, vt, EV_NORMAL);
+	input_set_device_ops(vt->base.input, NULL, NULL, NULL);
 
 	close_tty(vt);
 	if (vt->libseat_efd)
@@ -567,6 +568,7 @@ struct uterm_vt *uterm_vt_libseat_new(struct ev_eloop *eloop, struct input *inpu
 err_input:
 	input_unregister_key_cb(input, vt_libseat_input, vt);
 err_close_tty:
+	input_set_device_ops(input, NULL, NULL, NULL);
 	close_tty(vt);
 err_free:
 	free(vt);
