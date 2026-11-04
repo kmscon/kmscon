@@ -118,7 +118,7 @@ struct kmscon_terminal {
 
 	/* Set on lock terminals only, which run the unlock helper instead of the
 	 * login process: the terminal hidden behind this one. It starts with its
-	 * zoom. */
+	 * zoom and rotation. */
 	struct kmscon_terminal *follower;
 	struct ev_timer *respawn_timer;
 };
@@ -836,7 +836,7 @@ static void rotate_ccw_all(struct kmscon_terminal *term)
 
 int terminal_add_display(struct kmscon_terminal *term, struct display *disp)
 {
-	struct screen *scr;
+	struct screen *scr, *fscr;
 	const char *be, *gpu, *connector;
 	enum Orientation orientation;
 	int ret;
@@ -860,6 +860,14 @@ int terminal_add_display(struct kmscon_terminal *term, struct display *disp)
 	connector = display_name(disp);
 
 	config_get_screen(term->conf, gpu, connector, &orientation, &scr->config_enabled);
+
+	if (term->follower) {
+		dlist_for_each_entry(fscr, &term->follower->screens, list)
+		{
+			if (fscr->disp == disp)
+				orientation = kmscon_text_get_orientation(fscr->txt);
+		}
+	}
 
 	ret = display_register_pageflip(scr->disp, display_pageflip, scr);
 	if (ret) {
