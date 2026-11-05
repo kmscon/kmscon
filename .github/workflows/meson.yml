@@ -45,6 +45,11 @@ jobs:
     - name: Install dependencies on Ubuntu
       run: sudo apt-get update && sudo apt-get install -y meson check libudev-dev libxkbcommon-dev libdrm-dev libgbm-dev libegl1-mesa-dev libgles-dev libpango1.0-dev libsystemd-dev jq libseat-dev
 
+    # libtsm (src/tsm) is a Rust crate, edition 2024 needs rustc >= 1.85,
+    # which is newer than the cargo package of Ubuntu
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
     - name: Configure Meson
       run: meson setup -Dlibseat=enabled build
 
