@@ -306,6 +306,15 @@
                 and text with blink attribute will blink too. (default: on)</para>
         </listitem>
       </varlistentry>
+
+      <varlistentry>
+        <term><option>--lock-cmd {cmd}</option></term>
+        <listitem>
+          <para>Unlock program run as the owner of a locked terminal, given
+                by its absolute path, for example /usr/bin/vlock -c. Locking
+                is off while it is unset. See Locking. (default: unset)</para>
+        </listitem>
+      </varlistentry>
     </variablelist>
 
     <para>Input Options:</para>
@@ -545,6 +554,14 @@
                 Use with caution as the reboot is immediate without confirmation.
                 Example: --grab-reboot=&lt;Ctrl&gt;&lt;Alt&gt;Delete
                 (default: disabled)</para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term><option>--grab-lock {grab}</option></term>
+        <listitem>
+          <para>Lock every terminal of this kmscon instance where a user is
+                logged in. The shortcut does nothing while --lock-cmd is unset.
+                See Locking. (default: &lt;Ctrl&gt;&lt;Logo&gt;l)</para>
         </listitem>
       </varlistentry>
     </variablelist>
@@ -935,6 +952,87 @@
   </refsect1>
 
   <refsect1>
+    <title>Locking</title>
+    <para>KMSCON can lock its terminals, like vlock. A locked terminal keeps
+          running in the background, and a lock screen is shown in its place.
+          The lock screen runs the program set with <option>--lock-cmd</option>
+          as the user logged in on that terminal, so it asks for that user's
+          password. The terminal is unlocked when the program exits with status
+          0. Any other exit keeps it locked, and the program is restarted after
+          5 seconds. <option>--lock-cmd</option> is unset by default, which
+          turns locking off. For example, with vlock:</para>
+
+    <programlisting>lock-cmd=/usr/bin/vlock -c</programlisting>
+
+    <para>The program is given by its absolute path, otherwise the option is
+          rejected, and must exit 0 only after authenticating the user it runs
+          as. That user must be able to
+          read and execute it, otherwise the terminal is not locked and a
+          warning is logged. It always starts with a reset environment, whatever
+          <option>--reset-env</option> says.</para>
+
+    <para>The <option>--grab-lock</option> shortcut locks every terminal of
+          this KMSCON instance where a user is logged in, whichever user it is.
+          Each locked terminal asks for its own owner's password. Terminals at a
+          login prompt, and terminals that handed the display to a graphical
+          program with kmscon-launch-gui, are not locked. Switching between
+          sessions, opening and closing terminals, and the reboot shortcut keep
+          working while terminals are locked.</para>
+
+    <para>A terminal counts as logged in when systemd-logind has a session for
+          it, and the owner is that session's user. Without logind, a terminal
+          running login counts as logged in once login has started the user's
+          shell, and the owner is the user running it. A terminal running any
+          other program counts as logged in as soon as it starts.</para>
+
+    <para>If KMSCON is built with D-Bus support and
+          <option>--lock-cmd</option> is set, it also follows
+          systemd-logind:</para>
+    <itemizedlist>
+      <listitem><para><command>loginctl lock-session</command>,
+            <command>loginctl lock-sessions</command> and
+            <varname>IdleAction=lock</varname> lock the terminals of the
+            sessions concerned.</para></listitem>
+      <listitem><para><command>loginctl unlock-session</command> and
+            <command>loginctl unlock-sessions</command> unlock them without a
+            password.</para></listitem>
+      <listitem><para>KMSCON tells logind whether each session is locked, as
+            shown by <command>loginctl show-session -p
+            LockedHint</command>.</para></listitem>
+    </itemizedlist>
+    <para>Who may lock or unlock which session is decided by logind and polkit:
+          a user can lock and unlock their own sessions, and other sessions
+          need administrator rights.</para>
+
+    <para>To lock all terminals before the system suspends, enable
+          <filename>kmscon-lock-on-sleep.service</filename>:</para>
+
+    <programlisting>systemctl enable kmscon-lock-on-sleep.service</programlisting>
+
+    <para>It runs <command>loginctl lock-sessions</command>, which also asks
+          graphical sessions to lock. The system may suspend before the lock
+          screen is drawn, so the terminal content can show briefly on
+          resume.</para>
+
+    <para>Limitations:</para>
+    <itemizedlist>
+      <listitem><para>The lock only protects what is shown on the screen. With
+            an automatic login, opening a new terminal gives an unlocked shell,
+            and closing a locked terminal ends its programs without a
+            password.</para></listitem>
+      <listitem><para>The lock program runs as the owner, so it can usually
+            only check the owner's password: vlock's fallback to root's
+            password does not work there. PAM modules that need root, such
+            as pam_fscrypt or pam_faillock, fail in it.</para></listitem>
+      <listitem><para>Without logind, logged-in users are found through
+            <filename>/proc</filename>, which needs a kernel with
+            CONFIG_PROC_CHILDREN. Terminals started with su -l, sudo -i or
+            agetty, or with a wrapper script that does not exec login, are
+            locked for root.</para></listitem>
+    </itemizedlist>
+  </refsect1>
+
+  <refsect1>
     <title>Virtual Terminals</title>
     <para>Historically, Linux provides virtual terminals (VT) only on seat
           <emphasis>seat0</emphasis>. This is because only one VT can be active
@@ -954,7 +1052,9 @@
     <title>See Also</title>
     <para>
       <citerefentry><refentrytitle>console</refentrytitle><manvolnum>4</manvolnum></citerefentry>,
-      <citerefentry><refentrytitle>Compose</refentrytitle><manvolnum>5</manvolnum></citerefentry>
+      <citerefentry><refentrytitle>Compose</refentrytitle><manvolnum>5</manvolnum></citerefentry>,
+      <citerefentry><refentrytitle>loginctl</refentrytitle><manvolnum>1</manvolnum></citerefentry>,
+      <citerefentry><refentrytitle>vlock</refentrytitle><manvolnum>1</manvolnum></citerefentry>
     </para>
   </refsect1>
 </refentry>

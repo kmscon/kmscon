@@ -27,17 +27,25 @@
 #ifndef _KMSCON_DBUS_H
 #define _KMSCON_DBUS_H
 
+#include <errno.h>
+#include <stdbool.h>
+#include <sys/types.h>
+
 struct ev_eloop;
 struct kmscon_dbus;
 
 typedef void (*dbus_update_xkb_layout_cb)(const char *model, const char *layout,
 					  const char *variant, const char *options, void *data);
+typedef void (*dbus_session_lock_cb)(pid_t leader, uid_t uid, bool lock, void *data);
 
 #ifdef BUILD_ENABLE_DBUS
 void kmscon_dbus_set_xkb_env_from_locale1(struct kmscon_dbus *dbus);
 struct kmscon_dbus *kmscon_dbus_new(struct ev_eloop *eloop);
 void kmscon_dbus_free(struct kmscon_dbus *dbus);
 int kmscon_dbus_listen_locale1(struct kmscon_dbus *dbus, dbus_update_xkb_layout_cb cb, void *data);
+int kmscon_dbus_listen_logind(struct kmscon_dbus *dbus, dbus_session_lock_cb cb, void *data);
+int kmscon_dbus_get_session_owner(struct kmscon_dbus *dbus, pid_t leader, uid_t *uid);
+void kmscon_dbus_set_locked_hint(struct kmscon_dbus *dbus, pid_t leader, bool locked);
 
 #else
 static inline void kmscon_dbus_set_xkb_env_from_locale1(struct kmscon_dbus *dbus)
@@ -56,6 +64,19 @@ static inline int kmscon_dbus_listen_locale1(struct kmscon_dbus *dbus, dbus_upda
 					     void *data)
 {
 	return 0;
+}
+static inline int kmscon_dbus_listen_logind(struct kmscon_dbus *dbus, dbus_session_lock_cb cb,
+					    void *data)
+{
+	return 0;
+}
+static inline int kmscon_dbus_get_session_owner(struct kmscon_dbus *dbus, pid_t leader, uid_t *uid)
+{
+	return -ENOTCONN;
+}
+static inline void kmscon_dbus_set_locked_hint(struct kmscon_dbus *dbus, pid_t leader, bool locked)
+{
+	return;
 }
 #endif /* BUILD_ENABLE_DBUS */
 #endif /* _KMSCON_DBUS_H */

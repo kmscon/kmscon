@@ -93,6 +93,14 @@ if enable_font_freetype
     test('test_font_freetype', test_font_freetype)
 endif
 
+test_pty = executable(
+    'test_pty',
+    'test_pty.c',
+    include_directories: [src_inc, misc_inc],
+    dependencies: [shl_deps, eloop_deps],
+)
+test('test_pty', test_pty)
+
 test_conf = executable(
     'test_conf',
     'test_conf.c',

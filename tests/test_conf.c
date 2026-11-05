@@ -127,10 +127,62 @@ void test_parse_screen(const char *config, struct kmscon_conf_screen *screen, in
 	}
 }
 
+static struct kmscon_conf_t *parse_config(struct conf_ctx **ctx, const char *config)
+{
+	char *buf;
+
+	kmscon_conf_new(ctx);
+	conf_ctx_reset(*ctx);
+
+	buf = strdup(config);
+	parse_buffer((*ctx)->opts, (*ctx)->onum, buf, strlen(buf));
+	free(buf);
+	return conf_ctx_get_mem(*ctx);
+}
+
+void test_lock_options(void)
+{
+	struct conf_ctx *ctx;
+	struct kmscon_conf_t *conf;
+	uint32_t sym_l = XKB_KEY_l, sym_x = XKB_KEY_x;
+
+	/* defaults */
+	conf = parse_config(&ctx, "");
+	assert(!conf->lock_argv);
+	assert(conf_grab_matches(conf->grab_lock, SHL_CONTROL_MASK | SHL_LOGO_MASK, 1, &sym_l));
+	assert(!conf_grab_matches(conf->grab_lock, SHL_CONTROL_MASK, 1, &sym_l));
+	kmscon_conf_free(ctx);
+
+	/* custom values */
+	conf = parse_config(&ctx, "lock-cmd=/usr/local/bin/vlock -c\n"
+				  "grab-lock=<Alt>x\n");
+	assert(!strcmp(conf->lock_argv[0], "/usr/local/bin/vlock"));
+	assert(!strcmp(conf->lock_argv[1], "-c") && !conf->lock_argv[2]);
+	assert(conf_grab_matches(conf->grab_lock, SHL_ALT_MASK, 1, &sym_x));
+	assert(!conf_grab_matches(conf->grab_lock, SHL_CONTROL_MASK | SHL_LOGO_MASK, 1, &sym_l));
+	kmscon_conf_free(ctx);
+
+	/* an empty command leaves locking off */
+	conf = parse_config(&ctx, "lock-cmd=\n");
+	assert(!conf->lock_argv);
+	kmscon_conf_free(ctx);
+
+	/* an unterminated quote is rejected when the config is read */
+	conf = parse_config(&ctx, "lock-cmd=\"/usr/bin/vlock -c\n");
+	assert(!conf->lock_argv);
+	kmscon_conf_free(ctx);
+
+	/* so is a relative path: the program runs from the user's home */
+	conf = parse_config(&ctx, "lock-cmd=usr/bin/vlock -c\n");
+	assert(!conf->lock_argv);
+	kmscon_conf_free(ctx);
+}
+
 int main()
 {
 	test_parse_mode(config_file, parsed_modes, 6);
 	test_parse_screen(screen_conf, parsed_screens, 3);
+	test_lock_options();
 
 	return 0;
 }

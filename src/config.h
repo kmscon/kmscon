@@ -123,6 +123,8 @@ struct kmscon_conf_t {
 	bool bell;
 	/* enable cursor and text blinking */
 	bool blink;
+	/* unlock helper run on locked sessions, NULL when unset */
+	char **lock_argv;
 
 	/* Input Options */
 	/* input KBD model */
@@ -177,6 +179,8 @@ struct kmscon_conf_t {
 	struct conf_grab *grab_rotate_ccw;
 	/* reboot system grab */
 	struct conf_grab *grab_reboot;
+	/* lock sessions grab */
+	struct conf_grab *grab_lock;
 
 	/* Video Options */
 	/* use DRM if available */

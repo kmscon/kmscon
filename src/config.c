@@ -125,6 +125,11 @@ static void print_help()
 		"\t                              Enable bell forwarding to the VT\n"
 		"\t    --blink                 [on]\n"
 		"\t                              Enable or disable cursor/text blinking\n"
+		"\t    --lock-cmd <cmd>        [-]\n"
+		"\t                              Unlock helper run as the owner of a\n"
+		"\t                              locked session, e.g. /usr/bin/vlock -c.\n"
+		"\t                              The session is unlocked when it exits\n"
+		"\t                              with status 0. Unset: no locking\n"
 		"\n"
 		"Input Options:\n"
 		"\t    --xkb-model <model>        [-]  Set XkbModel for input devices\n"
@@ -175,6 +180,9 @@ static void print_help()
 		"\t                                  Rotate output counter-clock-wise\n"
 		"\t    --grab-reboot <grab>        []\n"
 		"\t                                  Reboot the system (disabled by default)\n"
+		"\t    --grab-lock <grab>          [<Ctrl><Logo>l]\n"
+		"\t                                  Lock all logged in terminals\n"
+		"\t                                  (only when --lock-cmd is set)\n"
 		"\n"
 		"Video Options:\n"
 		"\t    --drm                     [on]    Use DRM if available\n"
@@ -447,6 +455,72 @@ static int file_login(struct conf_option *opt, bool on, const char *arg)
 	conf->argv = t;
 	return 0;
 }
+
+/*
+ * Lock command
+ * Split when the configuration is read, like the login command. The program
+ * must be an absolute path, as it runs from the user's home directory.
+ */
+
+static void conf_free_lock_cmd(struct conf_option *opt)
+{
+	free(*(char ***)opt->mem);
+	*(char ***)opt->mem = NULL;
+}
+
+static void conf_default_lock_cmd(struct conf_option *opt)
+{
+	opt->type->free(opt);
+}
+
+static int conf_parse_lock_cmd(struct conf_option *opt, bool on, const char *arg)
+{
+	unsigned int size;
+	char **t;
+	int ret;
+
+	ret = shl_split_command_string(arg, &t, &size);
+	if (ret) {
+		log_error("cannot split 'lock-cmd' config-option argument");
+		return ret;
+	}
+	if (!size) {
+		free(t);
+		t = NULL;
+	} else if (t[0][0] != '/') {
+		log_error("'lock-cmd' config-option needs an absolute path: %s", t[0]);
+		free(t);
+		return -EINVAL;
+	}
+
+	opt->type->free(opt);
+	*(char ***)opt->mem = t;
+	return 0;
+}
+
+static int conf_copy_lock_cmd(struct conf_option *opt, const struct conf_option *src)
+{
+	char **t = NULL;
+	int ret;
+
+	if (*(char ***)src->mem) {
+		ret = shl_dup_array(&t, *(char ***)src->mem);
+		if (ret)
+			return ret;
+	}
+
+	opt->type->free(opt);
+	*(char ***)opt->mem = t;
+	return 0;
+}
+
+static const struct conf_type conf_lock_cmd = {
+	.flags = CONF_HAS_ARG,
+	.set_default = conf_default_lock_cmd,
+	.free = conf_free_lock_cmd,
+	.parse = conf_parse_lock_cmd,
+	.copy = conf_copy_lock_cmd,
+};
 
 /*
  * GPU selection type
@@ -942,6 +1016,9 @@ static struct conf_grab def_grab_rotate_cw =
 
 static struct conf_grab def_grab_rotate_ccw = CONF_SINGLE_GRAB(SHL_LOGO_MASK, XKB_KEY_minus);
 
+static struct conf_grab def_grab_lock =
+	CONF_SINGLE_GRAB(SHL_CONTROL_MASK | SHL_LOGO_MASK, XKB_KEY_l);
+
 static palette_t def_palette = {
 	[TSM_COLOR_BLACK] = {0, 0, 0},		   /* black */
 	[TSM_COLOR_RED] = {205, 0, 0},		   /* red */
@@ -1011,6 +1088,8 @@ int kmscon_conf_new(struct conf_ctx **out)
 		CONF_OPTION_UINT(0, "sb-size", &conf->sb_size, 1000),
 		CONF_OPTION_BOOL(0, "bell", &conf->bell, false),
 		CONF_OPTION_BOOL(0, "blink", &conf->blink, true),
+		CONF_OPTION(0, 0, "lock-cmd", &conf_lock_cmd, NULL, NULL, NULL, &conf->lock_argv,
+			    NULL),
 
 		/* Input Options */
 		CONF_OPTION_STRING(0, "xkb-model", &conf->xkb_model, NULL),
@@ -1046,6 +1125,7 @@ int kmscon_conf_new(struct conf_ctx **out)
 		CONF_OPTION_GRAB(0, "grab-rotate-ccw", &conf->grab_rotate_ccw,
 				 &def_grab_rotate_ccw),
 		CONF_OPTION_GRAB(0, "grab-reboot", &conf->grab_reboot, NULL),
+		CONF_OPTION_GRAB(0, "grab-lock", &conf->grab_lock, &def_grab_lock),
 
 		/* Video Options */
 		CONF_OPTION_BOOL_FULL(0, "drm", aftercheck_drm, NULL, NULL, &conf->drm, true),
