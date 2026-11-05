@@ -5,7 +5,7 @@
 project(
     'kmscon',
     'c',
-    version: '10.1.0',
+    version: '10.1.1',
     license: 'MIT',
     # meson 0.58: f-string
     # meson 0.62: dependency libdl

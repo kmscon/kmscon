@@ -1,5 +1,10 @@
 = KMSCON Release News =
 
+## CHANGES with 10.1.1
+* seat: don't use VT_WAITACTIVE by @kdj0c in https://github.com/kmscon/kmscon/pull/603
+* font_freetype: fallback to non-monospace fonts for uncovered languages by @tagoh in https://github.com/kmscon/kmscon/pull/598
+* libseat: remove input open/close callback in case of error by @kdj0c in https://github.com/kmscon/kmscon/pull/605
+
 ## CHANGES with 10.1.0
 ### Important Notes
 It's now possible to configure each monitor independantly, regarding
