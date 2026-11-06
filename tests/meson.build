@@ -121,6 +121,9 @@ test(
         tsm_target_dir,
         '--profile',
         cargo_profile,
+        '--frozen',
     ],
+    # for .cargo/config.toml, which selects the vendored crates
+    workdir: tsm_source_dir,
     timeout: 600,
 )

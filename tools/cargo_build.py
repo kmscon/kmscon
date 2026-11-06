@@ -6,6 +6,10 @@ Usage: cargo_build.py CARGO MANIFEST TARGET_DIR PROFILE OUTPUT DEPFILE
 
 Runs cargo, copies the produced lib<name>.a to OUTPUT and writes a ninja
 depfile listing every Rust source cargo used, so meson rebuilds on change.
+
+Cargo runs in the crate directory, so that its .cargo/config.toml (which
+selects the vendored crates) is used, and with --frozen, so that it never
+accesses the network nor changes Cargo.lock.
 """
 
 import os
@@ -26,8 +30,9 @@ def main():
         target_dir,
         '--profile',
         profile,
+        '--frozen',
     ]
-    ret = subprocess.run(cmd).returncode
+    ret = subprocess.run(cmd, cwd=os.path.dirname(os.path.abspath(manifest))).returncode
     if ret:
         return ret
 

@@ -18,14 +18,15 @@ else
     cargo_profile = 'release'
 endif
 
-tsm_manifest = meson.current_source_dir() / 'Cargo.toml'
+tsm_source_dir = meson.current_source_dir()
+tsm_manifest = tsm_source_dir / 'Cargo.toml'
 tsm_target_dir = meson.current_build_dir() / 'cargo-target'
 
 tsm_lib = custom_target(
     'libtsm',
     output: 'libtsm.a',
     depfile: 'libtsm.d',
-    depend_files: files('Cargo.toml', 'Cargo.lock'),
+    depend_files: files('.cargo/config.toml', 'Cargo.toml', 'Cargo.lock'),
     console: true,
     command: [
         python,
