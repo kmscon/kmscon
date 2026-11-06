@@ -27,13 +27,13 @@
 #include <fontconfig/fontconfig.h>
 #include <freetype2/freetype/freetype.h>
 #include FT_FREETYPE_H
-#include <libtsm.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include "font.h"
 #include "shl/log.h"
 #include "shl/misc.h"
+#include "tsm.h"
 #include "video/video.h"
 
 #define LOG_SUBSYSTEM "font_freetype"
@@ -450,7 +450,7 @@ static struct kmscon_glyph *render_glyph(struct kmscon_font *font, FT_Face face,
 	unsigned int cwidth;
 	struct kmscon_glyph *glyph;
 
-	cwidth = tsm_ucs4_get_width(ch);
+	cwidth = tsm_char_width(ch);
 	if (!cwidth)
 		return NULL;
 
