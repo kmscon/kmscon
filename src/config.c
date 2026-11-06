@@ -220,6 +220,11 @@ static void print_help()
 		"\t                              values redraw at a fixed cadence, so\n"
 		"\t                              animations stay smooth.\n"
 		"\t                              Clamped to at most 1000.\n"
+		"\t    --render-ghosting <pct>  [0]\n"
+		"\t                              Temporal ghosting (phosphor persistence)\n"
+		"\t                              in percent: each pixel keeps that much of\n"
+		"\t                              the previous frame. 0 disables it, values\n"
+		"\t                              above 99 are treated as 99.\n"
 		"\n"
 		"Palette Options:\n"
 		"\t    --palette <name>                [default]\n"
@@ -1080,6 +1085,7 @@ int kmscon_conf_new(struct conf_ctx **out)
 		/* Renderer Options */
 		CONF_OPTION_STRING(0, "render-shader", &conf->render_shader, NULL),
 		CONF_OPTION_UINT(0, "render-fps", &conf->render_fps, 0),
+		CONF_OPTION_UINT(0, "render-ghosting", &conf->render_ghosting, 0),
 
 		/* Palette Options */
 		CONF_OPTION_STRING(0, "palette", &conf->palette, NULL),

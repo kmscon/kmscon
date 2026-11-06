@@ -55,6 +55,8 @@
 ## Redraw rate in frames per second, gltex renderer only (default: 0, only repaint
 ## when the screen content changes; clamped to 1000). Uncomment for smooth effects.
 #render-fps=60
+## Temporal ghosting (phosphor persistence) in percent (default: 0, disabled, max 99)
+#render-ghosting=85
 
 ## Fonts
 ## font-engine, can be [freetype, pango, psf, unifont, 8x16], by default kmscon tries in this order.

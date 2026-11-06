@@ -210,6 +210,8 @@ struct kmscon_conf_t {
 	/* redraw rate in frames per second for render-only redraws;
 	 * 0 only repaints when the screen content changes */
 	unsigned int render_fps;
+	/* temporal ghosting/phosphor persistence in percent (0 = off) */
+	unsigned int render_ghosting;
 
 	/* Palette Options */
 	/* color palette */

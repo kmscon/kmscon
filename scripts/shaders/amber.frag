@@ -5,12 +5,22 @@
  * original brightness: black stays black, dim colors turn deep amber, bright
  * colors turn hot amber.
  *
+ * Pair with `render-ghosting` in kmscon.conf for a phosphor persistence trail:
+ * kmscon flips the HISTORY_ENABLED marker below to 1 whenever ghosting is
+ * configured, which switches on the history/gamma uniforms and the blend.
+ *
  * Inputs available to every kmscon fragment shader:
  *   varying vec2 texcoord;        screen texture coordinates (0..1)
  *   uniform sampler2D source;     the rendered console
  *   uniform float time;           seconds since the renderer started
  *   uniform vec2 resolution;      screen size in pixels
+ *   #if HISTORY_ENABLED:
+ *   uniform sampler2D history;    previously displayed frame
+ *   uniform float gamma;          ghosting amount 0..0.99
  */
+
+/* kmscon rewrites this line to 1 when render-ghosting is enabled */
+#define HISTORY_ENABLED 0
 
 precision mediump float;
 
@@ -19,6 +29,11 @@ varying vec2 texcoord;
 uniform sampler2D source;
 uniform float time;
 uniform vec2 resolution;
+
+#if HISTORY_ENABLED
+uniform sampler2D history;
+uniform float gamma;
+#endif
 
 void main()
 {
@@ -43,5 +58,12 @@ void main()
 	 * columns simulating CRT pixel gaps; parity check, no per-pixel sine */
 	float door = 1.0 - 0.4 * mod(floor(texcoord.x * resolution.x), 2.0);
 
-	gl_FragColor = vec4(amber * b * door, val.a);
+	vec3 col = amber * b * door;
+
+#if HISTORY_ENABLED
+	/* phosphor persistence: keep `gamma` of the previous frame */
+	col = mix(col, texture2D(history, texcoord).rgb, gamma);
+#endif
+
+	gl_FragColor = vec4(col, val.a);
 }

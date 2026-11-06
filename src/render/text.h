@@ -75,6 +75,9 @@ struct kmscon_text {
 	 * Set this before kmscon_text_set() is called. Renderers that do not
 	 * support shaders ignore it. */
 	const char *render_shader;
+
+	/* temporal ghosting/phosphor persistence in percent (0 = off) */
+	unsigned int render_ghosting;
 };
 
 struct kmscon_cursor {

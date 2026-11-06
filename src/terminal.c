@@ -324,7 +324,8 @@ static bool screen_is_gltex(struct screen *scr)
 
 static bool terminal_has_render_options(struct kmscon_terminal *term)
 {
-	return term->conf->render_shader && term->conf->render_shader[0];
+	return (term->conf->render_shader && term->conf->render_shader[0]) ||
+	       term->conf->render_ghosting;
 }
 
 static void do_redraw_screen(struct screen *scr, bool rebuild)
@@ -965,6 +966,7 @@ int terminal_add_display(struct kmscon_terminal *term, struct display *disp)
 		goto err_cb;
 	}
 	scr->txt->render_shader = term->conf->render_shader;
+	scr->txt->render_ghosting = term->conf->render_ghosting;
 	if (terminal_has_render_options(term) && !screen_is_gltex(scr))
 		log_warning("render options are ignored on display %s: the %s renderer "
 			    "does not support shaders",
