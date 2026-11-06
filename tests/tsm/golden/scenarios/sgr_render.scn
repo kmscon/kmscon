@@ -1,0 +1,7 @@
+# Note: differs from the C libtsm 4.x: inverse cells are not inverted again by DECSCNM (tsm xor-ed with the raw flag value)
+resize 8 3
+in "\e[7mA\e[m\e[2mB\e[m\e[2;7mC\e[m\e[1;3;4;5mD\e[m\e[31;42;2mE\e[m"
+in "\e[38;2;200;100;50;48;2;10;20;30;2mF\e[m"
+dump render
+in "\e[?5h"
+dump render

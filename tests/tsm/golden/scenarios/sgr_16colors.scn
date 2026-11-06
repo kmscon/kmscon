@@ -1,0 +1,11 @@
+resize 16 8
+in "\e[30mA\e[31mB\e[32mC\e[33mD\e[34mE\e[35mF\e[36mG\e[37mH\e[39mI"
+in "\r\n\e[40mA\e[41mB\e[42mC\e[43mD\e[44mE\e[45mF\e[46mG\e[47mH\e[49mI"
+in "\r\n\e[90mA\e[91mB\e[92mC\e[93mD\e[94mE\e[95mF\e[96mG\e[97mH\e[39mI"
+in "\r\n\e[100mA\e[101mB\e[102mC\e[103mD\e[104mE\e[105mF\e[106mG\e[107mH\e[49mI"
+# bold brightens 30-37 only, also when set after the colour
+in "\r\n\e[1;30mA\e[31mB\e[37mC\e[90mD\e[97mE\e[22mF\e[m"
+in "\r\n\e[31m\e[1mG\e[22mH\e[1;41mI\e[m"
+# bold + default foreground
+in "\r\n\e[1mJ\e[m"
+dump attrs

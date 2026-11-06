@@ -1,0 +1,15 @@
+resize 6 3
+in "aaaaaa\r\nbbbbbb\r\ncccccc\e[2;3H\e[K"
+dump text
+in "\e[2;1Hbbbbbb\e[2;3H\e[0K"
+dump text
+in "\e[2;1Hbbbbbb\e[2;3H\e[1K"
+dump text
+in "\e[2;1Hbbbbbb\e[2;3H\e[2K"
+dump text
+in "\e[2;1Hbbbbbb\e[2;3H\e[3K"
+dump text
+in "\e[2;1Hbbbbbb\e[K"
+dump state text
+in "\e[2;1Hbbbbbb\e[1K"
+dump state text

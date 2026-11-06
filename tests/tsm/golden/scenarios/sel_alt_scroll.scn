@@ -1,0 +1,13 @@
+# selection on the alternate screen follows lines scrolled in place
+resize 6 4
+in "\e[?1049h11\r\n22\r\n33\r\n44"
+sel-start 0 1
+sel-target 1 2
+in "\n"
+sel-copy
+in "\e[2S"
+sel-copy
+dump render
+in "\e[T"
+sel-copy
+dump render

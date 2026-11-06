@@ -1,0 +1,9 @@
+> resize 40 3
+> in "\e(0"
+> in "_`abcdefghijklmnopqrstuvwxyz{|}~"
+> in "\e(B\r\n_`abcdefghijklmnopqrstuvwxyz{|}~"
+> dump text
+text
+   0|♦▒␉␌␍␊°±␤␋┘┐┌└┼⎺⎻─⎼⎽├┤┴┬│≤≥π≠£⋅·········|
+   1|_`abcdefghijklmnopqrstuvwxyz{|}~········|
+   2|········································|

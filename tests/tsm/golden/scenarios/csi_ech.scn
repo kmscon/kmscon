@@ -1,0 +1,11 @@
+resize 8 2
+in "abcdefgh\e[1;3H\e[X"
+dump text
+in "\e[2X"
+dump text
+in "\e[0X"
+dump text
+in "\e[1;6H\e[99X"
+dump state text
+in "\e[2;1H01234567\e[2X"
+dump state text

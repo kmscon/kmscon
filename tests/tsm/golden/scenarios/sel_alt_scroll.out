@@ -1,0 +1,30 @@
+> resize 6 4
+> in "\e[?1049h11\r\n22\r\n33\r\n44"
+> sel-start 0 1
+> sel-target 1 2
+> in "\n"
+> sel-copy
+< copy "22\n33"
+> in "\e[2S"
+> sel-copy
+< copy "\n"
+> dump render
+render
+   0|44    |
+   1|      |
+   2|      |
+   3|      |
+  2: 0-5 000000/e5e5e5 -
+  3: 0-1 000000/e5e5e5 -
+> in "\e[T"
+> sel-copy
+< copy ""
+> dump render
+render
+   0|      |
+   1|44    |
+   2|      |
+   3|      |
+  0: 2-5 000000/e5e5e5 -
+  1: 0-5 000000/e5e5e5 -
+  2: 0-5 000000/e5e5e5 -

@@ -1,0 +1,13 @@
+resize 6 3
+in "main\e[2;3H"
+in "\e[?1049h"
+dump state text
+in "alt\e[3;5H"
+in "\e[?1049l"
+dump state text
+in "\e[?1049h"
+dump text
+in "\e[?1049h"
+dump state
+in "\e[?1049l\e[?1049l"
+dump state

@@ -1,0 +1,161 @@
+> resize 5 5
+> sb-max 5
+> dump state
+state
+  size 5x5 cursor 0,0
+  cursor-style 0 blink 500
+  margins 0-4
+  tabs 0
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=0 pos=0 max=5
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+> in "\eE\eE\eE\eE"
+> in "\eE"
+> dump state
+state
+  size 5x5 cursor 0,4
+  cursor-style 0 blink 500
+  margins 0-4
+  tabs 0
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=1 pos=1 max=5
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+> in "\eE"
+> in "\eE"
+> dump state
+state
+  size 5x5 cursor 0,4
+  cursor-style 0 blink 500
+  margins 0-4
+  tabs 0
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=3 pos=3 max=5
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+> sb-up 1
+> dump state
+state
+  size 5x5 cursor 0,4
+  cursor-style 0 blink 500
+  margins 0-4
+  tabs 0
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=3 pos=2 max=5
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+> sb-up 1
+> sb-up 1
+> dump state
+state
+  size 5x5 cursor 0,4
+  cursor-style 0 blink 500
+  margins 0-4
+  tabs 0
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=3 pos=0 max=5
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+> sb-up 1
+> dump state
+state
+  size 5x5 cursor 0,4
+  cursor-style 0 blink 500
+  margins 0-4
+  tabs 0
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=3 pos=0 max=5
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+> sb-down 3
+> dump state
+state
+  size 5x5 cursor 0,4
+  cursor-style 0 blink 500
+  margins 0-4
+  tabs 0
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=3 pos=3 max=5
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+> in "\eE"
+> in "\eE"
+> dump state
+state
+  size 5x5 cursor 0,4
+  cursor-style 0 blink 500
+  margins 0-4
+  tabs 0
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=5 pos=5 max=5
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+> sb-up 2
+> dump state
+state
+  size 5x5 cursor 0,4
+  cursor-style 0 blink 500
+  margins 0-4
+  tabs 0
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=5 pos=3 max=5
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+> in "\eE"
+> dump state
+state
+  size 5x5 cursor 0,4
+  cursor-style 0 blink 500
+  margins 0-4
+  tabs 0
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=5 pos=2 max=5
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+> resize 5 3
+> dump state
+state
+  size 5x3 cursor 0,2
+  cursor-style 0 blink 500
+  margins 0-2
+  tabs 0
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=5 pos=0 max=5
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+> resize 5 5
+> dump state
+state
+  size 5x5 cursor 0,4
+  cursor-style 0 blink 500
+  margins 0-4
+  tabs 0
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=3 pos=0 max=5
+  default e5e5e5/000000
+  erase e5e5e5/000000 -

@@ -1,0 +1,66 @@
+in "\e[?1l"
+key Home
+key End
+key KP_Home
+key KP_End
+key Page_Up mods=none
+key Page_Down mods=none
+key KP_Page_Up mods=none
+key KP_Page_Down mods=none
+key Page_Up mods=shift
+key Page_Down mods=shift
+key KP_Page_Up mods=shift
+key KP_Page_Down mods=shift
+key Page_Up mods=ctrl
+key Page_Down mods=ctrl
+key KP_Page_Up mods=ctrl
+key KP_Page_Down mods=ctrl
+key Page_Up mods=ctrl+shift
+key Page_Down mods=ctrl+shift
+key KP_Page_Up mods=ctrl+shift
+key KP_Page_Down mods=ctrl+shift
+key Page_Up mods=alt
+key Page_Down mods=alt
+key KP_Page_Up mods=alt
+key KP_Page_Down mods=alt
+key Page_Up mods=ctrl+alt
+key Page_Down mods=ctrl+alt
+key KP_Page_Up mods=ctrl+alt
+key KP_Page_Down mods=ctrl+alt
+key Page_Up mods=lock
+key Page_Down mods=lock
+key KP_Page_Up mods=lock
+key KP_Page_Down mods=lock
+in "\e[?1h"
+key Home
+key End
+key KP_Home
+key KP_End
+key Page_Up mods=none
+key Page_Down mods=none
+key KP_Page_Up mods=none
+key KP_Page_Down mods=none
+key Page_Up mods=shift
+key Page_Down mods=shift
+key KP_Page_Up mods=shift
+key KP_Page_Down mods=shift
+key Page_Up mods=ctrl
+key Page_Down mods=ctrl
+key KP_Page_Up mods=ctrl
+key KP_Page_Down mods=ctrl
+key Page_Up mods=ctrl+shift
+key Page_Down mods=ctrl+shift
+key KP_Page_Up mods=ctrl+shift
+key KP_Page_Down mods=ctrl+shift
+key Page_Up mods=alt
+key Page_Down mods=alt
+key KP_Page_Up mods=alt
+key KP_Page_Down mods=alt
+key Page_Up mods=ctrl+alt
+key Page_Down mods=ctrl+alt
+key KP_Page_Up mods=ctrl+alt
+key KP_Page_Down mods=ctrl+alt
+key Page_Up mods=lock
+key Page_Down mods=lock
+key KP_Page_Up mods=lock
+key KP_Page_Down mods=lock

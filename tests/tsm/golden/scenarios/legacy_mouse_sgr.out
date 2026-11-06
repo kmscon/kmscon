@@ -1,0 +1,24 @@
+> in "\e[?1006h"
+> in "\e[?1002h"
+< mouse-cb mode=1002 pixels=0
+> mouse press left cell=0,0
+< write "\e[<0;1;1M"
+< ret true
+> mouse release left cell=0,0
+< write "\e[<0;1;1m"
+< ret true
+> mouse press middle cell=0,0
+< write "\e[<1;1;1M"
+< ret true
+> mouse press right cell=0,0
+< write "\e[<2;1;1M"
+< ret true
+> mouse press wheelup cell=0,0
+< write "\e[<64;1;1M"
+< ret true
+> mouse press wheeldown cell=0,0
+< write "\e[<65;1;1M"
+< ret true
+> mouse press left cell=49,119
+< write "\e[<0;50;120M"
+< ret true

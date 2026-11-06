@@ -1,0 +1,40 @@
+> in "\e[?9h"
+< mouse-cb mode=1002 pixels=0
+> mouse press left cell=0,0 mods=shift+ctrl
+< write "\e[M !!"
+< ret true
+> mouse release left cell=0,0
+< ret false
+> mouse move left cell=1,1
+< ret false
+> mouse press wheelup cell=2,3
+< write "\e[M`#$"
+< ret true
+> mouse press left cell=222,0
+< write "\e[M \xff!"
+< ret true
+> mouse press left cell=223,0
+< write "\e[M \xff!"
+< ret true
+> mouse press left cell=0,300
+< write "\e[M !\xff"
+< ret true
+> in "\e[?9l\e[?1000h"
+< mouse-cb mode=1002 pixels=0
+< mouse-cb mode=1002 pixels=0
+> mouse press left cell=4,5 mods=shift+meta+ctrl
+< write "\e[M<%&"
+< ret true
+> mouse release left cell=4,5
+< write "\e[M#%&"
+< ret true
+> mouse release right cell=4,5 mods=ctrl
+< write "\e[M3%&"
+< ret true
+> mouse move left cell=6,6
+< ret false
+> mouse move 32 cell=6,6
+< ret false
+> mouse press wheeldown cell=1,1
+< write "\e[Ma\"\""
+< ret true

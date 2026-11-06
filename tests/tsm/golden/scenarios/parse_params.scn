@@ -1,0 +1,24 @@
+# Note: differs from the C libtsm 4.x: CSI sequences with unknown private markers (CSI = 3 C) are ignored
+resize 10 5
+in "\e[1;2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18H"
+dump state
+in "\e[2;3;4;5;6;7;8;9;10;11;12;13;14;15;16;17;18;19;20;21;22;23;24;25;26;27;28;29;30;31;32;33;34;35H"
+dump state
+in "\e[00003;00004H"
+dump state
+in "\e[;;;;;;;;;;;;;;;;;;;;;H"
+dump state
+# intermediates
+in "\e[1 !\"q"
+dump state
+in "\e[?5A\e[>2B\e[=3C"
+dump state
+in "\e[1?2H\e[1>2H"
+dump state
+in "\e[ 2H"
+dump state
+in "\e[2 3H"
+dump state
+# unknown finals
+in "\e[5y\e[5~\e[5`\e[5a\e[5h"
+dump state

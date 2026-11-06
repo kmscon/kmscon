@@ -1,0 +1,34 @@
+> resize 3 300
+> in "\e[1;1Ha\e[150;1Hb\e[300;1Hc"
+> in "\e[140S"
+> dump state
+state
+  size 3x300 cursor 1,299
+  cursor-style 0 blink 500
+  margins 0-299
+  tabs 0
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=0 pos=0 max=0
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+> in "\e[1;1H\e[6n\e[20;1H\e[6n"
+< write "\e[1;1R\e[20;1R"
+> in "\e[10;1H\e[6n"
+< write "\e[10;1R"
+> in "\e[200T"
+> in "\e[200;1H\e[300;1H"
+> in "\e[2J\e[1;1Ha\e[300;1Hz\e[299S"
+> dump state
+state
+  size 3x300 cursor 1,299
+  cursor-style 0 blink 500
+  margins 0-299
+  tabs 0
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=0 pos=0 max=0
+  default e5e5e5/000000
+  erase e5e5e5/000000 -

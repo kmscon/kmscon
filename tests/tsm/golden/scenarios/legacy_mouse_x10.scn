@@ -1,0 +1,7 @@
+# from test_vte_mouse.c: x10 tests
+in "\e[?9h"
+dump state
+mouse press left cell=0,0
+mouse press right cell=0,0
+mouse press middle cell=0,0
+mouse press left cell=299,279

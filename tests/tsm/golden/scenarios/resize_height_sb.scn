@@ -1,0 +1,12 @@
+resize 4 4
+sb-max 10
+in "1\r\n2\r\n3\r\n4\r\n5\r\n6"
+dump state text
+resize 4 2
+dump state text
+resize 4 6
+dump state text
+resize 4 9
+dump state text
+resize 6 2
+dump state text

@@ -1,0 +1,29 @@
+> resize 20 3
+> paste "hello\nworld"
+< write "hello\nworld"
+> in "\e[?2004h"
+> paste "hello"
+< write "\e[200~hello\e[201~"
+> paste ""
+< write "\e[200~\e[201~"
+> in "\e[?2004l"
+> paste "plain"
+< write "plain"
+> in "\e[?2004h"
+> reset
+> paste "after reset"
+< write "after reset"
+> in "\e[!p"
+> paste "after soft reset"
+< write "after soft reset"
+> in "\ec"
+> paste "after RIS"
+< write "after RIS"
+> in "\e[?2004l\e[12l"
+> paste "echo\u{e9}"
+< write "echo\xc3\xa9"
+> dump text
+text
+   0|echoé···············|
+   1|····················|
+   2|····················|

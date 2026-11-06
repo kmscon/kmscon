@@ -1,0 +1,11 @@
+resize 6 2
+sb-max 10
+in "aaaaaa\r\nbbbbbb\r\n"
+resize 3 2
+in "cc\r\ndd\r\n"
+resize 6 2
+sb-up 9
+dump state render
+sb-reset
+resize 6 5
+dump state text

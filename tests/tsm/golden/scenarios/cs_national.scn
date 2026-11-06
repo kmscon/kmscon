@@ -1,0 +1,11 @@
+resize 20 9
+# all national charsets currently map to the upper unicode table
+in "\e(A#a\e(B#a\r\n"
+in "\e(4#a\e(C#a\e(5#a\r\n"
+in "\e(R#a\e(Q#a\e(K#a\r\n"
+in "\e(Y#a\e(E#a\e(6#a\r\n"
+in "\e(Z#a\e(H#a\e(7#a\r\n"
+in "\e(=#a\e(B\r\n"
+# DEC supplemental graphics
+in "\e(<!#$%&'()*\e(B"
+dump text

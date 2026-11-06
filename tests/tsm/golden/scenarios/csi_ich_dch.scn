@@ -1,0 +1,27 @@
+resize 8 3
+in "abcdefgh\e[1;3H\e[@"
+dump text
+in "\e[2@"
+dump text
+in "\e[0@\e[1;8H\e[@"
+dump text
+in "\e[1;6H\e[99@"
+dump text
+in "\e[2;1H01234567\e[2;3H\e[P"
+dump text
+in "\e[2P"
+dump text
+in "\e[0P\e[2;8H\e[P"
+dump text
+in "\e[2;2H\e[99P"
+dump text
+# split wide chars
+in "\e[3;1Ha\u{4e16}\u{4e16}b\e[3;3H\e[@"
+dump text
+in "\e[3;3H\e[P\e[P"
+dump text
+# pending wrap
+in "\e[3;1H01234567\e[@"
+dump state text
+in "\e[3;1H01234567\e[P"
+dump state text

@@ -1,0 +1,50 @@
+> resize 16 8
+> in "\e[30mA\e[31mB\e[32mC\e[33mD\e[34mE\e[35mF\e[36mG\e[37mH\e[39mI"
+> in "\r\n\e[40mA\e[41mB\e[42mC\e[43mD\e[44mE\e[45mF\e[46mG\e[47mH\e[49mI"
+> in "\r\n\e[90mA\e[91mB\e[92mC\e[93mD\e[94mE\e[95mF\e[96mG\e[97mH\e[39mI"
+> in "\r\n\e[100mA\e[101mB\e[102mC\e[103mD\e[104mE\e[105mF\e[106mG\e[107mH\e[49mI"
+> in "\r\n\e[1;30mA\e[31mB\e[37mC\e[90mD\e[97mE\e[22mF\e[m"
+> in "\r\n\e[31m\e[1mG\e[22mH\e[1;41mI\e[m"
+> in "\r\n\e[1mJ\e[m"
+> dump attrs
+attrs
+  0: 0 000000/000000 -
+  0: 1 cd0000/000000 -
+  0: 2 00cd00/000000 -
+  0: 3 cdcd00/000000 -
+  0: 4 0000ee/000000 -
+  0: 5 cd00cd/000000 -
+  0: 6 00cdcd/000000 -
+  1: 1 e5e5e5/cd0000 -
+  1: 2 e5e5e5/00cd00 -
+  1: 3 e5e5e5/cdcd00 -
+  1: 4 e5e5e5/0000ee -
+  1: 5 e5e5e5/cd00cd -
+  1: 6 e5e5e5/00cdcd -
+  1: 7 e5e5e5/e5e5e5 -
+  2: 0 7f7f7f/000000 -
+  2: 1 ff0000/000000 -
+  2: 2 00ff00/000000 -
+  2: 3 ffff00/000000 -
+  2: 4 5c5cff/000000 -
+  2: 5 ff00ff/000000 -
+  2: 6 00ffff/000000 -
+  2: 7 ffffff/000000 -
+  3: 0 e5e5e5/7f7f7f -
+  3: 1 e5e5e5/ff0000 -
+  3: 2 e5e5e5/00ff00 -
+  3: 3 e5e5e5/ffff00 -
+  3: 4 e5e5e5/5c5cff -
+  3: 5 e5e5e5/ff00ff -
+  3: 6 e5e5e5/00ffff -
+  3: 7 e5e5e5/ffffff -
+  4: 0 7f7f7f/000000 B
+  4: 1 ff0000/000000 B
+  4: 2 ffffff/000000 B
+  4: 3 7f7f7f/000000 B
+  4: 4 ffffff/000000 B
+  4: 5 ffffff/000000 -
+  5: 0 ff0000/000000 B
+  5: 1 cd0000/000000 -
+  5: 2 ff0000/cd0000 B
+  6: 0 e5e5e5/000000 B

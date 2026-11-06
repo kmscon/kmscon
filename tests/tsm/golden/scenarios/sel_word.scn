@@ -1,0 +1,20 @@
+resize 20 4
+in "foo bar.baz  qux\r\n  end"
+sel-word 5 0
+sel-copy
+sel-word 4 0
+sel-copy
+sel-word 0 0
+sel-copy
+sel-word 14 0
+sel-copy
+# on a space: no selection change
+sel-reset
+sel-word 3 0
+sel-copy
+# on an empty cell
+sel-word 19 0
+sel-copy
+sel-word 3 1
+sel-copy
+dump render

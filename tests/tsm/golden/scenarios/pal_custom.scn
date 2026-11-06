@@ -1,0 +1,18 @@
+resize 18 2
+# custom palette is only used when the "custom" palette is selected
+custom-palette 001224 011325 021426 031527 041628 051729 06182a 07192b 081a2c 091b2d 0a1c2e 0b1d2f 0c1e30 0d1f31 0e2032 0f2133 102234 112335
+dump state
+palette custom
+dump state
+in "\e[30mA\e[31mB\e[32mC\e[33mD\e[34mE\e[35mF\e[36mG\e[37mH\e[90mI\e[91mJ\e[92mK\e[93mL\e[94mM\e[95mN\e[96mO\e[97mP\e[mQ\e[7mR\e[m"
+in "\e[38;5;3mS\e[48;5;12mT\e[m"
+dump attrs
+# clearing the custom palette while active falls back to legacy
+custom-palette none
+dump state
+palette custom
+dump state
+palette unknown-name
+dump state
+palette none
+dump state

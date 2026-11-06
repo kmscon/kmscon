@@ -1,0 +1,50 @@
+> resize 4 3
+> sb-max 10
+> in "1\r\n2\r\n3\r\n4"
+> dump state
+state
+  size 4x3 cursor 1,2
+  cursor-style 0 blink 500
+  margins 0-2
+  tabs 0
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=1 pos=1 max=10
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+> in "\e[?1049h"
+> in "a\r\nb\r\nc\r\nd\r\ne"
+> dump state text
+state
+  size 4x3 cursor 1,2
+  cursor-style 0 blink 500
+  margins 0-2
+  tabs 0
+  screen-flags AUTO_WRAP|ALTERNATE
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=1 pos=1 max=10
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+text
+   0|c···|
+   1|d···|
+   2|e···|
+> in "\e[?1049l"
+> dump state text
+state
+  size 4x3 cursor 1,2
+  cursor-style 0 blink 500
+  margins 0-2
+  tabs 0
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=1 pos=1 max=10
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+text
+   0|2···|
+   1|3···|
+   2|4···|

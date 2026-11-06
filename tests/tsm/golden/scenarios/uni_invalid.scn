@@ -1,0 +1,16 @@
+# Note: differs from the C libtsm 4.x: invalid UTF-8 is replaced per the Unicode "maximal subpart" rule
+resize 20 6
+# lone continuation bytes are skipped
+hex 61 80 62 bf 63
+# truncated sequences
+in "\r\n"
+hex 64 c3 41 65 e2 82 42 66 f0 9f 98 43
+# overlong forms and invalid lead bytes
+in "\r\n"
+hex 67 c0 80 68 c1 bf 69 e0 80 80 6a f5 80 80 80 6b ff 6c fe 6d
+# surrogates, beyond U+10FFFF, noncharacters
+in "\r\n"
+hex 6e ed a0 80 6f f4 90 80 80 70 ef bf be 71 ef b7 90 72
+# U+FFFD itself
+in "\r\n\u{fffd}"
+dump state text

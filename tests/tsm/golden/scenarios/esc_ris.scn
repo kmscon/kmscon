@@ -1,0 +1,8 @@
+resize 10 4
+sb-max 10
+in "\e[?1h\e[4h\e[2;3r\e[1;31m\e(0\e[?1000hab\r\n\r\n\r\n\r\n\r\nc"
+dump state text attrs
+in "\ec"
+dump state text attrs
+in "lq"
+dump text

@@ -1,0 +1,12 @@
+resize 8 3
+in "abcdef\e[1;3H\e[4h"
+in "XY"
+dump state text
+in "\e[1;7HZ"
+dump state text
+in "\u{4e16}"
+dump state text
+in "\e[2;1Hdefgh\e[2;1H\u{4e16}"
+dump text
+in "\e[4l\e[3;1H12345\e[3;2HW"
+dump state text

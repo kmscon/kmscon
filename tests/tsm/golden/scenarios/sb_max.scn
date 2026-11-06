@@ -1,0 +1,12 @@
+resize 4 2
+in "1\r\n2\r\n3"
+dump state
+sb-max 1
+in "\r\n4\r\n5\r\n6"
+dump state
+sb-up 9
+dump render
+sb-reset
+sb-max 3
+in "\r\n7\r\n8"
+dump state

@@ -1,0 +1,19 @@
+resize 4 6
+in "1111\r\n2222\r\n3333\r\n4444\r\n5555\r\n6666\e[3;2H"
+in "\e[S"
+dump state text
+in "\e[2S"
+dump text
+in "\e[0T"
+dump text
+in "\e[2T"
+dump text
+in "\e[1;1H1111\r\n2222\r\n3333\r\n4444\r\n5555\r\n6666"
+in "\e[2;4r\e[S"
+dump state text
+in "\e[T"
+dump text
+in "\e[9S"
+dump text
+in "\e[r\e[9T"
+dump text

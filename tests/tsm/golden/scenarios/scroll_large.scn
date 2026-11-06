@@ -1,0 +1,11 @@
+# scroll counts larger than 128 use a different code path in tsm
+resize 3 300
+in "\e[1;1Ha\e[150;1Hb\e[300;1Hc"
+in "\e[140S"
+dump state
+in "\e[1;1H\e[6n\e[20;1H\e[6n"
+in "\e[10;1H\e[6n"
+in "\e[200T"
+in "\e[200;1H\e[300;1H"
+in "\e[2J\e[1;1Ha\e[300;1Hz\e[299S"
+dump state

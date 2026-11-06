@@ -1,0 +1,22 @@
+resize 10 4
+# BS at column 0, in the middle, at pending wrap
+in "\bab\bX"
+dump state text
+in "\r0123456789"
+dump state
+in "\bY"
+dump state text
+# HT, CR
+in "\r\tT\t\tU"
+dump state text
+# LF, VT, FF move down without CR (LNM off)
+hard-reset
+in "a\nb\vc\fd"
+dump state text
+# LNM on: LF/VT/FF imply CR
+hard-reset
+in "\e[20ha\nb\vc\fd"
+dump state text
+# LF at bottom scrolls
+in "\n\n\n"
+dump state text

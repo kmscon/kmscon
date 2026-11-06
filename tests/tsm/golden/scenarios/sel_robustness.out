@@ -1,0 +1,1177 @@
+> sb-max 20
+> resize 30 10
+> in "q~wE0?+=7)NoK\eE"
+> in "4Jwh*\"rP@Ds7\eE"
+> in "&q]W^t}gIIUR#S!4#)\eE"
+> in "-Ham6w-fGV|G\eE"
+> in " S0ny^UzP-$'oO_j?W\eE"
+> in "Wh@EX^\eE"
+> in "+3_FlCeNqk]^!1Sj{(dRa<% Z*t${y-\eE"
+> in "#yTN+tu&aWNkjKqPAh'K\eE"
+> in "[V5.f,|y|5H;>^J)MS1\eE"
+> in "gv>L,-/+~l7b~X(5D6.fK\"VPTS1c-Q?\\'\eE"
+> in "q#PfLu0B*:(/LQgoDZ\eE"
+> in "O!\eE"
+> in "Fw\eE"
+> in "`1I\eE"
+> in "4^+m\eE"
+> in "loX?]<Jrm&+]>KHs^v=\eE"
+> in "~d&+K'fAlwdH\eE"
+> in "l?Y8p~dJVat!]M*--x#bP~Y+s%;(Gwo 4myV7@\eE"
+> in "kFCKy/nCIsso<\eE"
+> in "yvwXPA,Z'k<W{12g>@?Tl5fEEL\eE"
+> in "Y3P#O`l>p1iKH-5J\\Gr4A(\\A-M9q?/\eE"
+> in "+YraO\eE"
+> in "+d@5{d:+\eE"
+> in "/@Uu`k}F{;u+@&?FEL*!9.I;y 7Gk[\eE"
+> in "5h?L`,b{Rk'}W>/~~U=Ic;O!5T)R\\ogRB=%~\eE"
+> resize 22 2
+> sb-up 13
+> sb-down 19
+> sel-start 2 0
+> sel-target 7 0
+> sel-copy
+< copy "B=%~"
+> sb-up 20
+> sb-down 13
+> sel-copy
+< copy "B=%~"
+> dump state render
+state
+  size 22x2 cursor 0,1
+  cursor-style 0 blink 500
+  margins 0-1
+  tabs 0,8,16
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=20 pos=13 max=20
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+render
+   0|kFCKy/nCIsso<         |
+   1|yvwXPA,Z'k<W{12g>@?Tl5|
+> in "4/4>%S6B &cIK\eE"
+> in "-=![O5i@3-O{-K}Q0BD9aVd 2UkElT@v cZ\eE"
+> in "P#DNv#izq3x-,4{U_j^ +iC $?d\eE"
+> in "EO(yPYr;8t7oKbS?gjm#]]nd\eE"
+> in "9yrCk,\"_N/5E&wIn`Lo$vDPVH\eE"
+> resize 32 13
+> sb-up 18
+> sb-down 2
+> sel-start 3 5
+> sel-target 24 7
+> sel-copy
+< copy "aO\n+d@5{d:+\n/@Uu`k}F{;u+@&?FEL*!9.I;y"
+> sb-up 20
+> sb-down 1
+> sel-copy
+< copy "aO\n+d@5{d:+\n/@Uu`k}F{;u+@&?FEL*!9.I;y"
+> dump state render
+state
+  size 32x13 cursor 0,12
+  cursor-style 0 blink 500
+  margins 0-12
+  tabs 0,8,16,24
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=9 pos=1 max=20
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+render
+   0|~d&+K'fAlwdH                    |
+   1|l?Y8p~dJVat!]M*--x#bP~Y+s%;(Gw  |
+   2|o 4myV7@                        |
+   3|kFCKy/nCIsso<                   |
+   4|yvwXPA,Z'k<W{12g>@?Tl5fEEL      |
+   5|Y3P#O`l>p1iKH-5J\Gr4A(\A-M9q?/  |
+   6|+YraO                           |
+   7|+d@5{d:+                        |
+   8|/@Uu`k}F{;u+@&?FEL*!9.I;y 7Gk[  |
+   9|5h?L`,b{Rk'}W>/~~U=Ic;O!5T)R\o  |
+  10|gRB=%~                          |
+  11|4/4>%S6B &cIK                   |
+  12|-=![O5i@3-O{-K}Q0BD9aV          |
+  6: 3-31 000000/e5e5e5 -
+  7: 0-31 000000/e5e5e5 -
+  8: 0-24 000000/e5e5e5 -
+> in " )\\\"\eE"
+> in "<AA=|E*#8~\"37\eE"
+> resize 35 14
+> sb-up 0
+> sb-down 19
+> sel-start 24 8
+> sel-target 8 13
+> sel-copy
+< copy "9yrCk,\"_N/5E&wIn`Lo$vD\nPVH\n )\\\"\n<AA=|E*#8~\"37\n"
+> sb-up 20
+> sb-down 14
+> sel-copy
+< copy "9yrCk,\"_N/5E&wIn`Lo$vD\nPVH\n )\\\"\n<AA=|E*#8~\"37\n"
+> dump state render
+state
+  size 35x14 cursor 0,13
+  cursor-style 0 blink 500
+  margins 0-13
+  tabs 0,8,16,24,32
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=10 pos=10 max=20
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+render
+   0|5h?L`,b{Rk'}W>/~~U=Ic;O!5T)R\o     |
+   1|gRB=%~                             |
+   2|4/4>%S6B &cIK                      |
+   3|-=![O5i@3-O{-K}Q0BD9aV             |
+   4|d 2UkElT@v cZ                      |
+   5|P#DNv#izq3x-,4{U_j^ +i             |
+   6|C $?d                              |
+   7|EO(yPYr;8t7oKbS?gjm#]]             |
+   8|nd                                 |
+   9|9yrCk,"_N/5E&wIn`Lo$vD             |
+  10|PVH                                |
+  11| )\"                               |
+  12|<AA=|E*#8~"37                      |
+  13|                                   |
+  8: 24-34 000000/e5e5e5 -
+  9: 0-34 000000/e5e5e5 -
+  10: 0-34 000000/e5e5e5 -
+  11: 0-34 000000/e5e5e5 -
+  12: 0-34 000000/e5e5e5 -
+  13: 0-8 000000/e5e5e5 -
+> in "im}/%ni@nJBdg2\eE"
+> in "U],\eE"
+> in ";[RJK9\eE"
+> in "Q\eE"
+> resize 4 11
+> sb-up 18
+> sb-down 10
+> sel-start 3 4
+> sel-target 0 0
+> sel-copy
+< copy "5h?L\ngRB=\n4/4>\n-=![\nd 2U"
+> sb-up 20
+> sb-down 19
+> sel-copy
+< copy "5h?L\ngRB=\n4/4>\n-=![\nd 2U"
+> dump state render
+state
+  size 4x11 cursor 0,10
+  cursor-style 0 blink 500
+  margins 0-10
+  tabs 0
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=17 pos=17 max=20
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+render
+   0|EO(y|
+   1|nd  |
+   2|9yrC|
+   3|PVH |
+   4| )\"|
+   5|<AA=|
+   6|im}/|
+   7|U], |
+   8|;[RJ|
+   9|Q   |
+  10|    |
+> in "t+K\eE"
+> in "kh{OT.IR8ROo'}7oas)a:.s>/\eE"
+> in "\".(c=6aWD*kN)$Bshw,66?xI\eE"
+> resize 25 15
+> sb-up 16
+> sb-down 15
+> sel-start 10 5
+> sel-target 20 9
+> sel-copy
+< copy "as)a\n:.s>\n/\n\".(c"
+> sb-up 20
+> sb-down 1
+> sel-copy
+< copy "as)a\n:.s>\n/\n\".(c"
+> dump state render
+state
+  size 25x15 cursor 0,14
+  cursor-style 0 blink 500
+  margins 0-14
+  tabs 0,8,16,24
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=16 pos=1 max=20
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+render
+   0|4/4>%S6B &cIK            |
+   1|-=![O5i@3-O{-K}Q0BD9aV   |
+   2|d 2UkElT@v cZ            |
+   3|P#DNv#izq3x-,4{U_j^ +i   |
+   4|C $?d                    |
+   5|EO(yPYr;8t7oKbS?gjm#]]   |
+   6|nd                       |
+   7|9yrCk,"_N/5E&wIn`Lo$vD   |
+   8|PVH                      |
+   9| )\"                     |
+  10|<AA=|E*#8~"37            |
+  11|im}/%ni@nJBdg2           |
+  12|U],                      |
+  13|;[RJK9                   |
+  14|Q                        |
+> in "57kOC&KlQQLg{M>3C'uq9/A`fj?6DvZA\"Is\eE"
+> in "O_C3^>Fm3\eE"
+> in "5MXI('7[@yn']&Q%EC~ALzVXu3Da]DCq9^'mc\eE"
+> in "cMwa`U+a11G??eK\eE"
+> resize 36 11
+> sb-up 13
+> sb-down 11
+> sel-start 8 5
+> sel-target 19 5
+> sel-copy
+< copy ""
+> sb-up 20
+> sb-down 8
+> sel-copy
+< copy ""
+> dump state render
+state
+  size 36x11 cursor 0,10
+  cursor-style 0 blink 500
+  margins 0-10
+  tabs 0,8,16,24,32
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=20 pos=8 max=20
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+render
+   0|;[RJK9                              |
+   1|Q                                   |
+   2|t+K                                 |
+   3|kh{O                                |
+   4|T.IR                                |
+   5|8ROo                                |
+   6|'}7o                                |
+   7|as)a                                |
+   8|:.s>                                |
+   9|/                                   |
+  10|".(c                                |
+  8: 8-19 000000/e5e5e5 -
+> resize 25 8
+> sb-up 9
+> sb-down 15
+> sel-start 6 4
+> sel-target 16 0
+> sel-copy
+< copy "=6aW\nD*kN\n)$Bs\nhw,6"
+> sb-up 20
+> sb-down 0
+> sel-copy
+< copy "=6aW\nD*kN\n)$Bs\nhw,6"
+> dump state render
+state
+  size 25x8 cursor 0,7
+  cursor-style 0 blink 500
+  margins 0-7
+  tabs 0,8,16,24
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=20 pos=0 max=20
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+render
+   0|PVH                      |
+   1| )\"                     |
+   2|<AA=|E*#8~"37            |
+   3|im}/%ni@nJBdg2           |
+   4|U],                      |
+   5|;[RJK9                   |
+   6|Q                        |
+   7|t+K                      |
+> in "B1/KfUm.$T9H}SM{!Zk7].qx7)gdOth14idK~e \eE"
+> in "1C(r7LdQ7Oec#l~Qe 1g)ZL=qJl$\eE"
+> resize 18 10
+> sb-up 3
+> sb-down 10
+> sel-start 4 6
+> sel-target 13 4
+> sel-copy
+< copy "hw,6\n6?xI"
+> sb-up 20
+> sb-down 15
+> sel-copy
+< copy "hw,6\n6?xI"
+> dump state render
+state
+  size 18x10 cursor 0,9
+  cursor-style 0 blink 500
+  margins 0-9
+  tabs 0,8,16
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=18 pos=15 max=20
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+render
+   0|hw,6              |
+   1|6?xI              |
+   2|57kOC&KlQQLg{M>3C'|
+   3|j?6DvZA"Is        |
+   4|O_C3^>Fm3         |
+   5|5MXI('7[@yn']&Q%EC|
+   6|3Da]DCq9^'mc      |
+   7|cMwa`U+a11G??eK   |
+   8|B1/KfUm.$T9H}SM{!Z|
+   9|)gdOth14idK~e     |
+  0: 0-17 000000/e5e5e5 -
+  1: 0-4 000000/e5e5e5 -
+> resize 20 13
+> sb-up 6
+> sb-down 18
+> sel-start 2 2
+> sel-target 18 1
+> sel-copy
+< copy "57k"
+> sb-up 20
+> sb-down 13
+> sel-copy
+< copy "57k"
+> dump state render
+state
+  size 20x13 cursor 0,12
+  cursor-style 0 blink 500
+  margins 0-12
+  tabs 0,8,16
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=15 pos=13 max=20
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+render
+   0|D*kN                |
+   1|)$Bs                |
+   2|hw,6                |
+   3|6?xI                |
+   4|57kOC&KlQQLg{M>3C'uq|
+   5|j?6DvZA"Is          |
+   6|O_C3^>Fm3           |
+   7|5MXI('7[@yn']&Q%EC~A|
+   8|3Da]DCq9^'mc        |
+   9|cMwa`U+a11G??eK     |
+  10|B1/KfUm.$T9H}SM{!Zk7|
+  11|)gdOth14idK~e       |
+  12|1C(r7LdQ7Oec#l~Qe 1g|
+  3: 18-19 000000/e5e5e5 -
+  4: 0-2 000000/e5e5e5 -
+> in "\\uI]]|s4e9LIFN(%d3d-v[=?_!}Rx~[H$L4\eE"
+> in "El?5gFQ\eE"
+> in "w@l9.h~tj6@l$FX?H6!N3A}}7@^f9PGI8\\,A<8\eE"
+> in "9et`b8J#IbQn'0q,}9vg')+q\eE"
+> in "cXu?Q~5N)/Afu@EeP</0tl65'hx7=*7\eE"
+> resize 28 4
+> sb-up 3
+> sb-down 8
+> sel-start 6 3
+> sel-target 21 3
+> sel-copy
+< copy "14idK~e "
+> sb-up 20
+> sb-down 13
+> sel-copy
+< copy "14idK~e "
+> dump state render
+state
+  size 28x4 cursor 0,3
+  cursor-style 0 blink 500
+  margins 0-3
+  tabs 0,8,16,24
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=20 pos=13 max=20
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+render
+   0|Jl$                         |
+   1|\uI]]|s4e9LIFN(%d3d-        |
+   2|v[=?_!}Rx~[H$L4             |
+   3|El?5gFQ                     |
+> in ".;Ke3hwM$qKn$\eE"
+> in "Wh0p\eE"
+> in "5BCY/C8\\~$qXkp$3ZsqyaSng\eE"
+> in "E=0.>Kd?tew~\eE"
+> in "05o\eE"
+> resize 35 9
+> sb-up 11
+> sb-down 10
+> sel-start 32 1
+> sel-target 32 4
+> sel-copy
+< copy "w@l9.h~tj6@l$FX?H6!N\n3A}}7@^f9PGI8\\,A<8\n9et`b8J#IbQn'0q,}9vg"
+> sb-up 20
+> sb-down 8
+> sel-copy
+< copy "w@l9.h~tj6@l$FX?H6!N\n3A}}7@^f9PGI8\\,A<8\n9et`b8J#IbQn'0q,}9vg"
+> dump state render
+state
+  size 35x9 cursor 0,8
+  cursor-style 0 blink 500
+  margins 0-8
+  tabs 0,8,16,24,32
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=15 pos=8 max=20
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+render
+   0|Jl$                                |
+   1|\uI]]|s4e9LIFN(%d3d-               |
+   2|v[=?_!}Rx~[H$L4                    |
+   3|El?5gFQ                            |
+   4|w@l9.h~tj6@l$FX?H6!N               |
+   5|3A}}7@^f9PGI8\,A<8                 |
+   6|9et`b8J#IbQn'0q,}9vg               |
+   7|')+q                               |
+   8|cXu?Q~5N)/Afu@EeP</0               |
+  3: 32-34 000000/e5e5e5 -
+  4: 0-34 000000/e5e5e5 -
+  5: 0-34 000000/e5e5e5 -
+  6: 0-32 000000/e5e5e5 -
+> resize 5 7
+> sb-up 7
+> sb-down 14
+> sel-start 3 0
+> sel-target 3 0
+> sel-copy
+< copy "q"
+> sb-up 20
+> sb-down 5
+> sel-copy
+< copy "q"
+> dump state render
+state
+  size 5x7 cursor 0,6
+  cursor-style 0 blink 500
+  margins 0-6
+  tabs 0
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=17 pos=5 max=20
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+render
+   0|B1/Kf|
+   1|)gdOt|
+   2|1C(r7|
+   3|Jl$  |
+   4|\uI]]|
+   5|v[=?_|
+   6|El?5g|
+> in "V5DT?}Ne&asA'y`;VeK.lq7@nBSs_\"L\eE"
+> in "NYpZdw1@?;JnO-w\eE"
+> resize 18 14
+> sb-up 0
+> sb-down 14
+> sel-start 8 6
+> sel-target 4 2
+> sel-copy
+< copy "V5DT?\n}Ne&a\nsA'y`\n;VeK."
+> sb-up 20
+> sb-down 19
+> sel-copy
+< copy "V5DT?\n}Ne&a\nsA'y`\n;VeK."
+> dump state render
+state
+  size 18x14 cursor 0,13
+  cursor-style 0 blink 500
+  margins 0-13
+  tabs 0,8,16
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=13 pos=13 max=20
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+render
+   0|5BCY/C8\~$qXkp$3Zs|
+   1|E=0.>Kd?tew~      |
+   2|05o               |
+   3|V5DT?             |
+   4|}Ne&a             |
+   5|sA'y`             |
+   6|;VeK.             |
+   7|lq7@n             |
+   8|BSs_"             |
+   9|L                 |
+  10|NYpZd             |
+  11|w1@?;             |
+  12|JnO-w             |
+  13|                  |
+  2: 4-17 000000/e5e5e5 -
+  3: 0-17 000000/e5e5e5 -
+  4: 0-17 000000/e5e5e5 -
+  5: 0-17 000000/e5e5e5 -
+  6: 0-8 000000/e5e5e5 -
+> resize 36 7
+> sb-up 14
+> sb-down 12
+> sel-start 33 0
+> sel-target 18 4
+> sel-copy
+< copy ";VeK.\nlq7@n\nBSs_\"\nL"
+> sb-up 20
+> sb-down 7
+> sel-copy
+< copy ";VeK.\nlq7@n\nBSs_\"\nL"
+> dump state render
+state
+  size 36x7 cursor 0,6
+  cursor-style 0 blink 500
+  margins 0-6
+  tabs 0,8,16,24,32
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=20 pos=7 max=20
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+render
+   0|9et`b8J#IbQn'0q,}9vg                |
+   1|')+q                                |
+   2|cXu?Q~5N)/Afu@EeP</0                |
+   3|tl65'hx7=*7                         |
+   4|.;Ke3hwM$qKn$                       |
+   5|Wh0p                                |
+   6|5BCY/C8\~$qXkp$3ZsqyaSng            |
+> in "U\eE"
+> in "'%Am&Qlm f)Lo/m?=\eE"
+> in "kP`#D='UE\"FlteT`*Te4N>K=CGqgfixn[P\eE"
+> resize 24 14
+> sb-up 3
+> sb-down 18
+> sel-start 9 2
+> sel-target 16 2
+> sel-copy
+< copy ""
+> sb-up 20
+> sb-down 14
+> sel-copy
+< copy ""
+> dump state render
+state
+  size 24x14 cursor 0,13
+  cursor-style 0 blink 500
+  margins 0-13
+  tabs 0,8,16
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=13 pos=13 max=20
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+render
+   0|V5DT?                   |
+   1|}Ne&a                   |
+   2|sA'y`                   |
+   3|;VeK.                   |
+   4|lq7@n                   |
+   5|BSs_"                   |
+   6|L                       |
+   7|NYpZd                   |
+   8|w1@?;                   |
+   9|JnO-w                   |
+  10|U                       |
+  11|'%Am&Qlm f)Lo/m?=       |
+  12|kP`#D='UE"FlteT`*Te4N>K=|
+  13|                        |
+  2: 9-16 000000/e5e5e5 -
+> in "5@})Fs.\eE"
+> in "6t&=anK*~9GH_;g=03_dH?Egwuu)n!qeVyd\eE"
+> in "<z.5frg ?Ic/Ax(kcn\eE"
+> in "9jwq9[\eE"
+> in "yyr} ] {4+<Edwj]sTN\"uQOn=qo_+W.5?;+%)\eE"
+> resize 23 8
+> sb-up 17
+> sb-down 18
+> sel-start 22 0
+> sel-target 4 2
+> sel-copy
+< copy "6t&=anK*~9GH_;g=03_dH?E\nwuu)n"
+> sb-up 20
+> sb-down 4
+> sel-copy
+< copy "6t&=anK*~9GH_;g=03_dH?E\nwuu)n"
+> dump state render
+state
+  size 23x8 cursor 0,7
+  cursor-style 0 blink 500
+  margins 0-7
+  tabs 0,8,16
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=20 pos=4 max=20
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+render
+   0|5BCY/C8\~$qXkp$3ZsqyaSn|
+   1|E=0.>Kd?tew~           |
+   2|05o                    |
+   3|V5DT?                  |
+   4|}Ne&a                  |
+   5|sA'y`                  |
+   6|;VeK.                  |
+   7|lq7@n                  |
+> in "ejHp*tm3l^tlztW#*HT:VL$\eE"
+> in "KW3'Zh&l;l6Ba6Et~9y]{ tIe(]YD?qz9\eE"
+> in "G>*A^}0| CLx)v#\eE"
+> in "\eE"
+> in "#-0]eksbta>RTUGIUbYcv36azIHenQ\eE"
+> resize 7 10
+> sb-up 2
+> sb-down 5
+> sel-start 6 5
+> sel-target 2 3
+> sel-copy
+< copy "@?;\nJnO-w\nU"
+> sb-up 20
+> sb-down 2
+> sel-copy
+< copy "@?;\nJnO-w\nU"
+> dump state render
+state
+  size 7x10 cursor 0,9
+  cursor-style 0 blink 500
+  margins 0-9
+  tabs 0
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=18 pos=2 max=20
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+render
+   0|sA'y`  |
+   1|;VeK.  |
+   2|lq7@n  |
+   3|BSs_"  |
+   4|L      |
+   5|NYpZd  |
+   6|w1@?;  |
+   7|JnO-w  |
+   8|U      |
+   9|'%Am&Ql|
+  6: 2-6 000000/e5e5e5 -
+  7: 0-6 000000/e5e5e5 -
+  8: 0-6 000000/e5e5e5 -
+> resize 21 12
+> sb-up 19
+> sb-down 8
+> sel-start 16 9
+> sel-target 19 6
+> sel-copy
+< copy "dH\nwuu)n!qeVyd\n<z.5frg ?Ic/Ax(kcn\n9jwq9["
+> sb-up 20
+> sb-down 18
+> sel-copy
+< copy "dH\nwuu)n!qeVyd\n<z.5frg ?Ic/Ax(kcn\n9jwq9["
+> dump state render
+state
+  size 21x12 cursor 0,11
+  cursor-style 0 blink 500
+  margins 0-11
+  tabs 0,8,16
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=16 pos=16 max=20
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+render
+   0|<z.5frg ?Ic/Ax(kcn   |
+   1|9jwq9[               |
+   2|yyr} ] {4+<Edwj]sTN"u|
+   3|=qo_+W.5?;+%)        |
+   4|ejHp*tm3l^tlztW#*HT:V|
+   5|KW3'Zh&l;l6Ba6Et~9y]{|
+   6|Ie(]YD?qz9           |
+   7|G>*A^}0| CLx)v#      |
+   8|                     |
+   9|#-0]eksbta>RTUGIUbYcv|
+  10|azIHenQ              |
+  11|                     |
+  0: 0-20 000000/e5e5e5 -
+  1: 0-16 000000/e5e5e5 -
+> in "U]{'w`c5*w[8^m6`?YI/% `Mg$9X'8\eE"
+> in "FqZ<hL7XZ'TN9\"MMpR,=I[S\eE"
+> in "8I#3M{=0iaB.gv[}jwuUj @}4\\%zD>\\\"T\eE"
+> resize 22 11
+> sb-up 7
+> sb-down 19
+> sel-start 21 0
+> sel-target 17 5
+> sel-copy
+< copy "\n#-0]eksbta>RTUGIUbYcv3\nazIHenQ\nU]{'w`c5*w[8^m6`?YI/%\n `Mg$9X'8"
+> sb-up 20
+> sb-down 19
+> sel-copy
+< copy "\n#-0]eksbta>RTUGIUbYcv3\nazIHenQ\nU]{'w`c5*w[8^m6`?YI/%\n `Mg$9X'8"
+> dump state render
+state
+  size 22x11 cursor 0,10
+  cursor-style 0 blink 500
+  margins 0-10
+  tabs 0,8,16
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=20 pos=19 max=20
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+render
+   0|Ie(]YD?qz9            |
+   1|G>*A^}0| CLx)v#       |
+   2|                      |
+   3|#-0]eksbta>RTUGIUbYcv3|
+   4|azIHenQ               |
+   5|U]{'w`c5*w[8^m6`?YI/% |
+   6| `Mg$9X'8             |
+   7|FqZ<hL7XZ'TN9"MMpR,=I |
+   8|[S                    |
+   9|8I#3M{=0iaB.gv[}jwuUj |
+  10| @}4\%zD>\"T          |
+  1: 21 000000/e5e5e5 -
+  2: 0-21 000000/e5e5e5 -
+  3: 0-21 000000/e5e5e5 -
+  4: 0-21 000000/e5e5e5 -
+  5: 0-21 000000/e5e5e5 -
+  6: 0-17 000000/e5e5e5 -
+> in "3y>\eE"
+> in "evf*d\eE"
+> in "Fc|Q@{n\eE"
+> in "ck##AE&M0s~SM`T:oyd(CaXjS$wRsLaBrA\eE"
+> in "G8FK4KGs \"|#1DT\eE"
+> resize 27 9
+> sb-up 14
+> sb-down 10
+> sel-start 24 2
+> sel-target 15 1
+> sel-copy
+< copy "G>*A^}0| CLx)v#"
+> sb-up 20
+> sb-down 12
+> sel-copy
+< copy "G>*A^}0| CLx)v#"
+> dump state render
+state
+  size 27x9 cursor 0,8
+  cursor-style 0 blink 500
+  margins 0-8
+  tabs 0,8,16,24
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=20 pos=12 max=20
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+render
+   0|G>*A^}0| CLx)v#            |
+   1|                           |
+   2|#-0]eksbta>RTUGIUbYcv36    |
+   3|azIHenQ                    |
+   4|U]{'w`c5*w[8^m6`?YI/%      |
+   5| `Mg$9X'8                  |
+   6|FqZ<hL7XZ'TN9"MMpR,=I      |
+   7|[S                         |
+   8|8I#3M{=0iaB.gv[}jwuUj      |
+  0: 0-24 000000/e5e5e5 -
+> in "o?;7A3&})HKq>aXqT|0Rk$SxOY(U7j9;\eE"
+> in "}G>\eE"
+> in "fxq .L\eE"
+> in "w7aeF{Z*: |-FHl~q<\eE"
+> resize 18 12
+> sb-up 19
+> sb-down 13
+> sel-start 14 11
+> sel-target 7 6
+> sel-copy
+< copy "\nck##AE&M0s~SM`T:oy\nXjS$wRsLaBrA\nG8FK4KGs \"|#1DT\no?;7A3&})HKq>aXqT|\nU7j9;"
+> sb-up 20
+> sb-down 10
+> sel-copy
+< copy "\nck##AE&M0s~SM`T:oy\nXjS$wRsLaBrA\nG8FK4KGs \"|#1DT\no?;7A3&})HKq>aXqT|\nU7j9;"
+> dump state render
+state
+  size 18x12 cursor 0,11
+  cursor-style 0 blink 500
+  margins 0-11
+  tabs 0,8,16
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=17 pos=10 max=20
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+render
+   0|azIHenQ           |
+   1|U]{'w`c5*w[8^m6`?Y|
+   2| `Mg$9X'8         |
+   3|FqZ<hL7XZ'TN9"MMpR|
+   4|[S                |
+   5|8I#3M{=0iaB.gv[}jw|
+   6| @}4\%zD>\"T      |
+   7|3y>               |
+   8|evf*d             |
+   9|Fc|Q@{n           |
+  10|ck##AE&M0s~SM`T:oy|
+  11|XjS$wRsLaBrA      |
+  9: 7-17 000000/e5e5e5 -
+  10: 0-17 000000/e5e5e5 -
+  11: 0-17 000000/e5e5e5 -
+> in "3zr02(n+F{hx$*7g\\ux|:Lxn-#A)\eE"
+> resize 13 7
+> sb-up 2
+> sb-down 19
+> sel-start 9 2
+> sel-target 9 1
+> sel-copy
+< copy "fxq .L"
+> sb-up 20
+> sb-down 7
+> sel-copy
+< copy "fxq .L"
+> dump state render
+state
+  size 13x7 cursor 0,6
+  cursor-style 0 blink 500
+  margins 0-6
+  tabs 0,8
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=20 pos=7 max=20
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+render
+   0|U]{'w`c5*w[8^|
+   1| `Mg$9X'8    |
+   2|FqZ<hL7XZ'TN9|
+   3|[S           |
+   4|8I#3M{=0iaB.g|
+   5| @}4\%zD>\"T |
+   6|3y>          |
+> in "vc$4+Y!K]Ma+A%&UtF\eE"
+> resize 9 14
+> sb-up 0
+> sb-down 4
+> sel-start 0 0
+> sel-target 3 7
+> sel-copy
+< copy "8I#3M{=0i\n @}4\\%zD>\n3y>\nevf*d\nFc|Q@{n\nck##AE&M0\nXjS$wRsLa\nG8FK"
+> sb-up 20
+> sb-down 13
+> sel-copy
+< copy "8I#3M{=0i\n @}4\\%zD>\n3y>\nevf*d\nFc|Q@{n\nck##AE&M0\nXjS$wRsLa\nG8FK"
+> dump state render
+state
+  size 9x14 cursor 0,13
+  cursor-style 0 blink 500
+  margins 0-13
+  tabs 0,8
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=13 pos=13 max=20
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+render
+   0|Fc|Q@{n  |
+   1|ck##AE&M0|
+   2|XjS$wRsLa|
+   3|G8FK4KGs |
+   4|o?;7A3&})|
+   5|U7j9;    |
+   6|}G>      |
+   7|fxq .L   |
+   8|w7aeF{Z*:|
+   9|3zr02(n+F|
+  10|x|:Lxn-#A|
+  11|vc$4+Y!K]|
+  12|%&UtF    |
+  13|         |
+  0: 0-8 000000/e5e5e5 -
+  1: 0-8 000000/e5e5e5 -
+  2: 0-8 000000/e5e5e5 -
+  3: 0-3 000000/e5e5e5 -
+> in "_ZWAyh~@</\\WLqBzbO\"\eE"
+> in "+\eE"
+> resize 25 11
+> sb-up 19
+> sb-down 4
+> sel-start 23 7
+> sel-target 16 7
+> sel-copy
+< copy ""
+> sb-up 20
+> sb-down 14
+> sel-copy
+< copy ""
+> dump state render
+state
+  size 25x11 cursor 0,10
+  cursor-style 0 blink 500
+  margins 0-10
+  tabs 0,8,16,24
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=20 pos=14 max=20
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+render
+   0|ck##AE&M0s~SM`T:oyd(Ca   |
+   1|XjS$wRsLaBrA             |
+   2|G8FK4KGs "|#1DT          |
+   3|o?;7A3&})HKq>aXqT|0Rk$SxO|
+   4|U7j9;                    |
+   5|}G>                      |
+   6|fxq .L                   |
+   7|w7aeF{Z*: |-FHl~q<       |
+   8|3zr02(n+F{hx$*7g\u       |
+   9|x|:Lxn-#A)               |
+  10|vc$4+Y!K]Ma+A            |
+> in "]J\"b(Iq(B*w5L0U+`A:b1zw;,(UHt\eE"
+> resize 17 12
+> sb-up 9
+> sb-down 18
+> sel-start 7 8
+> sel-target 4 6
+> sel-copy
+< copy "qBzbO\n\"\n+"
+> sb-up 20
+> sb-down 4
+> sel-copy
+< copy "qBzbO\n\"\n+"
+> dump state render
+state
+  size 17x12 cursor 0,11
+  cursor-style 0 blink 500
+  margins 0-11
+  tabs 0,8,16
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=19 pos=4 max=20
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+render
+   0| `Mg$9X'8        |
+   1|FqZ<hL7XZ'TN9"MMp|
+   2|[S               |
+   3|8I#3M{=0iaB.gv[}j|
+   4| @}4\%zD>\"T     |
+   5|3y>              |
+   6|evf*d            |
+   7|Fc|Q@{n          |
+   8|ck##AE&M0s~SM`T:o|
+   9|XjS$wRsLaBrA     |
+  10|G8FK4KGs "|#1DT  |
+  11|o?;7A3&})HKq>aXqT|
+> resize 30 10
+> sb-up 0
+> sb-down 16
+> sel-start 20 2
+> sel-target 8 2
+> sel-copy
+< copy "]Ma+A"
+> sb-up 20
+> sb-down 7
+> sel-copy
+< copy "]Ma+A"
+> dump state render
+state
+  size 30x10 cursor 0,9
+  cursor-style 0 blink 500
+  margins 0-9
+  tabs 0,8,16,24
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=20 pos=7 max=20
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+render
+   0| @}4\%zD>\"T                  |
+   1|3y>                           |
+   2|evf*d                         |
+   3|Fc|Q@{n                       |
+   4|ck##AE&M0s~SM`T:oyd(Ca        |
+   5|XjS$wRsLaBrA                  |
+   6|G8FK4KGs "|#1DT               |
+   7|o?;7A3&})HKq>aXqT|0Rk$SxOY(   |
+   8|U7j9;                         |
+   9|}G>                           |
+> in "u~PLo0aln&\eE"
+> in "5zbO<(MSC^;\eE"
+> in "R8M+3)v'sB34m\"8x\eE"
+> in "N|1}{]hi[YH;\"d]-mcNc[m)\\%FZ|9Y-fZDL\eE"
+> resize 3 4
+> sb-up 9
+> sb-down 0
+> sel-start 2 0
+> sel-target 0 2
+> sel-copy
+< copy "#\nXjS\nG"
+> sb-up 20
+> sb-down 13
+> sel-copy
+< copy "#\nXjS\nG"
+> dump state render
+state
+  size 3x4 cursor 0,3
+  cursor-style 0 blink 500
+  margins 0-3
+  tabs 0
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=20 pos=13 max=20
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+render
+   0|/\W|
+   1|"  |
+   2|+  |
+   3|]J"|
+> in "6Tcgq&\eE"
+> in "ha_= eI{\"3\"\eE"
+> in "Bp\eE"
+> in "w\eE"
+> in "CL)wA{5NO;:h|j;3H'3~[gD&O+6AmQBb=\eE"
+> resize 14 6
+> sb-up 3
+> sb-down 8
+> sel-start 12 3
+> sel-target 3 3
+> sel-copy
+< copy ""
+> sb-up 20
+> sb-down 9
+> sel-copy
+< copy ""
+> dump state render
+state
+  size 14x6 cursor 0,5
+  cursor-style 0 blink 500
+  margins 0-5
+  tabs 0,8
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=18 pos=9 max=20
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+render
+   0|3"            |
+   1|Bp            |
+   2|w             |
+   3|CL)           |
+   4|wA{           |
+   5|5NO           |
+  2: 3-12 000000/e5e5e5 -
+> in "lCQY3Io}1Skiv)f^pt\eE"
+> in "3*WS,qnIPub4<M(\eE"
+> in "\eE"
+> in "'n8\"e9$N|(1'XUT\eE"
+> resize 24 10
+> sb-up 11
+> sb-down 10
+> sel-start 15 5
+> sel-target 15 3
+> sel-copy
+< copy "gD&\nO+6"
+> sb-up 20
+> sb-down 15
+> sel-copy
+< copy "gD&\nO+6"
+> dump state render
+state
+  size 24x10 cursor 0,9
+  cursor-style 0 blink 500
+  margins 0-9
+  tabs 0,8,16
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=16 pos=15 max=20
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+render
+   0|O+6                     |
+   1|AmQ                     |
+   2|Bb=                     |
+   3|lCQY3Io}1Skiv)          |
+   4|f^pt                    |
+   5|3*WS,qnIPub4<M          |
+   6|(                       |
+   7|                        |
+   8|'n8"e9$N|(1'XU          |
+   9|T                       |
+  0: 0-15 000000/e5e5e5 -
+> in "Y:P#O$n N}hmYWG+ :[b.l>1Y\eE"
+> resize 19 15
+> sb-up 10
+> sb-down 2
+> sel-start 1 9
+> sel-target 0 7
+> sel-copy
+< copy "3H'\n3~[\ngD"
+> sb-up 20
+> sb-down 13
+> sel-copy
+< copy "3H'\n3~[\ngD"
+> dump state render
+state
+  size 19x15 cursor 0,14
+  cursor-style 0 blink 500
+  margins 0-14
+  tabs 0,8,16
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=13 pos=13 max=20
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+render
+   0|3~[                |
+   1|gD&                |
+   2|O+6                |
+   3|AmQ                |
+   4|Bb=                |
+   5|lCQY3Io}1Skiv)     |
+   6|f^pt               |
+   7|3*WS,qnIPub4<M     |
+   8|(                  |
+   9|                   |
+  10|'n8"e9$N|(1'XU     |
+  11|T                  |
+  12|Y:P#O$n N}hmYWG+ :[|
+  13|Y                  |
+  14|                   |
+  0: 0-18 000000/e5e5e5 -
+  1: 0-1 000000/e5e5e5 -
+> in "<X\eE"
+> in "I62t)(<y\"DqJm}$kIAhY$w$l\eE"
+> in " &5,.V.L~oq85*kvRp'r:\eE"
+> in "uKWUlO?_'yn(cZ_SE+(-w1Y:%v@*BiA#f0L?^<\eE"

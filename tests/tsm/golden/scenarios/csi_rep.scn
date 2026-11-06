@@ -1,0 +1,15 @@
+# Note: differs from the C libtsm 4.x: REP without parameter repeats once (tsm filled the line)
+# REP: repeat the preceding character
+resize 10 4
+in "ab\e[3b"
+dump state text
+in "\r\nx\e[b"
+dump state text
+in "\r\nyz\e[0b"
+dump state text
+in "\r\n\e[3b"
+dump state text
+in "q\e[99b"
+dump state text
+in "\e[4;9H\e[1;31mR\e[m\e[5b"
+dump state text attrs

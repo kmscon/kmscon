@@ -1,0 +1,7 @@
+resize 20 3
+in "\e*0\e+<"
+in "\eNqq\eOaa"
+# single shift survives spaces and controls
+in "\eN \bq"
+in "\eN\r\nq"
+dump text

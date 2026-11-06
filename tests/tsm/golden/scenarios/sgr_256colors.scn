@@ -1,0 +1,10 @@
+# Note: differs from the C libtsm 4.x: an empty CSI parameter is 0, not "missing" (38;5;m selects color 0)
+resize 16 6
+in "\e[38;5;0mA\e[38;5;1mB\e[38;5;9mC\e[38;5;15mD\e[38;5;16mE\e[38;5;21mF"
+in "\e[38;5;110mG\e[38;5;196mH\e[38;5;231mI\e[38;5;232mJ\e[38;5;244mK\e[38;5;255mL\e[38;5;256mM\e[m"
+in "\r\n\e[48;5;3mA\e[48;5;100mB\e[48;5;250mC\e[48;5;999mD\e[m"
+# palette colours keep the colour code: bold brightens them
+in "\r\n\e[1;38;5;1mE\e[38;5;196mF\e[m"
+# missing arguments
+in "\r\n\e[31m\e[38;5mG\e[38mH\e[38;5;mI\e[38;3;1mJ\e[m"
+dump attrs

@@ -1,0 +1,6 @@
+# from test_vte.c: test_vte_osc4
+custom-palette 001224 011325 021426 031527 041628 051729 06182a 07192b 081a2c 091b2d 0a1c2e 0b1d2f 0c1e30 0d1f31 0e2032 0f2133 102234 112335
+palette custom
+in "\e]4;1;?;13;?;3;?\a"
+in "\e]4;110;?;254;?;\a"
+in "\e]4;1;rgb:1111/2222/3333;2\a"

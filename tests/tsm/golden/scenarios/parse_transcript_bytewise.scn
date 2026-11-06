@@ -1,0 +1,12 @@
+# same as parse_transcript, fed one byte at a time
+resize 30 8
+sb-max 20
+in1 "\e]0;user@host: ~\a\e[01;32muser@host\e[00m:\e[01;34m~\e[00m$ ls\r\n"
+in1 "\e[0m\e[01;34mbin\e[0m  \e[01;32mrun.sh\e[0m  notes.txt\r\n"
+in1 "\e]0;user@host: ~\a\e[01;32muser@host\e[00m:\e[01;34m~\e[00m$ vi\r\n"
+in1 "\e[?1049h\e[22;0;0t\e[1;8r\e[?12h\e[?12l\e[22;2t\e[22;1t\e[27m\e[23m\e[29m\e[m\e[H\e[2J\e[?25l\e[8;1H\"notes.txt\" 3L, 42B"
+in1 "\e[1;1H\e[34mline one\e[m\r\n\e[1mline two\e[m\r\n~\r\n~\e[1;5H\e[?25h"
+dump state text attrs
+in1 "\e[?25l\e[8;1H\e[K\e[8;1H:q\r\e[?25h\e[?1049l\e[23;0;0t\r\e[?1l\e>"
+in1 "\e]0;user@host: ~\a\e[01;32muser@host\e[00m:\e[01;34m~\e[00m$ "
+dump state text attrs

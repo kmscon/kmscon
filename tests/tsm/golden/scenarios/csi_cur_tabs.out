@@ -1,0 +1,210 @@
+> resize 30 3
+> in "\e[I"
+> dump state
+state
+  size 30x3 cursor 8,0
+  cursor-style 0 blink 500
+  margins 0-2
+  tabs 0,8,16,24
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=0 pos=0 max=0
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+> in "\e[2I"
+> dump state
+state
+  size 30x3 cursor 24,0
+  cursor-style 0 blink 500
+  margins 0-2
+  tabs 0,8,16,24
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=0 pos=0 max=0
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+> in "\e[0I\e[9I"
+> dump state
+state
+  size 30x3 cursor 29,0
+  cursor-style 0 blink 500
+  margins 0-2
+  tabs 0,8,16,24
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=0 pos=0 max=0
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+> in "\e[Z"
+> dump state
+state
+  size 30x3 cursor 24,0
+  cursor-style 0 blink 500
+  margins 0-2
+  tabs 0,8,16,24
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=0 pos=0 max=0
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+> in "\e[2Z"
+> dump state
+state
+  size 30x3 cursor 8,0
+  cursor-style 0 blink 500
+  margins 0-2
+  tabs 0,8,16,24
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=0 pos=0 max=0
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+> in "\e[9Z"
+> dump state
+state
+  size 30x3 cursor 0,0
+  cursor-style 0 blink 500
+  margins 0-2
+  tabs 0,8,16,24
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=0 pos=0 max=0
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+> in "\e[1;30H\e[Z"
+> dump state
+state
+  size 30x3 cursor 24,0
+  cursor-style 0 blink 500
+  margins 0-2
+  tabs 0,8,16,24
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=0 pos=0 max=0
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+> in "\e[3g\e[1;3H\eH\e[1;7H\eH\e[1;20H\eH\e[1;1H"
+> in "\e[I"
+> dump state
+state
+  size 30x3 cursor 2,0
+  cursor-style 0 blink 500
+  margins 0-2
+  tabs 2,6,19
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=0 pos=0 max=0
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+> in "\e[3I"
+> dump state
+state
+  size 30x3 cursor 29,0
+  cursor-style 0 blink 500
+  margins 0-2
+  tabs 2,6,19
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=0 pos=0 max=0
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+> in "\e[I"
+> dump state
+state
+  size 30x3 cursor 29,0
+  cursor-style 0 blink 500
+  margins 0-2
+  tabs 2,6,19
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=0 pos=0 max=0
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+> in "\e[Z\e[Z"
+> dump state
+state
+  size 30x3 cursor 6,0
+  cursor-style 0 blink 500
+  margins 0-2
+  tabs 2,6,19
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=0 pos=0 max=0
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+> in "\e[Z"
+> dump state
+state
+  size 30x3 cursor 2,0
+  cursor-style 0 blink 500
+  margins 0-2
+  tabs 2,6,19
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=0 pos=0 max=0
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+> in "\e[1;29H\u{4e16}"
+> dump state
+state
+  size 30x3 cursor 30,0
+  cursor-style 0 blink 500
+  margins 0-2
+  tabs 2,6,19
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=0 pos=0 max=0
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+> in "\e[Z"
+> dump state
+state
+  size 30x3 cursor 19,0
+  cursor-style 0 blink 500
+  margins 0-2
+  tabs 2,6,19
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=0 pos=0 max=0
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+> in "\e[1;7H\e[2g\e[1;3H\e[1g"
+> dump state
+state
+  size 30x3 cursor 2,0
+  cursor-style 0 blink 500
+  margins 0-2
+  tabs 2,6,19
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=0 pos=0 max=0
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+> in "\e[0g"
+> dump state
+state
+  size 30x3 cursor 2,0
+  cursor-style 0 blink 500
+  margins 0-2
+  tabs 6,19
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=0 pos=0 max=0
+  default e5e5e5/000000
+  erase e5e5e5/000000 -

@@ -1,0 +1,6 @@
+# from test_vte_mouse.c: test_mouse_sgr_cell_change
+in "\e[?1006h\e[?1003h"
+mouse move left cell=0,0
+mouse move left cell=0,0
+mouse move left cell=1,1
+mouse press left cell=1,1

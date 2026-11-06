@@ -1,0 +1,11 @@
+resize 10 6
+in "\e[3;5H\e[E"
+dump state
+in "\e[3;5H\e[2E"
+dump state
+in "\e[3;5H\e[0F"
+dump state
+in "\e[3;5H\e[9F"
+dump state
+in "\e[2;4r\e[3;5H\e[9E"
+dump state

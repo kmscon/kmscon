@@ -1,0 +1,31 @@
+# from test_selection.c: copy line(s) in scrollback
+resize 20 6
+sb-max 10
+in "\eE   Hello World!\eEFiller Text\eE"
+in "\eE\eE\eE\eE\eE\eE"
+sb-up 4
+dump state render
+sel-start 3 1
+sel-target 14 1
+sel-copy
+sel-start 7 1
+sel-target 3 1
+sel-copy
+sel-start 3 1
+sel-target 5 2
+sel-copy
+sel-start 5 2
+sel-target 3 1
+sel-copy
+# selection spanning scrollback and screen
+sel-start 3 1
+sel-target 2 5
+sel-copy
+dump render
+# scroll the view, selection follows the lines
+sb-down 2
+dump render
+sel-copy
+sb-reset
+dump render
+sel-copy

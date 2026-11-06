@@ -1,0 +1,8 @@
+resize 20 4
+# CAN / SUB abort sequences; SUB prints U+00BF
+in "a\e[1\x18mb"
+in "c\e[1\x1amd"
+in "\r\ne\e\x18f\e\x1ag"
+in "\r\n\e]0;title\x18h\e]0;title\x1ai"
+in "\r\n\eP1;2q\x18j\eP1;2q\x1ak"
+dump text attrs
