@@ -204,6 +204,11 @@ struct kmscon_conf_t {
 	/* font name */
 	char *font_name;
 
+	/* Renderer Options */
+	/* redraw rate in frames per second for render-only redraws;
+	 * 0 only repaints when the screen content changes */
+	unsigned int render_fps;
+
 	/* Palette Options */
 	/* color palette */
 	char *palette;

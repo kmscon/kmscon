@@ -49,6 +49,11 @@
 ## Disable HDMI-A-1
 #screen=[HDMI-A-1]disabled
 
+### Renderer options
+## Redraw rate in frames per second, gltex renderer only (default: 0, only repaint
+## when the screen content changes; clamped to 1000). Uncomment for smooth effects.
+#render-fps=60
+
 ## Fonts
 ## font-engine, can be [freetype, pango, psf, unifont, 8x16], by default kmscon tries in this order.
 #font-engine=freetype

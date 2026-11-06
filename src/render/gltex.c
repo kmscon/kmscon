@@ -493,9 +493,13 @@ static int gltex_prepare(struct kmscon_text *txt, struct tsm_screen_attr *attr)
 	if (ret)
 		return ret;
 
-	dlist_for_each_entry(atlas, &gt->atlases, list)
-	{
-		atlas->cache_num = 0;
+	/* render-only rounds keep the cached glyph geometry of the last full
+	 * rebuild, so only reset the caches when the content changed */
+	if (txt->rebuild) {
+		dlist_for_each_entry(atlas, &gt->atlases, list)
+		{
+			atlas->cache_num = 0;
+		}
 	}
 	gt->attr = *attr;
 

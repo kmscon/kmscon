@@ -676,6 +676,22 @@
       </varlistentry>
     </variablelist>
 
+    <para>Renderer Options:</para>
+
+    <variablelist>
+      <varlistentry>
+        <term><option>--render-fps {fps}</option></term>
+        <listitem>
+          <para>Redraw rate in frames per second for hardware rendering
+                (`gltex' renderer), independent of content changes. Values are
+                clamped to at most 1000. Set to 0 (the default) to only repaint
+                when the screen content changes, which is the traditional
+                behaviour; higher values redraw at a fixed cadence so
+                animations stay smooth. (default: 0)</para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+
     <para>Palette Options:</para>
 
     <variablelist>

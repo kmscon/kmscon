@@ -206,6 +206,15 @@ static void print_help()
 		"\t    --font-name <name>      [monospace]\n"
 		"\t                              Font name\n"
 		"\n"
+		"Renderer Options:\n"
+		"\t    --render-fps <fps>       [0]\n"
+		"\t                              Redraw rate in frames per second for the\n"
+		"\t                              gltex renderer. 0 (default) only repaints\n"
+		"\t                              when the screen content changes. Higher\n"
+		"\t                              values redraw at a fixed cadence, so\n"
+		"\t                              animations stay smooth.\n"
+		"\t                              Clamped to at most 1000.\n"
+		"\n"
 		"Palette Options:\n"
 		"\t    --palette <name>                [default]\n"
 		"\t                                      Select the used color palette.\n"
@@ -1061,6 +1070,9 @@ int kmscon_conf_new(struct conf_ctx **out)
 		CONF_OPTION_STRING(0, "font-engine", &conf->font_engine, NULL),
 		CONF_OPTION_UINT(0, "font-size", &conf->font_size, 0),
 		CONF_OPTION_STRING(0, "font-name", &conf->font_name, "monospace"),
+
+		/* Renderer Options */
+		CONF_OPTION_UINT(0, "render-fps", &conf->render_fps, 0),
 
 		/* Palette Options */
 		CONF_OPTION_STRING(0, "palette", &conf->palette, NULL),

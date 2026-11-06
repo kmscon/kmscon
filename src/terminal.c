@@ -62,6 +62,7 @@ struct screen {
 
 	bool config_enabled;
 	bool pending;
+	bool pending_rebuild;
 	bool hw_cursor;
 	bool enabled;
 	bool scaled;
@@ -110,6 +111,8 @@ struct kmscon_terminal {
 
 	struct ev_timer *blink_timer;
 	struct ev_timer *blink_cursor;
+	struct ev_timer *render_timer;
+	bool render_timer_failed;
 	bool blinking;
 	bool cursor_blinking;
 
@@ -118,6 +121,7 @@ struct kmscon_terminal {
 
 #define BLINK_TIMER_NS (500 * 1000 * 1000) // Blinking interval 500ms
 #define BLINK_CURSOR_TYPING 1		   // After keypress, wait 1s before blinking the cursor
+#define RENDER_FPS_MAX 1000		   // upper limit for --render-fps
 
 static void coord_to_cell(struct kmscon_terminal *term, int32_t x, int32_t y, unsigned int *posx,
 			  unsigned int *posy)
@@ -311,7 +315,14 @@ static void disable_screen(struct screen *scr)
 	scr->enabled = false;
 }
 
-static void do_redraw_screen(struct screen *scr)
+/* Only the gltex renderer supports render-only frames that reuse the glyph
+ * geometry of the previous frame; every other renderer must rebuild. */
+static bool screen_is_gltex(struct screen *scr)
+{
+	return !strcmp(scr->txt->ops->name, "gltex");
+}
+
+static void do_redraw_screen(struct screen *scr, bool rebuild)
 {
 	struct tsm_screen_attr attr;
 	int ret;
@@ -326,10 +337,14 @@ static void do_redraw_screen(struct screen *scr)
 		return;
 	}
 
+	if (!rebuild && !screen_is_gltex(scr))
+		rebuild = true;
+
 	scr->pending = false;
+	scr->pending_rebuild = false;
 
 	tsm_vte_get_def_attr(scr->term->vte, &attr);
-	kmscon_text_prepare(scr->txt, &attr, scr->term->blinking);
+	kmscon_text_prepare(scr->txt, &attr, scr->term->blinking, rebuild);
 	kmscon_text_draw(scr->txt, scr->term->console, scr->term->cursor_blinking);
 	draw_pointer(scr);
 	kmscon_text_render(scr->txt);
@@ -339,15 +354,18 @@ static void do_redraw_screen(struct screen *scr)
 		log_warning("cannot swap display [%s] %d", display_name(scr->disp), ret);
 }
 
-static void redraw_screen(struct screen *scr)
+static void redraw_screen(struct screen *scr, bool rebuild)
 {
 	if (!scr->term->awake || !scr->enabled)
 		return;
 
-	if (display_is_swapping(scr->disp))
+	if (display_is_swapping(scr->disp)) {
 		scr->pending = true;
-	else
-		do_redraw_screen(scr);
+		if (rebuild)
+			scr->pending_rebuild = true;
+	} else {
+		do_redraw_screen(scr, rebuild);
+	}
 }
 
 static void redraw_all(struct kmscon_terminal *term)
@@ -359,7 +377,7 @@ static void redraw_all(struct kmscon_terminal *term)
 
 	dlist_for_each_entry(scr, &term->screens, list)
 	{
-		redraw_screen(scr);
+		redraw_screen(scr, true);
 	}
 }
 
@@ -444,7 +462,7 @@ static void display_pageflip(void *unused, void *unused2, void *data)
 	struct screen *scr = data;
 
 	if (scr->pending)
-		do_redraw_screen(scr);
+		do_redraw_screen(scr, scr->pending_rebuild);
 }
 
 static void blink_event(struct ev_timer *timer, uint64_t count, void *data)
@@ -467,6 +485,83 @@ static void cursor_blink_event(struct ev_timer *timer, uint64_t count, void *dat
 
 	term->cursor_blinking = !term->cursor_blinking;
 	redraw_all(term);
+}
+
+static void render_redraw_event(struct ev_timer *timer, uint64_t count, void *data)
+{
+	struct kmscon_terminal *term = data;
+	struct screen *scr;
+
+	if (!term->awake)
+		return;
+
+	/* The screen content is unchanged, so re-run only the render pass
+	 * from the cached glyph geometry. Only gltex supports this; leave
+	 * all other renderers untouched. */
+	dlist_for_each_entry(scr, &term->screens, list)
+	{
+		if (screen_is_gltex(scr))
+			redraw_screen(scr, false);
+	}
+}
+
+static bool terminal_has_gltex(struct kmscon_terminal *term)
+{
+	struct screen *scr;
+
+	dlist_for_each_entry(scr, &term->screens, list)
+	{
+		if (screen_is_gltex(scr))
+			return true;
+	}
+
+	return false;
+}
+
+/* The render-fps timer runs at the configured render-fps while the
+ * terminal is awake and at least one screen uses the gltex renderer. With
+ * render-fps=0 it is never created and the console is only repainted when
+ * its content changes. The timer is created lazily so that terminals
+ * without gltex never allocate one. */
+static void render_timer_sync(struct kmscon_terminal *term)
+{
+	uint64_t interval_ns;
+	unsigned int fps;
+	struct itimerspec spec;
+	int ret;
+
+	if (!term->awake || !term->conf->render_fps || !terminal_has_gltex(term)) {
+		ev_timer_disable(term->render_timer);
+		return;
+	}
+
+	if (!term->render_timer) {
+		if (term->render_timer_failed)
+			return;
+
+		fps = term->conf->render_fps;
+		if (fps > RENDER_FPS_MAX)
+			fps = RENDER_FPS_MAX;
+
+		interval_ns = 1000000000ULL / fps;
+		spec.it_interval.tv_sec = interval_ns / 1000000000ULL;
+		spec.it_interval.tv_nsec = interval_ns % 1000000000ULL;
+		spec.it_value.tv_sec = spec.it_interval.tv_sec;
+		spec.it_value.tv_nsec = spec.it_interval.tv_nsec;
+
+		ret = ev_eloop_new_timer(term->eloop, &term->render_timer, &spec,
+					 render_redraw_event, term);
+		if (ret) {
+			term->render_timer = NULL;
+			term->render_timer_failed = true;
+			log_warning("cannot create render-fps timer: %d; render-fps is "
+				    "ignored",
+				    ret);
+			return;
+		}
+	}
+
+	ev_timer_enable(term->render_timer);
 }
 
 static void asciinema_write(const char *u8, size_t len, void *data)
@@ -878,7 +973,8 @@ int terminal_add_display(struct kmscon_terminal *term, struct display *disp)
 		   term->font->ops->name, scr->hw_cursor ? "HW" : "SW");
 
 	display_ref(scr->disp);
-	do_redraw_screen(scr);
+	render_timer_sync(term);
+	do_redraw_screen(scr, true);
 	return 0;
 
 err_cb:
@@ -900,6 +996,8 @@ static void free_screen(struct screen *scr, bool update)
 	display_unregister_pageflip(scr->disp, display_pageflip, scr);
 	display_unref(scr->disp);
 	free(scr);
+
+	render_timer_sync(term);
 
 	if (!update || dlist_empty(&term->screens))
 		return;
@@ -1349,6 +1447,7 @@ void terminal_activate(struct kmscon_terminal *term)
 		ev_timer_enable(term->blink_timer);
 		ev_timer_enable(term->blink_cursor);
 	}
+	render_timer_sync(term);
 	if (!term->opened)
 		terminal_open(term);
 	else
@@ -1365,6 +1464,7 @@ void terminal_deactivate(struct kmscon_terminal *term)
 		ev_timer_disable(term->blink_timer);
 		ev_timer_disable(term->blink_cursor);
 	}
+	render_timer_sync(term);
 	kmscon_asciinema_pause(term->asciinema);
 }
 
@@ -1376,6 +1476,7 @@ void terminal_destroy(struct kmscon_terminal *term)
 	rm_all_screens(term);
 	ev_eloop_rm_timer(term->blink_timer);
 	ev_eloop_rm_timer(term->blink_cursor);
+	ev_eloop_rm_timer(term->render_timer);
 	kmscon_asciinema_free(term->asciinema);
 	input_unregister_pointer_cb(term->input, pointer_event, term);
 	input_unregister_key_cb(term->input, input_event, term);
