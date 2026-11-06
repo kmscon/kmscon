@@ -25,7 +25,6 @@
  */
 
 #include <errno.h>
-#include <libtsm.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -44,6 +43,7 @@
 #include "shl/eloop.h"
 #include "shl/log.h"
 #include "shl/misc.h"
+#include "tsm.h"
 
 #ifdef BUILD_ENABLE_PAM
 #include <security/pam_appl.h>
@@ -65,7 +65,6 @@ struct locker {
 	pid_t pid;
 
 	/* lock screen */
-	struct tsm_screen *console;
 	struct tsm_vte *vte;
 	const char *status;
 
@@ -76,8 +75,6 @@ struct locker {
 /*
  * Lock screen
  */
-
-static void locker_write_event(struct tsm_vte *vte, const char *u8, size_t len, void *data) {}
 
 /* Only updates the screen, the caller is responsible for the redraw */
 static void locker_draw(struct locker *locker, const char *status)
@@ -350,6 +347,13 @@ void locker_input(struct locker *locker, struct input_key_event *ev)
 /*
  * Locker
  */
+static const struct tsm_callbacks locker_cbs = {
+	.write = NULL,
+	.osc = NULL,
+	.bell = NULL,
+	.leds = NULL,
+	.mouse_mode = NULL,
+};
 
 struct locker *locker_new(struct ev_eloop *eloop, struct kmscon_conf_t *conf, const char *user,
 			  const char *tty, unsigned int cols, unsigned int rows, locker_cb cb,
@@ -386,19 +390,21 @@ struct locker *locker_new(struct ev_eloop *eloop, struct kmscon_conf_t *conf, co
 			goto err;
 	}
 
-	if (tsm_screen_new(&locker->console, log_llog, NULL))
+	if (tsm_vte_new(&locker->vte, &locker_cbs, locker))
 		goto err;
 
-	tsm_screen_set_max_sb(locker->console, 0);
+	tsm_vte_set_max_scrollback(locker->vte, 0);
 	if (cols && rows)
-		tsm_screen_resize(locker->console, cols, rows);
+		tsm_vte_resize(locker->vte, cols, rows);
 
-	if (tsm_vte_new(&locker->vte, locker->console, locker_write_event, locker, log_llog, NULL))
-		goto err;
-
-	if (tsm_vte_set_palette(locker->vte, conf->palette) ||
-	    tsm_vte_set_custom_palette(locker->vte, conf->custom_palette))
-		goto err;
+	if (conf->palette && !strcmp(conf->palette, "custom")) {
+		if (tsm_vte_set_custom_palette(locker->vte, conf->custom_palette))
+			goto err;
+	} else if (conf->palette) {
+		/* unknown names keep the default palette, as libtsm 4 did */
+		if (tsm_vte_set_palette(locker->vte, conf->palette))
+			log_warning("unknown palette %s, using the default one", conf->palette);
+	}
 
 	locker_draw(locker, NULL);
 	return locker;
@@ -416,8 +422,7 @@ void locker_free(struct locker *locker)
 	locker_kill_child(locker);
 	clear_password(locker);
 	munlock(locker->buf, sizeof(locker->buf));
-	tsm_vte_unref(locker->vte);
-	tsm_screen_unref(locker->console);
+	tsm_vte_free(locker->vte);
 	ev_eloop_unref(locker->eloop);
 	free(locker->tty);
 	free(locker->user);
@@ -426,11 +431,11 @@ void locker_free(struct locker *locker)
 
 void locker_resize(struct locker *locker, unsigned int cols, unsigned int rows)
 {
-	tsm_screen_resize(locker->console, cols, rows);
+	tsm_vte_resize(locker->vte, cols, rows);
 	locker_draw(locker, locker->status);
 }
 
-struct tsm_screen *locker_get_screen(struct locker *locker)
+struct tsm_vte *locker_get_vte(struct locker *locker)
 {
-	return locker->console;
+	return locker->vte;
 }

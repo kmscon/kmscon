@@ -20,6 +20,10 @@ unicode-width = "0.2"
 name = "golden"
 path = "tests/tsm/golden/main.rs"
 
+[[test]]
+name = "stress"
+path = "tests/tsm/stress.rs"
+
 [profile.release]
 panic = "abort"
 lto = true

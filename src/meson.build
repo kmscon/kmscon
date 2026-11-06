@@ -2,6 +2,9 @@
 #
 # SPDX-License-Identifier: MIT
 
+## libtsm in rust
+subdir('tsm')
+
 #
 # Binary File Compiler
 #

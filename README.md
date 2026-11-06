@@ -8,8 +8,7 @@ console. See kmscon(1) man-page for usage information.
 
 ## Requirements
 ### Mandatory dependencies
-Kmscon requires the following software:
-  - [libtsm](https://github.com/kmscon/libtsm): terminal emulator state machine
+Kmscon requires the following software to run:
   - [libudev](https://www.freedesktop.org/software/systemd/man/libudev.html): providing input, video, etc. device hotplug support (>=v172)
   - [libxkbcommon](https://xkbcommon.org/): providing internationalized keyboard handling
   - **linux-headers**: linux kernel headers for ABI definitions
@@ -54,17 +53,23 @@ Released tarballs can be found at: https://github.com/kmscon/kmscon/releases
 
 ## Install
 
+### Compile dependencies
+To build kmscon, you will need:
+- meson
+- gcc or clang toolchain
+- cargo and a rust compiler for the tsm part
+
 To compile the kmscon binary, run the standard meson commands:
 ```bash
-meson setup builddir/
+meson setup build
 ````
 
 By default this will install into `/usr/local`, you can change your prefix with `--prefix=/usr`
-(or `meson configure builddir/ -Dprefix=/usr` after the initial meson setup).
+(or `meson configure build -Dprefix=/usr` after the initial meson setup).
 
 Then build and install. Note that this requires ninja.
 ```bash
-meson install -C builddir/
+meson install -C build
 ```
 
 The following meson options are available.

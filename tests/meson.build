@@ -101,3 +101,12 @@ test_conf = executable(
 )
 test('test_conf', test_conf)
 
+
+test_tsm = executable(
+    'test_tsm',
+    'test_tsm.c',
+    dependencies: [libtsm_deps],
+)
+test('test_tsm', test_tsm)
+
+subdir('tsm')

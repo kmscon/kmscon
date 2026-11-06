@@ -38,7 +38,7 @@ struct ev_eloop;
 struct input_key_event;
 struct kmscon_conf_t;
 struct locker;
-struct tsm_screen;
+struct tsm_vte;
 
 enum locker_event {
 	LOCKER_REDRAW,	 /* the screen content changed */
@@ -54,6 +54,6 @@ struct locker *locker_new(struct ev_eloop *eloop, struct kmscon_conf_t *conf, co
 void locker_free(struct locker *locker);
 void locker_input(struct locker *locker, struct input_key_event *ev);
 void locker_resize(struct locker *locker, unsigned int cols, unsigned int rows);
-struct tsm_screen *locker_get_screen(struct locker *locker);
+struct tsm_vte *locker_get_vte(struct locker *locker);
 
 #endif /* KMSCON_LOCKER_H */
