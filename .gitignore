@@ -17,3 +17,6 @@ docs/man/*.3
 docs/man/*.5
 docs/man/*.7
 
+
+# cargo
+target/
