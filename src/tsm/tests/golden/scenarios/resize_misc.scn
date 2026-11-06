@@ -1,0 +1,14 @@
+resize 10 3
+in "0123456789"
+dump state
+resize 8 3
+dump state
+resize 0 0
+resize 0 5
+resize 5 0
+dump state
+resize 1 1
+in "ab"
+dump state text
+resize 3 2
+dump state text

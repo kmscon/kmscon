@@ -1,0 +1,14 @@
+> in "\e[?1049h\e[?1h"
+> in "\e[?1$p\e[1$p\e[?12$p\e[2$p"
+> dump state
+state
+  size 80x24 cursor 0,0
+  cursor-style 0 blink 500
+  margins 0-23
+  tabs 0,8,16,24,32,40,48,56,64,72
+  screen-flags AUTO_WRAP|ALTERNATE
+  vte-flags CURSOR_KEY_MODE|SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=0 pos=0 max=0
+  default e5e5e5/000000
+  erase e5e5e5/000000 -

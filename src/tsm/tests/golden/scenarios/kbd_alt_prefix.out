@@ -1,0 +1,33 @@
+> key a uni="a" mods=alt
+< write "\ea"
+< ret true
+> key A uni="A" mods=alt+shift
+< write "\eA"
+< ret true
+> key c mods=alt+ctrl
+< write "\e\x03"
+< ret true
+> key Return mods=alt
+< write "\e\r"
+< ret true
+> key Up mods=alt
+< write "\e[1;3A"
+< ret true
+> key F1 mods=alt
+< write "\e\eOP"
+< ret true
+> key 0xffff mods=alt
+< write "\e\e[3~"
+< ret true
+> key b uni="b"
+< write "b"
+< ret true
+> key 0xe9 uni="é" mods=alt
+< write "\e\xc3\xa9"
+< ret true
+> key Escape mods=alt
+< write "\e\e"
+< ret true
+> key BackSpace mods=alt
+< write "\e\b"
+< ret true

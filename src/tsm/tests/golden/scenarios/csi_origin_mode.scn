@@ -1,0 +1,20 @@
+# Note: differs from the C libtsm 4.x: VPR, CHA and DSR are relative to the origin in DECOM (tsm added the margin twice)
+resize 10 8
+in "\e[3;6r"
+in "\e[?6h"
+dump state
+in "\e[2;2HX"
+dump state
+in "\e[99;1HY"
+dump state
+in "\e[H\e[5d"
+dump state
+in "\e[H\e[e"
+dump state
+in "\e[2;3H\e[4G"
+dump state
+in "\e[6n"
+in "\e[?6l"
+dump state
+in "\e[2;2HZ"
+dump text

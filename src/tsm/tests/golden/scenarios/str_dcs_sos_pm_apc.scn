@@ -1,0 +1,10 @@
+resize 20 3
+in "\eP1;2|data\e\\A"
+in "\ePq#0;2;0;0;0#1!14~-\e\\B"
+in "\eP\x01\x7fdata\e\\C"
+in "\eX sos \e\\D\e^ pm \e\\E\e_ apc \e\\F"
+in "\eX\x01\x7f\e\\G\eP:ignored\e\\H"
+in "\eP1$q\u{e9}\e\\I"
+in "\eXnested\ePx\e\\J"
+in "\eP\e]2;t\a\e\\K"
+dump text

@@ -1,0 +1,63 @@
+> resize 10 4
+> in "\e[2;3H\e7\e[1;1H\e#8"
+> dump state
+state
+  size 10x4 cursor 0,0
+  cursor-style 0 blink 500
+  margins 0-3
+  tabs 0,8
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=0 pos=0 max=0
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+> in "\e[3;3H\e#7\e[1;1H\e8"
+> dump state
+state
+  size 10x4 cursor 2,1
+  cursor-style 0 blink 500
+  margins 0-3
+  tabs 0,8
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=0 pos=0 max=0
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+> in "\e%G\e SD\e-A\e(=\e)E"
+> dump state text
+state
+  size 10x4 cursor 3,1
+  cursor-style 0 blink 500
+  margins 0-3
+  tabs 0,8
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=0 pos=0 max=0
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+text
+   0|··········|
+   1|··D·······|
+   2|··········|
+   3|··········|
+> in "\ek\eq\e\x7fDx\e\e[2Cy"
+> dump state text
+state
+  size 10x4 cursor 7,2
+  cursor-style 0 blink 500
+  margins 0-3
+  tabs 0,8
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=0 pos=0 max=0
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+text
+   0|··········|
+   1|··D·······|
+   2|···ø··ù···|
+   3|··········|

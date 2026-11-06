@@ -1,0 +1,43 @@
+> resize 18 2
+> in "x\e[44m"
+> palette nord
+> dump state text attrs
+state
+  size 18x2 cursor 1,0
+  cursor-style 0 blink 500
+  margins 0-1
+  tabs 0,8,16
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=0 pos=0 max=0
+  default d8dee9/2e3440
+  erase d8dee9/2e3440 -
+text
+   0|··················|
+   1|··················|
+attrs
+> in "\e[30mA\e[31mB\e[32mC\e[33mD\e[34mE\e[35mF\e[36mG\e[37mH\e[90mI\e[91mJ\e[92mK\e[93mL\e[94mM\e[95mN\e[96mO\e[97mP\e[mQ\e[7mR\e[m"
+> in "\e[1;31mS\e[m"
+> in "\e]10;?\a\e]11;?\a\e]4;0;?;7;?;15;?\a"
+< write "\e]10;rgb:d8d8/dede/e9e9\a\e]11;rgb:2e2e/3434/4040\a\e]4;0;rgb:3b3b/4242/5252\a\e]4;7;rgb:e5e5/e9e9/f0f0\a\e]4;15;rgb:ecec/efef/f4f4\a"
+> dump attrs
+attrs
+  0: 1 3b4252/2e3440 -
+  0: 2 bf616a/2e3440 -
+  0: 3 a3be8c/2e3440 -
+  0: 4 ebcb8b/2e3440 -
+  0: 5 81a1c1/2e3440 -
+  0: 6 b48ead/2e3440 -
+  0: 7 88c0d0/2e3440 -
+  0: 8 e5e9f0/2e3440 -
+  0: 9 4c566a/2e3440 -
+  0: 10 bf616a/2e3440 -
+  0: 11 a3be8c/2e3440 -
+  0: 12 ebcb8b/2e3440 -
+  0: 13 81a1c1/2e3440 -
+  0: 14 b48ead/2e3440 -
+  0: 15 8fbcbb/2e3440 -
+  0: 16 eceff4/2e3440 -
+  1: 0 d8dee9/2e3440 R
+  1: 1 bf616a/2e3440 B

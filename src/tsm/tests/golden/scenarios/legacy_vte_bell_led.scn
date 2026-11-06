@@ -1,0 +1,10 @@
+# from test_vte.c: bell and DECLL tests
+in "\a"
+in "abc\adef\a\a"
+in "\e[1q"
+in "\e[2q"
+in "\e[3q"
+in "\e[0q"
+in "\e[q"
+in "\e[2q\e[4q"
+dump text

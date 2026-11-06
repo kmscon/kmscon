@@ -1,0 +1,15 @@
+in "\e[?9h"
+mouse press left cell=0,0 mods=shift+ctrl
+mouse release left cell=0,0
+mouse move left cell=1,1
+mouse press wheelup cell=2,3
+mouse press left cell=222,0
+mouse press left cell=223,0
+mouse press left cell=0,300
+in "\e[?9l\e[?1000h"
+mouse press left cell=4,5 mods=shift+meta+ctrl
+mouse release left cell=4,5
+mouse release right cell=4,5 mods=ctrl
+mouse move left cell=6,6
+mouse move 32 cell=6,6
+mouse press wheeldown cell=1,1

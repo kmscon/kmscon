@@ -1,0 +1,15 @@
+# C1 controls sent as UTF-8 encoded code points U+0080..U+009F
+resize 10 5
+in "ab\u{84}c"
+dump state text
+in "\u{85}d"
+dump state text
+in "\r\e[3g\e[4G\u{88}\r\tX"
+dump state text
+in "\e[1;1H\u{8d}"
+dump state text
+in "\e*0\e+0\u{8e}qq\u{8f}xx"
+dump text
+in "\u{9a}"
+in "\u{9c}Z"
+dump text

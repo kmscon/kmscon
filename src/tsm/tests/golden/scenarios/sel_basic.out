@@ -1,0 +1,61 @@
+> resize 20 6
+> in "\eE   Hello World!\eEFiller Text\eE"
+> sel-start 3 1
+> sel-copy
+< copy "H"
+> sel-target 3 1
+> sel-copy
+< copy "H"
+> sel-reset
+> sel-copy
+< copy none
+> sel-start 3 1
+> sel-target 14 1
+> sel-copy
+< copy "Hello World!"
+> sel-start 3 1
+> sel-target 7 1
+> sel-copy
+< copy "Hello"
+> sel-start 0 1
+> sel-target 7 1
+> sel-copy
+< copy "   Hello"
+> sel-start 14 1
+> sel-target 3 1
+> sel-copy
+< copy "Hello World!"
+> sel-start 7 1
+> sel-target 3 1
+> sel-copy
+< copy "Hello"
+> sel-start 3 1
+> sel-target 19 1
+> sel-copy
+< copy "Hello World!"
+> sel-start 3 1
+> sel-target 5 2
+> sel-copy
+< copy "Hello World!\nFiller"
+> sel-start 5 2
+> sel-target 3 1
+> sel-copy
+< copy "Hello World!\nFiller"
+> sel-start 0 0
+> sel-target 19 5
+> sel-copy
+< copy "\n   Hello World!\nFiller Text\n\n\n"
+> dump render
+render
+   0|                    |
+   1|   Hello World!     |
+   2|Filler Text         |
+   3|                    |
+   4|                    |
+   5|                    |
+  0: 0-19 000000/e5e5e5 -
+  1: 0-19 000000/e5e5e5 -
+  2: 0-19 000000/e5e5e5 -
+  3: 0-19 000000/e5e5e5 -
+  4: 0-19 000000/e5e5e5 -
+  5: 0-19 000000/e5e5e5 -

@@ -1,0 +1,9 @@
+# from test_screen.c: test_screen_resize_alt_colors
+# cells added while on the alternate screen must use the main screen
+# default attributes once we switch back
+resize 2 2
+in "\e[?47h\e[41m\e[2J"
+dump attrs
+resize 4 4
+in "\e[?47l"
+dump state attrs
