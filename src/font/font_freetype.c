@@ -277,8 +277,13 @@ static int kmscon_font_freetype_init(struct kmscon_font *out, const char *name, 
 		log_err("Failed to initialize FreeType\n");
 		goto err_free;
 	}
-	FcConfigSetFontSetFilter(NULL, _fc_monospace_font_filter_func, NULL, NULL);
-	ftf->mono = FcConfigReference(FcConfigGetCurrent());
+	/* Install the monospace filter on a config owned by this font. Do not
+	 * touch the shared current config: with fontconfig 2.18.3 a repeated
+	 * FcConfigSetFontSetFilter(NULL, ...) frees it while other fonts still
+	 * reference it, and destroying such a font then corrupts the heap. */
+	ftf->mono = FcInitLoadConfigAndFonts();
+	if (ftf->mono)
+		FcConfigSetFontSetFilter(ftf->mono, _fc_monospace_font_filter_func, NULL, NULL);
 	ftf->fallback = FcInitLoadConfigAndFonts();
 	if (!ftf->mono || !ftf->fallback) {
 		log_err("Failed to load fontconfig configuration\n");
