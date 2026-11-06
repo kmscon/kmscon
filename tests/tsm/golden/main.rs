@@ -470,7 +470,12 @@ fn first_diff(expected: &str, actual: &str) -> String {
 
 #[test]
 fn golden() {
-    let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/golden/scenarios");
+    let dir = PathBuf::from(
+        option_env!("CARGO_MANIFEST_DIR")
+            .map(String::from)
+            .unwrap_or_else(|| std::env::var("CARGO_MANIFEST_DIR").expect("Missing CARGO_MANIFEST_DIR")),
+    )
+    .join("tests/tsm/golden/scenarios");
     let filter = std::env::var("GOLDEN_FILTER").ok();
     let bless = std::env::var_os("GOLDEN_BLESS").is_some_and(|v| v == "1");
 

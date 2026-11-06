@@ -9,7 +9,7 @@ project(
     license: 'MIT',
     # meson 0.58: f-string
     # meson 0.62: dependency libdl
-    meson_version: '>=1.1',
+    meson_version: '>=1.11',
     default_options: [
         'warning_level=1',
         'werror=true',
@@ -51,7 +51,6 @@ systemdsystemunitdir = systemd_deps.get_variable(
 # Required dependencies
 #
 xkbcommon_deps = dependency('xkbcommon', version: '>=0.5.0')
-libtsm_deps = dependency('libtsm', version: '>=4.8.0', allow_fallback: true)
 libudev_deps = dependency('libudev', version: '>=172')
 dl_deps = dependency('dl')
 threads_deps = dependency('threads')
@@ -59,6 +58,8 @@ zlib_deps = dependency('zlib')
 zlib_deps_native = dependency('zlib', native: true)
 
 python = find_program('python3')
+
+rust = import('rust')
 
 #
 # Dependencies

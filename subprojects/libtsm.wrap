@@ -1,9 +1,0 @@
-[wrap-git]
-directory = libtsm
-
-url = https://github.com/kmscon/libtsm
-revision = v4.8.0
-depth = 1
-
-[provide]
-libtsm = libtsm_dep

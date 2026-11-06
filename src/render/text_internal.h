@@ -53,7 +53,7 @@ struct kmscon_text {
 };
 
 struct kmscon_cursor {
-	struct tsm_screen_cell cell;
+	struct tsm_cell cell;
 	unsigned int x;
 	unsigned int y;
 	bool visible;
@@ -68,8 +68,8 @@ struct kmscon_text_ops {
 	void (*unset)(struct kmscon_text *txt);
 	void (*resize)(struct kmscon_text *txt, unsigned int cols, unsigned int rows);
 	int (*rotate)(struct kmscon_text *txt, enum Orientation orientation);
-	int (*prepare)(struct kmscon_text *txt, struct tsm_screen_attr *attr);
-	int (*draw)(struct kmscon_text *txt, const struct tsm_screen_cell *cells,
+	int (*prepare)(struct kmscon_text *txt, struct tsm_attr *attr);
+	int (*draw)(struct kmscon_text *txt, const struct tsm_cell *cells,
 		    struct kmscon_cursor *cursor);
 	int (*draw_pointer)(struct kmscon_text *txt, unsigned int x, unsigned int y);
 	int (*render)(struct kmscon_text *txt);

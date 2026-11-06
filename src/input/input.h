@@ -49,7 +49,7 @@ enum input_modifier {
 	INPUT_LOGO_MASK = (1 << 4),
 };
 
-/* keep in sync with TSM_VTE_INVALID */
+/* keep in sync with TSM_INVALID */
 #define INPUT_INVALID 0xffffffff
 
 struct input_key_event {

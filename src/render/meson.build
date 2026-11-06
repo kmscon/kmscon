@@ -8,7 +8,7 @@ render_srcs = [
 render_dep = [
     font_deps,
     shl_deps,
-    libtsm_deps,
+    libtsm_headers_deps,
     video_deps,
 ]
 
@@ -32,7 +32,7 @@ if enable_renderer_gltex
         ],
         name_prefix: '',
         dependencies: [
-            libtsm_deps,
+            libtsm_headers_deps,
             render_deps,
             glesv2_deps,
             shl_deps,
