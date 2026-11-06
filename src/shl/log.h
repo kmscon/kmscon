@@ -62,9 +62,6 @@ void log_set_level(enum log_severity level);
  * log_format:
  * Same as log_submit but first converts the arguments into a va_list object.
  *
- * log_llog:
- * Only for compatibility with libtsm.
- *
  * log_print_init(appname):
  * This prints a message with build-time/date and appname to the log. You should
  * invoke this very early in your program. It is not required, though.
@@ -75,11 +72,6 @@ __attribute__((format(printf, 3, 0))) void log_submit(enum log_severity level, c
 
 __attribute__((format(printf, 3, 4))) void log_format(enum log_severity level, const char *subs,
 						      const char *format, ...);
-
-__attribute__((format(printf, 7, 0))) void log_llog(void *data, const char *file, int line,
-						    const char *func, const char *subs,
-						    unsigned int tsm_level, const char *format,
-						    va_list args);
 
 void log_print_init(const char *appname);
 

@@ -1,0 +1,10 @@
+# scrolling on the alt screen never feeds the scrollback
+resize 4 3
+sb-max 10
+in "1\r\n2\r\n3\r\n4"
+dump state
+in "\e[?1049h"
+in "a\r\nb\r\nc\r\nd\r\ne"
+dump state text
+in "\e[?1049l"
+dump state text

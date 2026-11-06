@@ -1,0 +1,10 @@
+# scrolling with a top margin pushes the region's top line to scrollback
+resize 4 4
+sb-max 10
+in "1111\r\n2222\r\n3333\r\n4444"
+in "\e[2;4r\e[S"
+dump state text
+in "\e[4;1H\n"
+dump state text
+sb-up 2
+dump render

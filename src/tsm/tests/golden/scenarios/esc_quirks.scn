@@ -1,0 +1,12 @@
+# Note: differs from the C libtsm 4.x: escape sequences with unknown intermediates (ESC # 8) are ignored
+resize 10 4
+# unknown intermediates are dropped by tsm
+in "\e[2;3H\e7\e[1;1H\e#8"
+dump state
+in "\e[3;3H\e#7\e[1;1H\e8"
+dump state
+in "\e%G\e SD\e-A\e(=\e)E"
+dump state text
+# unknown finals, DEL inside escape, ESC ESC
+in "\ek\eq\e\x7fDx\e\e[2Cy"
+dump state text

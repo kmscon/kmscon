@@ -1,0 +1,19 @@
+in "\e[?1006h\e[?1002h"
+mouse press left cell=0,0 mods=shift
+mouse press right cell=0,0 mods=meta+ctrl
+mouse release right cell=0,0 mods=ctrl
+mouse press wheelup cell=3,3 mods=ctrl
+# drag (button 32..34) is reported in button-event mode, plain moves are not
+mouse move left cell=1,1
+mouse move 32 cell=2,2
+mouse move 32 cell=2,2
+mouse move 34 cell=3,2
+mouse move 35 cell=4,2
+mouse press left cell=9999,9999
+in "\e[?1003h"
+mouse move left cell=5,5
+mouse move left cell=5,5
+mouse move right cell=6,5 mods=shift
+mouse move 33 cell=7,5
+mouse 5 left cell=8,5
+mouse 0 left cell=8,6

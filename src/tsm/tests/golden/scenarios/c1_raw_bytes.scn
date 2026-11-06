@@ -1,0 +1,5 @@
+# Note: differs from the C libtsm 4.x: invalid UTF-8 bytes are replaced by U+FFFD instead of being dropped
+# raw 8bit C1 bytes are invalid UTF-8 in default mode
+resize 20 3
+hex 61 84 62 9b 31 6d 63 9d 30 3b 78 07 64
+dump state text attrs

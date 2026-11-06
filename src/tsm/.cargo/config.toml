@@ -1,0 +1,7 @@
+# Build with the crates vendored in vendor/ (cargo vendor), so that building
+# kmscon needs no network access.
+[source.crates-io]
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "vendor"

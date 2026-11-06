@@ -1,0 +1,3 @@
+in "\e[?1049h\e[?1h"
+in "\e[?1$p\e[1$p\e[?12$p\e[2$p"
+dump state

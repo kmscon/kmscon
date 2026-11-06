@@ -1,0 +1,35 @@
+# Note: differs from the C libtsm 4.x: inverse cells are not inverted again by DECSCNM (tsm xor-ed with the raw flag value)
+resize 10 4
+in "a\u{4e16}b\r\n\r\nx  y   "
+# wide chars, empty cells versus spaces
+sel-start 0 0
+sel-target 9 2
+sel-copy
+# out of bounds positions are ignored
+sel-reset
+sel-start 10 0
+sel-copy
+sel-start 0 4
+sel-copy
+sel-start 1 0
+sel-target 10 3
+sel-target 0 4
+sel-copy
+# target without start
+sel-reset
+sel-target 2 2
+sel-copy
+# switching to the alternate screen resets the selection
+sel-start 0 0
+sel-target 3 0
+in "\e[?1049h"
+sel-copy
+in "\e[?1049l"
+sel-copy
+# inverse attr and selection combine
+sel-start 0 2
+sel-target 4 2
+in "\e[H\e[7mINV\e[m"
+dump render
+in "\e[?5h"
+dump render

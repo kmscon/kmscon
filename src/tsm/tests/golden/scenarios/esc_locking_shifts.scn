@@ -1,0 +1,9 @@
+resize 30 6
+in "\e*0\e+<"
+# LS2 / LS3 map G2 / G3 into GL
+in "\enlmq\eolmq\x0flmq"
+# LS1R / LS2R / LS3R map into GR (latin-1 input U+00A1..U+00FE)
+in "\r\n\u{a1}\u{e0}\u{ec}\e~\u{a1}\u{e0}\u{ec}"
+in "\e}\u{e0}\u{ec}\u{ed}\e|\u{e0}\u{ec}\u{a4}"
+in "\r\n\u{a0}\u{ff}\u{100}"
+dump text

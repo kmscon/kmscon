@@ -1,0 +1,8 @@
+> resize 20 6
+> sb-max 0
+> in "   Hello World!\eELine 2\eELine 3"
+> sel-start 3 0
+> sel-target 5 2
+> in "\eE\eE\eE\eE\eE"
+> sel-copy
+< copy "Line 3"

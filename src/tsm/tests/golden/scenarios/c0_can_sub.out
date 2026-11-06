@@ -1,0 +1,15 @@
+> resize 20 4
+> in "a\e[1\x18mb"
+> in "c\e[1\x1amd"
+> in "\r\ne\e\x18f\e\x1ag"
+> in "\r\n\e]0;title\x18h\e]0;title\x1ai"
+< osc "0;title"
+< osc "0;title"
+> in "\r\n\eP1;2q\x18j\eP1;2q\x1ak"
+> dump text attrs
+text
+   0|ambc¿md·············|
+   1|ef¿g················|
+   2|h¿i·················|
+   3|j¿k·················|
+attrs

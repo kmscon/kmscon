@@ -1,0 +1,8 @@
+resize 18 2
+in "x\e[44m"
+palette solarized-white
+dump state text attrs
+in "\e[30mA\e[31mB\e[32mC\e[33mD\e[34mE\e[35mF\e[36mG\e[37mH\e[90mI\e[91mJ\e[92mK\e[93mL\e[94mM\e[95mN\e[96mO\e[97mP\e[mQ\e[7mR\e[m"
+in "\e[1;31mS\e[m"
+in "\e]10;?\a\e]11;?\a\e]4;0;?;7;?;15;?\a"
+dump attrs

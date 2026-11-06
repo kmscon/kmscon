@@ -1,0 +1,15 @@
+resize 10 4
+sb-max 10
+in "a\r\nb\r\nc\r\nd\r\ne"
+in "\e[2;3r\e[?6h\e[?1h\e=\e[20h\e[4h\e[?5h\e[?25l\e[1;41m\e(0\e)<\e[?1006h\e[?1003h\e[3 q\e[3;3H\e7"
+dump state
+reset
+dump state text attrs
+in "\e8lq"
+dump state text
+in "\e[2;3r\e[?6h\e[1;41m\e[3;3H"
+hard-reset
+dump state text attrs
+in "\e[2;3r\e[?6h\e[1;41m\e[3;3H\e[?47h"
+in "\e[!p"
+dump state text attrs

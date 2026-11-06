@@ -1,0 +1,10 @@
+# Note: differs from the C libtsm 4.x: DECSCA (CSI 1 " q) no longer changes the LEDs
+resize 10 2
+in "\e[1q\e[3q"
+in "\e[0q"
+in "\e[2;3q"
+in "\e[5q"
+in "\e[1\"q"
+in "\e[1;31\a;1m"
+in "\e]0;x\a"
+in "\a\a"

@@ -1,0 +1,29 @@
+resize 4 6
+in "1111\r\n2222\r\n3333\r\n4444\r\n5555\r\n6666"
+in "\e[2;3H\e[L"
+dump state text
+in "\e[2L"
+dump text
+in "\e[1;1H1111\r\n2222\r\n3333\r\n4444\r\n5555\r\n6666"
+in "\e[2;3H\e[M"
+dump state text
+in "\e[2M"
+dump text
+in "\e[1;1H1111\r\n2222\r\n3333\r\n4444\r\n5555\r\n6666"
+in "\e[3;1H\e[99L"
+dump text
+in "\e[1;1H1111\r\n2222\r\n3333\r\n4444\r\n5555\r\n6666"
+in "\e[3;1H\e[99M"
+dump text
+# inside / outside margins
+in "\e[1;1H1111\r\n2222\r\n3333\r\n4444\r\n5555\r\n6666"
+in "\e[2;4r\e[3;2H\e[L"
+dump text
+in "\e[3;2H\e[M"
+dump text
+in "\e[5;2H\e[L\e[1;2H\e[M"
+dump state text
+in "\e[2;2H\e[3L"
+dump text
+in "\e[2;2H\e[3M"
+dump text

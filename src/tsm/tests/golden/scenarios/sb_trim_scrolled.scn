@@ -1,0 +1,12 @@
+# Note: differs from the C libtsm 4.x: the scroll-back position stays consistent when sb-max drops lines
+resize 4 2
+sb-max 8
+in "1\r\n2\r\n3\r\n4\r\n5\r\n6\r\n7\r\n8\r\n9"
+sb-up 2
+dump state render
+sb-max 4
+dump state render
+sb-max 2
+dump state render
+sb-up 5
+dump state render

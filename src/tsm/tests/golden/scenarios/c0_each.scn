@@ -1,0 +1,9 @@
+# every C0 control byte between markers
+resize 20 4
+in "a\x00b\x01c\x02d\x03e\x04f"
+in "\x05"
+in "\x06g\x07h"
+dump state text
+hard-reset
+in "\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x19\x1c\x1d\x1e\x1f\x7fz"
+dump state text

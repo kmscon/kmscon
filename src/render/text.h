@@ -34,10 +34,10 @@
 #define KMSCON_TEXT_H
 
 #include <errno.h>
-#include <libtsm.h>
 #include <stdlib.h>
 #include "font/font.h"
 #include "shl/module.h"
+#include "tsm.h"
 #include "video/video.h"
 
 /* text renderer */
@@ -70,7 +70,7 @@ struct kmscon_text {
 };
 
 struct kmscon_cursor {
-	struct tsm_screen_cell cell;
+	struct tsm_cell cell;
 	unsigned int x;
 	unsigned int y;
 	bool visible;
@@ -85,8 +85,8 @@ struct kmscon_text_ops {
 	void (*unset)(struct kmscon_text *txt);
 	void (*resize)(struct kmscon_text *txt, unsigned int cols, unsigned int rows);
 	int (*rotate)(struct kmscon_text *txt, enum Orientation orientation);
-	int (*prepare)(struct kmscon_text *txt, struct tsm_screen_attr *attr);
-	int (*draw)(struct kmscon_text *txt, const struct tsm_screen_cell *cells,
+	int (*prepare)(struct kmscon_text *txt, struct tsm_attr *attr);
+	int (*draw)(struct kmscon_text *txt, const struct tsm_cell *cells,
 		    struct kmscon_cursor *cursor);
 	int (*draw_pointer)(struct kmscon_text *txt, unsigned int x, unsigned int y);
 	int (*render)(struct kmscon_text *txt);
@@ -116,8 +116,8 @@ enum Orientation kmscon_text_get_orientation(struct kmscon_text *txt);
 void kmscon_text_resize(struct kmscon_text *txt, unsigned int cols, unsigned int rows);
 int kmscon_text_rotate(struct kmscon_text *txt, enum Orientation orientation);
 
-int kmscon_text_prepare(struct kmscon_text *txt, struct tsm_screen_attr *attr, bool blinking);
-int kmscon_text_draw(struct kmscon_text *txt, struct tsm_screen *con, bool cursor_blink);
+int kmscon_text_prepare(struct kmscon_text *txt, struct tsm_attr *attr, bool blinking);
+int kmscon_text_draw(struct kmscon_text *txt, struct tsm_vte *vte, bool cursor_blink);
 int kmscon_text_draw_pointer(struct kmscon_text *txt, unsigned int x, unsigned int y);
 int kmscon_text_render(struct kmscon_text *txt);
 void kmscon_text_abort(struct kmscon_text *txt);

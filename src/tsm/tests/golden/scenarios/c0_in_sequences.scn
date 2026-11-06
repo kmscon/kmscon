@@ -1,0 +1,10 @@
+resize 10 5
+# C0 controls execute inside escape sequences
+in "\e[2\n;5H"
+dump state
+in "\e[\r3;3H"
+dump state
+in "\e\b7a"
+dump state text
+in "\e[1;\a31mX"
+dump text attrs

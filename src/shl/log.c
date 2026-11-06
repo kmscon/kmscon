@@ -125,13 +125,6 @@ void log_format(enum log_severity level, const char *subs, const char *format, .
 	errno = saved_errno;
 }
 
-SHL_EXPORT
-void log_llog(void *data, const char *file, int line, const char *func, const char *subs,
-	      unsigned int tsm_level, const char *format, va_list args)
-{
-	log_submit(tsm_level, subs, format, args);
-}
-
 void log_print_init(const char *appname)
 {
 	if (!appname)

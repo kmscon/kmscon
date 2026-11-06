@@ -1,0 +1,17 @@
+> resize 10 2
+> in "\e[1q\e[3q"
+< led scroll
+< led scroll+caps
+> in "\e[0q"
+< led none
+> in "\e[2;3q"
+< led num
+> in "\e[5q"
+> in "\e[1\"q"
+> in "\e[1;31\a;1m"
+< bell
+> in "\e]0;x\a"
+< osc "0;x"
+> in "\a\a"
+< bell
+< bell

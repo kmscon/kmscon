@@ -1,0 +1,194 @@
+> in "\e[?1l"
+> key Home
+< write "\e[H"
+< ret true
+> key End
+< write "\e[F"
+< ret true
+> key KP_Home
+< write "\e[H"
+< ret true
+> key KP_End
+< write "\e[F"
+< ret true
+> key Page_Up mods=none
+< write "\e[5~"
+< ret true
+> key Page_Down mods=none
+< write "\e[6~"
+< ret true
+> key KP_Page_Up mods=none
+< write "\e[5~"
+< ret true
+> key KP_Page_Down mods=none
+< write "\e[6~"
+< ret true
+> key Page_Up mods=shift
+< write "\e[5;2~"
+< ret true
+> key Page_Down mods=shift
+< write "\e[6;2~"
+< ret true
+> key KP_Page_Up mods=shift
+< write "\e[5;2~"
+< ret true
+> key KP_Page_Down mods=shift
+< write "\e[6;2~"
+< ret true
+> key Page_Up mods=ctrl
+< write "\e[5;5~"
+< ret true
+> key Page_Down mods=ctrl
+< write "\e[6;5~"
+< ret true
+> key KP_Page_Up mods=ctrl
+< write "\e[5;5~"
+< ret true
+> key KP_Page_Down mods=ctrl
+< write "\e[6;5~"
+< ret true
+> key Page_Up mods=ctrl+shift
+< write "\e[5;6~"
+< ret true
+> key Page_Down mods=ctrl+shift
+< write "\e[6;6~"
+< ret true
+> key KP_Page_Up mods=ctrl+shift
+< write "\e[5;6~"
+< ret true
+> key KP_Page_Down mods=ctrl+shift
+< write "\e[6;6~"
+< ret true
+> key Page_Up mods=alt
+< write "\e\e[5~"
+< ret true
+> key Page_Down mods=alt
+< write "\e\e[6~"
+< ret true
+> key KP_Page_Up mods=alt
+< write "\e\e[5~"
+< ret true
+> key KP_Page_Down mods=alt
+< write "\e\e[6~"
+< ret true
+> key Page_Up mods=ctrl+alt
+< write "\e\e[5;5~"
+< ret true
+> key Page_Down mods=ctrl+alt
+< write "\e\e[6;5~"
+< ret true
+> key KP_Page_Up mods=ctrl+alt
+< write "\e\e[5;5~"
+< ret true
+> key KP_Page_Down mods=ctrl+alt
+< write "\e\e[6;5~"
+< ret true
+> key Page_Up mods=lock
+< write "\e[5~"
+< ret true
+> key Page_Down mods=lock
+< write "\e[6~"
+< ret true
+> key KP_Page_Up mods=lock
+< write "\e[5~"
+< ret true
+> key KP_Page_Down mods=lock
+< write "\e[6~"
+< ret true
+> in "\e[?1h"
+> key Home
+< write "\eOH"
+< ret true
+> key End
+< write "\eOF"
+< ret true
+> key KP_Home
+< write "\eOH"
+< ret true
+> key KP_End
+< write "\eOF"
+< ret true
+> key Page_Up mods=none
+< write "\e[5~"
+< ret true
+> key Page_Down mods=none
+< write "\e[6~"
+< ret true
+> key KP_Page_Up mods=none
+< write "\e[5~"
+< ret true
+> key KP_Page_Down mods=none
+< write "\e[6~"
+< ret true
+> key Page_Up mods=shift
+< write "\e[5;2~"
+< ret true
+> key Page_Down mods=shift
+< write "\e[6;2~"
+< ret true
+> key KP_Page_Up mods=shift
+< write "\e[5;2~"
+< ret true
+> key KP_Page_Down mods=shift
+< write "\e[6;2~"
+< ret true
+> key Page_Up mods=ctrl
+< write "\e[5;5~"
+< ret true
+> key Page_Down mods=ctrl
+< write "\e[6;5~"
+< ret true
+> key KP_Page_Up mods=ctrl
+< write "\e[5;5~"
+< ret true
+> key KP_Page_Down mods=ctrl
+< write "\e[6;5~"
+< ret true
+> key Page_Up mods=ctrl+shift
+< write "\e[5;6~"
+< ret true
+> key Page_Down mods=ctrl+shift
+< write "\e[6;6~"
+< ret true
+> key KP_Page_Up mods=ctrl+shift
+< write "\e[5;6~"
+< ret true
+> key KP_Page_Down mods=ctrl+shift
+< write "\e[6;6~"
+< ret true
+> key Page_Up mods=alt
+< write "\e\e[5~"
+< ret true
+> key Page_Down mods=alt
+< write "\e\e[6~"
+< ret true
+> key KP_Page_Up mods=alt
+< write "\e\e[5~"
+< ret true
+> key KP_Page_Down mods=alt
+< write "\e\e[6~"
+< ret true
+> key Page_Up mods=ctrl+alt
+< write "\e\e[5;5~"
+< ret true
+> key Page_Down mods=ctrl+alt
+< write "\e\e[6;5~"
+< ret true
+> key KP_Page_Up mods=ctrl+alt
+< write "\e\e[5;5~"
+< ret true
+> key KP_Page_Down mods=ctrl+alt
+< write "\e\e[6;5~"
+< ret true
+> key Page_Up mods=lock
+< write "\e[5~"
+< ret true
+> key Page_Down mods=lock
+< write "\e[6~"
+< ret true
+> key KP_Page_Up mods=lock
+< write "\e[5~"
+< ret true
+> key KP_Page_Down mods=lock
+< write "\e[6~"
+< ret true

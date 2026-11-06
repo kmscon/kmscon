@@ -1,0 +1,8 @@
+in "\e]0;title zero\a"
+in "\e]1;icon\e\\"
+in "\e]2;window\u{9c}"
+in "\e]2;\a"
+in "\e]\a"
+in "\e]8;;http://example.com\e\\link\e]8;;\e\\"
+in "\e]2;caf\u{e9} \u{4e16}\a"
+in1 "\e]2;split\e\\"

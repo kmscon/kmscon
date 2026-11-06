@@ -1,0 +1,11 @@
+# Note: differs from the C libtsm 4.x: DECSCA is implemented: CSI 1 " q sets protection instead of the scroll-lock LED
+# DECSED / DECSEL: protect attribute (DECSCA)
+resize 6 3
+in "aa\e[1\"qPP\e[0\"qaa\r\nbbbbbb"
+dump attrs
+in "\e[1;1H\e[?K"
+dump text
+in "\e[?J"
+dump text
+in "\e[1;1Hxx\e[1\"qPP\e[2\"qxx\e[1;1H\e[?2J"
+dump text attrs

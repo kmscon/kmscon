@@ -4,7 +4,6 @@
 
 #include <ctype.h>
 #include <errno.h>
-#include <libtsm.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -14,6 +13,7 @@
 #include "asciinema.h"
 #include "shl/eloop.h"
 #include "shl/log.h"
+#include "tsm.h"
 
 #define LOG_SUBSYSTEM "asciinema"
 

@@ -1,0 +1,37 @@
+resize 30 3
+in "\e[I"
+dump state
+in "\e[2I"
+dump state
+in "\e[0I\e[9I"
+dump state
+in "\e[Z"
+dump state
+in "\e[2Z"
+dump state
+in "\e[9Z"
+dump state
+in "\e[1;30H\e[Z"
+dump state
+# custom tab stops
+in "\e[3g\e[1;3H\eH\e[1;7H\eH\e[1;20H\eH\e[1;1H"
+in "\e[I"
+dump state
+in "\e[3I"
+dump state
+in "\e[I"
+dump state
+in "\e[Z\e[Z"
+dump state
+in "\e[Z"
+dump state
+# tab left from beyond the last column (pending wrap)
+in "\e[1;29H\u{4e16}"
+dump state
+in "\e[Z"
+dump state
+# TBC with other parameters
+in "\e[1;7H\e[2g\e[1;3H\e[1g"
+dump state
+in "\e[0g"
+dump state

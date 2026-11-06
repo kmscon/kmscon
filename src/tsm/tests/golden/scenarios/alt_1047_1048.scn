@@ -1,0 +1,11 @@
+resize 6 3
+in "main\e[2;3H"
+in "\e[?1048h\e[?1047h"
+dump state text
+in "\e[1;1Halt\e[3;5H"
+in "\e[?1047l"
+dump state text
+in "\e[?1048l"
+dump state
+in "\e[?47h"
+dump text
