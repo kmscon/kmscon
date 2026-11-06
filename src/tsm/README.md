@@ -66,6 +66,14 @@ cargo test
 
 From kmscon, `meson test` also runs `cargo test`.
 
+The dependencies are vendored in `vendor/` and selected by
+`.cargo/config.toml`, so cargo works offline. After changing a dependency or
+updating `Cargo.lock`, refresh them with:
+
+```bash
+cargo vendor --locked vendor
+```
+
 Dependencies: [vte](https://crates.io/crates/vte) (escape sequence parser)
 and [unicode-width](https://crates.io/crates/unicode-width).
 
