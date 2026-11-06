@@ -67,6 +67,17 @@ struct kmscon_text {
 	bool rendering;
 	enum Orientation orientation;
 	bool blinking;
+	/* whether the current frame needs a full glyph rebuild; if false, a
+	 * renderer may reuse cached geometry and only re-run its render pass */
+	bool rebuild;
+
+	/* optional path to a GLES2 fragment shader file (not owned).
+	 * Set this before kmscon_text_set() is called. Renderers that do not
+	 * support shaders ignore it. */
+	const char *render_shader;
+
+	/* temporal ghosting/phosphor persistence in percent (0 = off) */
+	unsigned int render_ghosting;
 };
 
 struct kmscon_cursor {
@@ -116,7 +127,8 @@ enum Orientation kmscon_text_get_orientation(struct kmscon_text *txt);
 void kmscon_text_resize(struct kmscon_text *txt, unsigned int cols, unsigned int rows);
 int kmscon_text_rotate(struct kmscon_text *txt, enum Orientation orientation);
 
-int kmscon_text_prepare(struct kmscon_text *txt, struct tsm_screen_attr *attr, bool blinking);
+int kmscon_text_prepare(struct kmscon_text *txt, struct tsm_screen_attr *attr, bool blinking,
+			bool rebuild);
 int kmscon_text_draw(struct kmscon_text *txt, struct tsm_screen *con, bool cursor_blink);
 int kmscon_text_draw_pointer(struct kmscon_text *txt, unsigned int x, unsigned int y);
 int kmscon_text_render(struct kmscon_text *txt);

@@ -97,9 +97,11 @@ static inline bool dlist_empty(struct dlist *head)
 
 #define dlist_entry(ptr, type, member) shl_offsetof((ptr), type, member)
 
-#define dlist_first(head, type, member) dlist_entry((head)->next, type, member)
+#define dlist_first(head, type, member)                                                            \
+	(dlist_empty(head) ? NULL : dlist_entry((head)->next, type, member))
 
-#define dlist_last(head, type, member) dlist_entry((head)->prev, type, member)
+#define dlist_last(head, type, member)                                                             \
+	(dlist_empty(head) ? NULL : dlist_entry((head)->prev, type, member))
 
 #define dlist_next(iter, head, member)                                                             \
 	((iter)->member.next == (head) ? NULL                                                      \

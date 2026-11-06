@@ -676,6 +676,64 @@
       </varlistentry>
     </variablelist>
 
+    <para>Renderer Options:</para>
+
+    <variablelist>
+      <varlistentry>
+        <term><option>--render-shader {file}</option></term>
+        <listitem>
+          <para>Path to a GLES2 fragment shader file which is applied to the whole screen when
+                using hardware rendering (`gltex' renderer). The shader receives the rendered
+                console via <literal>uniform sampler2D source</literal> and
+                <literal>varying vec2 texcoord</literal>, plus
+                <literal>uniform float time</literal> (seconds since start) and
+                <literal>uniform vec2 resolution</literal> (screen size in pixels); with
+                <option>--render-ghosting</option> it also receives
+                <literal>uniform sampler2D history</literal> (the previously displayed frame)
+                and <literal>uniform float gamma</literal> (the persistence amount) and should
+                blend them itself. Shaders guard these declarations and their blend code with
+                <literal>#if HISTORY_ENABLED</literal> around a
+                <literal>#define HISTORY_ENABLED 0</literal> marker line, which kmscon
+                rewrites to 1 while ghosting is configured; all uniforms are optional. If the
+                file cannot be read, compiled, or linked, a warning is logged and kmscon
+                renders without the shader. Changes to the shader file are reloaded live while
+                kmscon is running; with <option>--render-fps</option> 0 they are picked up on
+                the next repaint. See
+                <filename>/usr/share/kmscon/shaders/amber.frag</filename> for an example.
+                (default: none)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>--render-fps {fps}</option></term>
+        <listitem>
+          <para>Redraw rate in frames per second for hardware rendering
+                (`gltex' renderer), independent of content changes. Values are
+                clamped to at most 1000. Set to 0 (the default) to only repaint
+                when the screen content changes, which is the traditional
+                behaviour; higher values redraw at a fixed cadence so
+                animations stay smooth. (default: 0)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>--render-ghosting {percent}</option></term>
+        <listitem>
+          <para>Temporal ghosting (phosphor persistence) in percent: each pixel keeps that
+                percentage of the previously displayed frame, i.e.
+                <literal>out = (1 - gamma) * current + gamma * history</literal>. Without a
+                <option>--render-shader</option> file a built-in shader applies this formula; a
+                shader file receives the history frame and gamma via
+                <literal>uniform sampler2D history</literal> and
+                <literal>uniform float gamma</literal> and applies them itself through its
+                <literal>HISTORY_ENABLED</literal> marker (see <option>--render-shader</option>). Set
+                <option>--render-fps</option> to a positive value so the trails decay smoothly
+                even while the console is idle. Works only with the `gltex' renderer; values
+                above 99 are treated as 99. (default: 0)</para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+
     <para>Palette Options:</para>
 
     <variablelist>
