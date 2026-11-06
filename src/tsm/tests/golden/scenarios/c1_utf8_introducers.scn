@@ -1,0 +1,13 @@
+resize 20 4
+# U+009B is CSI
+in "\u{9b}1mA\u{9b}0m"
+# U+009D is OSC, terminated by U+009C or BEL
+in "\u{9d}0;one\u{9c}"
+in "\u{9d}0;two\a"
+in "\u{9d}10;?\u{9c}"
+# U+0090 DCS, U+0098 SOS, U+009E PM, U+009F APC are ignored until ST
+in "\u{90}1;2qdata\u{9c}B"
+in "\u{98}sos\u{9c}C"
+in "\u{9e}pm\u{9c}D"
+in "\u{9f}apc\u{9c}E"
+dump text attrs

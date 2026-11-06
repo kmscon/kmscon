@@ -1,0 +1,6 @@
+# from test_vte_mouse.c: pixel tests
+in "\e[?1016h"
+in "\e[?1003h"
+mouse move left cell=0,0 px=236,120
+mouse press left cell=0,0 px=236,120
+mouse release left cell=0,0 px=236,120

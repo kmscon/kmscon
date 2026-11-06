@@ -1,0 +1,15 @@
+# Note: differs from the C libtsm 4.x: saved cursor positions are absolute and restored after the origin mode
+resize 10 8
+in "\e[3;6r"
+# saved without origin mode, restored while origin mode is on
+in "\e[2;5H\e7\e[?6h\e[3;3H"
+dump state
+in "\e8X"
+dump state text
+# saved with origin mode, restored while it is off
+in "\e[?6h\e[2;2H\e7\e[?6l\e[8;8H"
+in "\e8Y"
+dump state text
+# saved in origin mode below the top margin
+in "\e[?6h\e[4;7H\e7\e[?6l\e[1;1H\e8Z"
+dump state text

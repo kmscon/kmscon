@@ -1,0 +1,17 @@
+# background colour erase: erased cells take the current pen
+resize 6 7
+in "aaaaaa\r\nbbbbbb\r\ncccccc\r\ndddddd\r\neeeeee\r\nffffff\r\ngggggg"
+in "\e[44;4;7m"
+in "\e[1;3H\e[K"
+in "\e[2;3H\e[1K"
+in "\e[3;3H\e[2X"
+in "\e[4;3H\e[@"
+in "\e[5;3H\e[P"
+in "\e[6;1H\e[L"
+in "\e[m"
+dump state text attrs
+in "\e[41m\e[2J\e[m"
+dump state attrs
+in "\e[43m"
+in "\e[7;1H\n"
+dump attrs

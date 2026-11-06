@@ -1,0 +1,14 @@
+# Note: differs from the C libtsm 4.x: empty CSI parameters are 0; SGR with private markers (? < =) is ignored
+resize 12 5
+# colon sub-parameters: tsm ignores the whole sequence
+in "\e[38:5:1mA\e[4:3mB\e[1:mC\e[m"
+# trailing / leading empty parameters
+in "\r\n\e[1;mD\e[;1mE\e[;mF\e[m"
+# more than 16 parameters
+in "\r\n\e[0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;1;4mG\e[m"
+in "\e[0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;0;1mH\e[m"
+# large values
+in "\r\n\e[65535mI\e[65536mJ\e[700000mK\e[1;700000;4mL\e[m"
+# private markers
+in "\r\n\e[>4;1mM\e[?4mN\e[<1mO\e[=1mP\e[m"
+dump attrs

@@ -1,0 +1,4 @@
+resize 20 3
+in "a\u{80}b\u{81}c\u{82}d\u{83}e\u{86}f\u{87}g\u{89}h\u{8a}i\u{8b}j\u{8c}k"
+in "\r\nl\u{91}m\u{92}n\u{93}o\u{94}p\u{95}q\u{96}r\u{97}s\u{99}t"
+dump state text

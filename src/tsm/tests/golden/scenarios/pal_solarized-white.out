@@ -1,0 +1,42 @@
+> resize 18 2
+> in "x\e[44m"
+> palette solarized-white
+> dump state text attrs
+state
+  size 18x2 cursor 1,0
+  cursor-style 0 blink 500
+  margins 0-1
+  tabs 0,8,16
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=0 pos=0 max=0
+  default 073642/eee8d5
+  erase 073642/eee8d5 -
+text
+   0|··················|
+   1|··················|
+attrs
+> in "\e[30mA\e[31mB\e[32mC\e[33mD\e[34mE\e[35mF\e[36mG\e[37mH\e[90mI\e[91mJ\e[92mK\e[93mL\e[94mM\e[95mN\e[96mO\e[97mP\e[mQ\e[7mR\e[m"
+> in "\e[1;31mS\e[m"
+> in "\e]10;?\a\e]11;?\a\e]4;0;?;7;?;15;?\a"
+< write "\e]10;rgb:0707/3636/4242\a\e]11;rgb:eeee/e8e8/d5d5\a\e]4;0;rgb:0707/3636/4242\a\e]4;7;rgb:eeee/e8e8/d5d5\a\e]4;15;rgb:fdfd/f6f6/e3e3\a"
+> dump attrs
+attrs
+  0: 2 dc322f/eee8d5 -
+  0: 3 859900/eee8d5 -
+  0: 4 b58900/eee8d5 -
+  0: 5 268bd2/eee8d5 -
+  0: 6 d33682/eee8d5 -
+  0: 7 2aa198/eee8d5 -
+  0: 8 eee8d5/eee8d5 -
+  0: 9 002b36/eee8d5 -
+  0: 10 cb4b16/eee8d5 -
+  0: 11 586e75/eee8d5 -
+  0: 12 657b83/eee8d5 -
+  0: 13 839496/eee8d5 -
+  0: 14 6c71c4/eee8d5 -
+  0: 15 93a1a1/eee8d5 -
+  0: 16 fdf6e3/eee8d5 -
+  1: 0 073642/eee8d5 R
+  1: 1 cb4b16/eee8d5 B

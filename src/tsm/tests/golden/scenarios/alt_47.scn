@@ -1,0 +1,10 @@
+resize 6 3
+in "main\r\nmain2"
+in "\e[?47h"
+dump state text
+in "alt"
+dump state text
+in "\e[?47l"
+dump state text
+in "\e[?47h"
+dump text

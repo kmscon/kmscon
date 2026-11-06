@@ -1,0 +1,16 @@
+in "\e[1 q"
+dump state
+in "\e[2 q"
+dump state
+in "\e[6 q"
+dump state
+in "\e[7 q"
+dump state
+in "\e[ q"
+dump state
+in "\e[65535 q"
+dump state
+in "\e[4 q\e7\e[0 q"
+dump state
+in "\e8"
+dump state

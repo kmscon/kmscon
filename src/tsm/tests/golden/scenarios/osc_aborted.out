@@ -1,0 +1,25 @@
+> resize 20 3
+> in "\e]2;can\x18A"
+< osc "2;can"
+> in "\e]2;sub\x1aB"
+< osc "2;sub"
+> in "\e]2;esc\e[1mC\e[m"
+< osc "2;esc"
+> in "\e]2;c1\u{9b}1mD\e[m"
+< osc "2;c1"
+> in "\e]2;ctl\x01\x08\x7f\x1fok\a"
+< osc "2;ctl\x7fok"
+> in "\e]2;unterminated"
+> in "E"
+> in "\a"
+< osc "2;unterminatedE"
+> in "\e]0;bel\a\aF"
+< osc "0;bel"
+< bell
+> dump text attrs
+text
+   0|A¿BCDF··············|
+   1|····················|
+   2|····················|
+attrs
+  0: 3-4 e5e5e5/000000 B

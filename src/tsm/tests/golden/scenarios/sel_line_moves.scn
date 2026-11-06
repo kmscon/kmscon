@@ -1,0 +1,42 @@
+# selection anchored to lines while they move (IL, DL, SD, RI, margins, alt screen)
+resize 6 6
+sb-max 4
+in "aaaa\r\nbbbb\r\ncccc\r\ndddd\r\neeee\r\nffff"
+sel-start 1 1
+sel-target 2 3
+sel-copy
+# insert / delete lines move the selected lines
+in "\e[2;1H\e[L"
+sel-copy
+dump render
+in "\e[1;1H\e[2M"
+sel-copy
+dump render
+# scroll down and reverse index inside margins
+in "\e[2;5r\e[T"
+sel-copy
+in "\e[2;1H\eM\eM"
+sel-copy
+dump render
+# lines cleared by scrolling down wrap to the top in reverse order
+in "\e[r\e[1;1H11\r\n22\r\n33\r\n44\r\n55\r\n66"
+sel-start 0 4
+sel-target 1 5
+in "\e[2T"
+sel-copy
+dump render
+# scrolling up with a top margin pushes the region top into the scroll-back
+in "\e[1;1H11\r\n22\r\n33\r\n44\r\n55\r\n66"
+sel-start 0 1
+sel-target 1 2
+in "\e[2;6r\e[S"
+sel-copy
+sb-up 2
+dump state render
+sb-reset
+# shrinking and clearing the scroll-back drops selected lines
+sb-max 2
+sel-copy
+sb-clear
+sel-copy
+dump render

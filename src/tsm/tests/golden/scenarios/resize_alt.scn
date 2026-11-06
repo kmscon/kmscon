@@ -1,0 +1,10 @@
+resize 4 3
+sb-max 10
+in "1\r\n2\r\n3\r\n4\r\n5"
+in "\e[?1049h"
+resize 6 5
+dump state text
+resize 4 2
+dump state text
+in "\e[?1049l"
+dump state text

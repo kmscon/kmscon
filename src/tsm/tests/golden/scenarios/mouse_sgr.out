@@ -1,0 +1,48 @@
+> in "\e[?1006h\e[?1002h"
+< mouse-cb mode=1002 pixels=0
+> mouse press left cell=0,0 mods=shift
+< write "\e[<4;1;1M"
+< ret true
+> mouse press right cell=0,0 mods=meta+ctrl
+< write "\e[<26;1;1M"
+< ret true
+> mouse release right cell=0,0 mods=ctrl
+< write "\e[<18;1;1m"
+< ret true
+> mouse press wheelup cell=3,3 mods=ctrl
+< write "\e[<80;4;4M"
+< ret true
+> mouse move left cell=1,1
+< ret false
+> mouse move 32 cell=2,2
+< write "\e[<32;3;3M"
+< ret true
+> mouse move 32 cell=2,2
+< ret false
+> mouse move 34 cell=3,2
+< write "\e[<34;4;3M"
+< ret true
+> mouse move 35 cell=4,2
+< ret false
+> mouse press left cell=9999,9999
+< write "\e[<0;10000;10000M"
+< ret true
+> in "\e[?1003h"
+< mouse-cb mode=1003 pixels=0
+> mouse move left cell=5,5
+< write "\e[<35;6;6M"
+< ret true
+> mouse move left cell=5,5
+< ret false
+> mouse move right cell=6,5 mods=shift
+< write "\e[<35;7;6M"
+< ret true
+> mouse move 33 cell=7,5
+< write "\e[<33;8;6M"
+< ret true
+> mouse 5 left cell=8,5
+< write "\e[<35;9;6M"
+< ret true
+> mouse 0 left cell=8,6
+< write "\e[<0;9;7m"
+< ret true

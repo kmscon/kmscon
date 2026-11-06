@@ -1,0 +1,11 @@
+# SGR + wide char + DSR + keyboard
+resize 10 3
+in "ab\e[1;31mc\e[0m\r\n"
+in "\u{4e16}x\e[38;2;1;2;3;48;5;196my\e[m"
+in "\e[6n"
+key Up
+key a ascii=a uni="a" mods=alt
+in "\e]2;title\a\a"
+mouse press left cell=1,1
+dump
+dump render

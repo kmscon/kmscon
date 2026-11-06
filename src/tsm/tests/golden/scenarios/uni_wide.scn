@@ -1,0 +1,14 @@
+resize 6 5
+in "\u{4e16}\u{754c}x"
+dump state text
+# wide char at the last column
+in "\r\nabcde\u{4e16}"
+dump state text
+in "y"
+dump state text
+# overwrite the first / second half of a wide char
+in "\e[1;1HA\e[1;4HB"
+dump text
+# without autowrap
+in "\e[?7l\e[4;1Habcde\u{4e16}\u{754c}"
+dump state text

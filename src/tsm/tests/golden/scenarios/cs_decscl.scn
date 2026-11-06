@@ -1,0 +1,14 @@
+# Note: differs from the C libtsm 4.x: 8-bit mode accepts high bytes (tsm sign-extended and dropped them)
+resize 20 4
+in "\e[61\"p"
+dump state
+in "\e[62;1\"p"
+dump state
+in "\e[63;2\"p"
+dump state
+in "\e[64\"p"
+dump state
+in "\e[65\"p"
+dump state
+in "\e[62\"p\u{e0}\u{a1}"
+dump text
