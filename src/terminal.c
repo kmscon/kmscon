@@ -322,6 +322,11 @@ static bool screen_is_gltex(struct screen *scr)
 	return !strcmp(scr->txt->ops->name, "gltex");
 }
 
+static bool terminal_has_render_options(struct kmscon_terminal *term)
+{
+	return term->conf->render_shader && term->conf->render_shader[0];
+}
+
 static void do_redraw_screen(struct screen *scr, bool rebuild)
 {
 	struct tsm_screen_attr attr;
@@ -959,6 +964,11 @@ int terminal_add_display(struct kmscon_terminal *term, struct display *disp)
 		log_error("cannot create text-renderer");
 		goto err_cb;
 	}
+	scr->txt->render_shader = term->conf->render_shader;
+	if (terminal_has_render_options(term) && !screen_is_gltex(scr))
+		log_warning("render options are ignored on display %s: the %s renderer "
+			    "does not support shaders",
+			    display_name(disp), scr->txt->ops->name);
 
 	dlist_link(&term->screens, &scr->list);
 

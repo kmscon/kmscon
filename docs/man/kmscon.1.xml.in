@@ -680,6 +680,24 @@
 
     <variablelist>
       <varlistentry>
+        <term><option>--render-shader {file}</option></term>
+        <listitem>
+          <para>Path to a GLES2 fragment shader file which is applied to the whole screen when
+                using hardware rendering (`gltex' renderer). The shader receives the rendered
+                console via <literal>uniform sampler2D source</literal> and
+                <literal>varying vec2 texcoord</literal>, plus
+                <literal>uniform float time</literal> (seconds since start) and
+                <literal>uniform vec2 resolution</literal> (screen size in pixels); all are
+                optional. If the file cannot be read, compiled, or linked, a warning is logged
+                and kmscon renders without the shader. Changes to the shader file are reloaded
+                live while kmscon is running; with <option>--render-fps</option> 0 they are
+                picked up on the next repaint. See
+                <filename>/usr/share/kmscon/shaders/amber.frag</filename> for an example.
+                (default: none)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
         <term><option>--render-fps {fps}</option></term>
         <listitem>
           <para>Redraw rate in frames per second for hardware rendering

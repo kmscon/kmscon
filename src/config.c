@@ -207,6 +207,12 @@ static void print_help()
 		"\t                              Font name\n"
 		"\n"
 		"Renderer Options:\n"
+		"\t    --render-shader <file>   [none]\n"
+		"\t                              GLES2 fragment shader file applied to the\n"
+		"\t                              whole screen (gltex renderer only). Changes\n"
+		"\t                              to the file are reloaded live. On any error\n"
+		"\t                              a warning is printed and rendering continues\n"
+		"\t                              without the shader.\n"
 		"\t    --render-fps <fps>       [0]\n"
 		"\t                              Redraw rate in frames per second for the\n"
 		"\t                              gltex renderer. 0 (default) only repaints\n"
@@ -1072,6 +1078,7 @@ int kmscon_conf_new(struct conf_ctx **out)
 		CONF_OPTION_STRING(0, "font-name", &conf->font_name, "monospace"),
 
 		/* Renderer Options */
+		CONF_OPTION_STRING(0, "render-shader", &conf->render_shader, NULL),
 		CONF_OPTION_UINT(0, "render-fps", &conf->render_fps, 0),
 
 		/* Palette Options */

@@ -271,6 +271,12 @@ install_data(
     'scripts/etc/kmscon.conf.example',
     install_dir: join_paths(get_option('sysconfdir'), 'kmscon'),
 )
+
+# example shaders
+install_data(
+    'scripts/shaders/amber.frag',
+    install_dir: datadir / meson.project_name() / 'shaders',
+)
 if enable_libseat
     install_data(
         'scripts/pam/kmscon',

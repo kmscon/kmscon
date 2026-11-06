@@ -70,6 +70,11 @@ struct kmscon_text {
 	/* whether the current frame needs a full glyph rebuild; if false, a
 	 * renderer may reuse cached geometry and only re-run its render pass */
 	bool rebuild;
+
+	/* optional path to a GLES2 fragment shader file (not owned).
+	 * Set this before kmscon_text_set() is called. Renderers that do not
+	 * support shaders ignore it. */
+	const char *render_shader;
 };
 
 struct kmscon_cursor {
