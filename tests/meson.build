@@ -101,3 +101,26 @@ test_conf = executable(
 )
 test('test_conf', test_conf)
 
+
+test_tsm = executable(
+    'test_tsm',
+    'test_tsm.c',
+    dependencies: [libtsm_deps],
+)
+test('test_tsm', test_tsm)
+
+# libtsm unit, golden and stress tests
+test(
+    'cargo_test',
+    cargo,
+    args: [
+        'test',
+        '--manifest-path',
+        tsm_manifest,
+        '--target-dir',
+        tsm_target_dir,
+        '--profile',
+        cargo_profile,
+    ],
+    timeout: 600,
+)

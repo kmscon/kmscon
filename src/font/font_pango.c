@@ -44,7 +44,6 @@
  */
 
 #include <glib.h>
-#include <libtsm.h>
 #include <pango/pango.h>
 #include <pango/pangoft2.h>
 #include <pthread.h>
@@ -53,6 +52,7 @@
 #include <string.h>
 #include "font.h"
 #include "shl/log.h"
+#include "tsm.h"
 #include "video/video.h"
 
 #define LOG_SUBSYSTEM "font_pango"
@@ -109,9 +109,9 @@ static struct kmscon_glyph *get_glyph(struct kmscon_font *font, struct face *fac
 	FT_Bitmap bitmap;
 	unsigned int cwidth;
 	size_t ulen, cnt;
-	char *val;
+	char val[4];
 
-	cwidth = tsm_ucs4_get_width(ch);
+	cwidth = tsm_char_width(ch);
 	if (!cwidth)
 		return NULL;
 
@@ -149,12 +149,11 @@ static struct kmscon_glyph *get_glyph(struct kmscon_font *font, struct face *fac
 	else
 		pango_attr_list_change(attrlist, pango_attr_weight_new(PANGO_WEIGHT_NORMAL));
 
-	val = tsm_ucs4_to_utf8_alloc(&ch, 1, &ulen);
-	if (!val)
+	ulen = tsm_ucs4_to_utf8(ch, val);
+	if (!ulen)
 		goto out_layout;
 
 	pango_layout_set_text(layout, val, ulen);
-	free(val);
 
 	cnt = pango_layout_get_line_count(layout);
 	if (cnt == 0)
