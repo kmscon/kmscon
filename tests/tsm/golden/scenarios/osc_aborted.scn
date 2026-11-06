@@ -1,0 +1,11 @@
+resize 20 3
+in "\e]2;can\x18A"
+in "\e]2;sub\x1aB"
+in "\e]2;esc\e[1mC\e[m"
+in "\e]2;c1\u{9b}1mD\e[m"
+in "\e]2;ctl\x01\x08\x7f\x1fok\a"
+in "\e]2;unterminated"
+in "E"
+in "\a"
+in "\e]0;bel\a\aF"
+dump text attrs

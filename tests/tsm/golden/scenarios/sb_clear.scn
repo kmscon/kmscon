@@ -1,0 +1,12 @@
+resize 4 2
+sb-max 4
+in "1\r\n2\r\n3\r\n4"
+sb-up 1
+sb-clear
+dump state render
+in "\r\n5\r\n6"
+dump state
+in "\ec"
+dump state render
+sb-up 1
+dump state

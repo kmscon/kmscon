@@ -1,0 +1,13 @@
+> in "\e[?1006h\e[?1003h"
+< mouse-cb mode=1003 pixels=0
+> mouse move left cell=0,0
+< write "\e[<35;1;1M"
+< ret true
+> mouse move left cell=0,0
+< ret false
+> mouse move left cell=1,1
+< write "\e[<35;2;2M"
+< ret true
+> mouse press left cell=1,1
+< write "\e[<0;2;2M"
+< ret true

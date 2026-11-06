@@ -1,0 +1,3 @@
+resize 10 2
+in "a\e\\b"
+dump text

@@ -1,0 +1,10 @@
+# Note: differs from the C libtsm 4.x: CSI = c (tertiary DA) is not answered with the primary DA
+resize 10 4
+in "\e[c\e[0c\e[>c\e[>0c\e[=c\e[1c\e[?c\e[>1c\e[0;0c"
+in "\e[5n\e[6n\e[?6n\e[n\e[0n\e[7n\e[?5n"
+in "\e[3;4H\e[6n"
+in "\e[1;1H0123456789\e[6n"
+in "\e[4;10H\u{4e16}\e[6n"
+in "\e[18t\e[19t\e[t\e[14t\e[18;1t"
+resize 132 50
+in "\e[18t"

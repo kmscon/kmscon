@@ -1,0 +1,4 @@
+resize 12 3
+in "a\u{e9}\u{3b1}\u{20ac}\u{1f600}\u{10348}b"
+in1 "\r\nc\u{e9}\u{20ac}\u{1f600}d"
+dump state text

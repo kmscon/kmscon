@@ -1,0 +1,7 @@
+# from test_vte.c: test_vte_get_flags, test_vte_decrqm_no_reset
+dump state
+in "\e[?1h"
+dump state
+in "\e[?1049h"
+in "\e[?12$p"
+dump state

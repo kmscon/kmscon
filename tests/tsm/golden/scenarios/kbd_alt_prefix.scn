@@ -1,0 +1,11 @@
+key a uni="a" mods=alt
+key A uni="A" mods=alt+shift
+key c mods=alt+ctrl
+key Return mods=alt
+key Up mods=alt
+key F1 mods=alt
+key 0xffff mods=alt
+key b uni="b"
+key 0xe9 uni="é" mods=alt
+key Escape mods=alt
+key BackSpace mods=alt

@@ -1,0 +1,20 @@
+resize 6 4
+in "aaaaaa\r\nbbbbbb\r\ncccccc\r\ndddddd\e[2;3H"
+in "\e[J"
+dump text
+in "\e[1;1Haaaaaa\r\nbbbbbb\r\ncccccc\r\ndddddd\e[2;3H"
+in "\e[0J"
+dump text
+in "\e[1;1Haaaaaa\r\nbbbbbb\r\ncccccc\r\ndddddd\e[2;3H"
+in "\e[1J"
+dump text
+in "\e[1;1Haaaaaa\r\nbbbbbb\r\ncccccc\r\ndddddd\e[2;3H"
+in "\e[2J"
+dump state text
+in "\e[1;1Haaaaaa\r\nbbbbbb\r\ncccccc\r\ndddddd\e[2;3H"
+in "\e[3J"
+dump text
+# from pending wrap
+in "\e[1;1Haaaaaa\r\nbbbbbb"
+in "\e[J"
+dump text

@@ -1,0 +1,19 @@
+# Note: differs from the C libtsm 4.x: the API takes Option<char>: surrogates and values above U+10FFFF cannot be passed
+key a ascii=a uni="a"
+key 0xe9 uni="é"
+key 0x20ac uni="€"
+key 0x1001f600 uni="😀"
+key a
+key a uni=U+d800
+key a uni=U+110000
+type "Hello wörld €"
+# 7bit mode
+in "\e[61\"p"
+key a uni="a"
+key 0xe9 uni="é"
+key 0x20ac uni="€"
+# 8bit mode
+in "\e[62\"p"
+key a uni="a"
+key 0xe9 uni="é"
+key 0x20ac uni="€"

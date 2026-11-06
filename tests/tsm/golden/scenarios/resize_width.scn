@@ -1,0 +1,9 @@
+resize 10 3
+in "0123456789\r\nabcdefghij\e[2;3r\e[3g\e[1;5H\eH"
+dump state text
+resize 5 3
+dump state text
+resize 10 3
+dump state text
+resize 12 3
+dump state text

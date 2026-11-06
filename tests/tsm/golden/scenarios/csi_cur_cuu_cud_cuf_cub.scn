@@ -1,0 +1,42 @@
+resize 10 6
+in "\e[4;5H"
+in "\e[A"
+dump state
+in "\e[0A"
+dump state
+in "\e[2A"
+dump state
+in "\e[99A"
+dump state
+in "\e[B\e[0B\e[2B"
+dump state
+in "\e[99B"
+dump state
+in "\e[C\e[0C\e[3C"
+dump state
+in "\e[99C"
+dump state
+in "\e[D\e[0D\e[3D"
+dump state
+in "\e[99D"
+dump state
+# inside / outside margins
+in "\e[2;4r\e[3;1H\e[9A"
+dump state
+in "\e[9B"
+dump state
+in "\e[1;1H\e[9B"
+dump state
+in "\e[6;1H\e[9A"
+dump state
+in "\e[5;1H\e[9A"
+dump state
+# from pending wrap
+in "\e[r\e[1;1H0123456789"
+dump state
+in "\e[D"
+dump state
+in "\e[1;1H0123456789\e[C"
+dump state
+in "\e[1;1H0123456789\e[A"
+dump state

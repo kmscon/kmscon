@@ -1,0 +1,24 @@
+resize 4 3
+sb-max 10
+in "1\r\n2\r\n3\r\n4\r\n5\r\n6\r\n7"
+dump state
+sb-up 1
+dump state render
+sb-up 2
+dump state render
+sb-up 9
+dump state render
+sb-down 1
+dump state render
+sb-page-down 1
+dump state render
+sb-page-up 1
+dump state render
+sb-page-up 9
+dump state
+sb-reset
+dump state render
+sb-up 0
+sb-down 0
+sb-page-up 0
+dump state

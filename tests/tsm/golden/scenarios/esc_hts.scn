@@ -1,0 +1,8 @@
+resize 30 3
+in "\e[3g"
+in "\e[5G\eH\e[12G\eH\e[1G"
+dump state
+in "\ta\tb\tc"
+dump state text
+in "\e[1;12H\e[0g\e[1;5H\e[g\r\tz"
+dump state text

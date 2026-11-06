@@ -1,0 +1,253 @@
+> key Up mods=none
+< write "\e[A"
+< ret true
+> key Down mods=none
+< write "\e[B"
+< ret true
+> key Right mods=none
+< write "\e[C"
+< ret true
+> key Left mods=none
+< write "\e[D"
+< ret true
+> key KP_Up mods=none
+< write "\e[A"
+< ret true
+> key KP_Left mods=none
+< write "\e[D"
+< ret true
+> key Up mods=shift
+< write "\e[1;2A"
+< ret true
+> key Down mods=shift
+< write "\e[1;2B"
+< ret true
+> key Right mods=shift
+< write "\e[1;2C"
+< ret true
+> key Left mods=shift
+< write "\e[1;2D"
+< ret true
+> key KP_Up mods=shift
+< write "\e[1;2A"
+< ret true
+> key KP_Left mods=shift
+< write "\e[1;2D"
+< ret true
+> key Up mods=alt
+< write "\e[1;3A"
+< ret true
+> key Down mods=alt
+< write "\e[1;3B"
+< ret true
+> key Right mods=alt
+< write "\e[1;3C"
+< ret true
+> key Left mods=alt
+< write "\e[1;3D"
+< ret true
+> key KP_Up mods=alt
+< write "\e[1;3A"
+< ret true
+> key KP_Left mods=alt
+< write "\e[1;3D"
+< ret true
+> key Up mods=shift+alt
+< write "\e[1;4A"
+< ret true
+> key Down mods=shift+alt
+< write "\e[1;4B"
+< ret true
+> key Right mods=shift+alt
+< write "\e[1;4C"
+< ret true
+> key Left mods=shift+alt
+< write "\e[1;4D"
+< ret true
+> key KP_Up mods=shift+alt
+< write "\e[1;4A"
+< ret true
+> key KP_Left mods=shift+alt
+< write "\e[1;4D"
+< ret true
+> key Up mods=ctrl
+< write "\e[1;5A"
+< ret true
+> key Down mods=ctrl
+< write "\e[1;5B"
+< ret true
+> key Right mods=ctrl
+< write "\e[1;5C"
+< ret true
+> key Left mods=ctrl
+< write "\e[1;5D"
+< ret true
+> key KP_Up mods=ctrl
+< write "\e[1;5A"
+< ret true
+> key KP_Left mods=ctrl
+< write "\e[1;5D"
+< ret true
+> key Up mods=ctrl+shift
+< write "\e[1;6A"
+< ret true
+> key Down mods=ctrl+shift
+< write "\e[1;6B"
+< ret true
+> key Right mods=ctrl+shift
+< write "\e[1;6C"
+< ret true
+> key Left mods=ctrl+shift
+< write "\e[1;6D"
+< ret true
+> key KP_Up mods=ctrl+shift
+< write "\e[1;6A"
+< ret true
+> key KP_Left mods=ctrl+shift
+< write "\e[1;6D"
+< ret true
+> key Up mods=ctrl+alt
+< write "\e[1;7A"
+< ret true
+> key Down mods=ctrl+alt
+< write "\e[1;7B"
+< ret true
+> key Right mods=ctrl+alt
+< write "\e[1;7C"
+< ret true
+> key Left mods=ctrl+alt
+< write "\e[1;7D"
+< ret true
+> key KP_Up mods=ctrl+alt
+< write "\e[1;7A"
+< ret true
+> key KP_Left mods=ctrl+alt
+< write "\e[1;7D"
+< ret true
+> key Up mods=ctrl+alt+shift
+< write "\e[1;8A"
+< ret true
+> key Down mods=ctrl+alt+shift
+< write "\e[1;8B"
+< ret true
+> key Right mods=ctrl+alt+shift
+< write "\e[1;8C"
+< ret true
+> key Left mods=ctrl+alt+shift
+< write "\e[1;8D"
+< ret true
+> key KP_Up mods=ctrl+alt+shift
+< write "\e[1;8A"
+< ret true
+> key KP_Left mods=ctrl+alt+shift
+< write "\e[1;8D"
+< ret true
+> key Up mods=lock
+< write "\e[A"
+< ret true
+> key Down mods=lock
+< write "\e[B"
+< ret true
+> key Right mods=lock
+< write "\e[C"
+< ret true
+> key Left mods=lock
+< write "\e[D"
+< ret true
+> key KP_Up mods=lock
+< write "\e[A"
+< ret true
+> key KP_Left mods=lock
+< write "\e[D"
+< ret true
+> key Up mods=logo
+< write "\e[A"
+< ret true
+> key Down mods=logo
+< write "\e[B"
+< ret true
+> key Right mods=logo
+< write "\e[C"
+< ret true
+> key Left mods=logo
+< write "\e[D"
+< ret true
+> key KP_Up mods=logo
+< write "\e[A"
+< ret true
+> key KP_Left mods=logo
+< write "\e[D"
+< ret true
+> key Up mods=shift+logo
+< write "\e[1;2A"
+< ret true
+> key Down mods=shift+logo
+< write "\e[1;2B"
+< ret true
+> key Right mods=shift+logo
+< write "\e[1;2C"
+< ret true
+> key Left mods=shift+logo
+< write "\e[1;2D"
+< ret true
+> key KP_Up mods=shift+logo
+< write "\e[1;2A"
+< ret true
+> key KP_Left mods=shift+logo
+< write "\e[1;2D"
+< ret true
+> in "\e[?1h"
+> key Up mods=none
+< write "\eOA"
+< ret true
+> key Down mods=none
+< write "\eOB"
+< ret true
+> key Right mods=none
+< write "\eOC"
+< ret true
+> key Left mods=none
+< write "\eOD"
+< ret true
+> key KP_Down mods=none
+< write "\eOB"
+< ret true
+> key KP_Right mods=none
+< write "\eOC"
+< ret true
+> key Up mods=shift
+< write "\e[1;2A"
+< ret true
+> key Down mods=shift
+< write "\e[1;2B"
+< ret true
+> key Right mods=shift
+< write "\e[1;2C"
+< ret true
+> key Left mods=shift
+< write "\e[1;2D"
+< ret true
+> key KP_Down mods=shift
+< write "\e[1;2B"
+< ret true
+> key KP_Right mods=shift
+< write "\e[1;2C"
+< ret true
+> key Up mods=lock
+< write "\eOA"
+< ret true
+> key Down mods=lock
+< write "\eOB"
+< ret true
+> key Right mods=lock
+< write "\eOC"
+< ret true
+> key Left mods=lock
+< write "\eOD"
+< ret true
+> key KP_Down mods=lock
+< write "\eOB"
+< ret true
+> key KP_Right mods=lock
+< write "\eOC"
+< ret true

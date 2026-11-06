@@ -1,0 +1,20 @@
+> key BackSpace ascii=0x08 uni=U+08
+< write "\b"
+< ret true
+> key BackSpace ascii=0x7f uni=U+7f
+< write "\b"
+< ret true
+> bs-delete on
+> key BackSpace ascii=0x08 uni=U+08
+< write "\x7f"
+< ret true
+> key BackSpace ascii=0x7f uni=U+7f
+< write "\x7f"
+< ret true
+> bs-delete off
+> key BackSpace ascii=0x08 uni=U+08
+< write "\b"
+< ret true
+> key BackSpace ascii=0x7f uni=U+7f
+< write "\b"
+< ret true

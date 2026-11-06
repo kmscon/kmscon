@@ -1,0 +1,2 @@
+# Note: differs from the C libtsm 4.x: widths come from the unicode-width crate (newer Unicode than wcwidth.c), capped at 2
+width-table

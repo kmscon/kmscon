@@ -1,0 +1,11 @@
+# from test_vte.c: test_vte_csi_cursor_up_down
+in "\n123"
+dump state
+in "\e[1F"
+dump state
+in "\e[1E"
+dump state
+in "\e[34F"
+dump state
+in "\e[34E"
+dump state

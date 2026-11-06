@@ -1,0 +1,30 @@
+# from test_screen.c: test_screen_sb_get_line_pos
+resize 5 5
+sb-max 5
+dump state
+in "\eE\eE\eE\eE"
+in "\eE"
+dump state
+in "\eE"
+in "\eE"
+dump state
+sb-up 1
+dump state
+sb-up 1
+sb-up 1
+dump state
+sb-up 1
+dump state
+sb-down 3
+dump state
+in "\eE"
+in "\eE"
+dump state
+sb-up 2
+dump state
+in "\eE"
+dump state
+resize 5 3
+dump state
+resize 5 5
+dump state

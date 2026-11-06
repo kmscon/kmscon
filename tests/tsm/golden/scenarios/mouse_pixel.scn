@@ -1,0 +1,10 @@
+in "\e[?1016h\e[?1002h"
+mouse press left cell=0,0 px=10,20
+mouse release middle cell=0,0 px=10,20 mods=shift
+mouse move left cell=1,1 px=11,21
+mouse move 32 cell=1,1 px=12,22
+mouse move 32 cell=1,1 px=12,22
+in "\e[?1003h"
+mouse move left cell=1,1 px=13,23
+mouse move left cell=1,1 px=13,23
+mouse 5 left cell=1,1 px=14,24

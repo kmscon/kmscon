@@ -1,0 +1,19 @@
+resize 20 4
+in "\e[12l"
+dump state
+key a uni="a"
+key b uni="b" mods=alt
+type "xyz"
+key Return
+key Up
+key e mods=ctrl+alt
+dump state text
+key l mods=ctrl
+dump state text
+# replies generated while echoing are not echoed again
+in "\e[6n"
+type "\e[6n"
+dump state text
+in "\e[12h"
+key q uni="q"
+dump text

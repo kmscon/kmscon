@@ -1,0 +1,9 @@
+# Note: differs from the C libtsm 4.x: an empty CSI parameter is 0, not "missing" (38;2;;;m is black)
+resize 10 4
+in "\e[38;2;1;2;3mA\e[48;2;250;128;0mB\e[m"
+in "\e[38;2;256;300;65535mC\e[m"
+in "\e[38;2;1;2mD\e[38;2mE\e[m"
+in "\r\n\e[1;38;2;10;20;30;4;48;2;40;50;60;3mF\e[m"
+in "\e[1;38;2;10;20;30mG\e[m"
+in "\e[38;2;;;mH\e[m"
+dump attrs

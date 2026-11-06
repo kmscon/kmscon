@@ -1,0 +1,6 @@
+in "\e="
+dump state
+key KP_1
+in "\e>"
+dump state
+key KP_1

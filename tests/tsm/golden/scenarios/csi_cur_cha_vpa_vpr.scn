@@ -1,0 +1,19 @@
+resize 10 6
+in "\e[3;3H\e[G"
+dump state
+in "\e[5G"
+dump state
+in "\e[0G\e[99G"
+dump state
+in "\e[d"
+dump state
+in "\e[4d"
+dump state
+in "\e[99d"
+dump state
+in "\e[1;1H\e[e"
+dump state
+in "\e[2e"
+dump state
+in "\e[0e\e[99e"
+dump state

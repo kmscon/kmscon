@@ -1,0 +1,5 @@
+resize 10 3
+in "e\u{301}a\u{308}\u{200d}x\u{fe0f}y\u{200b}z"
+dump state text
+in "\r\n\u{1f468}\u{200d}\u{1f469}\u{200d}\u{1f467}!"
+dump state text

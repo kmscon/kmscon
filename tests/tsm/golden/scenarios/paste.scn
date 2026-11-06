@@ -1,0 +1,18 @@
+# Note: differs from the C libtsm 4.x: soft and hard resets clear bracketed paste mode
+resize 20 3
+paste "hello\nworld"
+in "\e[?2004h"
+paste "hello"
+paste ""
+in "\e[?2004l"
+paste "plain"
+in "\e[?2004h"
+reset
+paste "after reset"
+in "\e[!p"
+paste "after soft reset"
+in "\ec"
+paste "after RIS"
+in "\e[?2004l\e[12l"
+paste "echo\u{e9}"
+dump text

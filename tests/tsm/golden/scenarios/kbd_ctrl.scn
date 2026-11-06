@@ -1,0 +1,35 @@
+# Ctrl combinations
+key a mods=ctrl
+key A mods=ctrl
+key c mods=ctrl
+key z mods=ctrl
+key Z mods=ctrl
+key 2 mods=ctrl
+key space mods=ctrl
+key 3 mods=ctrl
+key bracketleft mods=ctrl
+key braceleft mods=ctrl
+key 4 mods=ctrl
+key backslash mods=ctrl
+key bar mods=ctrl
+key 5 mods=ctrl
+key bracketright mods=ctrl
+key braceright mods=ctrl
+key 6 mods=ctrl
+key grave mods=ctrl
+key asciitilde mods=ctrl
+key 7 mods=ctrl
+key slash mods=ctrl
+key question mods=ctrl
+key 8 mods=ctrl
+key 1 mods=ctrl
+key 9 mods=ctrl
+key 0x2c mods=ctrl
+# ascii fallback for non-latin layouts
+key 0x6c3 ascii=c mods=ctrl
+key 0x6c3 mods=ctrl uni=U+0441
+key 0x6c3 ascii=NoSymbol mods=ctrl
+# ctrl with other modifiers
+key c mods=ctrl+shift
+key c mods=ctrl+alt
+key c mods=ctrl+lock+logo

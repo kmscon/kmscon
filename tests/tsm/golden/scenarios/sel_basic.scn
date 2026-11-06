@@ -1,0 +1,42 @@
+# from test_selection.c: copy incomplete / one cell / line / lines
+resize 20 6
+in "\eE   Hello World!\eEFiller Text\eE"
+# start only
+sel-start 3 1
+sel-copy
+# same cell
+sel-target 3 1
+sel-copy
+# left to right, right to left, partial
+sel-reset
+sel-copy
+sel-start 3 1
+sel-target 14 1
+sel-copy
+sel-start 3 1
+sel-target 7 1
+sel-copy
+sel-start 0 1
+sel-target 7 1
+sel-copy
+sel-start 14 1
+sel-target 3 1
+sel-copy
+sel-start 7 1
+sel-target 3 1
+sel-copy
+# past the end of the text
+sel-start 3 1
+sel-target 19 1
+sel-copy
+# multiple lines, both directions
+sel-start 3 1
+sel-target 5 2
+sel-copy
+sel-start 5 2
+sel-target 3 1
+sel-copy
+sel-start 0 0
+sel-target 19 5
+sel-copy
+dump render

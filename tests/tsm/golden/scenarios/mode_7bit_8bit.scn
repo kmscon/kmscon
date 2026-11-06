@@ -1,0 +1,14 @@
+# Note: differs from the C libtsm 4.x: 8-bit mode accepts high bytes (tsm sign-extended and dropped them)
+resize 20 4
+# 7bit mode strips the high bit
+in "\e[61\"p"
+hex 61 c3 a9 62 9b 31 6d 63
+dump state text attrs
+# 8bit mode: raw bytes, high bytes are dropped
+in "\e[62\"p\r\n"
+hex 61 c3 a9 62 1b 5b 31 6d 63 1b 5b 6d 1b 5b c3 6d 64
+dump state text attrs
+# back to UTF-8 mode
+in "\e[65\"p\r\n"
+in "\u{e9}"
+dump state text

@@ -1,0 +1,24 @@
+> resize 10 4
+> in "\e[1\u{e9}mA\e[m"
+> in "\e\u{e9}B"
+> in "\e[\u{4e16}2CC"
+> in "\e(\u{e9}0D"
+> in "\eP1\u{e9}q\e\\E"
+> dump state text attrs
+state
+  size 10x4 cursor 4,0
+  cursor-style 0 blink 500
+  margins 0-3
+  tabs 0,8
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=0 pos=0 max=0
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+text
+   0|ACDE······|
+   1|··········|
+   2|··········|
+   3|··········|
+attrs

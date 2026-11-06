@@ -1,0 +1,25 @@
+> resize 6 3
+> in "aa\e[1\"qPP\e[0\"qaa\r\nbbbbbb"
+> dump attrs
+attrs
+  0: 2-3 e5e5e5/000000 P
+> in "\e[1;1H\e[?K"
+> dump text
+text
+   0|··PP··|
+   1|bbbbbb|
+   2|······|
+> in "\e[?J"
+> dump text
+text
+   0|··PP··|
+   1|······|
+   2|······|
+> in "\e[1;1Hxx\e[1\"qPP\e[2\"qxx\e[1;1H\e[?2J"
+> dump text attrs
+text
+   0|··PP··|
+   1|······|
+   2|······|
+attrs
+  0: 2-3 e5e5e5/000000 P

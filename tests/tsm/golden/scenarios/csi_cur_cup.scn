@@ -1,0 +1,19 @@
+resize 10 6
+in "\e[H"
+dump state
+in "\e[3;4H"
+dump state
+in "\e[;4H"
+dump state
+in "\e[3H"
+dump state
+in "\e[0;0H"
+dump state
+in "\e[99;99H"
+dump state
+in "\e[2;3f"
+dump state
+in "\e[65535;65535H"
+dump state
+in "\e[999999999H"
+dump state

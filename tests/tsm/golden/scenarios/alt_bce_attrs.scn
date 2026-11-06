@@ -1,0 +1,9 @@
+resize 4 3
+in "\e[44m\e[2J"
+in "\e[?1049h"
+dump state attrs
+in "\e[42m\e[2J"
+in "\e[?1049l"
+dump state attrs
+in "\e[m\e[?47h\e[2J\e[?47l"
+dump state

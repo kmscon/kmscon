@@ -1,0 +1,20 @@
+> resize 20 4
+> in "\u{9b}1mA\u{9b}0m"
+> in "\u{9d}0;one\u{9c}"
+< osc "0;one"
+> in "\u{9d}0;two\a"
+< osc "0;two"
+> in "\u{9d}10;?\u{9c}"
+< write "\e]10;rgb:e5e5/e5e5/e5e5\e\\"
+> in "\u{90}1;2qdata\u{9c}B"
+> in "\u{98}sos\u{9c}C"
+> in "\u{9e}pm\u{9c}D"
+> in "\u{9f}apc\u{9c}E"
+> dump text attrs
+text
+   0|ABCDE···············|
+   1|····················|
+   2|····················|
+   3|····················|
+attrs
+  0: 0 e5e5e5/000000 B

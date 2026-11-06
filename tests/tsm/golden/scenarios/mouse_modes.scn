@@ -1,0 +1,24 @@
+# mode changes and the mouse callback
+in "\e[?1002h"
+dump state
+in "\e[?1000h"
+dump state
+in "\e[?1002h"
+in "\e[?1003h"
+in "\e[?1000l"
+dump state
+in "\e[?1006h"
+in "\e[?1003h"
+dump state
+in "\e[?1003l"
+in "\e[?1006l"
+dump state
+in "\e[?1002h\e[?1006h"
+in "\e[?1016h"
+dump state
+in "\e[?1003h"
+in "\e[?1016l"
+dump state
+in "\e[?9h\e[?1003h"
+in "\e[?9l"
+dump state

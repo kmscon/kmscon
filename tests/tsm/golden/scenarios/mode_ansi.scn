@@ -1,0 +1,13 @@
+resize 10 3
+in "\e[2h"
+dump state
+in "\e[2l\e[4h\e[12h\e[20h"
+dump state
+in "\e[4l\e[12l\e[20l"
+dump state
+in "\e[3h\e[99h\e[h\e[0h"
+dump state
+in "\e[4;20h"
+dump state
+in "\e[1;2;4l"
+dump state

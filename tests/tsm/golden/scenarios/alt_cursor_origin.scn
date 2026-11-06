@@ -1,0 +1,10 @@
+# Note: differs from the C libtsm 4.x: the cursor saved by 1048/1049 is restored at its absolute position
+resize 10 8
+in "\e[3;6r\e[?6h\e[3;3H"
+dump state
+in "\e[?1048h\e[1;1H\e[?1048l"
+dump state
+in "\e[2;4H\e[?1049h\e[1;1H\e[?1049l"
+dump state
+in "\e[?6l\e[7;7H\e[?1048h\e[?6h\e[1;1H\e[?1048l"
+dump state

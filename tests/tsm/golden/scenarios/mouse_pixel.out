@@ -1,0 +1,27 @@
+> in "\e[?1016h\e[?1002h"
+< mouse-cb mode=1002 pixels=1
+> mouse press left cell=0,0 px=10,20
+< write "\e[<0;10;20M"
+< ret true
+> mouse release middle cell=0,0 px=10,20 mods=shift
+< write "\e[<5;10;20m"
+< ret true
+> mouse move left cell=1,1 px=11,21
+< ret false
+> mouse move 32 cell=1,1 px=12,22
+< write "\e[<32;12;22M"
+< ret true
+> mouse move 32 cell=1,1 px=12,22
+< write "\e[<32;12;22M"
+< ret true
+> in "\e[?1003h"
+< mouse-cb mode=1003 pixels=1
+> mouse move left cell=1,1 px=13,23
+< write "\e[<35;13;23M"
+< ret true
+> mouse move left cell=1,1 px=13,23
+< write "\e[<35;13;23M"
+< ret true
+> mouse 5 left cell=1,1 px=14,24
+< write "\e[<0;14;24M"
+< ret true

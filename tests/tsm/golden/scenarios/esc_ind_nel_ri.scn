@@ -1,0 +1,12 @@
+resize 10 5
+in "1\r\n2\r\n3\r\n4\r\n5"
+in "\e[1;1H\eM"
+dump state text
+in "\e[2;4r\e[4;3H\eDX\eDY"
+dump state text
+in "\e[2;3H\eMZ\eMW"
+dump state text
+in "\e[5;3H\eE\eEN"
+dump state text
+in "\e[1;3H\eMQ"
+dump state text

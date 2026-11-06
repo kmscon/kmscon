@@ -1,0 +1,19 @@
+> resize 20 3
+> in "a\u{80}b\u{81}c\u{82}d\u{83}e\u{86}f\u{87}g\u{89}h\u{8a}i\u{8b}j\u{8c}k"
+> in "\r\nl\u{91}m\u{92}n\u{93}o\u{94}p\u{95}q\u{96}r\u{97}s\u{99}t"
+> dump state text
+state
+  size 20x3 cursor 9,1
+  cursor-style 0 blink 500
+  margins 0-2
+  tabs 0,8,16
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=0 pos=0 max=0
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+text
+   0|abcdefghijk·········|
+   1|lmnopqrst···········|
+   2|····················|

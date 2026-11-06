@@ -1,0 +1,92 @@
+> key a mods=ctrl
+< write "\x01"
+< ret true
+> key A mods=ctrl
+< write "\x01"
+< ret true
+> key c mods=ctrl
+< write "\x03"
+< ret true
+> key z mods=ctrl
+< write "\x1a"
+< ret true
+> key Z mods=ctrl
+< write "\x1a"
+< ret true
+> key 2 mods=ctrl
+< write "\x00"
+< ret true
+> key space mods=ctrl
+< write "\x00"
+< ret true
+> key 3 mods=ctrl
+< write "\e"
+< ret true
+> key bracketleft mods=ctrl
+< write "\e"
+< ret true
+> key braceleft mods=ctrl
+< write "\e"
+< ret true
+> key 4 mods=ctrl
+< write "\x1c"
+< ret true
+> key backslash mods=ctrl
+< write "\x1c"
+< ret true
+> key bar mods=ctrl
+< write "\x1c"
+< ret true
+> key 5 mods=ctrl
+< write "\x1d"
+< ret true
+> key bracketright mods=ctrl
+< write "\x1d"
+< ret true
+> key braceright mods=ctrl
+< write "\x1d"
+< ret true
+> key 6 mods=ctrl
+< write "\x1e"
+< ret true
+> key grave mods=ctrl
+< write "\x1e"
+< ret true
+> key asciitilde mods=ctrl
+< write "\x1e"
+< ret true
+> key 7 mods=ctrl
+< write "\x1f"
+< ret true
+> key slash mods=ctrl
+< write "\x1f"
+< ret true
+> key question mods=ctrl
+< write "\x1f"
+< ret true
+> key 8 mods=ctrl
+< write "\x7f"
+< ret true
+> key 1 mods=ctrl
+< ret false
+> key 9 mods=ctrl
+< ret false
+> key 0x2c mods=ctrl
+< ret false
+> key 0x6c3 ascii=c mods=ctrl
+< write "\x03"
+< ret true
+> key 0x6c3 mods=ctrl uni=U+0441
+< write "\xd1\x81"
+< ret true
+> key 0x6c3 ascii=NoSymbol mods=ctrl
+< ret false
+> key c mods=ctrl+shift
+< write "\x03"
+< ret true
+> key c mods=ctrl+alt
+< write "\e\x03"
+< ret true
+> key c mods=ctrl+lock+logo
+< write "\x03"
+< ret true

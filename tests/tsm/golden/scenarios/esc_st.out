@@ -1,0 +1,6 @@
+> resize 10 2
+> in "a\e\\b"
+> dump text
+text
+   0|ab········|
+   1|··········|

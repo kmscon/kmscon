@@ -1,0 +1,22 @@
+> resize 20 6
+> in "\eE   Hello World!\eEFiller Text\eE"
+> sel-start 3 1
+> sel-target 14 1
+> in "\eE\eE\eE\eE"
+> sel-copy
+< copy ""
+> sel-start 3 1
+> sel-target 5 2
+> in "\eE"
+> sel-copy
+< copy ""
+> dump render
+render
+   0|                    |
+   1|                    |
+   2|                    |
+   3|                    |
+   4|                    |
+   5|                    |
+  0: 3-19 000000/e5e5e5 -
+  1: 0-5 000000/e5e5e5 -

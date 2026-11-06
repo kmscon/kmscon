@@ -1,0 +1,17 @@
+# from test_selection.c: selection made on screen then moved into scrollback
+resize 20 6
+sb-max 10
+in "\eE   Hello World!\eEFiller Text\eE"
+sel-start 3 1
+sel-target 5 2
+in "\eE\eE\eE\eE\eE"
+sel-copy
+dump render
+sb-up 3
+dump render
+sel-copy
+# invalid: scrolled out of the scrollback entirely
+in "\eE\eE\eE\eE\eE\eE\eE\eE\eE\eE\eE\eE"
+sb-reset
+sel-copy
+dump state render
