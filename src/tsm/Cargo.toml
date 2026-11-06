@@ -1,0 +1,29 @@
+[package]
+name = "libtsm"
+version = "5.0.0"
+edition = "2024"
+description = "Terminal-emulator state machine for DEC VT100-VT520 compatible terminals, with C bindings for kmscon"
+license = "MIT"
+publish = false
+
+[lib]
+name = "tsm"
+path = "src/lib.rs"
+# staticlib is linked into kmscon, rlib is used by the tests
+crate-type = ["staticlib", "rlib"]
+
+[dependencies]
+vte = "0.15"
+unicode-width = "0.2"
+
+[[test]]
+name = "golden"
+path = "tests/golden/main.rs"
+
+[profile.release]
+panic = "abort"
+lto = true
+codegen-units = 1
+
+[profile.dev]
+panic = "abort"
