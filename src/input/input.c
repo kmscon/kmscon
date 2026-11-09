@@ -184,8 +184,8 @@ static int input_wake_up_dev(struct input_dev *dev)
 	if (ret)
 		return ret;
 
-	if (dev->capabilities & DEVICE_HAS_KEYS)
-		uxkb_dev_wake_up(dev);
+	if (dev->capabilities & DEVICE_HAS_LEDS)
+		uxkb_dev_update_keyboard_leds(dev);
 
 	return 0;
 }
@@ -753,6 +753,7 @@ void input_wake_up(struct input *input)
 		return;
 
 	log_debug("waking up");
+	uxkb_wake_up(input);
 
 	/* Wake up already-probed devices */
 	dlist_for_each_entry_safe(dev, tmp, &input->devices, list)
