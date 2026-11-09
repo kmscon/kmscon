@@ -149,9 +149,20 @@ int uxkb_layout_init(struct input *input, const char *model, const char *layout,
 		log_debug("new keyboard description (%s, %s, %s, %s)", model, layout, variant,
 			  options);
 	}
+	input->state = xkb_state_new(input->keymap);
+	if (!input->state) {
+		log_error("cannot create XKB state");
+		ret = -ENOMEM;
+		goto err_keymap;
+	}
+
 	return 0;
+err_keymap:
+	xkb_keymap_unref(input->keymap);
+	input->keymap = NULL;
 err_ctx:
 	xkb_context_unref(input->ctx);
+	input->ctx = NULL;
 	return ret;
 }
 
@@ -186,16 +197,27 @@ void uxkb_compose_table_init(struct input *input, const char *compose_file, cons
 				 "table, disabling compose support");
 		}
 	}
+
+	if (input->compose_table) {
+		input->compose_state = xkb_compose_state_new(input->compose_table, 0);
+		if (!input->compose_state)
+			log_warn("cannot create compose state, "
+				 "disabling compose support");
+	}
 }
 
 void uxkb_compose_table_destroy(struct input *input)
 {
+	xkb_compose_state_unref(input->compose_state);
+	input->compose_state = NULL;
 	xkb_compose_table_unref(input->compose_table);
 	input->compose_table = NULL;
 }
 
 void uxkb_layout_destroy(struct input *input)
 {
+	xkb_state_unref(input->state);
+	input->state = NULL;
 	xkb_keymap_unref(input->keymap);
 	xkb_context_unref(input->ctx);
 	input->keymap = NULL;
@@ -212,40 +234,13 @@ static void timer_event(struct ev_timer *timer, uint64_t num, void *data)
 
 int uxkb_dev_init(struct input_dev *dev)
 {
-	int ret;
-
-	ret = ev_eloop_new_timer(dev->input->eloop, &dev->repeat_timer, NULL, timer_event, dev);
-	if (ret)
-		return ret;
-
-	dev->state = xkb_state_new(dev->input->keymap);
-	if (!dev->state) {
-		log_error("cannot create XKB state");
-		ret = -ENOMEM;
-		goto err_timer;
-	}
-
-	if (dev->input->compose_table) {
-		dev->compose_state = xkb_compose_state_new(dev->input->compose_table, 0);
-		if (!dev->compose_state)
-			log_warn("cannot create compose state, "
-				 "disabling compose support");
-	}
-
-	return 0;
-
-err_timer:
-	ev_eloop_rm_timer(dev->repeat_timer);
-	return ret;
+	/* The shared XKB state is created in uxkb_layout_init() */
+	return ev_eloop_new_timer(dev->input->eloop, &dev->repeat_timer, NULL, timer_event, dev);
 }
 
 void uxkb_dev_destroy(struct input_dev *dev)
 {
-	xkb_compose_state_unref(dev->compose_state);
-	xkb_state_unref(dev->state);
 	ev_eloop_rm_timer(dev->repeat_timer);
-	dev->compose_state = NULL;
-	dev->state = NULL;
 	dev->repeat_timer = NULL;
 }
 
@@ -256,7 +251,7 @@ enum {
 	KEY_REPEATED = 2,
 };
 
-static void uxkb_dev_update_keyboard_leds(struct input_dev *dev)
+void uxkb_dev_update_keyboard_leds(struct input_dev *dev)
 {
 	static const struct {
 		int evdev_led;
@@ -277,7 +272,7 @@ static void uxkb_dev_update_keyboard_leds(struct input_dev *dev)
 	for (i = 0; i < sizeof(leds) / sizeof(*leds); i++) {
 		events[i].type = EV_LED;
 		events[i].code = leds[i].evdev_led;
-		if (xkb_state_led_name_is_active(dev->state, leds[i].xkb_led) > 0)
+		if (xkb_state_led_name_is_active(dev->input->state, leds[i].xkb_led) > 0)
 			events[i].value = 1;
 	}
 
@@ -363,8 +358,8 @@ static int uxkb_dev_fill_event(struct input_dev *dev, struct input_key_event *ev
 		return ret;
 
 	ev->keycode = code;
-	ev->ascii = shl_get_ascii(dev->state, code, syms, num_syms);
-	ev->mods = shl_get_xkb_mods(dev->state);
+	ev->ascii = shl_get_ascii(dev->input->state, code, syms, num_syms);
+	ev->mods = shl_get_xkb_mods(dev->input->state);
 	ev->num_syms = num_syms;
 	memcpy(ev->keysyms, syms, sizeof(uint32_t) * num_syms);
 
@@ -379,7 +374,7 @@ static int uxkb_dev_fill_event(struct input_dev *dev, struct input_key_event *ev
 
 static void uxkb_dev_repeat(struct input_dev *dev, unsigned int state)
 {
-	struct xkb_keymap *keymap = xkb_state_get_keymap(dev->state);
+	struct xkb_keymap *keymap = xkb_state_get_keymap(dev->input->state);
 	unsigned int i;
 	int num_keysyms, ret;
 	const uint32_t *keysyms;
@@ -404,8 +399,8 @@ static void uxkb_dev_repeat(struct input_dev *dev, unsigned int state)
 			dev->repeat_event.codepoints[i] = dev->event.codepoints[i];
 		}
 	} else if (dev->repeating && !xkb_keymap_key_repeats(keymap, dev->event.keycode)) {
-		num_keysyms =
-			xkb_state_key_get_syms(dev->state, dev->repeat_event.keycode, &keysyms);
+		num_keysyms = xkb_state_key_get_syms(dev->input->state, dev->repeat_event.keycode,
+						     &keysyms);
 		if (num_keysyms <= 0)
 			return;
 
@@ -441,8 +436,8 @@ int uxkb_dev_process(struct input_dev *dev, uint16_t key_state, uint16_t code)
 	if (key_state == KEY_REPEATED)
 		return -ENOKEY;
 
-	state = dev->state;
-	compose_state = dev->compose_state;
+	state = dev->input->state;
+	compose_state = dev->input->compose_state;
 	keycode = code + EVDEV_KEYCODE_OFFSET;
 
 	/*
@@ -544,16 +539,19 @@ int uxkb_dev_process(struct input_dev *dev, uint16_t key_state, uint16_t code)
 
 unsigned int uxkb_dev_get_mods(struct input_dev *dev)
 {
-	if (!dev || !dev->state)
+	if (!dev || !dev->input->state)
 		return 0;
 
-	return xkb_state_serialize_mods(dev->state, XKB_STATE_MODS_EFFECTIVE);
+	return xkb_state_serialize_mods(dev->input->state, XKB_STATE_MODS_EFFECTIVE);
 }
 
-void uxkb_dev_wake_up(struct input_dev *dev)
+void uxkb_wake_up(struct input *input)
 {
 	xkb_mod_mask_t locked_mods;
 	xkb_layout_index_t locked_layout;
+
+	if (!input->state)
+		return;
 
 	/*
 	 * On VT re-entry, there are some race conditions about the state of the key
@@ -562,22 +560,20 @@ void uxkb_dev_wake_up(struct input_dev *dev)
 	 * The drawback is that the keys that are held when you switch to this VT
 	 * will need to be pressed again.
 	 */
-	locked_mods = xkb_state_serialize_mods(dev->state, XKB_STATE_MODS_LOCKED);
-	locked_layout = xkb_state_serialize_layout(dev->state, XKB_STATE_LAYOUT_LOCKED);
+	locked_mods = xkb_state_serialize_mods(input->state, XKB_STATE_MODS_LOCKED);
+	locked_layout = xkb_state_serialize_layout(input->state, XKB_STATE_LAYOUT_LOCKED);
 
 	/* There is no way to clear the current state, so destroy and recreate a new one */
-	xkb_state_unref(dev->state);
+	xkb_state_unref(input->state);
 
-	dev->state = xkb_state_new(dev->input->keymap);
-	if (!dev->state) {
+	input->state = xkb_state_new(input->keymap);
+	if (!input->state) {
 		log_error("cannot create XKB state");
 		return;
 	}
 
-	xkb_state_update_mask(dev->state, 0, 0, locked_mods, 0, 0, locked_layout);
+	xkb_state_update_mask(input->state, 0, 0, locked_mods, 0, 0, locked_layout);
 
-	uxkb_dev_update_keyboard_leds(dev);
-
-	if (dev->compose_state)
-		xkb_compose_state_reset(dev->compose_state);
+	if (input->compose_state)
+		xkb_compose_state_reset(input->compose_state);
 }
