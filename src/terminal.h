@@ -33,21 +33,28 @@
 #ifndef KMSCON_TERMINAL_H
 #define KMSCON_TERMINAL_H
 
+#include <sys/types.h>
+
 struct conf_ctx;
 struct display;
 struct ev_eloop;
+struct kmscon_dbus;
 struct kmscon_terminal;
 struct kmscon_session;
 struct input;
 
 struct kmscon_terminal *terminal_new(struct kmscon_session *session, unsigned int vtnr,
 				     struct conf_ctx *conf_ctx, struct ev_eloop *eloop,
-				     struct input *input, const char *seat_name);
+				     struct input *input, const char *seat_name,
+				     struct kmscon_dbus *dbus);
 void terminal_destroy(struct kmscon_terminal *term);
 int terminal_add_display(struct kmscon_terminal *term, struct display *disp);
 void terminal_rm_display(struct kmscon_terminal *term, struct display *disp);
 void terminal_refresh_displays(struct kmscon_terminal *term);
 void terminal_activate(struct kmscon_terminal *term);
 void terminal_deactivate(struct kmscon_terminal *term);
+void terminal_lock(struct kmscon_terminal *term);
+void terminal_unlock(struct kmscon_terminal *term);
+pid_t terminal_get_pid(struct kmscon_terminal *term);
 
 #endif /* KMSCON_TERMINAL_H */

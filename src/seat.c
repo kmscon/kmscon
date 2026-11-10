@@ -82,6 +82,7 @@ struct kmscon_video {
 
 struct kmscon_seat {
 	struct ev_eloop *eloop;
+	struct kmscon_dbus *dbus;
 	struct conf_ctx *conf_ctx;
 	struct kmscon_conf_t *conf;
 
@@ -578,7 +579,8 @@ static void seat_input_event(struct input *input, struct input_key_event *ev, vo
 	}
 	if (conf_grab_matches(seat->conf->grab_lock, ev->mods, ev->num_syms, ev->keysyms)) {
 		ev->handled = true;
-		log_warn("TO DO implement locking");
+		if (seat->current_sess)
+			terminal_lock(seat->current_sess->term);
 		return;
 	}
 	if (seat->conf->grab_reboot &&
@@ -690,7 +692,7 @@ static struct uterm_monitor_cb seat_monitor_cb = {
 };
 
 int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf,
-		    struct kmscon_conf_t *conf, struct ev_eloop *eloop)
+		    struct kmscon_conf_t *conf, struct ev_eloop *eloop, struct kmscon_dbus *dbus)
 {
 	struct kmscon_seat *seat;
 	const char *seatname;
@@ -703,6 +705,7 @@ int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf,
 	if (!seat)
 		return -ENOMEM;
 	seat->eloop = eloop;
+	seat->dbus = dbus;
 	dlist_init(&seat->displays);
 	dlist_init(&seat->videos);
 	dlist_init(&seat->sessions);
@@ -1063,6 +1066,25 @@ int kmscon_seat_startup(struct kmscon_seat *seat)
 	return 0;
 }
 
+/* Lock or unlock the terminal running the logind session led by @leader */
+void kmscon_seat_lock_session(struct kmscon_seat *seat, pid_t leader, bool lock)
+{
+	struct kmscon_session *sess;
+
+	if (!seat || leader <= 0)
+		return;
+
+	dlist_for_each_entry(sess, &seat->sessions, list)
+	{
+		if (terminal_get_pid(sess->term) != leader)
+			continue;
+		if (lock)
+			terminal_lock(sess->term);
+		else
+			terminal_unlock(sess->term);
+	}
+}
+
 struct conf_ctx *kmscon_seat_get_conf(struct kmscon_seat *seat)
 {
 	if (!seat)
@@ -1096,7 +1118,7 @@ static struct kmscon_session *kmscon_seat_new_session(struct kmscon_seat *seat)
 	sess->seat = seat;
 	sess->foreground = true;
 	sess->term = terminal_new(sess, uterm_vt_get_num(seat->vt), seat->conf_ctx, seat->eloop,
-				  seat->input, seat->name);
+				  seat->input, seat->name, seat->dbus);
 	if (!sess->term) {
 		log_error("cannot create terminal for new session on seat %s", seat->name);
 		free(sess);

@@ -86,6 +86,8 @@
 #grab-terminal-new=<Ctrl><Logo>Return
 #grab-rotate-cw=<Logo>plus
 #grab-rotate-ccw=<Logo>minus
+## Lock the current terminal (needs PAM support)
+#grab-lock=<Logo>l
 ## Reboot system (disabled by default)
 ## Reboot behavior follows /proc/sys/kernel/ctrl-alt-del:
 ##   0 (default): graceful reboot (sends SIGINT to init)

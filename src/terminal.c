@@ -33,15 +33,18 @@
 #include <errno.h>
 #include <inttypes.h>
 #include <libtsm.h>
+#include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "asciinema.h"
 #include "conf.h"
 #include "config.h"
+#include "dbus.h"
 #include "font/font.h"
 #include "input/input.h"
 #include "issue.h"
+#include "locker.h"
 #include "pty.h"
 #include "render/text.h"
 #include "seat.h"
@@ -114,6 +117,9 @@ struct kmscon_terminal {
 	bool cursor_blinking;
 
 	struct kmscon_asciinema *asciinema;
+	struct kmscon_dbus *dbus;
+	/* not NULL while the terminal is locked */
+	struct locker *locker;
 };
 
 #define BLINK_TIMER_NS (500 * 1000 * 1000) // Blinking interval 500ms
@@ -330,7 +336,12 @@ static void do_redraw_screen(struct screen *scr)
 
 	tsm_vte_get_def_attr(scr->term->vte, &attr);
 	kmscon_text_prepare(scr->txt, &attr, scr->term->blinking);
-	kmscon_text_draw(scr->txt, scr->term->console, scr->term->cursor_blinking);
+
+	if (scr->term->locker)
+		kmscon_text_draw(scr->txt, locker_get_screen(scr->term->locker),
+				 scr->term->cursor_blinking);
+	else
+		kmscon_text_draw(scr->txt, scr->term->console, scr->term->cursor_blinking);
 	draw_pointer(scr);
 	kmscon_text_render(scr->txt);
 
@@ -775,6 +786,8 @@ static void terminal_update_size_notify(struct kmscon_terminal *term)
 	if (terminal_update_size(term)) {
 		tsm_screen_resize(term->console, term->cols, term->rows);
 		kmscon_pty_resize(term->pty, term->cols, term->rows);
+		if (term->locker)
+			locker_resize(term->locker, term->cols, term->rows);
 		redraw_all(term);
 	}
 	update_pointer_max_all(term);
@@ -972,6 +985,12 @@ static void input_event(struct input *input, struct input_key_event *ev, void *d
 	kmscon_asciinema_stop(term->asciinema);
 	term->cursor_blinking = false;
 	ev_timer_update(term->blink_cursor, &blink_interval);
+
+	if (term->locker) {
+		locker_input(term->locker, ev);
+		ev->handled = true;
+		return;
+	}
 
 	if (conf_grab_matches(term->conf->grab_scroll_up, ev->mods, ev->num_syms, ev->keysyms)) {
 		tsm_screen_sb_up(term->console, 1);
@@ -1196,7 +1215,8 @@ static void pointer_event(struct input *input, struct input_pointer_event *ev, v
 {
 	struct kmscon_terminal *term = data;
 
-	if (!term->opened || !term->awake || !kmscon_session_get_foreground(term->session))
+	if (!term->opened || !term->awake || !kmscon_session_get_foreground(term->session) ||
+	    term->locker)
 		return;
 
 	if (ev->event == POINTER_MOVED) {
@@ -1323,6 +1343,9 @@ static int terminal_open(struct kmscon_terminal *term)
 
 static void terminal_close(struct kmscon_terminal *term)
 {
+	/* The locked session is gone with its process */
+	locker_free(term->locker);
+	term->locker = NULL;
 	kmscon_asciinema_pause(term->asciinema);
 	kmscon_pty_close(term->pty);
 	term->opened = false;
@@ -1375,6 +1398,102 @@ void terminal_deactivate(struct kmscon_terminal *term)
 		ev_timer_disable(term->blink_cursor);
 	}
 	kmscon_asciinema_pause(term->asciinema);
+}
+
+/*
+ * Locker
+ * The password is checked against the owner of the logind session running on
+ * the terminal.
+ */
+
+static void locker_event(struct locker *locker, enum locker_event ev, void *data)
+{
+	struct kmscon_terminal *term = data;
+
+	if (ev == LOCKER_UNLOCKED)
+		terminal_unlock(term);
+	else
+		redraw_all(term);
+}
+
+/* The user logged in on the terminal */
+static int get_owner(struct kmscon_terminal *term, char **user)
+{
+	pid_t pid = kmscon_pty_get_pid(term->pty);
+	struct passwd pw, *res;
+	char buf[4096];
+	uid_t uid;
+	int ret;
+
+	if (pid <= 0)
+		return -ENOENT;
+
+	ret = kmscon_dbus_get_session_owner(term->dbus, pid, &uid);
+	if (ret) {
+		/* Without logind, login(1) gives the tty to the user. A tty
+		 * owned by root is just a login prompt. */
+		if (kmscon_pty_get_uid(term->pty, &uid) || uid == 0)
+			return ret == -ENOTCONN ? -ENOENT : ret;
+	}
+
+	ret = getpwuid_r(uid, &pw, buf, sizeof(buf), &res);
+	if (!res) {
+		log_warning("cannot find the name of user %u: %d", uid, ret);
+		return ret ? -ret : -ENOENT;
+	}
+
+	*user = strdup(pw.pw_name);
+	return *user ? 0 : -ENOMEM;
+}
+
+void terminal_lock(struct kmscon_terminal *term)
+{
+	char name[128] = {0};
+	char *user;
+	int ret;
+
+	if (!term || !term->opened || term->locker)
+		return;
+
+	ret = get_owner(term, &user);
+	if (ret == -ENOENT) {
+		log_info("nobody is logged in on the terminal, not locking it");
+		return;
+	} else if (ret) {
+		log_warning("cannot find who is logged in on the terminal: %d", ret);
+		return;
+	}
+
+	kmscon_pty_get_slave_name(term->pty, name, sizeof(name));
+	term->locker = locker_new(term->eloop, term->conf, user, name, term->cols, term->rows,
+				  locker_event, term);
+	if (!term->locker) {
+		log_error("cannot lock the terminal");
+		free(user);
+		return;
+	}
+
+	log_notice("locking terminal %s for %s", name, user);
+	free(user);
+	tsm_screen_selection_reset(term->console);
+	kmscon_dbus_set_locked_hint(term->dbus, kmscon_pty_get_pid(term->pty), true);
+	redraw_all(term);
+}
+
+void terminal_unlock(struct kmscon_terminal *term)
+{
+	if (!term || !term->locker)
+		return;
+
+	locker_free(term->locker);
+	term->locker = NULL;
+	kmscon_dbus_set_locked_hint(term->dbus, kmscon_pty_get_pid(term->pty), false);
+	redraw_all(term);
+}
+
+pid_t terminal_get_pid(struct kmscon_terminal *term)
+{
+	return term ? kmscon_pty_get_pid(term->pty) : 0;
 }
 
 void terminal_destroy(struct kmscon_terminal *term)
@@ -1439,7 +1558,8 @@ static void write_event(struct tsm_vte *vte, const char *u8, size_t len, void *d
 
 struct kmscon_terminal *terminal_new(struct kmscon_session *session, unsigned int vtnr,
 				     struct conf_ctx *conf_ctx, struct ev_eloop *eloop,
-				     struct input *input, const char *seat_name)
+				     struct input *input, const char *seat_name,
+				     struct kmscon_dbus *dbus)
 {
 	struct kmscon_terminal *term;
 	struct itimerspec blink_interval = {
@@ -1456,6 +1576,7 @@ struct kmscon_terminal *terminal_new(struct kmscon_session *session, unsigned in
 	term->session = session;
 	term->eloop = eloop;
 	term->input = input;
+	term->dbus = dbus;
 	dlist_init(&term->screens);
 
 	term->conf_ctx = conf_ctx;

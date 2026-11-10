@@ -33,21 +33,24 @@
 #define KMSCON_SEAT_H
 
 #include <stdbool.h>
+#include <sys/types.h>
 #include "conf.h"
 #include "config.h"
 #include "shl/eloop.h"
 
+struct kmscon_dbus;
 struct kmscon_seat;
 struct kmscon_session;
 struct kmscon_video;
 
 int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf,
-		    struct kmscon_conf_t *conf, struct ev_eloop *eloop);
+		    struct kmscon_conf_t *conf, struct ev_eloop *eloop, struct kmscon_dbus *dbus);
 int kmscon_seat_exit(struct kmscon_seat *seat);
 void kmscon_seat_free(struct kmscon_seat *seat);
 int kmscon_seat_startup(struct kmscon_seat *seat);
 int kmscon_seat_update_xkb_layout(struct kmscon_seat *seat, const char *model, const char *layout,
 				  const char *variant, const char *options);
+void kmscon_seat_lock_session(struct kmscon_seat *seat, pid_t leader, bool lock);
 
 struct conf_ctx *kmscon_seat_get_conf(struct kmscon_seat *seat);
 

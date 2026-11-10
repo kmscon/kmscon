@@ -51,6 +51,7 @@ subdir('uterm')
 kmscon_srcs = [
     'seat.c',
     'config.c',
+    'locker.c',
     'main.c',
     'terminal.c',
 ]
@@ -66,6 +67,9 @@ kmscon_dep = [
     font_deps,
     misc_deps,
 ]
+if enable_pam
+    kmscon_dep += pam_deps
+endif
 
 kmscon = executable(
     'kmscon',
