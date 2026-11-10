@@ -58,7 +58,7 @@ static int setup_seat(struct kmscon_app *app)
 {
 	int ret;
 
-	ret = kmscon_seat_new(&app->seat, app->conf_ctx, app->conf, app->eloop);
+	ret = kmscon_seat_new(&app->seat, app->conf_ctx, app->conf, app->eloop, app->dbus);
 	if (ret) {
 		log_error("cannot create seat object: %d", ret);
 		return ret;
@@ -117,6 +117,13 @@ static void listen_to_dbus_locale1(struct kmscon_app *app)
 		log_warning("cannot listen to locale1: %d", ret);
 }
 
+static void session_lock(pid_t leader, uid_t uid, bool lock, void *data)
+{
+	struct kmscon_app *app = data;
+
+	kmscon_seat_lock_session(app->seat, leader, lock);
+}
+
 static int setup_app(struct kmscon_app *app)
 {
 	int ret;
@@ -149,6 +156,9 @@ static int setup_app(struct kmscon_app *app)
 	if (app->dbus) {
 		kmscon_dbus_set_xkb_env_from_locale1(app->dbus);
 		listen_to_dbus_locale1(app);
+		ret = kmscon_dbus_listen_logind(app->dbus, session_lock, app);
+		if (ret)
+			log_warning("cannot listen to logind: %d", ret);
 	}
 	return 0;
 

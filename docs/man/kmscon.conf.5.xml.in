@@ -434,6 +434,20 @@ font-name=Ubuntu Mono
       </varlistentry>
 
       <varlistentry>
+        <term><option>grab-lock</option></term>
+        <listitem>
+          <para>Lock the current terminal. The terminal content is hidden
+                until the logged in user enters their password, which is
+                checked with the kmscon-lock PAM service. Terminals showing
+                a login prompt are not locked. Locked terminals are also
+                unlocked when the session ends, or with
+                <command>loginctl unlock-session</command>, and
+                <command>loginctl lock-session</command> locks them.
+                (default: &lt;Logo&gt;l)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
         <term><option>grab-reboot</option></term>
         <listitem>
           <para>Reboot the system when this keyboard shortcut is pressed.

@@ -35,6 +35,10 @@ option('font_pango', type: 'feature', value: 'auto',
 option('dbus', type: 'feature', value: 'auto',
   description: 'dbus integration')
 
+# terminal locking
+option('pam', type: 'feature', value: 'auto',
+  description: 'PAM authentication, to unlock locked terminals')
+
 # TERM default value
 option('term', type: 'string', value: 'kmscon',
   description: 'default $TERM value')

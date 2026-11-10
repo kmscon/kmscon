@@ -99,6 +99,16 @@ fontconfig_deps = dependency(
     required: get_option('font_freetype'),
 )
 dbus_deps = dependency('dbus-1', disabler: true, required: get_option('dbus'))
+# Not all distributions ship a pkg-config file for PAM
+pam_deps = dependency('pam', required: false)
+if not pam_deps.found() and not get_option('pam').disabled()
+    pam_deps = meson.get_compiler('c').find_library(
+        'pam',
+        has_headers: ['security/pam_appl.h'],
+        disabler: true,
+        required: get_option('pam'),
+    )
+endif
 xsltproc = find_program(
     'xsltproc',
     native: true,
@@ -132,6 +142,7 @@ foreach name, reqs : {
     'font_freetype': [freetype_deps, fontconfig_deps],
     'font_pango': [pango_deps],
     'dbus': [dbus_deps],
+    'pam': [pam_deps],
 }
     found = true
     foreach req : reqs
@@ -276,6 +287,13 @@ if enable_libseat
         'scripts/pam/kmscon',
         install_dir: prefix / get_option('libdir') / 'pam.d',
         rename: 'kmscon',
+    )
+endif
+
+if enable_pam
+    install_data(
+        'scripts/pam/kmscon-lock',
+        install_dir: get_option('sysconfdir') / 'pam.d',
     )
 endif
 

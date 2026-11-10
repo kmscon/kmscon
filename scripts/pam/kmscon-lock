@@ -1,0 +1,4 @@
+#%PAM-1.0
+
+# Used by kmscon to unlock a locked terminal
+auth     include    login
