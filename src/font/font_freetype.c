@@ -58,6 +58,18 @@ struct ft_data {
 	FcConfig *fallback;
 };
 
+/*
+ * fontconfig configs are expensive to build and identical for every font, so
+ * they are shared process-wide instead of rebuilt per font. @ft_mono_cfg is the
+ * monospace-filtered config, @ft_fallback_cfg the unfiltered one. Each holds a
+ * single owning reference; every ft_data takes its own FcConfigReference() so an
+ * in-use config stays valid even after a fontconfig reload swaps these pointers
+ * for a freshly-scanned generation. The owning references are released in the
+ * backend fini hook once no font remains.
+ */
+static FcConfig *ft_mono_cfg;
+static FcConfig *ft_fallback_cfg;
+
 static void free_ft_font(struct ft_font *ftfont)
 {
 	if (ftfont->face)
@@ -262,6 +274,66 @@ static FcBool _fc_monospace_font_filter_func(const FcPattern *pat, void *user_da
 	return FcFalse;
 }
 
+/*
+ * Hand out references to the shared configs, (re)building them on first use or
+ * when fontconfig's files have changed since they were created. The monospace
+ * filter must be installed before FcConfigBuildFonts() - it is only consulted
+ * while the font set is assembled, never on an already-built config. Rebuilding
+ * replaces our owning reference with a new generation; fonts still using the old
+ * one keep it alive through their own reference until they are destroyed.
+ */
+static int ft_cfg_acquire(FcConfig **mono, FcConfig **fallback)
+{
+	int ret = -EINVAL;
+
+	if (!ft_mono_cfg || !FcConfigUptoDate(ft_mono_cfg)) {
+		FcConfig *cfg = FcInitLoadConfig();
+
+		if (cfg) {
+			FcConfigSetFontSetFilter(cfg, _fc_monospace_font_filter_func, NULL, NULL);
+			if (!FcConfigBuildFonts(cfg)) {
+				FcConfigDestroy(cfg);
+				cfg = NULL;
+			}
+		}
+		if (cfg) {
+			if (ft_mono_cfg)
+				FcConfigDestroy(ft_mono_cfg);
+			ft_mono_cfg = cfg;
+		}
+	}
+
+	if (!ft_fallback_cfg || !FcConfigUptoDate(ft_fallback_cfg)) {
+		FcConfig *cfg = FcInitLoadConfigAndFonts();
+
+		if (cfg) {
+			if (ft_fallback_cfg)
+				FcConfigDestroy(ft_fallback_cfg);
+			ft_fallback_cfg = cfg;
+		}
+	}
+
+	if (ft_mono_cfg && ft_fallback_cfg) {
+		*mono = FcConfigReference(ft_mono_cfg);
+		*fallback = FcConfigReference(ft_fallback_cfg);
+		ret = 0;
+	}
+
+	return ret;
+}
+
+/* Release the shared configs' owning references; called once the backend is
+ * fully unused, so no ft_data references remain. */
+static void kmscon_font_freetype_fini(void)
+{
+	if (ft_mono_cfg)
+		FcConfigDestroy(ft_mono_cfg);
+	if (ft_fallback_cfg)
+		FcConfigDestroy(ft_fallback_cfg);
+	ft_mono_cfg = NULL;
+	ft_fallback_cfg = NULL;
+}
+
 static int kmscon_font_freetype_init(struct kmscon_font *out, const char *name, unsigned int height)
 {
 	struct ft_data *ftf;
@@ -277,10 +349,7 @@ static int kmscon_font_freetype_init(struct kmscon_font *out, const char *name, 
 		log_err("Failed to initialize FreeType\n");
 		goto err_free;
 	}
-	FcConfigSetFontSetFilter(NULL, _fc_monospace_font_filter_func, NULL, NULL);
-	ftf->mono = FcConfigReference(FcConfigGetCurrent());
-	ftf->fallback = FcInitLoadConfigAndFonts();
-	if (!ftf->mono || !ftf->fallback) {
+	if (ft_cfg_acquire(&ftf->mono, &ftf->fallback)) {
 		log_err("Failed to load fontconfig configuration\n");
 		goto err_done;
 	}
@@ -627,4 +696,5 @@ struct kmscon_font_ops kmscon_font_freetype_ops = {
 	.destroy = kmscon_font_freetype_destroy,
 	.has_glyph = kmscon_font_freetype_has_glyph,
 	.render = kmscon_font_freetype_render,
+	.fini = kmscon_font_freetype_fini,
 };

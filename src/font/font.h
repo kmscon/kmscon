@@ -88,6 +88,13 @@ struct kmscon_font_ops {
 	bool (*has_glyph)(struct kmscon_font *font, struct kmscon_font_attr *attr, uint32_t ch);
 	struct kmscon_glyph *(*render)(struct kmscon_font *font, struct kmscon_font_attr *attr,
 				       uint32_t ch);
+	/*
+	 * Optional backend-wide teardown. Unlike destroy(), which is per font,
+	 * this is called once when the backend becomes fully unused (its last
+	 * registration record is dropped, so no font instances remain). Use it
+	 * to release process-global resources shared across fonts.
+	 */
+	void (*fini)(void);
 };
 
 int kmscon_font_register(const struct kmscon_font_ops *ops);
