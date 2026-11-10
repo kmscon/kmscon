@@ -465,6 +465,71 @@ static void test_configured_font_bypasses_filter(void)
 	kmscon_font_unregister(kmscon_font_freetype_ops.name);
 }
 
+/* --- 5. concurrent fonts share one config generation --- */
+
+/*
+ * Several fonts are alive at once in normal use: different sizes, multiple
+ * displays, and every zoom step builds the new font before dropping the old one
+ * (the exact pattern behind the #613 crash). They must share the single
+ * process-wide config generation, each holding its own reference, so destroying
+ * one font never frees the config out from under the others.
+ *
+ * This drives the reference balance the single-font tests don't reach: the
+ * shared config's count climbs to three (backend + two fonts) and must come
+ * back to zero via two per-font FcConfigDestroy() calls plus the fini hook.
+ * Running it under valgrind turns any imbalance into a lost block or an invalid
+ * free.
+ */
+static void test_shared_config_refcount(void)
+{
+	struct kmscon_font *a = NULL, *b = NULL;
+	struct ft_data *fa, *fb;
+	int ret;
+
+	ret = kmscon_font_register(&kmscon_font_freetype_ops);
+	assert(ret == 0);
+
+	/* Two fonts of different sizes kept alive simultaneously. */
+	ret = kmscon_font_find(&a, KMSCON_FONT_DEFAULT_NAME, 20, "freetype");
+	assert(ret == 0 && a);
+	assert(a->ops == &kmscon_font_freetype_ops);
+	ret = kmscon_font_find(&b, KMSCON_FONT_DEFAULT_NAME, 32, "freetype");
+	assert(ret == 0 && b);
+	assert(b->ops == &kmscon_font_freetype_ops);
+
+	fa = a->data;
+	fb = b->data;
+	assert(fa && fb);
+
+	/* Both fonts reference the very same shared generation, which is the
+	 * backend's current global config -- not a per-font rebuild. */
+	assert(fa->mono == fb->mono);
+	assert(fa->fallback == fb->fallback);
+	assert(fa->mono == ft_mono_cfg);
+	assert(fa->fallback == ft_fallback_cfg);
+
+	/* Dropping one font must leave the other's configs valid: the generation
+	 * is still held by b and by the backend. (Do not touch fa after this.) */
+	kmscon_font_unref(a);
+	assert(ft_mono_cfg && ft_fallback_cfg);
+	assert(fb->mono == ft_mono_cfg && fb->fallback == ft_fallback_cfg);
+	assert(fb->regular.fc && fb->regular.fc->nfont > 0);
+
+	/* With no fonts left but the backend still registered, its owning
+	 * reference keeps the generation alive. */
+	kmscon_font_unref(b);
+	assert(ft_mono_cfg && ft_fallback_cfg);
+
+	/* Unregistering drops the last record reference, so fini() runs and
+	 * releases the backend's owning reference -- now the configs are gone. */
+	kmscon_font_unregister(kmscon_font_freetype_ops.name);
+	assert(ft_mono_cfg == NULL);
+	assert(ft_fallback_cfg == NULL);
+
+	fprintf(stderr, "kmscon shared config: two concurrent fonts shared one "
+			"generation, freed only after unregister\n");
+}
+
 int main(void)
 {
 	assert(FcInit());
@@ -474,6 +539,7 @@ int main(void)
 	test_auto_language_fallback();
 	test_fallback_follows_fontconfig_order();
 	test_configured_font_bypasses_filter();
+	test_shared_config_refcount();
 
 	FcFini();
 	return 0;

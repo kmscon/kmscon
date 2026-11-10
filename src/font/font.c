@@ -69,6 +69,8 @@ static inline void kmscon_font_destroy(void *data)
 {
 	const struct kmscon_font_ops *ops = data;
 
+	if (ops->fini)
+		ops->fini();
 	shl_module_unref(ops->owner);
 }
 
