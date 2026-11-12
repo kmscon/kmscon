@@ -37,6 +37,8 @@
 #include "input/input.h"
 #include "shl/eloop.h"
 
+#define MAX_VT 24
+
 struct uterm_vt;
 
 typedef void (*uterm_vt_activate_cb)(struct uterm_vt *vt, void *data);
