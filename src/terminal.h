@@ -33,6 +33,7 @@
 #ifndef KMSCON_TERMINAL_H
 #define KMSCON_TERMINAL_H
 
+#include <stdbool.h>
 #include <sys/types.h>
 
 struct conf_ctx;
@@ -55,6 +56,7 @@ void terminal_activate(struct kmscon_terminal *term);
 void terminal_deactivate(struct kmscon_terminal *term);
 void terminal_lock(struct kmscon_terminal *term);
 void terminal_unlock(struct kmscon_terminal *term);
+bool terminal_is_locked(struct kmscon_terminal *term);
 pid_t terminal_get_pid(struct kmscon_terminal *term);
 
 #endif /* KMSCON_TERMINAL_H */

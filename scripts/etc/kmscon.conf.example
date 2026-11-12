@@ -105,6 +105,10 @@
 ## Any keyboard or mouse input will turn the screen back on
 #dpms-timeout=600
 
+## Lock a terminal not used for this time in seconds (0 = disabled)
+## Needs PAM support. Terminals showing a login prompt are not locked.
+#lock-timeout=600
+
 ## Terminal options
 ## Play an asciicast animation after opening the terminal session.
 ## The animation stops on keyboard input.

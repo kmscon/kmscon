@@ -147,6 +147,9 @@ static void print_help()
 		"\t                                 Force software cursor\n"
 		"\t    --dpms-timeout <secs>      [600]\n"
 		"\t                                 Screen timeout in seconds (0=off)\n"
+		"\t    --lock-timeout <secs>      [0]\n"
+		"\t                                 Lock a terminal not used for this\n"
+		"\t                                 time in seconds (0=off)\n"
 		"\n"
 		"Grabs / Keyboard-Shortcuts:\n"
 		"\t    --grab-scroll-up <grab>     [<Shift>Up]\n"
@@ -1030,6 +1033,7 @@ int kmscon_conf_new(struct conf_ctx **out)
 		CONF_OPTION_BOOL(0, "natural-scrolling", &conf->natural_scrolling, false),
 		CONF_OPTION_BOOL(0, "soft-cursor", &conf->soft_cursor, false),
 		CONF_OPTION_UINT(0, "dpms-timeout", &conf->dpms_timeout, 600),
+		CONF_OPTION_UINT(0, "lock-timeout", &conf->lock_timeout, 0),
 
 		/* Grabs / Keyboard-Shortcuts */
 		CONF_OPTION_GRAB(0, "grab-scroll-up", &conf->grab_scroll_up, &def_grab_scroll_up),

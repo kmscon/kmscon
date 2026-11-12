@@ -149,6 +149,8 @@ struct kmscon_conf_t {
 	bool soft_cursor;
 	/* DPMS screen timeout in seconds (0 = disabled) */
 	unsigned int dpms_timeout;
+	/* lock the terminal after this inactivity time in seconds (0 = disabled) */
+	unsigned int lock_timeout;
 
 	/* Grabs / Keyboard-Shortcuts */
 	/* scroll-up grab */
