@@ -462,6 +462,21 @@ static void vt_libseat_input(struct input *input, struct input_key_event *ev, vo
 		id = ev->keysyms[0] - XKB_KEY_F1 + 1;
 		if (id == vt->tty_num)
 			return;
+	} else if ((SHL_HAS_BITS(ev->mods, SHL_LOGO_MASK) ||
+		    SHL_HAS_BITS(ev->mods, SHL_ALT_MASK)) &&
+		   ev->keysyms[0] == XKB_KEY_Left) {
+		ev->handled = true;
+		id = vt->tty_num - 1;
+		if (id == 0)
+			id = MAX_VT;
+	} else if ((SHL_HAS_BITS(ev->mods, SHL_LOGO_MASK) ||
+		    SHL_HAS_BITS(ev->mods, SHL_ALT_MASK)) &&
+		   ev->keysyms[0] == XKB_KEY_Right) {
+		ev->handled = true;
+		if (vt->tty_num >= MAX_VT)
+			id = 1;
+		else
+			id = vt->tty_num + 1;
 	} else if (ev->keysyms[0] >= XKB_KEY_XF86Switch_VT_1 &&
 		   ev->keysyms[0] <= XKB_KEY_XF86Switch_VT_12) {
 		ev->handled = true;
