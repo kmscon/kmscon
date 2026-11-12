@@ -483,7 +483,7 @@ static void real_input(struct input *input, struct input_key_event *ev, void *da
 
 	id = 0;
 	if (SHL_HAS_BITS(ev->mods, SHL_CONTROL_MASK | SHL_ALT_MASK) &&
-	    ev->keysyms[0] >= XKB_KEY_F1 && ev->keysyms[0] <= XKB_KEY_F12) {
+	    ev->keysyms[0] >= XKB_KEY_F1 && ev->keysyms[0] <= XKB_KEY_F24) {
 		ev->handled = true;
 		id = ev->keysyms[0] - XKB_KEY_F1 + 1;
 		if (id == vt->real_num)
