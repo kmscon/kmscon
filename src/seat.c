@@ -119,7 +119,7 @@ static void kmscon_seat_remove_video(struct kmscon_seat *seat, void *data);
 static void kmscon_seat_poll_video(void *data);
 
 /* Forward declaration */
-static void seat_dpms_reset_timer(struct kmscon_seat *seat);
+static bool seat_dpms_reset_timer(struct kmscon_seat *seat);
 static struct kmscon_session *kmscon_seat_new_session(struct kmscon_seat *seat);
 static void kmscon_session_unregister(struct kmscon_session *sess);
 
@@ -487,14 +487,16 @@ static void seat_dpms_timeout(struct ev_timer *timer, uint64_t num, void *data)
 	seat->dpms_blanked = true;
 }
 
-static void seat_dpms_reset_timer(struct kmscon_seat *seat)
+/* Returns true if the screen was turned back on */
+static bool seat_dpms_reset_timer(struct kmscon_seat *seat)
 {
 	struct kmscon_display *d;
 	struct itimerspec spec = {0};
+	bool unblanked = false;
 	int ret;
 
 	if (!seat->conf->dpms_timeout || !seat->dpms_timer || !seat->foreground)
-		return;
+		return false;
 
 	/* If screen is blanked, unblank it */
 	if (seat->dpms_blanked) {
@@ -512,12 +514,14 @@ static void seat_dpms_reset_timer(struct kmscon_seat *seat)
 		if (seat->current_sess)
 			terminal_activate(seat->current_sess->term);
 		seat->dpms_blanked = false;
+		unblanked = true;
 	}
 
 	/* Reset the timer */
 	spec.it_value.tv_sec = seat->conf->dpms_timeout;
 	spec.it_value.tv_nsec = 0;
 	ev_timer_update(seat->dpms_timer, &spec);
+	return unblanked;
 }
 
 static void seat_pointer_event(struct input *input, struct input_pointer_event *ev, void *data)
@@ -535,8 +539,11 @@ static void seat_input_event(struct input *input, struct input_key_event *ev, vo
 	struct kmscon_seat *seat = data;
 	struct kmscon_session *s;
 
-	/* Reset DPMS timer on any input event */
-	seat_dpms_reset_timer(seat);
+	/* Reset DPMS timer on any input event. On a locked terminal, the key
+	 * waking the screen up must not be typed blindly in the password. */
+	if (seat_dpms_reset_timer(seat) && seat->current_sess &&
+	    terminal_is_locked(seat->current_sess->term))
+		ev->handled = true;
 
 	if (ev->handled || !seat->awake)
 		return;

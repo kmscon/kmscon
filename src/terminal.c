@@ -113,6 +113,8 @@ struct kmscon_terminal {
 
 	struct ev_timer *blink_timer;
 	struct ev_timer *blink_cursor;
+	/* locks the terminal when it is not used */
+	struct ev_timer *lock_timer;
 	bool blinking;
 	bool cursor_blinking;
 
@@ -121,6 +123,9 @@ struct kmscon_terminal {
 	/* not NULL while the terminal is locked */
 	struct locker *locker;
 };
+
+static void lock_timer_reset(struct kmscon_terminal *term);
+static void lock_timer_event(struct ev_timer *timer, uint64_t num, void *data);
 
 #define BLINK_TIMER_NS (500 * 1000 * 1000) // Blinking interval 500ms
 #define BLINK_CURSOR_TYPING 1		   // After keypress, wait 1s before blinking the cursor
@@ -985,6 +990,7 @@ static void input_event(struct input *input, struct input_key_event *ev, void *d
 	kmscon_asciinema_stop(term->asciinema);
 	term->cursor_blinking = false;
 	ev_timer_update(term->blink_cursor, &blink_interval);
+	lock_timer_reset(term);
 
 	if (term->locker) {
 		locker_input(term->locker, ev);
@@ -1219,6 +1225,9 @@ static void pointer_event(struct input *input, struct input_pointer_event *ev, v
 	    term->locker)
 		return;
 
+	if (ev->event == POINTER_MOVED || ev->event == POINTER_BUTTON || ev->event == POINTER_WHEEL)
+		lock_timer_reset(term);
+
 	if (ev->event == POINTER_MOVED) {
 		term->pointer.x = ev->pointer_x;
 		term->pointer.y = ev->pointer_y;
@@ -1406,6 +1415,27 @@ void terminal_deactivate(struct kmscon_terminal *term)
  * the terminal.
  */
 
+/* Restart the countdown to lock the terminal. It repeats, so a terminal is
+ * also locked once someone logs in and stops using it. */
+static void lock_timer_reset(struct kmscon_terminal *term)
+{
+	struct itimerspec spec = {
+		.it_interval = {term->conf->lock_timeout, 0},
+		.it_value = {term->conf->lock_timeout, 0},
+	};
+
+	if (term->lock_timer)
+		ev_timer_update(term->lock_timer, &spec);
+}
+
+static void lock_timer_event(struct ev_timer *timer, uint64_t num, void *data)
+{
+	struct kmscon_terminal *term = data;
+
+	if (!term->locker)
+		terminal_lock(term);
+}
+
 static void locker_event(struct locker *locker, enum locker_event ev, void *data)
 {
 	struct kmscon_terminal *term = data;
@@ -1457,7 +1487,7 @@ void terminal_lock(struct kmscon_terminal *term)
 
 	ret = get_owner(term, &user);
 	if (ret == -ENOENT) {
-		log_info("nobody is logged in on the terminal, not locking it");
+		log_debug("nobody is logged in on the terminal, not locking it");
 		return;
 	} else if (ret) {
 		log_warning("cannot find who is logged in on the terminal: %d", ret);
@@ -1491,6 +1521,11 @@ void terminal_unlock(struct kmscon_terminal *term)
 	redraw_all(term);
 }
 
+bool terminal_is_locked(struct kmscon_terminal *term)
+{
+	return term && term->locker;
+}
+
 pid_t terminal_get_pid(struct kmscon_terminal *term)
 {
 	return term ? kmscon_pty_get_pid(term->pty) : 0;
@@ -1504,6 +1539,7 @@ void terminal_destroy(struct kmscon_terminal *term)
 	rm_all_screens(term);
 	ev_eloop_rm_timer(term->blink_timer);
 	ev_eloop_rm_timer(term->blink_cursor);
+	ev_eloop_rm_timer(term->lock_timer);
 	kmscon_asciinema_free(term->asciinema);
 	input_unregister_pointer_cb(term->input, pointer_event, term);
 	input_unregister_key_cb(term->input, input_event, term);
@@ -1648,6 +1684,14 @@ struct kmscon_terminal *terminal_new(struct kmscon_session *session, unsigned in
 					 cursor_blink_event, term);
 		if (ret)
 			goto err_blink;
+	}
+	if (term->conf->lock_timeout) {
+		ret = ev_eloop_new_timer(term->eloop, &term->lock_timer, NULL, lock_timer_event,
+					 term);
+		if (ret)
+			log_error("cannot create the lock timer, lock-timeout disabled: %d", ret);
+		else
+			lock_timer_reset(term);
 	}
 	if (term->conf->asciicast) {
 		ret = kmscon_asciinema_new(&term->asciinema, term->eloop, term->conf->asciicast,
