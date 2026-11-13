@@ -95,10 +95,6 @@ struct input_dev {
 	char *node;
 	struct ev_fd *fd;
 
-	/* For keyboards */
-	struct xkb_state *state;
-	struct xkb_compose_state *compose_state;
-
 	unsigned int num_syms;
 	struct input_key_event event;
 	struct input_key_event repeat_event;
@@ -124,6 +120,15 @@ struct input {
 	struct shl_hook *key_hook;
 	struct xkb_context *ctx;
 	struct xkb_keymap *keymap;
+	/*
+	 * The XKB state and compose state are shared by all keyboard devices
+	 * of this input (seat). Devices that split keys across multiple evdev
+	 * nodes (e.g. MacBook T2 keyboards where the touchbar F-row is a
+	 * separate "Dynamic Function Row" device) would otherwise lose the
+	 * modifiers held on the other devices.
+	 */
+	struct xkb_state *state;
+	struct xkb_compose_state *compose_state;
 	struct xkb_compose_table *compose_table;
 
 	bool mouse_enabled;
@@ -150,7 +155,8 @@ int uxkb_dev_init(struct input_dev *dev);
 void uxkb_dev_destroy(struct input_dev *dev);
 int uxkb_dev_process(struct input_dev *dev, uint16_t key_state, uint16_t code);
 unsigned int uxkb_dev_get_mods(struct input_dev *dev);
-void uxkb_dev_wake_up(struct input_dev *dev);
+void uxkb_wake_up(struct input *input);
+void uxkb_dev_update_keyboard_leds(struct input_dev *dev);
 void uxkb_dev_set_leds(struct input_dev *dev, unsigned int scroll_lock, unsigned int num_lock,
 		       unsigned int caps_lock);
 
