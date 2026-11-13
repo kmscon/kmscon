@@ -51,12 +51,6 @@ struct rmlvo {
 	const char *options;
 };
 
-struct pending_lock {
-	char *path;
-	char *sender;
-	bool lock;
-};
-
 struct kmscon_dbus {
 	DBusConnection *conn;
 	struct ev_eloop *eloop;
@@ -67,8 +61,6 @@ struct kmscon_dbus {
 
 	dbus_session_lock_cb lock_cb;
 	void *lock_data;
-	struct pending_lock *pending;
-	unsigned int pending_num;
 };
 
 static void dbus_idle(struct ev_eloop *eloop, void *unused, void *data);
@@ -106,11 +98,6 @@ void kmscon_dbus_free(struct kmscon_dbus *dbus)
 	if (!dbus)
 		return;
 	ev_eloop_unregister_idle_cb(dbus->eloop, dbus_idle, dbus, EV_SINGLE);
-	for (unsigned int i = 0; i < dbus->pending_num; i++) {
-		free(dbus->pending[i].path);
-		free(dbus->pending[i].sender);
-	}
-	free(dbus->pending);
 	if (dbus->watch_fd) {
 		ev_eloop_rm_fd(dbus->watch_fd);
 		dbus->watch_fd = NULL;
@@ -391,10 +378,9 @@ void kmscon_dbus_set_locked_hint(struct kmscon_dbus *dbus, pid_t leader, bool lo
 	dbus_message_unref(msg);
 }
 
-/* The unique bus name of the connection that owns org.freedesktop.login1 */
-static int get_logind_owner(struct kmscon_dbus *dbus, char **owner)
+/* The unique bus name of the connection that owns @service */
+static int get_name_owner(struct kmscon_dbus *dbus, const char *service, char **owner)
 {
-	const char *service = LOGIND_SERVICE;
 	DBusMessage *msg, *reply;
 	DBusError err;
 	const char *name;
@@ -423,9 +409,62 @@ static int get_logind_owner(struct kmscon_dbus *dbus, char **owner)
 	return *owner ? 0 : -ENOMEM;
 }
 
-static void handle_pending_lock(struct kmscon_dbus *dbus, const char *path, bool lock)
+/* Any client can send a signal to us directly, bypassing the sender of the
+ * match rules, so only trust the signals sent by the owner of @service */
+static bool is_sent_by(struct kmscon_dbus *dbus, DBusMessage *msg, const char *service)
 {
+	const char *sender = dbus_message_get_sender(msg);
+	char *owner;
+	bool ret;
+
+	if (!sender)
+		return false;
+	if (get_name_owner(dbus, service, &owner)) {
+		log_warning("cannot find %s on the bus, ignoring its signals", service);
+		return false;
+	}
+
+	ret = !strcmp(sender, owner);
+	if (!ret)
+		log_warning("ignoring %s signal not sent by %s (sender %s)",
+			    dbus_message_get_member(msg), service, sender);
+	free(owner);
+	return ret;
+}
+
+static void handle_locale1(struct kmscon_dbus *dbus, DBusMessage *msg)
+{
+	struct rmlvo rmlvo = {NULL, NULL, NULL, NULL};
+	DBusMessageIter args;
+	const char *iface;
+
+	if (!dbus->xkb_cb || !dbus_message_has_path(msg, LOCALE1_PATH))
+		return;
+
+	if (!dbus_message_iter_init(msg, &args) ||
+	    dbus_message_iter_get_arg_type(&args) != DBUS_TYPE_STRING)
+		return;
+	dbus_message_iter_get_basic(&args, &iface);
+	if (strcmp(iface, LOCALE1_SERVICE) || !dbus_message_iter_next(&args))
+		return;
+
+	/* Other properties, like the Locale, don't change the keymap */
+	parse_locale_properties(&args, &rmlvo);
+	if (!rmlvo.model && !rmlvo.layout && !rmlvo.variant && !rmlvo.options)
+		return;
+
+	if (is_sent_by(dbus, msg, LOCALE1_SERVICE))
+		dbus->xkb_cb(rmlvo.model, rmlvo.layout, rmlvo.variant, rmlvo.options,
+			     dbus->xkb_data);
+}
+
+static void handle_lock(struct kmscon_dbus *dbus, DBusMessage *msg, bool lock)
+{
+	const char *path = dbus_message_get_path(msg);
 	uint32_t leader;
+
+	if (!dbus->lock_cb || !path || !is_sent_by(dbus, msg, LOGIND_SERVICE))
+		return;
 
 	/* logind signals every session: those of other programs are not ours */
 	if (get_session_uint(dbus, path, "Leader", &leader))
@@ -436,45 +475,26 @@ static void handle_pending_lock(struct kmscon_dbus *dbus, const char *path, bool
 	dbus->lock_cb(leader, lock, dbus->lock_data);
 }
 
-static void handle_dispatch_status(DBusConnection *conn, DBusDispatchStatus status, void *data);
-
-/* Pop the messages already read from the bus: no libdbus handler is
- * registered, so dbus_connection_dispatch() would drop them */
-static void dispatch_all(struct kmscon_dbus *dbus)
-{
-	while (dbus_connection_get_dispatch_status(dbus->conn) == DBUS_DISPATCH_DATA_REMAINS)
-		handle_dispatch_status(dbus->conn, DBUS_DISPATCH_DATA_REMAINS, dbus);
-}
-
-/* Blocking calls are allowed here, unlike in libdbus callbacks. Messages read
- * while waiting for a reply won't wake the socket up, so dispatch them. */
+/* The messages are handled here, as the libdbus callbacks must neither block
+ * nor dispatch. No libdbus handler is registered, so pop them instead of
+ * calling dbus_connection_dispatch(), which would drop them. */
 static void dbus_idle(struct ev_eloop *eloop, void *unused, void *data)
 {
 	struct kmscon_dbus *dbus = data;
-	struct pending_lock *pending = dbus->pending;
-	unsigned int i, num = dbus->pending_num;
-	char *owner = NULL;
+	DBusMessage *msg;
 
-	dbus->pending = NULL;
-	dbus->pending_num = 0;
-
-	/* Any client can send a signal to us directly, so only trust logind's */
-	if (num && get_logind_owner(dbus, &owner))
-		log_warning("cannot find logind on the bus, ignoring lock requests");
-
-	for (i = 0; i < num; ++i) {
-		if (!owner || strcmp(pending[i].sender, owner))
-			log_warning("ignoring %s request not sent by logind (sender %s)",
-				    pending[i].lock ? "lock" : "unlock", pending[i].sender);
-		else if (dbus->lock_cb)
-			handle_pending_lock(dbus, pending[i].path, pending[i].lock);
-		free(pending[i].path);
-		free(pending[i].sender);
+	/* Also gets the messages read while waiting for a reply */
+	while ((msg = dbus_connection_pop_message(dbus->conn))) {
+		log_debug("received message %s.%s", dbus_message_get_interface(msg),
+			  dbus_message_get_member(msg));
+		if (dbus_message_is_signal(msg, DBUS_INTERFACE_PROPERTIES, "PropertiesChanged"))
+			handle_locale1(dbus, msg);
+		else if (dbus_message_is_signal(msg, LOGIND_SESSION, "Lock"))
+			handle_lock(dbus, msg, true);
+		else if (dbus_message_is_signal(msg, LOGIND_SESSION, "Unlock"))
+			handle_lock(dbus, msg, false);
+		dbus_message_unref(msg);
 	}
-	free(pending);
-	free(owner);
-
-	dispatch_all(dbus);
 }
 
 static void schedule_idle(struct kmscon_dbus *dbus)
@@ -486,62 +506,18 @@ static void schedule_idle(struct kmscon_dbus *dbus)
 		log_error("cannot schedule dbus idle callback: %d", ret);
 }
 
-static void queue_lock(struct kmscon_dbus *dbus, DBusMessage *msg, bool lock)
+static void schedule_dispatch(struct kmscon_dbus *dbus)
 {
-	const char *path = dbus_message_get_path(msg);
-	const char *sender = dbus_message_get_sender(msg);
-	struct pending_lock *pending;
-	char *p, *s;
-
-	if (!path || !sender)
-		return;
-
-	p = strdup(path);
-	s = strdup(sender);
-	pending = realloc(dbus->pending, sizeof(*pending) * (dbus->pending_num + 1));
-	if (!p || !s || !pending) {
-		log_error("cannot queue logind %s request", lock ? "lock" : "unlock");
-		free(p);
-		free(s);
-		if (pending)
-			dbus->pending = pending;
-		return;
-	}
-	pending[dbus->pending_num].path = p;
-	pending[dbus->pending_num].sender = s;
-	pending[dbus->pending_num].lock = lock;
-	dbus->pending = pending;
-	++dbus->pending_num;
-	schedule_idle(dbus);
+	if (dbus_connection_get_dispatch_status(dbus->conn) == DBUS_DISPATCH_DATA_REMAINS)
+		schedule_idle(dbus);
 }
 
+/* Also called when messages are read while waiting for a reply, which doesn't
+ * wake the socket up */
 static void handle_dispatch_status(DBusConnection *conn, DBusDispatchStatus status, void *data)
 {
-	struct kmscon_dbus *dbus = data;
-	struct rmlvo rmlvo = {NULL, NULL, NULL, NULL};
-	DBusMessageIter args;
-
-	if (status == DBUS_DISPATCH_DATA_REMAINS) {
-		DBusMessage *msg = dbus_connection_pop_message(dbus->conn);
-		if (msg) {
-			log_debug("Received message %s\n", dbus_message_get_signature(msg));
-			if (dbus_message_is_signal(msg, DBUS_INTERFACE_PROPERTIES,
-						   "PropertiesChanged")) {
-				/* skip the interface name */
-				if (dbus_message_iter_init(msg, &args) &&
-				    dbus_message_iter_next(&args))
-					parse_locale_properties(&args, &rmlvo);
-				if (dbus->xkb_cb)
-					dbus->xkb_cb(rmlvo.model, rmlvo.layout, rmlvo.variant,
-						     rmlvo.options, dbus->xkb_data);
-			} else if (dbus_message_is_signal(msg, LOGIND_SESSION, "Lock")) {
-				queue_lock(dbus, msg, true);
-			} else if (dbus_message_is_signal(msg, LOGIND_SESSION, "Unlock")) {
-				queue_lock(dbus, msg, false);
-			}
-			dbus_message_unref(msg);
-		}
-	}
+	if (status == DBUS_DISPATCH_DATA_REMAINS)
+		schedule_idle(data);
 }
 
 static void dbus_watch_event(struct ev_fd *fd, int mask, void *data)
@@ -560,7 +536,7 @@ static void dbus_watch_event(struct ev_fd *fd, int mask, void *data)
 
 	dbus_watch_handle(watch, flags);
 
-	dispatch_all(dbus);
+	schedule_dispatch(dbus);
 }
 
 /* Only register one read watch, as we're not interested in writes */
@@ -631,6 +607,9 @@ static void setup_watch(struct kmscon_dbus *dbus)
 	dbus_connection_set_dispatch_status_function(dbus->conn, handle_dispatch_status, dbus,
 						     NULL);
 	dbus->watching = true;
+
+	/* The status function only reports changes */
+	schedule_dispatch(dbus);
 }
 
 /* Listen to locale1 properties changed, and update the XKB layout if needed */
