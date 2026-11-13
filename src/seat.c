@@ -82,6 +82,7 @@ struct kmscon_video {
 
 struct kmscon_seat {
 	struct ev_eloop *eloop;
+	struct kmscon_dbus *dbus;
 	struct conf_ctx *conf_ctx;
 	struct kmscon_conf_t *conf;
 
@@ -118,7 +119,7 @@ static void kmscon_seat_remove_video(struct kmscon_seat *seat, void *data);
 static void kmscon_seat_poll_video(void *data);
 
 /* Forward declaration */
-static void seat_dpms_reset_timer(struct kmscon_seat *seat);
+static bool seat_dpms_reset_timer(struct kmscon_seat *seat);
 static struct kmscon_session *kmscon_seat_new_session(struct kmscon_seat *seat);
 static void kmscon_session_unregister(struct kmscon_session *sess);
 
@@ -486,14 +487,16 @@ static void seat_dpms_timeout(struct ev_timer *timer, uint64_t num, void *data)
 	seat->dpms_blanked = true;
 }
 
-static void seat_dpms_reset_timer(struct kmscon_seat *seat)
+/* Returns true if the screen was turned back on */
+static bool seat_dpms_reset_timer(struct kmscon_seat *seat)
 {
 	struct kmscon_display *d;
 	struct itimerspec spec = {0};
+	bool unblanked = false;
 	int ret;
 
 	if (!seat->conf->dpms_timeout || !seat->dpms_timer || !seat->foreground)
-		return;
+		return false;
 
 	/* If screen is blanked, unblank it */
 	if (seat->dpms_blanked) {
@@ -511,12 +514,14 @@ static void seat_dpms_reset_timer(struct kmscon_seat *seat)
 		if (seat->current_sess)
 			terminal_activate(seat->current_sess->term);
 		seat->dpms_blanked = false;
+		unblanked = true;
 	}
 
 	/* Reset the timer */
 	spec.it_value.tv_sec = seat->conf->dpms_timeout;
 	spec.it_value.tv_nsec = 0;
 	ev_timer_update(seat->dpms_timer, &spec);
+	return unblanked;
 }
 
 static void seat_pointer_event(struct input *input, struct input_pointer_event *ev, void *data)
@@ -534,8 +539,11 @@ static void seat_input_event(struct input *input, struct input_key_event *ev, vo
 	struct kmscon_seat *seat = data;
 	struct kmscon_session *s;
 
-	/* Reset DPMS timer on any input event */
-	seat_dpms_reset_timer(seat);
+	/* Reset DPMS timer on any input event. On a locked terminal, the key
+	 * waking the screen up must not be typed blindly in the password. */
+	if (seat_dpms_reset_timer(seat) && seat->current_sess &&
+	    terminal_is_locked(seat->current_sess->term))
+		ev->handled = true;
 
 	if (ev->handled || !seat->awake)
 		return;
@@ -574,6 +582,12 @@ static void seat_input_event(struct input *input, struct input_key_event *ev, vo
 		s = kmscon_seat_new_session(seat);
 		if (s)
 			seat_switch(seat, s);
+		return;
+	}
+	if (conf_grab_matches(seat->conf->grab_lock, ev->mods, ev->num_syms, ev->keysyms)) {
+		ev->handled = true;
+		if (seat->current_sess)
+			terminal_lock(seat->current_sess->term);
 		return;
 	}
 	if (seat->conf->grab_reboot &&
@@ -685,7 +699,7 @@ static struct uterm_monitor_cb seat_monitor_cb = {
 };
 
 int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf,
-		    struct kmscon_conf_t *conf, struct ev_eloop *eloop)
+		    struct kmscon_conf_t *conf, struct ev_eloop *eloop, struct kmscon_dbus *dbus)
 {
 	struct kmscon_seat *seat;
 	const char *seatname;
@@ -698,6 +712,7 @@ int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf,
 	if (!seat)
 		return -ENOMEM;
 	seat->eloop = eloop;
+	seat->dbus = dbus;
 	dlist_init(&seat->displays);
 	dlist_init(&seat->videos);
 	dlist_init(&seat->sessions);
@@ -1058,6 +1073,25 @@ int kmscon_seat_startup(struct kmscon_seat *seat)
 	return 0;
 }
 
+/* Lock or unlock the terminal running the logind session led by @leader */
+void kmscon_seat_lock_session(struct kmscon_seat *seat, pid_t leader, bool lock)
+{
+	struct kmscon_session *sess;
+
+	if (!seat || leader <= 0)
+		return;
+
+	dlist_for_each_entry(sess, &seat->sessions, list)
+	{
+		if (terminal_get_pid(sess->term) != leader)
+			continue;
+		if (lock)
+			terminal_lock(sess->term);
+		else
+			terminal_unlock(sess->term);
+	}
+}
+
 struct conf_ctx *kmscon_seat_get_conf(struct kmscon_seat *seat)
 {
 	if (!seat)
@@ -1091,7 +1125,7 @@ static struct kmscon_session *kmscon_seat_new_session(struct kmscon_seat *seat)
 	sess->seat = seat;
 	sess->foreground = true;
 	sess->term = terminal_new(sess, uterm_vt_get_num(seat->vt), seat->conf_ctx, seat->eloop,
-				  seat->input, seat->name);
+				  seat->input, seat->name, seat->dbus);
 	if (!sess->term) {
 		log_error("cannot create terminal for new session on seat %s", seat->name);
 		free(sess);

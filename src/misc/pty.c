@@ -34,6 +34,7 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/signalfd.h>
+#include <sys/stat.h>
 #include <termios.h>
 #include <time.h>
 #include <unistd.h>
@@ -616,6 +617,36 @@ int kmscon_pty_get_slave_name(struct kmscon_pty *pty, char *buf, size_t len)
 		return -EINVAL;
 
 	return ptsname_r(pty->fd, buf, len);
+}
+
+/* The process started on the pty, usually login(1) */
+pid_t kmscon_pty_get_pid(struct kmscon_pty *pty)
+{
+	if (!pty || !pty_is_open(pty))
+		return 0;
+
+	return pty->child;
+}
+
+/* The owner of the slave side, which login(1) gives to the user. The master
+ * fd can't be used: it is /dev/ptmx, always owned by root. */
+int kmscon_pty_get_uid(struct kmscon_pty *pty, uid_t *uid)
+{
+	char name[128];
+	struct stat st;
+	int ret;
+
+	if (!uid)
+		return -EINVAL;
+
+	ret = kmscon_pty_get_slave_name(pty, name, sizeof(name));
+	if (ret)
+		return ret > 0 ? -ret : ret;
+	if (stat(name, &st))
+		return -errno;
+
+	*uid = st.st_uid;
+	return 0;
 }
 
 void kmscon_pty_resize(struct kmscon_pty *pty, unsigned short width, unsigned short height)

@@ -86,6 +86,8 @@
 #grab-terminal-new=<Ctrl><Logo>Return
 #grab-rotate-cw=<Logo>plus
 #grab-rotate-ccw=<Logo>minus
+## Lock the current terminal (needs PAM support)
+#grab-lock=<Logo>l
 ## Reboot system (disabled by default)
 ## Reboot behavior follows /proc/sys/kernel/ctrl-alt-del:
 ##   0 (default): graceful reboot (sends SIGINT to init)
@@ -102,6 +104,10 @@
 ## The screen will be turned off (DPMS OFF) after this period of inactivity
 ## Any keyboard or mouse input will turn the screen back on
 #dpms-timeout=600
+
+## Lock a terminal not used for this time in seconds (0 = disabled)
+## Needs PAM support. Terminals showing a login prompt are not locked.
+#lock-timeout=600
 
 ## Terminal options
 ## Play an asciicast animation after opening the terminal session.

@@ -417,6 +417,18 @@
         </listitem>
       </varlistentry>
 
+      <varlistentry>
+        <term><option>--lock-timeout</option></term>
+        <listitem>
+          <para>Lock a terminal when it hasn't received any keyboard or mouse
+                input for this time in seconds. Each terminal has its own
+                timeout, so the terminals in use are not locked when switching
+                between them. Terminals showing a login prompt are not locked.
+                See grab-lock for how locking works.
+                Set to 0 to disable. (default: 0)</para>
+        </listitem>
+      </varlistentry>
+
     </variablelist>
 
     <para>Grabs / Keyboard Shortcuts:</para>
@@ -535,6 +547,19 @@
         <listitem>
           <para>Rotate output counter-clock-wise: Normal -> Left -> Inverted -> Right and so on.
                 (default: &lt;Logo&gt;Minus)</para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term><option>--grab-lock {grab}</option></term>
+        <listitem>
+          <para>Lock the current terminal. The terminal content is hidden
+                until the logged in user enters their password, which is
+                checked with the kmscon-lock PAM service. Terminals showing
+                a login prompt are not locked. Locked terminals are also
+                unlocked when the session ends, or with
+                <command>loginctl unlock-session</command>, and
+                <command>loginctl lock-session</command> locks them.
+                (default: &lt;Logo&gt;l)</para>
         </listitem>
       </varlistentry>
       <varlistentry>

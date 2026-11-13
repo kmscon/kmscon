@@ -147,6 +147,9 @@ static void print_help()
 		"\t                                 Force software cursor\n"
 		"\t    --dpms-timeout <secs>      [600]\n"
 		"\t                                 Screen timeout in seconds (0=off)\n"
+		"\t    --lock-timeout <secs>      [0]\n"
+		"\t                                 Lock a terminal not used for this\n"
+		"\t                                 time in seconds (0=off)\n"
 		"\n"
 		"Grabs / Keyboard-Shortcuts:\n"
 		"\t    --grab-scroll-up <grab>     [<Shift>Up]\n"
@@ -175,6 +178,9 @@ static void print_help()
 		"\t                                  Rotate output counter-clock-wise\n"
 		"\t    --grab-reboot <grab>        []\n"
 		"\t                                  Reboot the system (disabled by default)\n"
+		"\t    --grab-lock <grab>          [<Logo>l]\n"
+		"\t                                  Lock the current terminal, until the\n"
+		"\t                                  logged in user enters their password\n"
 		"\n"
 		"Video Options:\n"
 		"\t    --drm                     [on]    Use DRM if available\n"
@@ -942,6 +948,8 @@ static struct conf_grab def_grab_rotate_cw =
 
 static struct conf_grab def_grab_rotate_ccw = CONF_SINGLE_GRAB(SHL_LOGO_MASK, XKB_KEY_minus);
 
+static struct conf_grab def_grab_lock = CONF_SINGLE_GRAB(SHL_LOGO_MASK, XKB_KEY_l);
+
 static palette_t def_palette = {
 	[TSM_COLOR_BLACK] = {0, 0, 0},		   /* black */
 	[TSM_COLOR_RED] = {205, 0, 0},		   /* red */
@@ -1025,6 +1033,7 @@ int kmscon_conf_new(struct conf_ctx **out)
 		CONF_OPTION_BOOL(0, "natural-scrolling", &conf->natural_scrolling, false),
 		CONF_OPTION_BOOL(0, "soft-cursor", &conf->soft_cursor, false),
 		CONF_OPTION_UINT(0, "dpms-timeout", &conf->dpms_timeout, 600),
+		CONF_OPTION_UINT(0, "lock-timeout", &conf->lock_timeout, 0),
 
 		/* Grabs / Keyboard-Shortcuts */
 		CONF_OPTION_GRAB(0, "grab-scroll-up", &conf->grab_scroll_up, &def_grab_scroll_up),
@@ -1046,6 +1055,7 @@ int kmscon_conf_new(struct conf_ctx **out)
 		CONF_OPTION_GRAB(0, "grab-rotate-ccw", &conf->grab_rotate_ccw,
 				 &def_grab_rotate_ccw),
 		CONF_OPTION_GRAB(0, "grab-reboot", &conf->grab_reboot, NULL),
+		CONF_OPTION_GRAB(0, "grab-lock", &conf->grab_lock, &def_grab_lock),
 
 		/* Video Options */
 		CONF_OPTION_BOOL_FULL(0, "drm", aftercheck_drm, NULL, NULL, &conf->drm, true),
