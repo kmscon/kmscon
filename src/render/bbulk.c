@@ -26,7 +26,7 @@
 /**
  * SECTION:text_bbulk.c
  * @short_description: Bit-Blitting Bulk Text Renderer Backend
- * @include: text.h
+ * @include: text_internal.h
  *
  * Similar to the bblit renderer but assembles an array of blit-requests and
  * pushes all of them at once to the video device.
@@ -44,7 +44,7 @@
 #include "shl/log.h"
 #include "shl/lru.h"
 #include "shl/misc.h"
-#include "text.h"
+#include "text_internal.h"
 #include "video/video.h"
 
 #define LOG_SUBSYSTEM "text_bbulk"

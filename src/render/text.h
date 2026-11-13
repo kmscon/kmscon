@@ -35,9 +35,8 @@
 
 #include <errno.h>
 #include <libtsm.h>
-#include <stdlib.h>
+#include <stdint.h>
 #include "font/font.h"
-#include "shl/module.h"
 #include "video/video.h"
 
 /* text renderer */
@@ -49,55 +48,12 @@ enum Orientation {
 	OR_LEFT,	// 270 Degree
 };
 
+struct kmscon_font;
 struct kmscon_text;
 struct kmscon_text_ops;
 
-struct kmscon_text {
-	unsigned long ref;
-	struct shl_register_record *record;
-	const struct kmscon_text_ops *ops;
-	void *data;
-
-	struct kmscon_font *font;
-	struct display *disp;
-	unsigned int cols;
-	unsigned int rows;
-	unsigned int max_cols;
-	unsigned int max_rows;
-	bool rendering;
-	enum Orientation orientation;
-	bool blinking;
-};
-
-struct kmscon_cursor {
-	struct tsm_screen_cell cell;
-	unsigned int x;
-	unsigned int y;
-	bool visible;
-};
-
-struct kmscon_text_ops {
-	const char *name;
-	struct shl_module *owner;
-	int (*init)(struct kmscon_text *txt);
-	void (*destroy)(struct kmscon_text *txt);
-	int (*set)(struct kmscon_text *txt);
-	void (*unset)(struct kmscon_text *txt);
-	void (*resize)(struct kmscon_text *txt, unsigned int cols, unsigned int rows);
-	int (*rotate)(struct kmscon_text *txt, enum Orientation orientation);
-	int (*prepare)(struct kmscon_text *txt, struct tsm_screen_attr *attr);
-	int (*draw)(struct kmscon_text *txt, const struct tsm_screen_cell *cells,
-		    struct kmscon_cursor *cursor);
-	int (*draw_pointer)(struct kmscon_text *txt, unsigned int x, unsigned int y);
-	int (*render)(struct kmscon_text *txt);
-	void (*abort)(struct kmscon_text *txt);
-};
-
-#define FONT_WIDTH(txt) ((txt)->font->width)
-#define FONT_HEIGHT(txt) ((txt)->font->height)
-
 int kmscon_text_register(const struct kmscon_text_ops *ops);
-void kmscon_text_unregister(const char *name);
+void kmscon_text_unregister(const struct kmscon_text_ops *ops);
 
 int kmscon_text_new(struct kmscon_text **out, const char *backend, enum Orientation orientation,
 		    struct display *disp);
@@ -113,6 +69,9 @@ unsigned int kmscon_text_get_cols(struct kmscon_text *txt, unsigned int font_wid
 unsigned int kmscon_text_get_rows(struct kmscon_text *txt, unsigned int font_height);
 
 enum Orientation kmscon_text_get_orientation(struct kmscon_text *txt);
+const char *kmscon_text_get_name(struct kmscon_text *txt);
+unsigned int kmscon_text_get_font_width(struct kmscon_text *txt);
+unsigned int kmscon_text_get_font_height(struct kmscon_text *txt);
 void kmscon_text_resize(struct kmscon_text *txt, unsigned int cols, unsigned int rows);
 int kmscon_text_rotate(struct kmscon_text *txt, enum Orientation orientation);
 
@@ -121,10 +80,10 @@ int kmscon_text_draw(struct kmscon_text *txt, struct tsm_screen *con, bool curso
 int kmscon_text_draw_pointer(struct kmscon_text *txt, unsigned int x, unsigned int y);
 int kmscon_text_render(struct kmscon_text *txt);
 void kmscon_text_abort(struct kmscon_text *txt);
+void kmscon_text_show_cursor(struct kmscon_text *txt, int32_t x, int32_t y);
 
-/* modularized backends */
+/* built-in backend */
 
 extern struct kmscon_text_ops kmscon_text_bbulk_ops;
-extern struct kmscon_text_ops kmscon_text_gltex_ops;
 
 #endif /* KMSCON_TEXT_H */

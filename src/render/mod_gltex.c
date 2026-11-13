@@ -32,7 +32,7 @@
 #include <stdlib.h>
 #include "shl/log.h"
 #include "shl/module_interface.h"
-#include "text.h"
+#include "text_internal.h"
 
 #define LOG_SUBSYSTEM "mod_gltex"
 
@@ -52,7 +52,7 @@ static int kmscon_gltex_load(void)
 
 static void kmscon_gltex_unload(void)
 {
-	kmscon_text_unregister(kmscon_text_gltex_ops.name);
+	kmscon_text_unregister(&kmscon_text_gltex_ops);
 }
 
 SHL_MODULE(NULL, kmscon_gltex_load, kmscon_gltex_unload, NULL);
