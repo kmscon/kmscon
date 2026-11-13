@@ -117,7 +117,7 @@ static void listen_to_dbus_locale1(struct kmscon_app *app)
 		log_warning("cannot listen to locale1: %d", ret);
 }
 
-static void session_lock(pid_t leader, uid_t uid, bool lock, void *data)
+static void session_lock(pid_t leader, bool lock, void *data)
 {
 	struct kmscon_app *app = data;
 
