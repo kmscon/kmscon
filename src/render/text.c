@@ -26,7 +26,7 @@
 /**
  * SECTION:text
  * @short_description: Text Renderer
- * @include: text.h
+ * @include: text_internal.h
  *
  * TODO
  */
@@ -35,12 +35,11 @@
 #include <libtsm.h>
 #include <pthread.h>
 #include <stdlib.h>
-#include <string.h>
 #include "font/font.h"
 #include "shl/log.h"
 #include "shl/misc.h"
 #include "shl/register.h"
-#include "text.h"
+#include "text_internal.h"
 #include "video/video.h"
 
 #define LOG_SUBSYSTEM "text"
@@ -90,16 +89,19 @@ int kmscon_text_register(const struct kmscon_text_ops *ops)
 
 /**
  * kmscon_text_unregister:
- * @name: Name of backend
+ * @ops: Operations of the backend
  *
- * This unregisters the text-backend that is registered with name @name. If
- * @name is not found, nothing is done.
+ * This unregisters the text-backend registered with @ops. If it is not
+ * registered, nothing is done.
  */
 SHL_EXPORT
-void kmscon_text_unregister(const char *name)
+void kmscon_text_unregister(const struct kmscon_text_ops *ops)
 {
-	log_debug("unregister backend %s", name);
-	shl_register_remove(&text_reg, name);
+	if (!ops)
+		return;
+
+	log_debug("unregister backend %s", ops->name);
+	shl_register_remove(&text_reg, ops->name);
 }
 
 static int new_text(struct kmscon_text *text, const char *backend)
@@ -354,6 +356,36 @@ enum Orientation kmscon_text_get_orientation(struct kmscon_text *txt)
 	return txt->orientation;
 }
 
+/* The name of the backend */
+SHL_EXPORT
+const char *kmscon_text_get_name(struct kmscon_text *txt)
+{
+	if (!txt)
+		return NULL;
+
+	return txt->ops->name;
+}
+
+/* The current font width */
+SHL_EXPORT
+unsigned int kmscon_text_get_font_width(struct kmscon_text *txt)
+{
+	if (!txt || !txt->font)
+		return 0;
+
+	return txt->font->width;
+}
+
+/* The current font height */
+SHL_EXPORT
+unsigned int kmscon_text_get_font_height(struct kmscon_text *txt)
+{
+	if (!txt || !txt->font)
+		return 0;
+
+	return txt->font->height;
+}
+
 /**
  * kmscon_text_rotate:
  * @txt: valid text renderer
@@ -534,4 +566,45 @@ void kmscon_text_abort(struct kmscon_text *txt)
 	if (txt->ops->abort)
 		txt->ops->abort(txt);
 	txt->rendering = false;
+}
+
+/**
+ * kmscon_text_show_cursor:
+ * @txt: valid text renderer
+ * @x: X position in pixels, in the text area
+ * @y: Y position in pixels, in the text area
+ *
+ * Move the HW cursor of the display to this position, which is clamped to the
+ * text area, and rotated like the text.
+ */
+SHL_EXPORT
+void kmscon_text_show_cursor(struct kmscon_text *txt, int32_t x, int32_t y)
+{
+	int32_t sw, sh;
+
+	if (!txt || !txt->font)
+		return;
+
+	sw = txt->cols * FONT_WIDTH(txt);
+	sh = txt->rows * FONT_HEIGHT(txt);
+	if (sw > 0 && x >= sw)
+		x = sw - 1;
+	if (sh > 0 && y >= sh)
+		y = sh - 1;
+
+	switch (txt->orientation) {
+	default:
+	case OR_NORMAL:
+		display_show_cursor(txt->disp, x, y);
+		break;
+	case OR_UPSIDE_DOWN:
+		display_show_cursor(txt->disp, sw - x, sh - y);
+		break;
+	case OR_RIGHT:
+		display_show_cursor(txt->disp, sh - y, x);
+		break;
+	case OR_LEFT:
+		display_show_cursor(txt->disp, y, sw - x);
+		break;
+	}
 }

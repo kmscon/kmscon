@@ -220,7 +220,7 @@ int main(int argc, char **argv)
 err_unload_app:
 	destroy_app(&app);
 err_unload:
-	kmscon_text_unregister(kmscon_text_bbulk_ops.name);
+	kmscon_text_unregister(&kmscon_text_bbulk_ops);
 	kmscon_font_unregister(kmscon_font_8x16_ops.name);
 	kmscon_unload_modules();
 	kmscon_conf_free(conf_ctx);

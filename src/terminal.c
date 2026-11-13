@@ -149,6 +149,25 @@ static void coord_to_cell(struct kmscon_terminal *term, int32_t x, int32_t y, un
 	*posy = min(y / fh, h - 1);
 }
 
+/* A scaled screen has its own font: convert the pointer position from the
+ * terminal font to it */
+static void scale_pointer(struct screen *scr, int32_t x, int32_t y, int32_t *sx, int32_t *sy)
+{
+	int32_t scr_fw = kmscon_text_get_font_width(scr->txt);
+	int32_t scr_fh = kmscon_text_get_font_height(scr->txt);
+	int32_t term_fw = scr->term->font->width;
+	int32_t term_fh = scr->term->font->height;
+
+	if (!scr_fw || !scr_fh || !term_fw || !term_fh) {
+		*sx = x;
+		*sy = y;
+		return;
+	}
+
+	*sx = x * scr_fw / term_fw;
+	*sy = y * scr_fh / term_fh;
+}
+
 static void draw_pointer(struct screen *scr)
 {
 	if (!scr->term->pointer.visible || scr->hw_cursor || !scr->term->font)
@@ -157,10 +176,7 @@ static void draw_pointer(struct screen *scr)
 	if (scr->scaled) {
 		int32_t x, y;
 
-		x = (scr->term->pointer.x * (int32_t)FONT_WIDTH(scr->txt)) / scr->term->font->width;
-		y = (scr->term->pointer.y * (int32_t)FONT_HEIGHT(scr->txt)) /
-		    scr->term->font->height;
-
+		scale_pointer(scr, scr->term->pointer.x, scr->term->pointer.y, &x, &y);
 		kmscon_text_draw_pointer(scr->txt, x, y);
 	} else
 		kmscon_text_draw_pointer(scr->txt, scr->term->pointer.x, scr->term->pointer.y);
@@ -262,16 +278,17 @@ static uint32_t *generate_ibeam_cursor(unsigned int font_height, unsigned int *w
 
 static void setup_hw_cursor(struct screen *scr)
 {
-	bool rotate = scr->txt->orientation == OR_LEFT || scr->txt->orientation == OR_RIGHT;
-	unsigned int beam_h;
-	unsigned int beam_w;
+	enum Orientation orientation = kmscon_text_get_orientation(scr->txt);
+	unsigned int fh = kmscon_text_get_font_height(scr->txt);
+	bool rotate = orientation == OR_LEFT || orientation == OR_RIGHT;
+	unsigned int beam_h, beam_w;
 	uint32_t *pixels;
 	int ret;
 
-	if (!scr->txt->font)
+	if (!fh)
 		return;
 
-	pixels = generate_ibeam_cursor(scr->txt->font->height, &beam_w, &beam_h, rotate);
+	pixels = generate_ibeam_cursor(fh, &beam_w, &beam_h, rotate);
 	if (!pixels)
 		return;
 
@@ -892,7 +909,7 @@ int terminal_add_display(struct kmscon_terminal *term, struct display *disp)
 
 	log_notice("Display %s[%s] with backend [%s] text renderer [%s] font engine [%s] Cursor "
 		   "[%s]\n",
-		   gpu, connector, display_backend_name(disp), scr->txt->ops->name,
+		   gpu, connector, display_backend_name(disp), kmscon_text_get_name(scr->txt),
 		   term->font->ops->name, scr->hw_cursor ? "HW" : "SW");
 
 	display_ref(scr->disp);
@@ -1158,50 +1175,21 @@ static void handle_pointer_button(struct kmscon_terminal *term, struct input_poi
 	}
 }
 
-static void text_show_cursor(struct kmscon_text *txt, int32_t x, int32_t y)
-{
-	unsigned int sw = txt->cols * FONT_WIDTH(txt);
-	unsigned int sh = txt->rows * FONT_HEIGHT(txt);
-
-	switch (txt->orientation) {
-	default:
-	case OR_NORMAL:
-		display_show_cursor(txt->disp, x, y);
-		break;
-	case OR_UPSIDE_DOWN:
-		display_show_cursor(txt->disp, sw - x, sh - y);
-		break;
-	case OR_RIGHT:
-		display_show_cursor(txt->disp, sh - y, x);
-		break;
-	case OR_LEFT:
-		display_show_cursor(txt->disp, y, sw - x);
-		break;
-	}
-}
-
 static void hw_cursor_show(struct kmscon_terminal *term, int32_t x, int32_t y)
 {
 	struct screen *scr;
-	int fw = term->font->width ? term->font->width : 1;
-	int fh = term->font->height ? term->font->height : 1;
+	int32_t sx, sy;
 
 	dlist_for_each_entry(scr, &term->screens, list)
 	{
-		int32_t sx, sy;
+		if (!scr->hw_cursor)
+			continue;
 
-		if (scr->hw_cursor) {
-			if (!scr->scaled)
-				text_show_cursor(scr->txt, x, y);
-			else {
-				sx = (x * (int32_t)FONT_WIDTH(scr->txt)) / fw;
-				sy = (y * (int32_t)FONT_HEIGHT(scr->txt)) / fh;
-				if (sx >= FONT_WIDTH(scr->txt) * scr->txt->cols)
-					sx = FONT_WIDTH(scr->txt) * scr->txt->cols - 1;
-				if (sy >= FONT_HEIGHT(scr->txt) * scr->txt->rows)
-					sy = FONT_HEIGHT(scr->txt) * scr->txt->rows - 1;
-				text_show_cursor(scr->txt, sx, sy);
-			}
+		if (scr->scaled) {
+			scale_pointer(scr, x, y, &sx, &sy);
+			kmscon_text_show_cursor(scr->txt, sx, sy);
+		} else {
+			kmscon_text_show_cursor(scr->txt, x, y);
 		}
 	}
 }

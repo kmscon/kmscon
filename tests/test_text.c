@@ -15,6 +15,10 @@ void kmscon_font_ref(struct kmscon_font *font) {}
 void kmscon_font_unref(struct kmscon_font *font) {}
 void display_ref(struct display *disp) {}
 void display_unref(struct display *disp) {}
+int display_show_cursor(struct display *disp, int32_t x, int32_t y)
+{
+	return 0;
+}
 unsigned int display_get_height(struct display *disp)
 {
 	return 0;

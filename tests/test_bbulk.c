@@ -7,7 +7,7 @@
 #include <errno.h>
 #include <stdint.h>
 #include <string.h>
-#include "../src/render/text.h"
+#include "../src/render/text_internal.h"
 
 /* ---- Stubs for external dependencies used by text_bbulk.c ---- */
 #include "../src/font/font.h"	/* for kmscon_font_* */

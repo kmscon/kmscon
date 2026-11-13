@@ -26,7 +26,7 @@
 /**
  * SECTION:text_gltex.c
  * @short_description: OpenGL Textures Text Renderer Backend
- * @include: text.h
+ * @include: text_internal.h
  *
  * Uses OpenGL textures to store glyph information and draws these textures with
  * a custom fragment shader.
@@ -53,7 +53,7 @@
 #include "shl/hashtable.h"
 #include "shl/log.h"
 #include "shl/misc.h"
-#include "text.h"
+#include "text_internal.h"
 #include "video/video.h"
 
 #define LOG_SUBSYSTEM "text_gltex"
