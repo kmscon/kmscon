@@ -1,0 +1,15 @@
+resize 4 6
+in "1111\r\n2222\r\n3333\r\n4444\r\n5555\r\n6666"
+in "\e[2;4r\e[4;1H\nX"
+dump state text
+in "\e[2;1H\eMY"
+dump state text
+# cursor below the bottom margin: LF stops at the last line, no scroll
+in "\e[5;1H\n\n\nZ"
+dump state text
+# cursor above the top margin: RI stops at line 0
+in "\e[1;1H\eMW"
+dump state text
+# writing at the bottom margin with autowrap
+in "\e[4;1Habcdefgh"
+dump state text

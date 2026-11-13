@@ -1,0 +1,10 @@
+# from test_vte_mouse.c: sgr tests
+in "\e[?1006h"
+in "\e[?1002h"
+mouse press left cell=0,0
+mouse release left cell=0,0
+mouse press middle cell=0,0
+mouse press right cell=0,0
+mouse press wheelup cell=0,0
+mouse press wheeldown cell=0,0
+mouse press left cell=49,119

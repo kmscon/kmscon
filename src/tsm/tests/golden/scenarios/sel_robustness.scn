@@ -1,0 +1,408 @@
+# generated: random resizes, scrollback moves and selections (from test_selection.c robustness)
+sb-max 20
+resize 30 10
+in "q~wE0?+=7)NoK\eE"
+in "4Jwh*\"rP@Ds7\eE"
+in "&q]W^t}gIIUR#S!4#)\eE"
+in "-Ham6w-fGV|G\eE"
+in " S0ny^UzP-$'oO_j?W\eE"
+in "Wh@EX^\eE"
+in "+3_FlCeNqk]^!1Sj{(dRa<% Z*t${y-\eE"
+in "#yTN+tu&aWNkjKqPAh'K\eE"
+in "[V5.f,|y|5H;>^J)MS1\eE"
+in "gv>L,-/+~l7b~X(5D6.fK\"VPTS1c-Q?\\'\eE"
+in "q#PfLu0B*:(/LQgoDZ\eE"
+in "O!\eE"
+in "Fw\eE"
+in "`1I\eE"
+in "4^+m\eE"
+in "loX?]<Jrm&+]>KHs^v=\eE"
+in "~d&+K'fAlwdH\eE"
+in "l?Y8p~dJVat!]M*--x#bP~Y+s%;(Gwo 4myV7@\eE"
+in "kFCKy/nCIsso<\eE"
+in "yvwXPA,Z'k<W{12g>@?Tl5fEEL\eE"
+in "Y3P#O`l>p1iKH-5J\\Gr4A(\\A-M9q?/\eE"
+in "+YraO\eE"
+in "+d@5{d:+\eE"
+in "/@Uu`k}F{;u+@&?FEL*!9.I;y 7Gk[\eE"
+in "5h?L`,b{Rk'}W>/~~U=Ic;O!5T)R\\ogRB=%~\eE"
+resize 22 2
+sb-up 13
+sb-down 19
+sel-start 2 0
+sel-target 7 0
+sel-copy
+sb-up 20
+sb-down 13
+sel-copy
+dump state render
+in "4/4>%S6B &cIK\eE"
+in "-=![O5i@3-O{-K}Q0BD9aVd 2UkElT@v cZ\eE"
+in "P#DNv#izq3x-,4{U_j^ +iC $?d\eE"
+in "EO(yPYr;8t7oKbS?gjm#]]nd\eE"
+in "9yrCk,\"_N/5E&wIn`Lo$vDPVH\eE"
+resize 32 13
+sb-up 18
+sb-down 2
+sel-start 3 5
+sel-target 24 7
+sel-copy
+sb-up 20
+sb-down 1
+sel-copy
+dump state render
+in " )\\\"\eE"
+in "<AA=|E*#8~\"37\eE"
+resize 35 14
+sb-up 0
+sb-down 19
+sel-start 24 8
+sel-target 8 13
+sel-copy
+sb-up 20
+sb-down 14
+sel-copy
+dump state render
+in "im}/%ni@nJBdg2\eE"
+in "U],\eE"
+in ";[RJK9\eE"
+in "Q\eE"
+resize 4 11
+sb-up 18
+sb-down 10
+sel-start 3 4
+sel-target 0 0
+sel-copy
+sb-up 20
+sb-down 19
+sel-copy
+dump state render
+in "t+K\eE"
+in "kh{OT.IR8ROo'}7oas)a:.s>/\eE"
+in "\".(c=6aWD*kN)$Bshw,66?xI\eE"
+resize 25 15
+sb-up 16
+sb-down 15
+sel-start 10 5
+sel-target 20 9
+sel-copy
+sb-up 20
+sb-down 1
+sel-copy
+dump state render
+in "57kOC&KlQQLg{M>3C'uq9/A`fj?6DvZA\"Is\eE"
+in "O_C3^>Fm3\eE"
+in "5MXI('7[@yn']&Q%EC~ALzVXu3Da]DCq9^'mc\eE"
+in "cMwa`U+a11G??eK\eE"
+resize 36 11
+sb-up 13
+sb-down 11
+sel-start 8 5
+sel-target 19 5
+sel-copy
+sb-up 20
+sb-down 8
+sel-copy
+dump state render
+resize 25 8
+sb-up 9
+sb-down 15
+sel-start 6 4
+sel-target 16 0
+sel-copy
+sb-up 20
+sb-down 0
+sel-copy
+dump state render
+in "B1/KfUm.$T9H}SM{!Zk7].qx7)gdOth14idK~e \eE"
+in "1C(r7LdQ7Oec#l~Qe 1g)ZL=qJl$\eE"
+resize 18 10
+sb-up 3
+sb-down 10
+sel-start 4 6
+sel-target 13 4
+sel-copy
+sb-up 20
+sb-down 15
+sel-copy
+dump state render
+resize 20 13
+sb-up 6
+sb-down 18
+sel-start 2 2
+sel-target 18 1
+sel-copy
+sb-up 20
+sb-down 13
+sel-copy
+dump state render
+in "\\uI]]|s4e9LIFN(%d3d-v[=?_!}Rx~[H$L4\eE"
+in "El?5gFQ\eE"
+in "w@l9.h~tj6@l$FX?H6!N3A}}7@^f9PGI8\\,A<8\eE"
+in "9et`b8J#IbQn'0q,}9vg')+q\eE"
+in "cXu?Q~5N)/Afu@EeP</0tl65'hx7=*7\eE"
+resize 28 4
+sb-up 3
+sb-down 8
+sel-start 6 3
+sel-target 21 3
+sel-copy
+sb-up 20
+sb-down 13
+sel-copy
+dump state render
+in ".;Ke3hwM$qKn$\eE"
+in "Wh0p\eE"
+in "5BCY/C8\\~$qXkp$3ZsqyaSng\eE"
+in "E=0.>Kd?tew~\eE"
+in "05o\eE"
+resize 35 9
+sb-up 11
+sb-down 10
+sel-start 32 1
+sel-target 32 4
+sel-copy
+sb-up 20
+sb-down 8
+sel-copy
+dump state render
+resize 5 7
+sb-up 7
+sb-down 14
+sel-start 3 0
+sel-target 3 0
+sel-copy
+sb-up 20
+sb-down 5
+sel-copy
+dump state render
+in "V5DT?}Ne&asA'y`;VeK.lq7@nBSs_\"L\eE"
+in "NYpZdw1@?;JnO-w\eE"
+resize 18 14
+sb-up 0
+sb-down 14
+sel-start 8 6
+sel-target 4 2
+sel-copy
+sb-up 20
+sb-down 19
+sel-copy
+dump state render
+resize 36 7
+sb-up 14
+sb-down 12
+sel-start 33 0
+sel-target 18 4
+sel-copy
+sb-up 20
+sb-down 7
+sel-copy
+dump state render
+in "U\eE"
+in "'%Am&Qlm f)Lo/m?=\eE"
+in "kP`#D='UE\"FlteT`*Te4N>K=CGqgfixn[P\eE"
+resize 24 14
+sb-up 3
+sb-down 18
+sel-start 9 2
+sel-target 16 2
+sel-copy
+sb-up 20
+sb-down 14
+sel-copy
+dump state render
+in "5@})Fs.\eE"
+in "6t&=anK*~9GH_;g=03_dH?Egwuu)n!qeVyd\eE"
+in "<z.5frg ?Ic/Ax(kcn\eE"
+in "9jwq9[\eE"
+in "yyr} ] {4+<Edwj]sTN\"uQOn=qo_+W.5?;+%)\eE"
+resize 23 8
+sb-up 17
+sb-down 18
+sel-start 22 0
+sel-target 4 2
+sel-copy
+sb-up 20
+sb-down 4
+sel-copy
+dump state render
+in "ejHp*tm3l^tlztW#*HT:VL$\eE"
+in "KW3'Zh&l;l6Ba6Et~9y]{ tIe(]YD?qz9\eE"
+in "G>*A^}0| CLx)v#\eE"
+in "\eE"
+in "#-0]eksbta>RTUGIUbYcv36azIHenQ\eE"
+resize 7 10
+sb-up 2
+sb-down 5
+sel-start 6 5
+sel-target 2 3
+sel-copy
+sb-up 20
+sb-down 2
+sel-copy
+dump state render
+resize 21 12
+sb-up 19
+sb-down 8
+sel-start 16 9
+sel-target 19 6
+sel-copy
+sb-up 20
+sb-down 18
+sel-copy
+dump state render
+in "U]{'w`c5*w[8^m6`?YI/% `Mg$9X'8\eE"
+in "FqZ<hL7XZ'TN9\"MMpR,=I[S\eE"
+in "8I#3M{=0iaB.gv[}jwuUj @}4\\%zD>\\\"T\eE"
+resize 22 11
+sb-up 7
+sb-down 19
+sel-start 21 0
+sel-target 17 5
+sel-copy
+sb-up 20
+sb-down 19
+sel-copy
+dump state render
+in "3y>\eE"
+in "evf*d\eE"
+in "Fc|Q@{n\eE"
+in "ck##AE&M0s~SM`T:oyd(CaXjS$wRsLaBrA\eE"
+in "G8FK4KGs \"|#1DT\eE"
+resize 27 9
+sb-up 14
+sb-down 10
+sel-start 24 2
+sel-target 15 1
+sel-copy
+sb-up 20
+sb-down 12
+sel-copy
+dump state render
+in "o?;7A3&})HKq>aXqT|0Rk$SxOY(U7j9;\eE"
+in "}G>\eE"
+in "fxq .L\eE"
+in "w7aeF{Z*: |-FHl~q<\eE"
+resize 18 12
+sb-up 19
+sb-down 13
+sel-start 14 11
+sel-target 7 6
+sel-copy
+sb-up 20
+sb-down 10
+sel-copy
+dump state render
+in "3zr02(n+F{hx$*7g\\ux|:Lxn-#A)\eE"
+resize 13 7
+sb-up 2
+sb-down 19
+sel-start 9 2
+sel-target 9 1
+sel-copy
+sb-up 20
+sb-down 7
+sel-copy
+dump state render
+in "vc$4+Y!K]Ma+A%&UtF\eE"
+resize 9 14
+sb-up 0
+sb-down 4
+sel-start 0 0
+sel-target 3 7
+sel-copy
+sb-up 20
+sb-down 13
+sel-copy
+dump state render
+in "_ZWAyh~@</\\WLqBzbO\"\eE"
+in "+\eE"
+resize 25 11
+sb-up 19
+sb-down 4
+sel-start 23 7
+sel-target 16 7
+sel-copy
+sb-up 20
+sb-down 14
+sel-copy
+dump state render
+in "]J\"b(Iq(B*w5L0U+`A:b1zw;,(UHt\eE"
+resize 17 12
+sb-up 9
+sb-down 18
+sel-start 7 8
+sel-target 4 6
+sel-copy
+sb-up 20
+sb-down 4
+sel-copy
+dump state render
+resize 30 10
+sb-up 0
+sb-down 16
+sel-start 20 2
+sel-target 8 2
+sel-copy
+sb-up 20
+sb-down 7
+sel-copy
+dump state render
+in "u~PLo0aln&\eE"
+in "5zbO<(MSC^;\eE"
+in "R8M+3)v'sB34m\"8x\eE"
+in "N|1}{]hi[YH;\"d]-mcNc[m)\\%FZ|9Y-fZDL\eE"
+resize 3 4
+sb-up 9
+sb-down 0
+sel-start 2 0
+sel-target 0 2
+sel-copy
+sb-up 20
+sb-down 13
+sel-copy
+dump state render
+in "6Tcgq&\eE"
+in "ha_= eI{\"3\"\eE"
+in "Bp\eE"
+in "w\eE"
+in "CL)wA{5NO;:h|j;3H'3~[gD&O+6AmQBb=\eE"
+resize 14 6
+sb-up 3
+sb-down 8
+sel-start 12 3
+sel-target 3 3
+sel-copy
+sb-up 20
+sb-down 9
+sel-copy
+dump state render
+in "lCQY3Io}1Skiv)f^pt\eE"
+in "3*WS,qnIPub4<M(\eE"
+in "\eE"
+in "'n8\"e9$N|(1'XUT\eE"
+resize 24 10
+sb-up 11
+sb-down 10
+sel-start 15 5
+sel-target 15 3
+sel-copy
+sb-up 20
+sb-down 15
+sel-copy
+dump state render
+in "Y:P#O$n N}hmYWG+ :[b.l>1Y\eE"
+resize 19 15
+sb-up 10
+sb-down 2
+sel-start 1 9
+sel-target 0 7
+sel-copy
+sb-up 20
+sb-down 13
+sel-copy
+dump state render
+in "<X\eE"
+in "I62t)(<y\"DqJm}$kIAhY$w$l\eE"
+in " &5,.V.L~oq85*kvRp'r:\eE"
+in "uKWUlO?_'yn(cZ_SE+(-w1Y:%v@*BiA#f0L?^<\eE"

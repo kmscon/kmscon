@@ -1,0 +1,11 @@
+mouse press left cell=0,0
+mouse move left cell=0,0
+in "\e[?1002h"
+mouse press left cell=0,0
+in "\e[?1000h\e[!p"
+dump state
+mouse press left cell=0,0
+in "\e[?1006h\e[?1003h"
+reset
+dump state
+mouse move left cell=1,1

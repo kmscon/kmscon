@@ -1,0 +1,98 @@
+> resize 6 5
+> in "\u{4e16}\u{754c}x"
+> dump state text
+state
+  size 6x5 cursor 5,0
+  cursor-style 0 blink 500
+  margins 0-4
+  tabs 0
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=0 pos=0 max=0
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+text
+   0|世界x·|
+   1|······|
+   2|······|
+   3|······|
+   4|······|
+> in "\r\nabcde\u{4e16}"
+> dump state text
+state
+  size 6x5 cursor 7,1
+  cursor-style 0 blink 500
+  margins 0-4
+  tabs 0
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=0 pos=0 max=0
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+text
+   0|世界x·|
+   1|abcde世|
+   2|······|
+   3|······|
+   4|······|
+cells
+  1,5 U+4E16 w=2
+> in "y"
+> dump state text
+state
+  size 6x5 cursor 1,2
+  cursor-style 0 blink 500
+  margins 0-4
+  tabs 0
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=0 pos=0 max=0
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+text
+   0|世界x·|
+   1|abcde世|
+   2|y·····|
+   3|······|
+   4|······|
+cells
+  1,5 U+4E16 w=2
+> in "\e[1;1HA\e[1;4HB"
+> dump text
+text
+   0|A·界Bx·|
+   1|abcde世|
+   2|y·····|
+   3|······|
+   4|······|
+cells
+  0,1 U+0000 w=0
+  0,2 U+754C w=2
+  1,5 U+4E16 w=2
+> in "\e[?7l\e[4;1Habcde\u{4e16}\u{754c}"
+> dump state text
+state
+  size 6x5 cursor 7,3
+  cursor-style 0 blink 500
+  margins 0-4
+  tabs 0
+  screen-flags -
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=0 pos=0 max=0
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+text
+   0|A·界Bx·|
+   1|abcde世|
+   2|y·····|
+   3|abcde界|
+   4|······|
+cells
+  0,1 U+0000 w=0
+  0,2 U+754C w=2
+  1,5 U+4E16 w=2
+  3,5 U+754C w=2

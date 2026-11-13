@@ -1,0 +1,10 @@
+resize 10 4
+in "a\e[1"
+in ";31mb\e"
+in "[0mc\e]2;ti"
+in "tle\a"
+in "\e[2;\e[3;4Hd"
+dump state text attrs
+in "\e[1;31\e]2;x\ae"
+in "\e]2;y\e[1mf\e[m"
+dump text attrs

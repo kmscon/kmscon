@@ -1,0 +1,257 @@
+> sb-max 8
+> resize 12 8
+> in "dd\r\n"
+> in "\e[1T"
+> in "\e[1L"
+> sel-start 11 3
+> sel-target 4 6
+> sb-reset
+> in "\eD"
+> sel-start 4 4
+> sel-target 9 3
+> in "c gf\r\n"
+> in "\e[?1049l"
+> sel-start 10 6
+> sel-target 10 5
+> sel-start 5 6
+> sel-target 10 4
+> in "\e[1S"
+> resize 4 7
+> in "\e[1T"
+> sel-start 3 4
+> sel-target 9 3
+> sel-copy
+< copy ""
+> dump render
+render
+   0|    |
+   1|c gf|
+   2|    |
+   3|    |
+   4|    |
+   5|    |
+   6|    |
+  4: 3 000000/e5e5e5 -
+> sel-start 7 1
+> sel-target 9 5
+> sb-reset
+> sel-start 6 5
+> sel-target 4 7
+> resize 5 3
+> in "fhaceaf\r\n"
+> in " \r\n"
+> in " he\r\n"
+> in "gfda ecf\r\n"
+> in "\n"
+> in "fbcgh\r\n"
+> in "\e[2;2H"
+> in "\e[?1049h"
+> sel-copy
+< copy none
+> dump render
+render
+   0|     |
+   1|     |
+   2|     |
+> in "\e[2S"
+> in "\r\n"
+> in "chccgccc\r\n"
+> in "\e[1S"
+> sel-start 1 0
+> sel-target 1 5
+> in "e\r\n"
+> in "f\r\n"
+> in "\e[?1049l"
+> in "h\r\n"
+> in "\e[4;5r"
+> in "\e[2M"
+> in "hac\r\n"
+> in "gf\r\n"
+> resize 13 4
+> in "ae\r\n"
+> sel-copy
+< copy none
+> in "\eM"
+> resize 13 4
+> in "\e[?1049l"
+> in "\e[2L"
+> in "\e[2S"
+> in "\e[?1049h"
+> sel-start 0 1
+> sel-target 0 4
+> in "g\r\n"
+> sel-start 0 4
+> sel-target 0 4
+> in "\e[3S"
+> sel-copy
+< copy ""
+> in " gehd \r\n"
+> sel-start 11 0
+> sel-target 9 7
+> in "\eM"
+> in "dddb g\r\n"
+> in "c\r\n"
+> in "\e[1L"
+> sel-start 11 6
+> sel-target 11 3
+> sel-copy
+< copy ""
+> dump render
+render
+   0|             |
+   1|dddb g       |
+   2|c            |
+   3|             |
+  3: 11 000000/e5e5e5 -
+> in " \r\n"
+> in "adf gagbb\r\n"
+> in " e ghdc\r\n"
+> sel-copy
+< copy ""
+> in "dghgaheh\r\n"
+> in "\e[4T"
+> in "afggd  a\r\n"
+> sel-copy
+< copy ""
+> dump render
+render
+   0|             |
+   1|             |
+   2|afggd  a     |
+   3|             |
+  3: 11 000000/e5e5e5 -
+> in "\r\n"
+> sel-start 11 5
+> sel-target 8 3
+> sel-start 11 4
+> sel-target 10 6
+> sel-copy
+< copy ""
+> sel-start 8 7
+> sel-target 10 6
+> in "\n"
+> in "ab\r\n"
+> in "\e[3L"
+> in "\e[3L"
+> in "edhcgcc\r\n"
+> in "\e[3S"
+> in "bg\r\n"
+> in "gb\r\n"
+> in "hdf\r\n"
+> in "\n"
+> in "\e[3;5H"
+> sel-copy
+< copy "hdf"
+> dump render
+render
+   0|gb           |
+   1|hdf          |
+   2|             |
+   3|             |
+  0: 11-12 000000/e5e5e5 -
+  1: 0-8 000000/e5e5e5 -
+> sel-copy
+< copy "hdf"
+> dump render
+render
+   0|gb           |
+   1|hdf          |
+   2|             |
+   3|             |
+  0: 11-12 000000/e5e5e5 -
+  1: 0-8 000000/e5e5e5 -
+> in "ghhcdcadd\r\n"
+> in " fc\r\n"
+> sel-copy
+< copy ""
+> sel-copy
+< copy ""
+> sel-start 1 2
+> sel-target 9 1
+> in "\e[4M"
+> in "h face\r\n"
+> in "\e[r"
+> in "\e[r"
+> sel-copy
+< copy "cadd\n f"
+> in "\eD"
+> in "\e[4L"
+> in "\e[?1049l"
+> in "d gc ddge\r\n"
+> sel-copy
+< copy none
+> in "gfgff da\r\n"
+> in "\e[?1049l"
+> sel-copy
+< copy none
+> dump render
+render
+   0|             |
+   1|d gc ddge    |
+   2|gfgff da     |
+   3|             |
+> in "edb bcge\r\n"
+> in "\e[4;5r"
+> in "dccf eah\r\n"
+> in "\e[?1049h"
+> in "dda\r\n"
+> sel-copy
+< copy none
+> dump render
+render
+   0|             |
+   1|             |
+   2|dda          |
+   3|             |
+> sel-copy
+< copy none
+> sb-max 5
+> sel-start 8 4
+> sel-target 6 5
+> in "b db\r\n"
+> in "c\r\n"
+> in "\e[r"
+> sb-down 0
+> in "hafgeg\r\n"
+> in "\e[3M"
+> in "\e[r"
+> sb-up 7
+> in "\e[r"
+> in "\n"
+> in "\e[2T"
+> in "ghhchbda\r\n"
+> sel-copy
+< copy none
+> in "\e[r"
+> sel-start 0 1
+> sel-target 4 3
+> in "bcaf\r\n"
+> in "fgcg\r\n"
+> in "\e[?1049h"
+> sel-copy
+< copy "\nfhcgh\nhac"
+> sel-copy
+< copy "\nfhcgh\nhac"
+> dump render
+render
+   0|ecf          |
+   1|             |
+   2|fhcgh        |
+   3|hac          |
+  1: 0-12 000000/e5e5e5 -
+  2: 0-12 000000/e5e5e5 -
+  3: 0-4 000000/e5e5e5 -
+> sb-down 1
+> in "\e[?1049l"
+> in "\e[2;7r"
+> in "eheagae\r\n"
+> in "bd fda\r\n"
+> in "\r\n"
+> sel-start 7 2
+> sel-target 2 2
+> in "db\r\n"
+> in "\e[4S"
+> resize 5 7
+> in "\e[?1049h"
+> in "a\r\n"
+> in "adh \r\n"

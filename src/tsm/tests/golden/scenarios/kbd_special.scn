@@ -1,0 +1,32 @@
+key BackSpace
+bs-delete on
+key BackSpace
+bs-delete off
+key Tab
+key KP_Tab
+key ISO_Left_Tab
+key Linefeed
+key Clear
+key Sys_Req
+key Escape
+key Return
+key KP_Enter
+key Find
+key Insert
+key Delete
+key Select
+key Pause
+key Scroll_Lock
+key KP_Space
+key 0xffff
+key 0xffff uni="x"
+# Enter with LNM and keypad application mode
+in "\e[20h"
+key Return
+key KP_Enter
+in "\e="
+key KP_Enter
+key Return
+in "\e[20l"
+key KP_Enter
+key Return

@@ -1,0 +1,5 @@
+resize 20 3
+# G1 = DEC special graphics, SO/SI switch GL
+in "\e)0"
+in "lqk\x0elqk\x0flqk"
+dump text

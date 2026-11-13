@@ -1,0 +1,19 @@
+resize 10 3
+in "\e[?1h"
+dump state
+in "\e[?2h\e[?3h\e[?4h\e[?8l\e[?12h\e[?18h\e[?19h\e[?42h"
+dump state
+in "\e[?5h"
+dump state
+in "\e[?6h"
+dump state
+in "\e[?7l"
+dump state
+in "\e[?25l"
+dump state
+in "\e[?1;5;6;7;25;42;8l"
+dump state
+in "\e[?1;999;5h"
+dump state
+in "\e[?h\e[?0h"
+dump state

@@ -1,0 +1,40 @@
+> key a ascii=a uni="a"
+< write "a"
+< ret true
+> key 0xe9 uni="é"
+< write "\xc3\xa9"
+< ret true
+> key 0x20ac uni="€"
+< write "\xe2\x82\xac"
+< ret true
+> key 0x1001f600 uni="😀"
+< write "\xf0\x9f\x98\x80"
+< ret true
+> key a
+< ret false
+> key a uni=U+d800
+< ret false
+> key a uni=U+110000
+< ret false
+> type "Hello wörld €"
+< write "Hello w\xc3\xb6rld \xe2\x82\xac"
+> in "\e[61\"p"
+> key a uni="a"
+< write "a"
+< ret true
+> key 0xe9 uni="é"
+< write "?"
+< ret true
+> key 0x20ac uni="€"
+< write "?"
+< ret true
+> in "\e[62\"p"
+> key a uni="a"
+< write "a"
+< ret true
+> key 0xe9 uni="é"
+< write "\xe9"
+< ret true
+> key 0x20ac uni="€"
+< write "?"
+< ret true

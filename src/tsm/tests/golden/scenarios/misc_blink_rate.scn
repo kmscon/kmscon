@@ -1,0 +1,15 @@
+# Note: differs from the C libtsm 4.x: an empty CSI parameter is 0, not "missing"
+in "\e[16;200]"
+dump state
+in "\e[16;10]"
+dump state
+in "\e[16;99999]"
+dump state
+in "\e[16]"
+dump state
+in "\e[16;]"
+dump state
+in "\e[15;300]"
+dump state
+in "\e[16;300;1]"
+dump state

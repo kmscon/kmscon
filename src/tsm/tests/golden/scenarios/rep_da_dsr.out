@@ -1,0 +1,16 @@
+> resize 10 4
+> in "\e[c\e[0c\e[>c\e[>0c\e[=c\e[1c\e[?c\e[>1c\e[0;0c"
+< write "\e[?60;1;6;9;15c\e[?60;1;6;9;15c\e[>1;1;0c\e[>1;1;0c"
+> in "\e[5n\e[6n\e[?6n\e[n\e[0n\e[7n\e[?5n"
+< write "\e[0n\e[1;1R\e[1;1R\e[0n"
+> in "\e[3;4H\e[6n"
+< write "\e[3;4R"
+> in "\e[1;1H0123456789\e[6n"
+< write "\e[1;11R"
+> in "\e[4;10H\u{4e16}\e[6n"
+< write "\e[4;12R"
+> in "\e[18t\e[19t\e[t\e[14t\e[18;1t"
+< write "\e[8;4;10t\e[9;4;10t\e[8;4;10t"
+> resize 132 50
+> in "\e[18t"
+< write "\e[8;50;132t"

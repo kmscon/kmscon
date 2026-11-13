@@ -32,7 +32,6 @@
 
 #include <errno.h>
 #include <inttypes.h>
-#include <libtsm.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -93,7 +92,6 @@ struct kmscon_terminal {
 	unsigned int cols;
 	unsigned int rows;
 
-	struct tsm_screen *console;
 	struct tsm_vte *vte;
 	struct kmscon_pty *pty;
 	struct ev_fd *ptyfd;
@@ -313,7 +311,7 @@ static void disable_screen(struct screen *scr)
 
 static void do_redraw_screen(struct screen *scr)
 {
-	struct tsm_screen_attr attr;
+	struct tsm_attr attr;
 	int ret;
 
 	if (!scr->term->awake || !kmscon_session_get_foreground(scr->term->session))
@@ -328,9 +326,9 @@ static void do_redraw_screen(struct screen *scr)
 
 	scr->pending = false;
 
-	tsm_vte_get_def_attr(scr->term->vte, &attr);
+	tsm_vte_get_default_attr(scr->term->vte, &attr);
 	kmscon_text_prepare(scr->txt, &attr, scr->term->blinking);
-	kmscon_text_draw(scr->txt, scr->term->console, scr->term->cursor_blinking);
+	kmscon_text_draw(scr->txt, scr->term->vte, scr->term->cursor_blinking);
 	draw_pointer(scr);
 	kmscon_text_render(scr->txt);
 
@@ -487,7 +485,7 @@ static void asciinema_start(struct kmscon_terminal *term)
 	kmscon_asciinema_start(term->asciinema);
 }
 
-static void osc_event(struct tsm_vte *vte, const char *osc_string, size_t osc_len, void *data)
+static void osc_event(void *data, const char *osc_string, size_t osc_len)
 {
 	struct kmscon_terminal *term = data;
 
@@ -500,7 +498,7 @@ static void osc_event(struct tsm_vte *vte, const char *osc_string, size_t osc_le
 	}
 }
 
-static void bell_event(struct tsm_vte *vte, void *data)
+static void bell_event(void *data)
 {
 	struct kmscon_terminal *term = data;
 
@@ -510,21 +508,20 @@ static void bell_event(struct tsm_vte *vte, void *data)
 	kmscon_session_bell(term->session);
 }
 
-static void led_event(struct tsm_vte *vte, unsigned int leds, void *data)
+static void led_event(void *data, unsigned int leds)
 {
 	struct kmscon_terminal *term = data;
 
-	kmscon_session_set_leds(term->session, leds & TSM_VTE_LED_SCROLL_LOCK,
-				leds & TSM_VTE_LED_NUM_LOCK, leds & TSM_VTE_LED_CAPS_LOCK);
+	kmscon_session_set_leds(term->session, leds & TSM_LED_SCROLL_LOCK, leds & TSM_LED_NUM_LOCK,
+				leds & TSM_LED_CAPS_LOCK);
 }
 
-static void mouse_event(struct tsm_vte *vte, enum tsm_mouse_track_mode track_mode,
-			bool track_pixels, void *data)
+static void mouse_event(void *data, bool enabled, bool track_pixels)
 {
 	struct kmscon_terminal *term = data;
 
 	term->pointer.select = false;
-	tsm_screen_selection_reset(term->console);
+	tsm_vte_selection_reset(term->vte);
 }
 
 static unsigned int terminal_get_auto_font_size(struct kmscon_terminal *term)
@@ -773,7 +770,7 @@ static bool terminal_update_size(struct kmscon_terminal *term)
 static void terminal_update_size_notify(struct kmscon_terminal *term)
 {
 	if (terminal_update_size(term)) {
-		tsm_screen_resize(term->console, term->cols, term->rows);
+		tsm_vte_resize(term->vte, term->cols, term->rows);
 		kmscon_pty_resize(term->pty, term->cols, term->rows);
 		redraw_all(term);
 	}
@@ -957,7 +954,7 @@ static void zoom_out(struct kmscon_terminal *term)
 static void input_event(struct input *input, struct input_key_event *ev, void *data)
 {
 	struct kmscon_terminal *term = data;
-	uint32_t ms = tsm_screen_get_cursor_blinking_rate_ms(term->console);
+	uint32_t ms = tsm_vte_get_cursor_blink_rate_ms(term->vte);
 	struct itimerspec blink_interval = {
 		.it_interval = {ms / 1000, (ms % 1000) * 1000000L},
 		.it_value = {BLINK_CURSOR_TYPING, 0},
@@ -968,31 +965,31 @@ static void input_event(struct input *input, struct input_key_event *ev, void *d
 		return;
 
 	// reset mouse selection on keypress
-	tsm_screen_selection_reset(term->console);
+	tsm_vte_selection_reset(term->vte);
 	kmscon_asciinema_stop(term->asciinema);
 	term->cursor_blinking = false;
 	ev_timer_update(term->blink_cursor, &blink_interval);
 
 	if (conf_grab_matches(term->conf->grab_scroll_up, ev->mods, ev->num_syms, ev->keysyms)) {
-		tsm_screen_sb_up(term->console, 1);
+		tsm_vte_sb_up(term->vte, 1);
 		redraw_all(term);
 		ev->handled = true;
 		return;
 	}
 	if (conf_grab_matches(term->conf->grab_scroll_down, ev->mods, ev->num_syms, ev->keysyms)) {
-		tsm_screen_sb_down(term->console, 1);
+		tsm_vte_sb_down(term->vte, 1);
 		redraw_all(term);
 		ev->handled = true;
 		return;
 	}
 	if (conf_grab_matches(term->conf->grab_page_up, ev->mods, ev->num_syms, ev->keysyms)) {
-		tsm_screen_sb_page_up(term->console, 1);
+		tsm_vte_sb_page_up(term->vte, 1);
 		redraw_all(term);
 		ev->handled = true;
 		return;
 	}
 	if (conf_grab_matches(term->conf->grab_page_down, ev->mods, ev->num_syms, ev->keysyms)) {
-		tsm_screen_sb_page_down(term->console, 1);
+		tsm_vte_sb_page_down(term->vte, 1);
 		redraw_all(term);
 		ev->handled = true;
 		return;
@@ -1026,21 +1023,21 @@ static void input_event(struct input *input, struct input_key_event *ev, void *d
 
 	if (tsm_vte_handle_keyboard(term->vte, ev->keysyms[0], ev->ascii, ev->mods,
 				    ev->codepoints[0])) {
-		tsm_screen_sb_reset(term->console);
+		tsm_vte_sb_reset(term->vte);
 		redraw_all(term);
 		ev->handled = true;
 	}
 }
 
-static void start_selection(struct tsm_screen *console, unsigned int x, unsigned int y)
+static void start_selection(struct tsm_vte *vte, unsigned int x, unsigned int y)
 {
-	tsm_screen_selection_reset(console);
-	tsm_screen_selection_start(console, x, y);
+	tsm_vte_selection_reset(vte);
+	tsm_vte_selection_start(vte, x, y);
 }
 
-static void update_selection(struct tsm_screen *console, unsigned int x, unsigned int y)
+static void update_selection(struct tsm_vte *vte, unsigned int x, unsigned int y)
 {
-	tsm_screen_selection_target(console, x, y);
+	tsm_vte_selection_target(vte, x, y);
 }
 
 static void free_selection(struct kmscon_terminal *term)
@@ -1055,7 +1052,7 @@ static void free_selection(struct kmscon_terminal *term)
 static void copy_selection(struct kmscon_terminal *term)
 {
 	free_selection(term);
-	term->pointer.copy_len = tsm_screen_selection_copy(term->console, &term->pointer.copy);
+	term->pointer.copy_len = tsm_vte_selection_copy(term->vte, &term->pointer.copy);
 }
 
 static void forward_pointer_event(struct kmscon_terminal *term, struct input_pointer_event *ev)
@@ -1104,14 +1101,13 @@ static void handle_pointer_button(struct kmscon_terminal *term, struct input_poi
 	case 0:
 		if (ev->pressed) {
 			if (ev->double_click) {
-				tsm_screen_selection_word(term->console, term->pointer.posx,
-							  term->pointer.posy);
+				tsm_vte_selection_word(term->vte, term->pointer.posx,
+						       term->pointer.posy);
 				copy_selection(term);
 				term->pointer.select = false;
 			} else {
 				term->pointer.select = true;
-				start_selection(term->console, term->pointer.posx,
-						term->pointer.posy);
+				start_selection(term->vte, term->pointer.posx, term->pointer.posy);
 			}
 		} else {
 			if (term->pointer.select)
@@ -1122,13 +1118,14 @@ static void handle_pointer_button(struct kmscon_terminal *term, struct input_poi
 	case 1:
 		if (ev->pressed) {
 			if (term->pointer.copy && term->pointer.copy_len)
-				tsm_vte_paste(term->vte, term->pointer.copy);
-			tsm_screen_selection_reset(term->console);
+				tsm_vte_paste(term->vte, term->pointer.copy,
+					      term->pointer.copy_len);
+			tsm_vte_selection_reset(term->vte);
 		}
 		break;
 	case 2:
 		term->pointer.select = false;
-		tsm_screen_selection_reset(term->console);
+		tsm_vte_selection_reset(term->vte);
 		break;
 	}
 }
@@ -1209,8 +1206,7 @@ static void pointer_event(struct input *input, struct input_pointer_event *ev, v
 		hw_cursor_show(term, ev->pointer_x, ev->pointer_y);
 	}
 
-	if (tsm_vte_get_mouse_mode(term->vte) != TSM_MOUSE_TRACK_DISABLE &&
-	    ev->event != POINTER_SYNC) {
+	if (tsm_vte_mouse_enabled(term->vte) && ev->event != POINTER_SYNC) {
 		forward_pointer_event(term, ev);
 		return;
 	}
@@ -1220,7 +1216,7 @@ static void pointer_event(struct input *input, struct input_pointer_event *ev, v
 		break;
 	case POINTER_MOVED:
 		if (term->pointer.select)
-			update_selection(term->console, term->pointer.posx, term->pointer.posy);
+			update_selection(term->vte, term->pointer.posx, term->pointer.posy);
 		break;
 	case POINTER_BUTTON:
 		handle_pointer_button(term, ev);
@@ -1233,16 +1229,16 @@ static void pointer_event(struct input *input, struct input_pointer_event *ev, v
 				zoom_out(term);
 		} else {
 			if (term->conf->natural_scrolling != (ev->wheel > 0))
-				tsm_screen_sb_up(term->console, 3);
+				tsm_vte_sb_up(term->vte, 3);
 			else
-				tsm_screen_sb_down(term->console, 3);
+				tsm_vte_sb_down(term->vte, 3);
 		}
 		break;
 	case POINTER_SYNC:
 		redraw_all(term);
 		break;
 	case POINTER_HIDE_TIMEOUT:
-		tsm_screen_selection_reset(term->console);
+		tsm_vte_selection_reset(term->vte);
 		term->pointer.visible = false;
 		hw_cursor_hide(term);
 		break;
@@ -1305,8 +1301,8 @@ static int terminal_open(struct kmscon_terminal *term)
 		return -EALREADY;
 
 	tsm_vte_hard_reset(term->vte);
-	width = tsm_screen_get_width(term->console);
-	height = tsm_screen_get_height(term->console);
+	width = tsm_vte_get_width(term->vte);
+	height = tsm_vte_get_height(term->vte);
 	ret = kmscon_pty_open(term->pty, width, height, has_kms_display(term));
 	if (ret)
 		return ret;
@@ -1382,8 +1378,7 @@ void terminal_destroy(struct kmscon_terminal *term)
 	ev_eloop_rm_fd(term->ptyfd);
 	kmscon_pty_unref(term->pty);
 	kmscon_font_unref(term->font);
-	tsm_vte_unref(term->vte);
-	tsm_screen_unref(term->console);
+	tsm_vte_free(term->vte);
 	input_unref(term->input);
 	ev_eloop_unref(term->eloop);
 	free_selection(term);
@@ -1421,12 +1416,20 @@ static void pty_event(struct ev_fd *fd, int mask, void *data)
 	kmscon_pty_dispatch(term->pty);
 }
 
-static void write_event(struct tsm_vte *vte, const char *u8, size_t len, void *data)
+static void write_event(void *data, const char *u8, size_t len)
 {
 	struct kmscon_terminal *term = data;
 
 	kmscon_pty_write(term->pty, u8, len);
 }
+
+static const struct tsm_callbacks tsm_cbs = {
+	.write = write_event,
+	.osc = osc_event,
+	.bell = bell_event,
+	.leds = led_event,
+	.mouse_mode = mouse_event,
+};
 
 struct kmscon_terminal *terminal_new(struct kmscon_session *session, unsigned int vtnr,
 				     struct conf_ctx *conf_ctx, struct ev_eloop *eloop,
@@ -1452,29 +1455,23 @@ struct kmscon_terminal *terminal_new(struct kmscon_session *session, unsigned in
 	term->conf_ctx = conf_ctx;
 	term->conf = conf_ctx_get_mem(term->conf_ctx);
 
-	ret = tsm_screen_new(&term->console, log_llog, NULL);
+	ret = tsm_vte_new(&term->vte, &tsm_cbs, term);
 	if (ret)
 		goto err_free;
-	tsm_screen_set_max_sb(term->console, term->conf->sb_size);
 
-	ret = tsm_vte_new(&term->vte, term->console, write_event, term, log_llog, NULL);
-	if (ret)
-		goto err_con;
-
+	tsm_vte_set_max_scrollback(term->vte, term->conf->sb_size);
 	tsm_vte_set_backspace_sends_delete(term->vte, term->conf->backspace_delete);
 
-	tsm_vte_set_osc_cb(term->vte, osc_event, (void *)term);
-	tsm_vte_set_mouse_cb(term->vte, mouse_event, (void *)term);
-	tsm_vte_set_bell_cb(term->vte, bell_event, (void *)term);
-	tsm_vte_set_led_cb(term->vte, led_event, (void *)term);
-
-	ret = tsm_vte_set_palette(term->vte, term->conf->palette);
-	if (ret)
-		goto err_vte;
-
-	ret = tsm_vte_set_custom_palette(term->vte, term->conf->custom_palette);
-	if (ret)
-		goto err_vte;
+	if (term->conf->palette && !strcmp(term->conf->palette, "custom")) {
+		ret = tsm_vte_set_custom_palette(term->vte, term->conf->custom_palette);
+		if (ret)
+			goto err_vte;
+	} else if (term->conf->palette) {
+		/* unknown names keep the default palette, as libtsm 4 did */
+		if (tsm_vte_set_palette(term->vte, term->conf->palette))
+			log_warning("unknown palette %s, using the default one",
+				    term->conf->palette);
+	}
 
 	term->font_size = term->conf->font_size;
 	if (term->font_size) {
@@ -1544,9 +1541,7 @@ err_pty:
 err_font:
 	kmscon_font_unref(term->font);
 err_vte:
-	tsm_vte_unref(term->vte);
-err_con:
-	tsm_screen_unref(term->console);
+	tsm_vte_free(term->vte);
 err_free:
 	free(term);
 	return NULL;

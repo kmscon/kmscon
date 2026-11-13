@@ -1,0 +1,39 @@
+> resize 10 4
+> in "a\e[1"
+> in ";31mb\e"
+> in "[0mc\e]2;ti"
+> in "tle\a"
+< osc "2;title"
+> in "\e[2;\e[3;4Hd"
+> dump state text attrs
+state
+  size 10x4 cursor 4,2
+  cursor-style 0 blink 500
+  margins 0-3
+  tabs 0,8
+  screen-flags AUTO_WRAP
+  vte-flags SEND_RECEIVE_MODE|TEXT_CURSOR_MODE|AUTO_WRAP_MODE|AUTO_REPEAT_MODE|BACKGROUND_COLOR_ERASE_MODE
+  mouse-mode 0
+  sb count=0 pos=0 max=0
+  default e5e5e5/000000
+  erase e5e5e5/000000 -
+text
+   0|abc·······|
+   1|··········|
+   2|···d······|
+   3|··········|
+attrs
+  0: 1 ff0000/000000 B
+> in "\e[1;31\e]2;x\ae"
+< osc "2;x"
+> in "\e]2;y\e[1mf\e[m"
+< osc "2;y"
+> dump text attrs
+text
+   0|abc·······|
+   1|··········|
+   2|···def····|
+   3|··········|
+attrs
+  0: 1 ff0000/000000 B
+  2: 5 e5e5e5/000000 B

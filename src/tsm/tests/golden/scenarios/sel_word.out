@@ -1,0 +1,31 @@
+> resize 20 4
+> in "foo bar.baz  qux\r\n  end"
+> sel-word 5 0
+> sel-copy
+< copy "bar.baz"
+> sel-word 4 0
+> sel-copy
+< copy "bar.baz"
+> sel-word 0 0
+> sel-copy
+< copy "foo"
+> sel-word 14 0
+> sel-copy
+< copy "qux"
+> sel-reset
+> sel-word 3 0
+> sel-copy
+< copy none
+> sel-word 19 0
+> sel-copy
+< copy "qux"
+> sel-word 3 1
+> sel-copy
+< copy "end"
+> dump render
+render
+   0|foo bar.baz  qux    |
+   1|  end               |
+   2|                    |
+   3|                    |
+  1: 2-4 000000/e5e5e5 -

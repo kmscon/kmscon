@@ -39,7 +39,6 @@
  */
 
 #include <errno.h>
-#include <libtsm.h>
 #include <pthread.h>
 #include <stdint.h>
 #include <stdlib.h>

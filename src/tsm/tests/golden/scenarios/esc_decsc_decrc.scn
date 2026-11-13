@@ -1,0 +1,13 @@
+resize 10 5
+# restore with no prior save goes home with default attributes
+in "\e[3;4H\e[1;31m\e8x"
+dump state attrs
+# save cursor, pen, charsets, wrap, origin and cursor style
+in "\e[2;3H\e[4;44m\e(0\e[?7l\e[2;4r\e[?6h\e[3 q\e7"
+in "\e[m\e(B\e[?7h\e[?6l\e[0 q\e[5;5H"
+dump state
+in "\e8q"
+dump state text attrs
+# a soft reset restores the saved state to defaults
+in "\e7\e[!p\e8y"
+dump state text attrs

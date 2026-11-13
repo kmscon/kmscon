@@ -1,0 +1,12 @@
+# from test_selection.c: copy line(s) scrolled (no scrollback)
+resize 20 6
+in "\eE   Hello World!\eEFiller Text\eE"
+sel-start 3 1
+sel-target 14 1
+in "\eE\eE\eE\eE"
+sel-copy
+sel-start 3 1
+sel-target 5 2
+in "\eE"
+sel-copy
+dump render

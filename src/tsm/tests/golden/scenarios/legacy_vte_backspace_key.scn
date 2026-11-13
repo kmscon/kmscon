@@ -1,0 +1,9 @@
+# from test_vte.c: test_vte_backspace_key
+key BackSpace ascii=0x08 uni=U+08
+key BackSpace ascii=0x7f uni=U+7f
+bs-delete on
+key BackSpace ascii=0x08 uni=U+08
+key BackSpace ascii=0x7f uni=U+7f
+bs-delete off
+key BackSpace ascii=0x08 uni=U+08
+key BackSpace ascii=0x7f uni=U+7f

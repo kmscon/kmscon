@@ -1,0 +1,11 @@
+# Note: differs from the C libtsm 4.x: soft reset clears bracketed paste; CSI 4 p (no ") is not DECSCL; CSI > p (XTSMPOINTER) does not reset
+resize 10 4
+in "\e[?1049h\e[2;3r\e[?1h\e[4h\e[?6h\e[?7l\e[?25l\e[1;31m\e[?1000h\e[?2004h\e(0\e[3 q"
+dump state
+in "\e[!p"
+dump state
+paste "x"
+in "lq\e[?1049h\e[2;3r\e[?1h\e[>p"
+dump state text
+in "\e[?1049h\e[4h\e[4p"
+dump state

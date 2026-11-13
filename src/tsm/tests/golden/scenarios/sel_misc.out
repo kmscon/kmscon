@@ -1,0 +1,52 @@
+> resize 10 4
+> in "a\u{4e16}b\r\n\r\nx  y   "
+> sel-start 0 0
+> sel-target 9 2
+> sel-copy
+< copy "a\xe4\xb8\x96 b\n\nx  y   "
+> sel-reset
+> sel-start 10 0
+> sel-copy
+< copy none
+> sel-start 0 4
+> sel-copy
+< copy none
+> sel-start 1 0
+> sel-target 10 3
+> sel-target 0 4
+> sel-copy
+< copy "\xe4\xb8\x96"
+> sel-reset
+> sel-target 2 2
+> sel-copy
+< copy none
+> sel-start 0 0
+> sel-target 3 0
+> in "\e[?1049h"
+> sel-copy
+< copy none
+> in "\e[?1049l"
+> sel-copy
+< copy none
+> sel-start 0 2
+> sel-target 4 2
+> in "\e[H\e[7mINV\e[m"
+> dump render
+render
+   0|INVb      |
+   1|          |
+   2|x  y      |
+   3|          |
+  0: 0-2 000000/e5e5e5 -
+  2: 0-4 000000/e5e5e5 -
+> in "\e[?5h"
+> dump render
+render
+   0|INVb      |
+   1|          |
+   2|x  y      |
+   3|          |
+  0: 3-9 000000/e5e5e5 -
+  1: 0-9 000000/e5e5e5 -
+  2: 5-9 000000/e5e5e5 -
+  3: 0-9 000000/e5e5e5 -

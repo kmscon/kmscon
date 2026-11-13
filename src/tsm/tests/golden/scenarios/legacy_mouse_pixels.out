@@ -1,0 +1,12 @@
+> in "\e[?1016h"
+> in "\e[?1003h"
+< mouse-cb mode=1003 pixels=1
+> mouse move left cell=0,0 px=236,120
+< write "\e[<35;236;120M"
+< ret true
+> mouse press left cell=0,0 px=236,120
+< write "\e[<0;236;120M"
+< ret true
+> mouse release left cell=0,0 px=236,120
+< write "\e[<0;236;120m"
+< ret true

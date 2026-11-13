@@ -31,12 +31,12 @@
 #ifndef KMSCON_CONFIG_H
 #define KMSCON_CONFIG_H
 
-#include <libtsm.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include "conf.h"
 #include "render/text.h"
+#include "tsm.h"
 
 enum kmscon_conf_gpu_selection {
 	KMSCON_GPU_ALL,

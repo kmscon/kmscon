@@ -1,0 +1,288 @@
+> key F1 mods=none
+< write "\eOP"
+< ret true
+> key F2 mods=none
+< write "\eOQ"
+< ret true
+> key F3 mods=none
+< write "\eOR"
+< ret true
+> key F4 mods=none
+< write "\eOS"
+< ret true
+> key F5 mods=none
+< write "\e[15~"
+< ret true
+> key F6 mods=none
+< write "\e[17~"
+< ret true
+> key F7 mods=none
+< write "\e[18~"
+< ret true
+> key F8 mods=none
+< write "\e[19~"
+< ret true
+> key F9 mods=none
+< write "\e[20~"
+< ret true
+> key F10 mods=none
+< write "\e[21~"
+< ret true
+> key F11 mods=none
+< write "\e[23~"
+< ret true
+> key F12 mods=none
+< write "\e[24~"
+< ret true
+> key F13 mods=none
+< write "\e[25~"
+< ret true
+> key F14 mods=none
+< write "\e[26~"
+< ret true
+> key F15 mods=none
+< write "\e[28~"
+< ret true
+> key F16 mods=none
+< write "\e[29~"
+< ret true
+> key F17 mods=none
+< write "\e[31~"
+< ret true
+> key F18 mods=none
+< write "\e[32~"
+< ret true
+> key F19 mods=none
+< write "\e[33~"
+< ret true
+> key F20 mods=none
+< write "\e[34~"
+< ret true
+> key KP_F1 mods=none
+< write "\eOP"
+< ret true
+> key KP_F2 mods=none
+< write "\eOQ"
+< ret true
+> key KP_F3 mods=none
+< write "\eOR"
+< ret true
+> key KP_F4 mods=none
+< write "\eOS"
+< ret true
+> key F1 mods=shift
+< write "\e[23~"
+< ret true
+> key F2 mods=shift
+< write "\e[24~"
+< ret true
+> key F3 mods=shift
+< write "\e[25~"
+< ret true
+> key F4 mods=shift
+< write "\e[26~"
+< ret true
+> key F5 mods=shift
+< write "\e[28~"
+< ret true
+> key F6 mods=shift
+< write "\e[29~"
+< ret true
+> key F7 mods=shift
+< write "\e[31~"
+< ret true
+> key F8 mods=shift
+< write "\e[32~"
+< ret true
+> key F9 mods=shift
+< write "\e[33~"
+< ret true
+> key F10 mods=shift
+< write "\e[34~"
+< ret true
+> key F11 mods=shift
+< write "\e[23;2~"
+< ret true
+> key F12 mods=shift
+< write "\e[24;2~"
+< ret true
+> key F13 mods=shift
+< write "\e[25;2~"
+< ret true
+> key F14 mods=shift
+< write "\e[26;2~"
+< ret true
+> key F15 mods=shift
+< write "\e[28;2~"
+< ret true
+> key F16 mods=shift
+< write "\e[29;2~"
+< ret true
+> key F17 mods=shift
+< write "\e[31;2~"
+< ret true
+> key F18 mods=shift
+< write "\e[32;2~"
+< ret true
+> key F19 mods=shift
+< write "\e[33;2~"
+< ret true
+> key F20 mods=shift
+< write "\e[34;2~"
+< ret true
+> key KP_F1 mods=shift
+< write "\e[23~"
+< ret true
+> key KP_F2 mods=shift
+< write "\e[24~"
+< ret true
+> key KP_F3 mods=shift
+< write "\e[25~"
+< ret true
+> key KP_F4 mods=shift
+< write "\e[26~"
+< ret true
+> key F1 mods=ctrl
+< write "\eOP"
+< ret true
+> key F2 mods=ctrl
+< write "\eOQ"
+< ret true
+> key F3 mods=ctrl
+< write "\eOR"
+< ret true
+> key F4 mods=ctrl
+< write "\eOS"
+< ret true
+> key F5 mods=ctrl
+< write "\e[15~"
+< ret true
+> key F6 mods=ctrl
+< write "\e[17~"
+< ret true
+> key F7 mods=ctrl
+< write "\e[18~"
+< ret true
+> key F8 mods=ctrl
+< write "\e[19~"
+< ret true
+> key F9 mods=ctrl
+< write "\e[20~"
+< ret true
+> key F10 mods=ctrl
+< write "\e[21~"
+< ret true
+> key F11 mods=ctrl
+< write "\e[23~"
+< ret true
+> key F12 mods=ctrl
+< write "\e[24~"
+< ret true
+> key F13 mods=ctrl
+< write "\e[25~"
+< ret true
+> key F14 mods=ctrl
+< write "\e[26~"
+< ret true
+> key F15 mods=ctrl
+< write "\e[28~"
+< ret true
+> key F16 mods=ctrl
+< write "\e[29~"
+< ret true
+> key F17 mods=ctrl
+< write "\e[31~"
+< ret true
+> key F18 mods=ctrl
+< write "\e[32~"
+< ret true
+> key F19 mods=ctrl
+< write "\e[33~"
+< ret true
+> key F20 mods=ctrl
+< write "\e[34~"
+< ret true
+> key KP_F1 mods=ctrl
+< write "\eOP"
+< ret true
+> key KP_F2 mods=ctrl
+< write "\eOQ"
+< ret true
+> key KP_F3 mods=ctrl
+< write "\eOR"
+< ret true
+> key KP_F4 mods=ctrl
+< write "\eOS"
+< ret true
+> key F1 mods=alt
+< write "\e\eOP"
+< ret true
+> key F2 mods=alt
+< write "\e\eOQ"
+< ret true
+> key F3 mods=alt
+< write "\e\eOR"
+< ret true
+> key F4 mods=alt
+< write "\e\eOS"
+< ret true
+> key F5 mods=alt
+< write "\e\e[15~"
+< ret true
+> key F6 mods=alt
+< write "\e\e[17~"
+< ret true
+> key F7 mods=alt
+< write "\e\e[18~"
+< ret true
+> key F8 mods=alt
+< write "\e\e[19~"
+< ret true
+> key F9 mods=alt
+< write "\e\e[20~"
+< ret true
+> key F10 mods=alt
+< write "\e\e[21~"
+< ret true
+> key F11 mods=alt
+< write "\e\e[23~"
+< ret true
+> key F12 mods=alt
+< write "\e\e[24~"
+< ret true
+> key F13 mods=alt
+< write "\e\e[25~"
+< ret true
+> key F14 mods=alt
+< write "\e\e[26~"
+< ret true
+> key F15 mods=alt
+< write "\e\e[28~"
+< ret true
+> key F16 mods=alt
+< write "\e\e[29~"
+< ret true
+> key F17 mods=alt
+< write "\e\e[31~"
+< ret true
+> key F18 mods=alt
+< write "\e\e[32~"
+< ret true
+> key F19 mods=alt
+< write "\e\e[33~"
+< ret true
+> key F20 mods=alt
+< write "\e\e[34~"
+< ret true
+> key KP_F1 mods=alt
+< write "\e\eOP"
+< ret true
+> key KP_F2 mods=alt
+< write "\e\eOQ"
+< ret true
+> key KP_F3 mods=alt
+< write "\e\eOR"
+< ret true
+> key KP_F4 mods=alt
+< write "\e\eOS"
+< ret true
