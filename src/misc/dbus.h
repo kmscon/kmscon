@@ -36,7 +36,7 @@ struct kmscon_dbus;
 
 typedef void (*dbus_update_xkb_layout_cb)(const char *model, const char *layout,
 					  const char *variant, const char *options, void *data);
-typedef void (*dbus_session_lock_cb)(pid_t leader, uid_t uid, bool lock, void *data);
+typedef void (*dbus_session_lock_cb)(pid_t leader, bool lock, void *data);
 
 #ifdef BUILD_ENABLE_DBUS
 void kmscon_dbus_set_xkb_env_from_locale1(struct kmscon_dbus *dbus);
