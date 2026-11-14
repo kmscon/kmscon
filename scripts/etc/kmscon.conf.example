@@ -49,6 +49,15 @@
 ## Disable HDMI-A-1
 #screen=[HDMI-A-1]disabled
 
+### Renderer options
+## GLES2 fragment shader applied to the whole screen (gltex renderer only), disabled by default
+#render-shader=/usr/share/kmscon/shaders/amber.frag
+## Redraw rate in frames per second, gltex renderer only (default: 0, only repaint
+## when the screen content changes; clamped to 1000). Uncomment for smooth effects.
+#render-fps=60
+## Temporal ghosting (phosphor persistence) in percent (default: 0, disabled, max 99)
+#render-ghosting=85
+
 ## Fonts
 ## font-engine, can be [freetype, pango, psf, unifont, 8x16], by default kmscon tries in this order.
 #font-engine=freetype

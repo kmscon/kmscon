@@ -204,6 +204,15 @@ struct kmscon_conf_t {
 	/* font name */
 	char *font_name;
 
+	/* Renderer Options */
+	/* path to a GLES2 fragment shader applied to the whole screen */
+	char *render_shader;
+	/* redraw rate in frames per second for render-only redraws;
+	 * 0 only repaints when the screen content changes */
+	unsigned int render_fps;
+	/* temporal ghosting/phosphor persistence in percent (0 = off) */
+	unsigned int render_ghosting;
+
 	/* Palette Options */
 	/* color palette */
 	char *palette;

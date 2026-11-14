@@ -43,8 +43,11 @@
 #include <errno.h>
 #include <limits.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <time.h>
 #include "font/font.h"
 #include "gltex_atlas.frag.bin.h"
 #include "gltex_atlas.vert.bin.h"
@@ -89,6 +92,13 @@ struct gl_glyph {
 #define GLYPH_STRIDE(gly) ((gly)->buf.stride)
 #define GLYPH_DATA(gly) ((gly)->buf.data)
 
+struct gltex_target {
+	GLuint tex;
+	GLuint fbo;
+	unsigned int w;
+	unsigned int h;
+};
+
 struct gltex {
 	struct shl_hashtable *glyphs;
 	unsigned int max_tex_size;
@@ -116,6 +126,38 @@ struct gltex {
 	GLfloat sin;
 
 	struct tsm_screen_attr attr;
+
+	/* post-processing fragment shader applied to the whole screen */
+	struct gl_shader *post_shader;
+	GLuint post_uni_source;
+	GLuint post_uni_time;
+	GLuint post_uni_resolution;
+	struct timespec post_start;
+
+	/* temporal ghosting/phosphor persistence: amount of the previous
+	 * frame the post-processing shader keeps (0 = off) */
+	GLfloat ghost_gamma;
+	GLuint post_uni_history;
+	GLuint post_uni_gamma;
+
+	/* render targets used by the post-processing pipeline */
+	struct gltex_target scene;
+	/* single history buffer with the last presented frame; it is passed
+	 * back into the post-processing shader as "history" */
+	struct gltex_target hist;
+	/* whether the scene texture holds the current console; render-only
+	 * frames can skip the glyph pass and only re-run post-processing */
+	bool scene_valid;
+
+	/* live reload of the shader file */
+	struct timespec shader_mtime;
+	struct timespec shader_check_time;
+	off_t shader_size;
+	bool shader_missing;
+
+	/* whether an unretryable post-processing setup failure was already
+	 * reported; such failures are only logged once */
+	bool post_setup_warned;
 };
 
 static int gltex_init(struct kmscon_text *txt)
@@ -173,6 +215,389 @@ static void compute_advance_and_offset(struct kmscon_text *txt)
 		gt->off_y = (float)2.0 * off_x / gt->sw;
 	}
 	display_set_cursor_offset(txt->disp, off_x, off_y);
+}
+
+/* Post-processing pass
+ * The whole console is first rendered into an off-screen framebuffer. That
+ * framebuffer is then drawn to the screen again through a fragment shader:
+ * the user-provided --render-shader file, or a built-in one when only
+ * --render-ghosting is configured. The shader gets:
+ *   varying vec2 texcoord;        texture coordinates of the screen
+ *   uniform sampler2D source;     rendered console
+ *   uniform float time;           seconds since the renderer was created
+ *   uniform vec2 resolution;      screen size in pixels
+ *   uniform sampler2D history;    last presented frame (ghosting only)
+ *   uniform float gamma;          ghosting amount, 0..0.99 (ghosting only)
+ * All uniforms are optional; missing ones are simply ignored.
+ *
+ * User shaders guard their history/gamma uniforms and blend code with
+ * "#if HISTORY_ENABLED" around a "#define HISTORY_ENABLED 0" marker line;
+ * while ghosting is configured that marker is flipped to 1 before compiling.
+ * With ghosting enabled the shader blends source and history itself and the
+ * result drawn to the screen is copied into the single history buffer
+ * afterwards, so ghosting costs one extra pass and one history texture in
+ * total.
+ * Any failure disables post-processing and falls back to direct rendering. */
+
+static const char post_vert_source[] = "attribute vec2 position;\n"
+				       "varying vec2 texcoord;\n"
+				       "void main()\n"
+				       "{\n"
+				       "	texcoord = position * 0.5 + 0.5;\n"
+				       "	gl_Position = vec4(position, 0.0, 1.0);\n"
+				       "}\n";
+
+static const GLfloat post_vertices[] = {-1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f,
+					-1.0f, -1.0f, 1.0f,  1.0f, 1.0f, -1.0f};
+
+/* built-in ghosting fragment shader: used as the post-processing shader when
+ * ghosting is requested without a shader file:
+ *   out = (1 - gamma) * current + gamma * history */
+static const char ghost_frag_source[] =
+	"precision mediump float;\n"
+	"varying vec2 texcoord;\n"
+	"uniform sampler2D source;\n"
+	"uniform sampler2D history;\n"
+	"uniform float gamma;\n"
+	"void main()\n"
+	"{\n"
+	"	vec4 cur = texture2D(source, texcoord);\n"
+	"	vec4 old = texture2D(history, texcoord);\n"
+	"	gl_FragColor = vec4((1.0 - gamma) * cur.rgb + gamma * old.rgb, cur.a);\n"
+	"}\n";
+
+#define SHADER_FILE_MAX (4 * 1024 * 1024)
+/* minimum time between two stat() calls on the shader file */
+#define SHADER_CHECK_INTERVAL_NS (400 * 1000 * 1000)
+
+static char *read_shader_file(const char *path, size_t *len_out)
+{
+	FILE *f;
+	char *buf;
+	long size;
+	size_t readn;
+
+	f = fopen(path, "re");
+	if (!f) {
+		log_warning("cannot open shader file '%s': %m", path);
+		return NULL;
+	}
+
+	if (fseek(f, 0, SEEK_END)) {
+		log_warning("cannot seek shader file '%s': %m", path);
+		fclose(f);
+		return NULL;
+	}
+
+	size = ftell(f);
+	if (size < 0 || size > SHADER_FILE_MAX) {
+		log_warning("invalid shader file size for '%s'", path);
+		fclose(f);
+		return NULL;
+	}
+
+	if (fseek(f, 0, SEEK_SET)) {
+		log_warning("cannot rewind shader file '%s': %m", path);
+		fclose(f);
+		return NULL;
+	}
+
+	buf = malloc(size + 1);
+	if (!buf) {
+		fclose(f);
+		return NULL;
+	}
+
+	readn = fread(buf, 1, size, f);
+	if (readn != (size_t)size || ferror(f)) {
+		log_warning("cannot read shader file '%s': %m", path);
+		free(buf);
+		fclose(f);
+		return NULL;
+	}
+	buf[readn] = 0;
+	fclose(f);
+
+	if (!readn) {
+		log_warning("shader file '%s' is empty", path);
+		free(buf);
+		return NULL;
+	}
+
+	*len_out = readn;
+	return buf;
+}
+
+static void gltex_target_free(struct gltex_target *t)
+{
+	if (t->fbo) {
+		glDeleteFramebuffers(1, &t->fbo);
+		t->fbo = 0;
+	}
+	if (t->tex) {
+		glDeleteTextures(1, &t->tex);
+		t->tex = 0;
+	}
+	t->w = 0;
+	t->h = 0;
+}
+
+static int gltex_target_create(struct gltex_target *t, unsigned int w, unsigned int h)
+{
+	GLenum status, err;
+
+	gltex_target_free(t);
+	gl_clear_error();
+
+	glGenTextures(1, &t->tex);
+	glBindTexture(GL_TEXTURE_2D, t->tex);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+
+	glGenFramebuffers(1, &t->fbo);
+	glBindFramebuffer(GL_FRAMEBUFFER, t->fbo);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, t->tex, 0);
+	status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	err = glGetError();
+	if (err != GL_NO_ERROR || status != GL_FRAMEBUFFER_COMPLETE) {
+		log_warning("cannot create render target %ux%u (%d: %s, status 0x%x)", w, h, err,
+			    gl_err_to_str(err), status);
+		gltex_target_free(t);
+		gl_clear_error();
+		return -EFAULT;
+	}
+
+	t->w = w;
+	t->h = h;
+	return 0;
+}
+
+static void gltex_target_clear(struct gltex_target *t)
+{
+	glBindFramebuffer(GL_FRAMEBUFFER, t->fbo);
+	glClearColor(0, 0, 0, 1);
+	glClear(GL_COLOR_BUFFER_BIT);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+static int gltex_recreate_targets(struct gltex *gt)
+{
+	if (gltex_target_create(&gt->scene, gt->sw, gt->sh))
+		return -EFAULT;
+	gt->scene_valid = false;
+
+	if (!gt->ghost_gamma)
+		return 0;
+
+	if (gltex_target_create(&gt->hist, gt->sw, gt->sh)) {
+		gltex_target_free(&gt->hist);
+		return -EFAULT;
+	}
+	gltex_target_clear(&gt->hist);
+	return 0;
+}
+
+static void gltex_disable_post(struct gltex *gt)
+{
+	if (gt->post_shader)
+		gl_shader_unref(gt->post_shader);
+	gt->post_shader = NULL;
+
+	gt->ghost_gamma = 0;
+	gt->scene_valid = false;
+
+	gltex_target_free(&gt->scene);
+	gltex_target_free(&gt->hist);
+
+	gl_clear_error();
+}
+
+static void gltex_record_shader_stat(struct gltex *gt, const char *path)
+{
+	struct stat st;
+
+	if (stat(path, &st)) {
+		gt->shader_missing = true;
+		gt->shader_mtime.tv_sec = 0;
+		gt->shader_mtime.tv_nsec = 0;
+		gt->shader_size = 0;
+		return;
+	}
+
+	gt->shader_missing = false;
+	gt->shader_mtime = st.st_mtim;
+	gt->shader_size = st.st_size;
+}
+
+static bool gltex_shader_check_due(struct gltex *gt)
+{
+	struct timespec now;
+	long long diff;
+
+	clock_gettime(CLOCK_MONOTONIC, &now);
+	diff = (now.tv_sec - gt->shader_check_time.tv_sec) * 1000000000LL +
+	       (now.tv_nsec - gt->shader_check_time.tv_nsec);
+	if (diff < SHADER_CHECK_INTERVAL_NS)
+		return false;
+
+	gt->shader_check_time = now;
+	return true;
+}
+
+static bool gltex_shader_changed(struct gltex *gt, const char *path)
+{
+	struct stat st;
+
+	if (stat(path, &st))
+		return !gt->shader_missing;
+
+	if (gt->shader_missing)
+		return true;
+
+	return st.st_mtim.tv_sec != gt->shader_mtime.tv_sec ||
+	       st.st_mtim.tv_nsec != gt->shader_mtime.tv_nsec || st.st_size != gt->shader_size;
+}
+
+/* Failures that cannot be retried without restarting kmscon are only
+ * reported once so repeated kmscon_text_set() calls do not spam the log. */
+static void gltex_post_setup_failed(struct kmscon_text *txt, const char *what)
+{
+	struct gltex *gt = txt->data;
+
+	if (gt->post_setup_warned)
+		return;
+	gt->post_setup_warned = true;
+	log_warning("%s failed; restart kmscon to try again", what);
+}
+
+/* User shaders carry a "#define HISTORY_ENABLED 0" line that guards their
+ * history/gamma uniforms and blend code. When ghosting is configured, that
+ * marker is flipped to 1 in-place (both are one character, so no reallocation
+ * is needed) which enables the guarded code. */
+static bool gltex_enable_ghosting(char *src)
+{
+	static const char off[] = "#define HISTORY_ENABLED 0";
+	char *p = strstr(src, off);
+
+	if (!p)
+		return false;
+
+	p[sizeof(off) - 2] = '1';
+	return true;
+}
+
+static void gltex_setup_post(struct kmscon_text *txt)
+{
+	struct gltex *gt = txt->data;
+	char *attrs[] = {"position"};
+	char *src;
+	size_t len;
+	int ret;
+
+	if ((!txt->render_shader || !txt->render_shader[0]) && !txt->render_ghosting)
+		return;
+
+	if (txt->render_shader && txt->render_shader[0]) {
+		gltex_record_shader_stat(gt, txt->render_shader);
+
+		src = read_shader_file(txt->render_shader, &len);
+		if (!src)
+			return;
+
+		if (txt->render_ghosting && !gltex_enable_ghosting(src))
+			log_warning("shader '%s' lacks a '#define HISTORY_ENABLED 0' line; "
+				    "ghosting has no effect on it",
+				    txt->render_shader);
+
+		ret = gl_shader_new(&gt->post_shader, post_vert_source,
+				    sizeof(post_vert_source) - 1, src, len, attrs, 1);
+		free(src);
+		if (ret) {
+			log_warning("cannot compile shader '%s'; ignoring shader",
+				    txt->render_shader);
+			gt->post_shader = NULL;
+			gl_clear_error();
+			return;
+		}
+	} else {
+		/* ghosting without a shader file: use the built-in
+		 * (1 - gamma) * current + gamma * history shader */
+		ret = gl_shader_new(&gt->post_shader, post_vert_source,
+				    sizeof(post_vert_source) - 1, ghost_frag_source,
+				    sizeof(ghost_frag_source) - 1, attrs, 1);
+		if (ret) {
+			log_warning("cannot create ghosting shader");
+			gl_clear_error();
+			gltex_post_setup_failed(txt, "creating the ghosting shader");
+			return;
+		}
+	}
+
+	if (gltex_target_create(&gt->scene, gt->sw, gt->sh)) {
+		gl_shader_unref(gt->post_shader);
+		gt->post_shader = NULL;
+		gltex_post_setup_failed(txt, "creating the post-processing render target");
+		return;
+	}
+	gt->scene_valid = false;
+
+	gt->post_uni_source = gl_shader_get_uniform(gt->post_shader, "source");
+	gt->post_uni_time = gl_shader_get_uniform(gt->post_shader, "time");
+	gt->post_uni_resolution = gl_shader_get_uniform(gt->post_shader, "resolution");
+	gt->post_uni_history = gl_shader_get_uniform(gt->post_shader, "history");
+	gt->post_uni_gamma = gl_shader_get_uniform(gt->post_shader, "gamma");
+
+	clock_gettime(CLOCK_MONOTONIC, &gt->post_start);
+
+	if (txt->render_ghosting) {
+		GLfloat gamma = txt->render_ghosting / 100.0;
+
+		/* full persistence would never update the history and freeze
+		 * the screen, so keep a bit of the current frame */
+		if (gamma > 0.99)
+			gamma = 0.99;
+
+		if (gltex_target_create(&gt->hist, gt->sw, gt->sh)) {
+			log_warning("cannot create ghosting history buffer; disabling ghosting");
+			gltex_target_free(&gt->hist);
+			gl_clear_error();
+			gltex_post_setup_failed(txt, "creating the ghosting history buffer");
+			return;
+		}
+		gltex_target_clear(&gt->hist);
+		gt->ghost_gamma = gamma;
+	}
+
+	gt->post_setup_warned = false;
+}
+
+static GLfloat gltex_get_time(struct gltex *gt)
+{
+	struct timespec now;
+	clock_gettime(CLOCK_MONOTONIC, &now);
+	return (now.tv_sec - gt->post_start.tv_sec) +
+	       (now.tv_nsec - gt->post_start.tv_nsec) / 1000000000.0;
+}
+
+static void gltex_shader_reload(struct kmscon_text *txt)
+{
+	struct gltex *gt = txt->data;
+
+	log_notice("shader file '%s' changed; reloading", txt->render_shader);
+	gltex_disable_post(gt);
+	gltex_setup_post(txt);
+
+	if (gt->post_shader)
+		log_notice("shader reloaded successfully");
+	else
+		log_warning("shader reload failed; rendering without shader");
 }
 
 static int gltex_set(struct kmscon_text *txt)
@@ -236,6 +661,8 @@ static int gltex_set(struct kmscon_text *txt)
 		s = 2048;
 	gt->max_tex_size = s;
 
+	gltex_setup_post(txt);
+
 	gl_clear_error();
 	return 0;
 
@@ -278,7 +705,7 @@ static void gltex_unset(struct kmscon_text *txt)
 
 	if (gl) {
 		gl_shader_unref(gt->shader);
-
+		gltex_disable_post(gt);
 		gl_clear_error();
 	}
 }
@@ -493,14 +920,38 @@ static int gltex_prepare(struct kmscon_text *txt, struct tsm_screen_attr *attr)
 	if (ret)
 		return ret;
 
-	dlist_for_each_entry(atlas, &gt->atlases, list)
-	{
-		atlas->cache_num = 0;
+	/* render-only rounds keep the cached glyph geometry of the last full
+	 * rebuild, so only reset the caches when the content changed */
+	if (txt->rebuild) {
+		dlist_for_each_entry(atlas, &gt->atlases, list)
+		{
+			atlas->cache_num = 0;
+		}
 	}
 	gt->attr = *attr;
 
-	glClearColor(gt->attr.br / 255.0, gt->attr.bg / 255.0, gt->attr.bb / 255.0, 1);
-	glClear(GL_COLOR_BUFFER_BIT);
+	if (txt->render_shader && txt->render_shader[0] && gltex_shader_check_due(gt) &&
+	    gltex_shader_changed(gt, txt->render_shader))
+		gltex_shader_reload(txt);
+
+	if (gt->post_shader && (gt->scene.w != gt->sw || gt->scene.h != gt->sh)) {
+		if (gltex_recreate_targets(gt)) {
+			log_warning("cannot resize render targets; ignoring shader");
+			gltex_disable_post(gt);
+		}
+	}
+
+	if (!gt->post_shader) {
+		glClearColor(gt->attr.br / 255.0, gt->attr.bg / 255.0, gt->attr.bb / 255.0, 1);
+		glClear(GL_COLOR_BUFFER_BIT);
+	} else if (txt->rebuild || !gt->scene_valid) {
+		glBindFramebuffer(GL_FRAMEBUFFER, gt->scene.fbo);
+		glClearColor(gt->attr.br / 255.0, gt->attr.bg / 255.0, gt->attr.bb / 255.0, 1);
+		glClear(GL_COLOR_BUFFER_BIT);
+	}
+	/* else: render-only frame; the off-screen scene texture still holds
+	 * the current console, so keep it and only re-run post-processing */
+
 	return 0;
 }
 
@@ -694,48 +1145,100 @@ static int gltex_render(struct kmscon_text *txt)
 
 	gl_clear_error();
 
-	gl_shader_use(gt->shader);
+	/* Pass 1 only has to run when the console changed or the scene
+	 * texture does not hold the current console. Render-only frames with
+	 * post-processing just re-run the post-processing pass on the
+	 * off-screen scene texture. Without post-processing the screen
+	 * framebuffer has no memory, so always draw it. */
+	if (txt->rebuild || !gt->post_shader || !gt->scene_valid) {
+		gl_shader_use(gt->shader);
 
-	glViewport(0, 0, gt->sw, gt->sh);
-	glDisable(GL_BLEND);
+		glViewport(0, 0, gt->sw, gt->sh);
+		glDisable(GL_BLEND);
 
-	gl_m4_identity(mat);
-	glUniformMatrix4fv(gt->uni_proj, 1, GL_FALSE, mat);
-	glUniform1f(gt->uni_cos, gt->cos);
-	glUniform1f(gt->uni_sin, gt->sin);
+		gl_m4_identity(mat);
+		glUniformMatrix4fv(gt->uni_proj, 1, GL_FALSE, mat);
+		glUniform1f(gt->uni_cos, gt->cos);
+		glUniform1f(gt->uni_sin, gt->sin);
 
-	glEnableVertexAttribArray(0);
-	glEnableVertexAttribArray(1);
-	glEnableVertexAttribArray(2);
-	glEnableVertexAttribArray(3);
+		glEnableVertexAttribArray(0);
+		glEnableVertexAttribArray(1);
+		glEnableVertexAttribArray(2);
+		glEnableVertexAttribArray(3);
 
-	glActiveTexture(GL_TEXTURE0);
-	glUniform1i(gt->uni_atlas, 0);
+		glActiveTexture(GL_TEXTURE0);
+		glUniform1i(gt->uni_atlas, 0);
 
-	dlist_for_each_entry(atlas, &gt->atlases, list)
-	{
-		if (!atlas->cache_num)
-			continue;
+		dlist_for_each_entry(atlas, &gt->atlases, list)
+		{
+			if (!atlas->cache_num)
+				continue;
 
-		glBindTexture(GL_TEXTURE_2D, atlas->tex);
-		glUniform1f(gt->uni_advance_htex, atlas->advance_htex);
-		glUniform1f(gt->uni_advance_vtex, atlas->advance_vtex);
+			glBindTexture(GL_TEXTURE_2D, atlas->tex);
+			glUniform1f(gt->uni_advance_htex, atlas->advance_htex);
+			glUniform1f(gt->uni_advance_vtex, atlas->advance_vtex);
 
-		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, atlas->cache_pos);
-		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, atlas->cache_texpos);
-		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, atlas->cache_fgcol);
-		glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, atlas->cache_bgcol);
-		glDrawArrays(GL_TRIANGLES, 0, 6 * atlas->cache_num);
+			glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, atlas->cache_pos);
+			glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, atlas->cache_texpos);
+			glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, atlas->cache_fgcol);
+			glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, atlas->cache_bgcol);
+			glDrawArrays(GL_TRIANGLES, 0, 6 * atlas->cache_num);
+		}
+
+		glDisableVertexAttribArray(0);
+		glDisableVertexAttribArray(1);
+		glDisableVertexAttribArray(2);
+		glDisableVertexAttribArray(3);
+
+		if (gl_has_error(gt->shader)) {
+			log_warning("rendering console caused OpenGL errors");
+			return -EFAULT;
+		}
+
+		gt->scene_valid = true;
 	}
 
-	glDisableVertexAttribArray(0);
-	glDisableVertexAttribArray(1);
-	glDisableVertexAttribArray(2);
-	glDisableVertexAttribArray(3);
+	if (gt->post_shader) {
+		/* pass 2: draw the off-screen console through the shader.
+		 * With ghosting the shader also blends the previous frame in
+		 * (history + gamma uniforms) and the result written to the
+		 * screen is copied into the history buffer afterwards. */
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, post_vertices);
+		glViewport(0, 0, gt->sw, gt->sh);
 
-	if (gl_has_error(gt->shader)) {
-		log_warning("rendering console caused OpenGL errors");
-		return -EFAULT;
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		gl_shader_use(gt->post_shader);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, gt->scene.tex);
+		glUniform1i(gt->post_uni_source, 0);
+		glUniform1f(gt->post_uni_time, gltex_get_time(gt));
+		glUniform2f(gt->post_uni_resolution, gt->sw, gt->sh);
+
+		if (gt->ghost_gamma > 0) {
+			glActiveTexture(GL_TEXTURE1);
+			glBindTexture(GL_TEXTURE_2D, gt->hist.tex);
+			glUniform1i(gt->post_uni_history, 1);
+			glUniform1f(gt->post_uni_gamma, gt->ghost_gamma);
+		}
+
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+
+		if (gt->ghost_gamma > 0) {
+			/* update the history buffer with the frame just drawn */
+			glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, gt->sw, gt->sh);
+			glActiveTexture(GL_TEXTURE1);
+			glBindTexture(GL_TEXTURE_2D, 0);
+			glActiveTexture(GL_TEXTURE0);
+		}
+
+		glDisableVertexAttribArray(0);
+		glBindTexture(GL_TEXTURE_2D, 0);
+
+		if (gl_has_error(gt->post_shader)) {
+			log_warning("fragment shader failed; ignoring shader from now on");
+			gltex_disable_post(gt);
+		}
 	}
 
 	return 0;

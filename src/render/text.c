@@ -379,6 +379,10 @@ int kmscon_text_rotate(struct kmscon_text *txt, enum Orientation orientation)
  * kmscon_text_prepare:
  * @txt: valid text renderer
  * @attr: glyph attributes
+ * @blinking: whether blinking cells should be blanked
+ * @rebuild: whether the glyph geometry must be rebuilt; if false, renderers
+ *           may reuse the geometry built by the previous round and only
+ *           re-run their render pass
  *
  * This starts a rendering-round. When rendering a console via a text renderer,
  * you have to call this first, then render all your glyphs via
@@ -389,7 +393,8 @@ int kmscon_text_rotate(struct kmscon_text *txt, enum Orientation orientation)
  *
  * Returns: 0 on success, negative error code on failure.
  */
-int kmscon_text_prepare(struct kmscon_text *txt, struct tsm_screen_attr *attr, bool blinking)
+int kmscon_text_prepare(struct kmscon_text *txt, struct tsm_screen_attr *attr, bool blinking,
+			bool rebuild)
 {
 	int ret = 0;
 
@@ -398,6 +403,7 @@ int kmscon_text_prepare(struct kmscon_text *txt, struct tsm_screen_attr *attr, b
 
 	txt->rendering = true;
 	txt->blinking = blinking;
+	txt->rebuild = rebuild;
 	if (txt->ops->prepare)
 		ret = txt->ops->prepare(txt, attr);
 	if (ret)
@@ -446,6 +452,10 @@ int kmscon_text_draw(struct kmscon_text *txt, struct tsm_screen *con, bool curso
 	if (!txt || !con)
 		return -EINVAL;
 
+	/* the geometry built by the previous round is still valid */
+	if (!txt->rebuild)
+		return 0;
+
 	cells = tsm_screen_draw2(con);
 	cursor.x = tsm_screen_get_cursor_x(con);
 	cursor.y = tsm_screen_get_cursor_y(con);
@@ -489,6 +499,9 @@ int kmscon_text_draw_pointer(struct kmscon_text *txt, unsigned int x, unsigned i
 {
 	if (!txt || !txt->rendering || !txt->ops->draw_pointer)
 		return -EINVAL;
+
+	if (!txt->rebuild)
+		return 0;
 
 	return txt->ops->draw_pointer(txt, x, y);
 }
