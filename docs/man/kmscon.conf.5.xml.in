@@ -451,7 +451,10 @@ font-name=Ubuntu Mono
           <para>Lock the current terminal. The terminal content is hidden
                 until the logged in user enters their password, which is
                 checked with the kmscon-lock PAM service. Terminals showing
-                a login prompt are not locked. Locked terminals are also
+                a login prompt are not locked. Terminals running a
+                graphical program started with kmscon-launch-gui are not
+                locked either: the program is in the same logind session,
+                and has to lock itself. Locked terminals are also
                 unlocked when the session ends, or with
                 <command>loginctl unlock-session</command>, and
                 <command>loginctl lock-session</command> locks them.

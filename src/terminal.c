@@ -1388,6 +1388,8 @@ void terminal_activate(struct kmscon_terminal *term)
 	else
 		kmscon_asciinema_resume(term->asciinema);
 
+	lock_timer_reset(term);
+
 	/* The displays' HW cursor is shared: another terminal may have replaced
 	 * or freed it */
 	dlist_for_each_entry(scr, &term->screens, list)
@@ -1432,7 +1434,7 @@ static void lock_timer_event(struct ev_timer *timer, uint64_t num, void *data)
 {
 	struct kmscon_terminal *term = data;
 
-	if (!term->locker)
+	if (!term->locker && kmscon_session_get_foreground(term->session))
 		terminal_lock(term);
 }
 
@@ -1484,6 +1486,11 @@ void terminal_lock(struct kmscon_terminal *term)
 
 	if (!term || !term->opened || term->locker)
 		return;
+
+	if (!kmscon_session_get_foreground(term->session)) {
+		log_info("terminal runs a GUI, not locking it");
+		return;
+	}
 
 	ret = get_owner(term, &user);
 	if (ret == -ENOENT) {
