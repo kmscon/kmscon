@@ -1213,6 +1213,11 @@ int kmscon_session_set_background(struct kmscon_session *sess)
 	if (!sess->foreground)
 		return 0;
 
+	if (sess->term && terminal_is_locked(sess->term)) {
+		log_warning("ignoring background request from locked session %p", sess);
+		return -EBUSY;
+	}
+
 	seat = sess->seat;
 	if (seat && seat->current_sess == sess && seat->foreground) {
 		if (sess->term)
