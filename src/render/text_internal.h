@@ -73,7 +73,6 @@ struct kmscon_text_ops {
 		    struct kmscon_cursor *cursor);
 	int (*draw_pointer)(struct kmscon_text *txt, unsigned int x, unsigned int y);
 	int (*render)(struct kmscon_text *txt);
-	void (*abort)(struct kmscon_text *txt);
 };
 
 #define FONT_WIDTH(txt) ((txt)->font->width)

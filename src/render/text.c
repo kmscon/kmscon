@@ -549,26 +549,6 @@ int kmscon_text_render(struct kmscon_text *txt)
 }
 
 /**
- * kmscon_text_abort:
- * @txt: valid text renderer
- *
- * If you called kmscon_text_prepare() but you want to abort rendering instead
- * of finishing it with kmscon_text_render(), you can safely call this to reset
- * internal state. It is optional to call this or simply restart rendering.
- * Especially if the other renderers return an error, then they probably already
- * aborted rendering and it is not required to call this.
- */
-void kmscon_text_abort(struct kmscon_text *txt)
-{
-	if (!txt || !txt->rendering)
-		return;
-
-	if (txt->ops->abort)
-		txt->ops->abort(txt);
-	txt->rendering = false;
-}
-
-/**
  * kmscon_text_show_cursor:
  * @txt: valid text renderer
  * @x: X position in pixels, in the text area
