@@ -465,8 +465,8 @@ static int real_deactivate(struct uterm_vt *base)
 static void real_input(struct input *input, struct input_key_event *ev, void *data)
 {
 	struct uterm_vt_real *vt = data;
-	int id;
-	int ret, active_tty;
+	int id, ret, active_tty;
+	unsigned int mods = ev->mods;
 
 	if (ev->handled || !vt->base.active || vt->base.hup)
 		return;
@@ -482,21 +482,21 @@ static void real_input(struct input *input, struct input_key_event *ev, void *da
 		return;
 
 	id = 0;
-	if (SHL_HAS_BITS(ev->mods, SHL_CONTROL_MASK | SHL_ALT_MASK) &&
+	/* ignore caps lock */
+	mods &= ~SHL_LOCK_MASK;
+	if ((mods == SHL_ALT_MASK || mods == (SHL_ALT_MASK | SHL_CONTROL_MASK)) &&
 	    ev->keysyms[0] >= XKB_KEY_F1 && ev->keysyms[0] <= XKB_KEY_F24) {
 		ev->handled = true;
 		id = ev->keysyms[0] - XKB_KEY_F1 + 1;
 		if (id == vt->real_num)
 			return;
-	} else if ((SHL_HAS_BITS(ev->mods, SHL_LOGO_MASK) ||
-		    SHL_HAS_BITS(ev->mods, SHL_ALT_MASK)) &&
+	} else if ((mods == SHL_ALT_MASK || mods == SHL_LOGO_MASK) &&
 		   ev->keysyms[0] == XKB_KEY_Left) {
 		ev->handled = true;
 		id = vt->real_num - 1;
 		if (id == 0)
 			id = MAX_VT;
-	} else if ((SHL_HAS_BITS(ev->mods, SHL_LOGO_MASK) ||
-		    SHL_HAS_BITS(ev->mods, SHL_ALT_MASK)) &&
+	} else if ((mods == SHL_ALT_MASK || mods == SHL_LOGO_MASK) &&
 		   ev->keysyms[0] == XKB_KEY_Right) {
 		ev->handled = true;
 		if (vt->real_num >= MAX_VT)

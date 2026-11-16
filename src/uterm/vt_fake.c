@@ -69,12 +69,14 @@ static int fake_deactivate(struct uterm_vt *vt)
 static void fake_input(struct input *input, struct input_key_event *ev, void *data)
 {
 	struct uterm_vt *vt = data;
+	unsigned int mods = ev->mods;
 
 	if (ev->handled)
 		return;
 
-	if (SHL_HAS_BITS(ev->mods, SHL_CONTROL_MASK | SHL_LOGO_MASK) &&
-	    ev->keysyms[0] == XKB_KEY_F12) {
+	/* ignore caps lock */
+	mods &= ~SHL_LOCK_MASK;
+	if ((mods == (SHL_LOGO_MASK | SHL_CONTROL_MASK)) && ev->keysyms[0] == XKB_KEY_F12) {
 		ev->handled = true;
 		if (vt->active) {
 			log_debug("deactivating fake VT due to user input");
