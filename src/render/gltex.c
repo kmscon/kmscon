@@ -754,5 +754,4 @@ struct kmscon_text_ops kmscon_text_gltex_ops = {
 	.draw = gltex_draw,
 	.draw_pointer = gltex_draw_pointer,
 	.render = gltex_render,
-	.abort = NULL,
 };

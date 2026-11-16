@@ -701,5 +701,4 @@ struct kmscon_text_ops kmscon_text_bbulk_ops = {
 	.draw = bbulk_draw,
 	.draw_pointer = bbulk_draw_pointer,
 	.render = bbulk_render,
-	.abort = NULL,
 };
