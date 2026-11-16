@@ -1,5 +1,21 @@
 = KMSCON Release News =
 
+## CHANGES with 10.1.2
+### Important Notes
+This release aligns VT switching shortcuts with fbcon.
+So now you can switch to a particular VT by pressing `Alt`+`Fx` or `Ctrl` + `Alt` + `Fx`. You can also switch to the
+next or previous VT, by pressing `Alt` + `Right` or `Logo` + `Right` for the next VT, and `Alt` + `Left` or `Logo` + `Left` for the previous VT.
+
+### Changes
+* mailmap: deduplicate contributors with multiple email addresses by @1ace in https://github.com/kmscon/kmscon/pull/615
+* font_freetype: fix heap corruption from per-font fontconfig setup by @tagoh in https://github.com/kmscon/kmscon/pull/618
+* Handle F13-F24 keys, and allow to switch to next/previous VT by @kdj0c in https://github.com/kmscon/kmscon/pull/619
+* input: share the XKB state between all keyboard devices by @pandhedge in https://github.com/kmscon/kmscon/pull/617
+* uterm: Align VT switching shortcut to fbcon. by @kdj0c in https://github.com/kmscon/kmscon/pull/620
+
+## New Contributors
+* @pandhedge made their first contribution in https://github.com/kmscon/kmscon/pull/617
+
 ## CHANGES with 10.1.1
 * seat: don't use VT_WAITACTIVE by @kdj0c in https://github.com/kmscon/kmscon/pull/603
 * font_freetype: fallback to non-monospace fonts for uncovered languages by @tagoh in https://github.com/kmscon/kmscon/pull/598
