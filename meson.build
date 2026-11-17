@@ -285,7 +285,7 @@ install_data(
 if enable_libseat
     install_data(
         'scripts/pam/kmscon',
-        install_dir: prefix / get_option('libdir') / 'pam.d',
+        install_dir: prefix / 'lib' / 'pam.d',
         rename: 'kmscon',
     )
 endif
@@ -293,7 +293,7 @@ endif
 if enable_pam
     install_data(
         'scripts/pam/kmscon-lock',
-        install_dir: get_option('sysconfdir') / 'pam.d',
+        install_dir: prefix / 'lib' / 'pam.d',
     )
 endif
 
