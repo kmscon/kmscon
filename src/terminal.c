@@ -1357,6 +1357,7 @@ void terminal_refresh_displays(struct kmscon_terminal *term)
 
 	dlist_for_each_entry(scr, &term->screens, list)
 	{
+		kmscon_text_resize(scr->txt, term->cols, term->rows);
 		display_set_need_redraw(scr->disp);
 	}
 	redraw_all(term);
