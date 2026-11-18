@@ -13,6 +13,7 @@ mod script;
 use std::fmt::Write;
 use std::path::{Path, PathBuf};
 
+use kmscon_rs::tsm;
 use script::{Token, first_codepoint, tokenize};
 use tsm::{
     Handler, Keysym, Leds, Modifiers, MouseButton, MouseEvent, MouseEventKind, MouseModifiers, MouseTracking, Palette,

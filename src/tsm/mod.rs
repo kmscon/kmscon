@@ -8,7 +8,7 @@
 //! receives, and draws the cells returned by [`Screen::render`].
 //!
 //! ```
-//! use tsm::{Keysym, Modifiers, Vte};
+//! use kmscon_rs::tsm::{Keysym, Modifiers, Vte};
 //!
 //! let mut vte = Vte::new(());
 //! vte.input("\x1b[31mred\x1b[m text".as_bytes());

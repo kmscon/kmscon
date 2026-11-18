@@ -2,8 +2,23 @@
 #
 # SPDX-License-Identifier: MIT
 
-## libtsm in rust
+#
+# Rust
+# kmscon-rs is the single static library holding all the Rust code: libtsm
+# and its C bindings, and the modules converted from C. The kmscon binary
+# links it and exports its symbols (export_dynamic) so that plugins can use
+# them. The rlib is for the Rust integration tests and doctests.
+#
 subdir('tsm')
+
+kmscon_rs_pkg = rust.workspace().package()
+kmscon_rs = kmscon_rs_pkg.library('kmscon_rs', rust_abi: 'c')
+kmscon_rs_rlib = kmscon_rs_pkg.library('kmscon_rs+10', rust_abi: 'rust')
+kmscon_rs_deps = declare_dependency(
+    include_directories: tsm_inc,
+    link_with: kmscon_rs,
+)
+rust.test('kmscon_rs', kmscon_rs)
 
 #
 # Binary File Compiler
@@ -60,7 +75,7 @@ kmscon_srcs = [
 ]
 kmscon_dep = [
     xkbcommon_deps,
-    libtsm_deps,
+    kmscon_rs_deps,
     threads_deps,
     dl_deps,
     shl_deps,

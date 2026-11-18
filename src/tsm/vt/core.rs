@@ -4,9 +4,9 @@
 use super::charset::Charset;
 use super::mouse::MouseState;
 use super::{Handler, Leds, VteFlags};
-use crate::cell::{Attr, AttrFlags};
-use crate::color::{Color, Palette, index};
-use crate::screen::{CursorStyle, Screen, ScreenFlags};
+use crate::tsm::cell::{Attr, AttrFlags};
+use crate::tsm::color::{Color, Palette, index};
+use crate::tsm::screen::{CursorStyle, Screen, ScreenFlags};
 
 /// Current graphic rendition, with unresolved palette colors.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
@@ -343,7 +343,7 @@ impl<H: Handler> Core<H> {
         }
     }
 
-    fn write_xcolor(&mut self, code: &str, end: &[u8], rgb: crate::Rgb) {
+    fn write_xcolor(&mut self, code: &str, end: &[u8], rgb: crate::tsm::Rgb) {
         let reply = format!("\x1b]{code};rgb:{0:02x}{0:02x}/{1:02x}{1:02x}/{2:02x}{2:02x}", rgb.r, rgb.g, rgb.b);
         let mut reply = reply.into_bytes();
         reply.extend_from_slice(end);

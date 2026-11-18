@@ -3,9 +3,9 @@
 use super::core::{Core, inter};
 use super::mouse::{MouseProtocol, MouseTracking};
 use super::{Handler, Leds, VteFlags};
-use crate::cell::AttrFlags;
-use crate::color::{Color, Rgb, index};
-use crate::screen::{CursorStyle, ScreenFlags};
+use crate::tsm::cell::AttrFlags;
+use crate::tsm::color::{Color, Rgb, index};
+use crate::tsm::screen::{CursorStyle, ScreenFlags};
 
 /// Maximum number of CSI parameters, the rest are dropped.
 const MAX_ARGS: usize = 16;

@@ -11,7 +11,7 @@
 use std::ffi::{CStr, c_char, c_int, c_uint, c_void};
 use std::{mem, ptr, slice};
 
-use crate::{
+use crate::tsm::{
     Attr, CursorStyle, Handler, Keysym, Leds, Modifiers, MouseButton, MouseEvent, MouseEventKind, MouseModifiers,
     MouseProtocol, MouseTracking, Palette, RenderCell, Rgb, ScreenFlags, Vte,
 };
@@ -463,7 +463,7 @@ pub unsafe extern "C" fn tsm_vte_selection_copy(vte: *mut tsm_vte, out: *mut *mu
 
 #[unsafe(no_mangle)]
 pub extern "C" fn tsm_char_width(ucs4: u32) -> c_uint {
-    char::from_u32(ucs4).map_or(0, crate::char_width) as c_uint
+    char::from_u32(ucs4).map_or(0, crate::tsm::char_width) as c_uint
 }
 
 #[unsafe(no_mangle)]

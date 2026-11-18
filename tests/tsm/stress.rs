@@ -1,5 +1,6 @@
 //! Feeds pseudo-random input and API calls to make sure nothing panics.
 
+use kmscon_rs::tsm;
 use tsm::{Keysym, Modifiers, MouseButton, MouseEvent, MouseEventKind, MouseModifiers, Vte};
 
 /// xorshift64*, good enough to generate test input.

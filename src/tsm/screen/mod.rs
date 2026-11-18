@@ -2,18 +2,18 @@
 //!
 //! A [`Screen`] is a grid of [`Cell`]s with a cursor, scroll margins, tab
 //! stops, an alternate buffer, a scroll-back buffer and a selection. It does
-//! not parse anything: the [`Vte`](crate::Vte) drives it.
+//! not parse anything: the [`Vte`](crate::tsm::Vte) drives it.
 
 mod render;
 mod selection;
 
 use std::collections::VecDeque;
 
-use crate::cell::{Attr, AttrFlags, Cell};
-use crate::flags::flags;
+use crate::tsm::cell::{Attr, AttrFlags, Cell};
+use crate::tsm::flags::flags;
 
 flags! {
-    /// Screen modes, mostly set by the [`Vte`](crate::Vte).
+    /// Screen modes, mostly set by the [`Vte`](crate::tsm::Vte).
     pub struct ScreenFlags: u32 {
         /// Insert characters instead of overwriting (IRM).
         const INSERT_MODE = 0x01;
@@ -651,7 +651,7 @@ impl Screen {
     /// Writes a character at the cursor and advances it, wrapping and
     /// scrolling as needed. Zero-width characters are ignored.
     pub(crate) fn write(&mut self, ch: char, attr: &Attr) {
-        let len = crate::unicode::char_width(ch);
+        let len = crate::tsm::unicode::char_width(ch);
         if len == 0 {
             return;
         }

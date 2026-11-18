@@ -1,7 +1,7 @@
 //! Keyboard input encoding.
 
 use super::{Handler, Modifiers, Vte, VteFlags};
-use crate::keysym::Keysym;
+use crate::tsm::keysym::Keysym;
 
 /// xterm modifier parameter for Shift, Alt and Control combinations.
 fn csi_modifier(mods: Modifiers) -> Option<u8> {

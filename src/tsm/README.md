@@ -20,7 +20,7 @@ as a static library.
 ## Usage
 
 ```rust
-use tsm::{Handler, Keysym, Modifiers, Vte};
+use kmscon_rs::tsm::{Handler, Keysym, Modifiers, Vte};
 
 struct Pty; // your connection to the application
 

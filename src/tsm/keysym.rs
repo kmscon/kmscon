@@ -1,4 +1,4 @@
-//! XKB key symbols understood by [`Vte::handle_keyboard`](crate::Vte::handle_keyboard).
+//! XKB key symbols understood by [`Vte::handle_keyboard`](crate::tsm::Vte::handle_keyboard).
 //!
 //! Values are identical to the `XKB_KEY_*` constants of xkbcommon. Latin-1
 //! keysyms are equal to their code point, so `Keysym(b'a' as u32)` is the `a`
