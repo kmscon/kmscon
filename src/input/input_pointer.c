@@ -13,7 +13,8 @@ static void pointer_update_inactivity_timer(struct input_dev *dev)
 	spec.it_interval.tv_nsec = 0;
 	spec.it_interval.tv_sec = 0;
 	spec.it_value.tv_nsec = 0;
-	spec.it_value.tv_sec = 20;
+	/* A timer set to zero is disarmed: the pointer is then never hidden. */
+	spec.it_value.tv_sec = dev->input->pointer_timeout;
 	ev_timer_update(dev->input->hide_pointer, &spec);
 }
 

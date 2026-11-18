@@ -493,6 +493,7 @@ int input_new(struct input **out, struct ev_eloop *eloop)
 	memset(input, 0, sizeof(*input));
 	input->ref = 1;
 	input->eloop = eloop;
+	input->pointer_timeout = 20;
 	dlist_init(&input->devices);
 
 	ret = shl_hook_new(&input->key_hook);
@@ -564,6 +565,13 @@ int input_update_keymap(struct input *input, const char *model, const char *layo
 		}
 	}
 	return 0;
+}
+
+SHL_EXPORT
+void input_set_pointer_timeout(struct input *input, unsigned int seconds)
+{
+	if (input)
+		input->pointer_timeout = seconds;
 }
 
 SHL_EXPORT

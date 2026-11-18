@@ -98,6 +98,7 @@ int input_update_keymap(struct input *input, const char *model, const char *layo
 			const char *variant, const char *options);
 void input_set_conf(struct input *input, unsigned int repeat_delay, unsigned int repeat_rate,
 		    bool mouse_enabled);
+void input_set_pointer_timeout(struct input *input, unsigned int seconds);
 void input_ref(struct input *input);
 void input_unref(struct input *input);
 

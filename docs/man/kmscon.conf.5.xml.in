@@ -336,6 +336,15 @@ font-name=Ubuntu Mono
       </varlistentry>
 
       <varlistentry>
+        <term><option>pointer-timeout</option></term>
+        <listitem>
+          <para>Hide the mouse pointer after this many seconds without
+                movement. Set to 0 to never hide it. (default: 20)
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
         <term><option>dpms-timeout</option></term>
         <listitem>
           <para>Set screen timeout in seconds (default: 600 = 10 minutes).

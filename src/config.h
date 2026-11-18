@@ -147,6 +147,8 @@ struct kmscon_conf_t {
 	bool natural_scrolling;
 	/* Force software cursor */
 	bool soft_cursor;
+	/* Seconds without pointer movement after which the pointer is hidden (0 = never) */
+	unsigned int pointer_timeout;
 	/* DPMS screen timeout in seconds (0 = disabled) */
 	unsigned int dpms_timeout;
 	/* lock the terminal after this inactivity time in seconds (0 = disabled) */

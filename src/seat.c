@@ -754,6 +754,7 @@ int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf,
 
 	input_set_conf(seat->input, seat->conf->xkb_repeat_delay, seat->conf->xkb_repeat_rate,
 		       seat->conf->mouse);
+	input_set_pointer_timeout(seat->input, seat->conf->pointer_timeout);
 
 	ret = input_set_keymap(seat->input, seat->conf->xkb_model, seat->conf->xkb_layout,
 			       seat->conf->xkb_variant, seat->conf->xkb_options,

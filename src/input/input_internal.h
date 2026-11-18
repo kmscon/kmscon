@@ -116,6 +116,8 @@ struct input {
 
 	unsigned int repeat_rate;
 	unsigned int repeat_delay;
+	/* seconds without movement after which the pointer is hidden, 0 for never */
+	unsigned int pointer_timeout;
 
 	struct shl_hook *key_hook;
 	struct xkb_context *ctx;
