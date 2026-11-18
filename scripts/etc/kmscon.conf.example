@@ -98,6 +98,8 @@
 #mouse
 ## Force software cursor
 #soft-cursor
+## Draw no pointer for a virtual machine's mouse (its viewer draws one)
+#hide-virtual-pointer
 ## Hide the mouse pointer after this many seconds without movement (0 = never)
 #pointer-timeout=20
 

@@ -1222,8 +1222,12 @@ static void pointer_event(struct input *input, struct input_pointer_event *ev, v
 
 		coord_to_cell(term, term->pointer.x, term->pointer.y, &term->pointer.posx,
 			      &term->pointer.posy);
-		term->pointer.visible = true;
-		hw_cursor_show(term, ev->pointer_x, ev->pointer_y);
+		/* Whoever views a virtual machine draws its mouse's pointer already. */
+		term->pointer.visible = !(ev->virtual_mouse && term->conf->hide_virtual_pointer);
+		if (term->pointer.visible)
+			hw_cursor_show(term, ev->pointer_x, ev->pointer_y);
+		else
+			hw_cursor_hide(term);
 	}
 
 	if (tsm_vte_get_mouse_mode(term->vte) != TSM_MOUSE_TRACK_DISABLE &&

@@ -79,6 +79,8 @@ struct input_pointer_event {
 	uint8_t button;
 	bool pressed;
 	bool double_click;
+	/* The device is a virtual mouse: whoever views the machine draws its pointer. */
+	bool virtual_mouse;
 };
 
 #define INPUT_HAS_MODS(_ev, _mods) (((_ev)->mods & (_mods)) == (_mods))

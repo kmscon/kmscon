@@ -147,6 +147,8 @@ struct kmscon_conf_t {
 	bool natural_scrolling;
 	/* Force software cursor */
 	bool soft_cursor;
+	/* Draw no pointer for a virtual machine's mouse */
+	bool hide_virtual_pointer;
 	/* Seconds without pointer movement after which the pointer is hidden (0 = never) */
 	unsigned int pointer_timeout;
 	/* DPMS screen timeout in seconds (0 = disabled) */

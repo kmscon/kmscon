@@ -25,6 +25,7 @@ static void pointer_dev_send_move(struct input_dev *dev)
 	pev.event = POINTER_MOVED;
 	pev.pointer_x = dev->pointer.x;
 	pev.pointer_y = dev->pointer.y;
+	pev.virtual_mouse = dev->pointer.kind == POINTER_VMOUSE;
 
 	/* Include button state if a button is pressed during motion (drag) */
 	if (dev->pointer.pressed_button != BUTTON_NONE) {

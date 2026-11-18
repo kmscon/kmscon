@@ -404,6 +404,18 @@
       </varlistentry>
 
       <varlistentry>
+        <term><option>--hide-virtual-pointer</option></term>
+        <listitem>
+          <para>Draw no mouse pointer for the mouse of a virtual machine
+                (an absolute pointing device such as QEMU's tablet or
+                VMware's mouse): the program showing the machine's screen
+                draws a pointer of its own at the same place.
+                (default: off)
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
         <term><option>--pointer-timeout &lt;seconds&gt;</option></term>
         <listitem>
           <para>Hide the mouse pointer after this many seconds without

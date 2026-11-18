@@ -145,6 +145,9 @@ static void print_help()
 		"\t                                 Invert mouse wheel direction\n"
 		"\t    --soft-cursor              [off]\n"
 		"\t                                 Force software cursor\n"
+		"\t    --hide-virtual-pointer     [off]\n"
+		"\t                                 Draw no pointer for a virtual machine's\n"
+		"\t                                 mouse (its viewer draws one)\n"
 		"\t    --pointer-timeout <secs>   [20]\n"
 		"\t                                 Hide the pointer after this many seconds\n"
 		"\t                                 without movement (0 to never hide it)\n"
@@ -1035,6 +1038,7 @@ int kmscon_conf_new(struct conf_ctx **out)
 		CONF_OPTION_BOOL(0, "mouse", &conf->mouse, true),
 		CONF_OPTION_BOOL(0, "natural-scrolling", &conf->natural_scrolling, false),
 		CONF_OPTION_BOOL(0, "soft-cursor", &conf->soft_cursor, false),
+		CONF_OPTION_BOOL(0, "hide-virtual-pointer", &conf->hide_virtual_pointer, false),
 		CONF_OPTION_UINT(0, "pointer-timeout", &conf->pointer_timeout, 20),
 		CONF_OPTION_UINT(0, "dpms-timeout", &conf->dpms_timeout, 600),
 		CONF_OPTION_UINT(0, "lock-timeout", &conf->lock_timeout, 0),
