@@ -84,7 +84,24 @@ int drm2d_display_blend(struct display *disp, const struct video_blend_req *req)
 			 *   t = (t + (t >> 8)) >> 8
 			 * This speeds up the computation by ~20% as the
 			 * division is not needed. */
-			if (src[i] == 0) {
+			if (req->over && src[i] != 255) {
+				uint_fast32_t shown = ((uint32_t *)dst)[i];
+
+				if (src[i] == 0)
+					continue;
+				r = req->fr * src[i] + ((shown >> 16) & 0xff) * (255 - src[i]);
+				r += 0x80;
+				r = (r + (r >> 8)) >> 8;
+
+				g = req->fg * src[i] + ((shown >> 8) & 0xff) * (255 - src[i]);
+				g += 0x80;
+				g = (g + (g >> 8)) >> 8;
+
+				b = req->fb * src[i] + (shown & 0xff) * (255 - src[i]);
+				b += 0x80;
+				b = (b + (b >> 8)) >> 8;
+				out = (r << 16) | (g << 8) | b;
+			} else if (src[i] == 0) {
 				r = req->br;
 				g = req->bg;
 				b = req->bb;

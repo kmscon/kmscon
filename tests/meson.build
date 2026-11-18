@@ -77,6 +77,16 @@ test_issue_parameter = executable(
 )
 test('test_issue_parameter', test_issue_parameter)
 
+if enable_video_fbdev
+    test_fbdev_blend = executable(
+        'test_fbdev_blend',
+        'test_fbdev_blend.c',
+        include_directories: src_inc,
+        dependencies: [shl_deps],
+    )
+    test('test_fbdev_blend', test_fbdev_blend)
+endif
+
 if enable_font_freetype
     test_font_freetype = executable(
         'test_font_freetype',

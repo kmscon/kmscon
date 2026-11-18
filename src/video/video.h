@@ -109,6 +109,8 @@ struct video_blend_req {
 	uint8_t br;
 	uint8_t bg;
 	uint8_t bb;
+	/* Blend over the display's own pixels: one the buffer does not cover is left as it is. */
+	bool over;
 };
 
 /*

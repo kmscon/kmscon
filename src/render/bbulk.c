@@ -82,6 +82,12 @@ struct bbulk {
 	struct video_rect *damage_rects;
 	unsigned int damage_rect_len;
 	uint8_t redraw;
+
+	/* The pointer: its shape and the outline around it, as coverage, for one font height */
+	struct video_buffer *pointer_shape;
+	struct video_buffer *pointer_outline;
+	unsigned int pointer_font_height;
+	bool pointer_rotated;
 };
 
 static int bbulk_init(struct kmscon_text *txt)
@@ -100,6 +106,8 @@ static void bbulk_destroy(struct kmscon_text *txt)
 {
 	struct bbulk *bb = txt->data;
 
+	free(bb->pointer_shape);
+	free(bb->pointer_outline);
 	free(bb);
 }
 
@@ -426,6 +434,7 @@ static int bbulk_draw_cell(struct kmscon_text *txt, const struct tsm_screen_cell
 	}
 
 	req.buf = &glyph->buf;
+	req.over = false;
 	set_color(&req, cur_cell);
 	display_blend(txt->disp, &req);
 	bb->requests++;
@@ -456,39 +465,22 @@ static int bbulk_draw(struct kmscon_text *txt, const struct tsm_screen_cell *cel
 }
 
 /*
- * When the pointer move over, mark the 4 underlying cells as damaged.
+ * Mark as damaged every cell a box around the pointer touches: the box reaches half_w and
+ * half_h pixels from (x, y), in the coordinates of the non-rotated screen.
  */
-static void mark_damaged(struct kmscon_text *txt, struct bbulk *bb, unsigned int x, unsigned int y)
+static void mark_damaged(struct kmscon_text *txt, struct bbulk *bb, unsigned int x, unsigned int y,
+			 unsigned int half_w, unsigned int half_h)
 {
-	unsigned int posx = 0;
-	unsigned int posy = 0;
-	unsigned int fw, fh, off;
-	fw = SHL_DIV_ROUND_UP(FONT_WIDTH(txt), 2);
-	fh = SHL_DIV_ROUND_UP(FONT_HEIGHT(txt), 2);
+	unsigned int first_x, last_x, first_y, last_y, posx, posy;
 
-	if (x > fw)
-		posx = (x - fw) / FONT_WIDTH(txt);
-	if (y > fh)
-		posy = (y - fh) / FONT_HEIGHT(txt);
+	first_x = x > half_w ? (x - half_w) / FONT_WIDTH(txt) : 0;
+	first_y = y > half_h ? (y - half_h) / FONT_HEIGHT(txt) : 0;
+	last_x = min((x + half_w) / FONT_WIDTH(txt), txt->cols - 1);
+	last_y = min((y + half_h) / FONT_HEIGHT(txt), txt->rows - 1);
 
-	if (posx >= txt->cols)
-		posx = txt->cols - 1;
-
-	if (posy >= txt->rows)
-		posy = txt->rows - 1;
-
-	off = posx + posy * txt->cols;
-
-	damage_cell(bb, off);
-
-	if (posx + 1 < txt->cols)
-		damage_cell(bb, off + 1);
-
-	if (posy + 1 < txt->rows)
-		damage_cell(bb, off + txt->cols);
-
-	if (posx + 1 < txt->cols && posy + 1 < txt->rows)
-		damage_cell(bb, off + 1 + txt->cols);
+	for (posy = first_y; posy <= last_y; posy++)
+		for (posx = first_x; posx <= last_x; posx++)
+			damage_cell(bb, posx + posy * txt->cols);
 }
 
 static unsigned int clamp(unsigned int val, unsigned int min, unsigned int max)
@@ -544,39 +536,149 @@ static void set_pointer_coordinate(struct bbulk *bb, struct kmscon_text *txt,
 	req->y = y - hf_h;
 }
 
+static struct video_buffer *new_coverage(unsigned int width, unsigned int height)
+{
+	struct video_buffer *buf = calloc(1, sizeof(*buf) + width * height);
+
+	if (buf) {
+		buf->width = width;
+		buf->height = height;
+	}
+	return buf;
+}
+
+/*
+ * The pointer for this font height: an I-beam as tall as a cell, with a stem, two serifs and
+ * an outline around them, the shape the hardware pointer has. Both are coverage buffers,
+ * turned with the screen.
+ */
+static int pointer_buffers(struct kmscon_text *txt, struct bbulk *bb)
+{
+	bool rotated = txt->orientation == OR_LEFT || txt->orientation == OR_RIGHT;
+	struct video_buffer *shape, *outline, *turned_shape, *turned_outline;
+	int w, h, thk, x, y, nx, ny, i;
+	bool near;
+
+	if (bb->pointer_shape && bb->pointer_font_height == FONT_HEIGHT(txt) &&
+	    bb->pointer_rotated == rotated)
+		return 0;
+
+	h = max(FONT_HEIGHT(txt), 8u);
+	thk = 1 + h / 16;
+	w = 2 * (h / 6) + 3 * thk;
+
+	shape = new_coverage(w, h);
+	outline = new_coverage(w, h);
+	if (!shape || !outline)
+		goto err_free;
+
+	for (y = thk; y < h - thk; y++)
+		for (i = 0; i < thk; i++)
+			shape->data[(w - thk) / 2 + i + y * w] = 255;
+	for (x = thk; x < w - thk; x++) {
+		for (i = 0; i < thk; i++) {
+			shape->data[x + (thk + i) * w] = 255;
+			shape->data[x + (h - 1 - thk - i) * w] = 255;
+		}
+	}
+
+	for (y = 0; y < h; y++) {
+		for (x = 0; x < w; x++) {
+			if (shape->data[x + y * w])
+				continue;
+			near = false;
+			for (ny = y - thk; ny <= y + thk && !near; ny++)
+				for (nx = x - thk; nx <= x + thk && !near; nx++)
+					near = ny >= 0 && ny < h && nx >= 0 && nx < w &&
+					       shape->data[nx + ny * w];
+			if (near)
+				outline->data[x + y * w] = 220;
+		}
+	}
+
+	if (rotated) {
+		turned_shape = new_coverage(h, w);
+		turned_outline = new_coverage(h, w);
+		if (!turned_shape || !turned_outline) {
+			free(turned_shape);
+			free(turned_outline);
+			goto err_free;
+		}
+		for (y = 0; y < h; y++) {
+			for (x = 0; x < w; x++) {
+				turned_shape->data[y + x * h] = shape->data[x + y * w];
+				turned_outline->data[y + x * h] = outline->data[x + y * w];
+			}
+		}
+		free(shape);
+		free(outline);
+		shape = turned_shape;
+		outline = turned_outline;
+	}
+
+	free(bb->pointer_shape);
+	free(bb->pointer_outline);
+	bb->pointer_shape = shape;
+	bb->pointer_outline = outline;
+	bb->pointer_font_height = FONT_HEIGHT(txt);
+	bb->pointer_rotated = rotated;
+	return 0;
+
+err_free:
+	free(shape);
+	free(outline);
+	return -ENOMEM;
+}
+
 static int bbulk_draw_pointer(struct kmscon_text *txt, unsigned int pointer_x,
 			      unsigned int pointer_y)
 {
 	struct bbulk *bb = txt->data;
-	struct video_blend_req req;
-	struct kmscon_glyph *bb_glyph;
-	struct tsm_screen_cell pointer_cell = {0};
+	struct video_blend_req req = {0};
 	unsigned int fw2 = FONT_WIDTH(txt) / 2;
 	unsigned int fh2 = FONT_HEIGHT(txt) / 2;
+	unsigned int hf_w, hf_h, w, h, long_side, short_side;
+	int ret;
 
-	pointer_cell.ch = 'I';
+	ret = pointer_buffers(txt, bb);
+	if (ret)
+		return ret;
 
 	pointer_x = clamp(pointer_x, fw2, txt->cols * FONT_WIDTH(txt) - fw2);
 	pointer_y = clamp(pointer_y, fh2, txt->rows * FONT_HEIGHT(txt) - fh2);
 
-	bb_glyph = find_glyph(txt, &pointer_cell);
-	if (!bb_glyph)
-		return -ENOMEM;
+	w = bb->pointer_shape->width;
+	h = bb->pointer_shape->height;
+	long_side = max(w, h);
+	short_side = min(w, h);
 
-	req.buf = &bb_glyph->buf;
-	req.w = bb_glyph->buf.width;
-	req.h = bb_glyph->buf.height;
+	/* The centre of a cell-sized box around the pointer, on the screen as it is turned */
 	set_pointer_coordinate(bb, txt, &req, pointer_x, pointer_y);
-	mark_damaged(txt, bb, pointer_x, pointer_y);
+	if (txt->orientation == OR_NORMAL || txt->orientation == OR_UPSIDE_DOWN) {
+		hf_w = SHL_DIV_ROUND_UP(FONT_WIDTH(txt), 2);
+		hf_h = SHL_DIV_ROUND_UP(FONT_HEIGHT(txt), 2);
+	} else {
+		hf_w = SHL_DIV_ROUND_UP(FONT_HEIGHT(txt), 2);
+		hf_h = SHL_DIV_ROUND_UP(FONT_WIDTH(txt), 2);
+	}
+	req.x += hf_w;
+	req.y += hf_h;
+	req.x = clamp(req.x, w / 2, bb->sw - (w - w / 2)) - w / 2;
+	req.y = clamp(req.y, h / 2, bb->sh - (h - h / 2)) - h / 2;
+	req.w = w;
+	req.h = h;
+	req.over = true;
 
-	req.fr = bb->attr.fr;
-	req.fg = bb->attr.fg;
-	req.fb = bb->attr.fb;
-	req.br = bb->attr.br;
-	req.bg = bb->attr.bg;
-	req.bb = bb->attr.bb;
+	mark_damaged(txt, bb, pointer_x, pointer_y, short_side / 2 + 1, long_side / 2 + 1);
+
+	req.buf = bb->pointer_outline;
 	display_blend(txt->disp, &req);
-	bb->requests++;
+	req.buf = bb->pointer_shape;
+	req.fr = 255;
+	req.fg = 255;
+	req.fb = 255;
+	display_blend(txt->disp, &req);
+	bb->requests += 2;
 	return 0;
 }
 

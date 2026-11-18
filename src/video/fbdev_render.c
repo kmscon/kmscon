@@ -113,6 +113,75 @@ static void write_24bit(uint8_t *dst, uint_fast32_t value)
 #endif
 }
 
+static uint_fast32_t read_24bit(const uint8_t *src)
+{
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+	return src[0] | (src[1] << 8) | (src[2] << 16);
+#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+	return src[2] | (src[1] << 8) | (src[0] << 16);
+#else
+#error "Unknown endianness"
+#endif
+}
+
+/* One colour channel of a device pixel, widened to 8 bits. */
+static uint_fast32_t device_channel(uint_fast32_t pixel, unsigned int off, unsigned int len)
+{
+	uint_fast32_t val;
+	unsigned int i;
+
+	if (!len)
+		return 0;
+	val = ((pixel >> off) & ((1u << len) - 1)) << (8 - len);
+	for (i = len; i < 8; i <<= 1)
+		val |= val >> i;
+	return val & 0xff;
+}
+
+/*
+ * Blend the foreground colour over the pixels the framebuffer already shows: a pixel the
+ * buffer does not cover is left as it is.
+ */
+static void blend_over(struct display *disp, const struct video_blend_req *req, uint8_t *dst,
+		       unsigned int width, unsigned int height)
+{
+	struct fbdev_display *fbdev = disp->data;
+	const uint8_t *src = req->buf->data;
+	uint_fast32_t shown, r, g, b, val;
+	unsigned int i;
+
+	while (height--) {
+		for (i = 0; i < width; ++i) {
+			if (src[i] == 0)
+				continue;
+
+			if (fbdev->Bpp == 2)
+				shown = ((uint16_t *)dst)[i];
+			else if (fbdev->Bpp == 3)
+				shown = read_24bit(&dst[i * 3]);
+			else
+				shown = ((uint32_t *)dst)[i];
+
+			r = device_channel(shown, fbdev->off_r, fbdev->len_r);
+			g = device_channel(shown, fbdev->off_g, fbdev->len_g);
+			b = device_channel(shown, fbdev->off_b, fbdev->len_b);
+			r = (req->fr * src[i] + r * (255 - src[i])) / 255;
+			g = (req->fg * src[i] + g * (255 - src[i])) / 255;
+			b = (req->fb * src[i] + b * (255 - src[i])) / 255;
+			val = xrgb32_to_device(disp, (r << 16) | (g << 8) | b);
+
+			if (fbdev->Bpp == 2)
+				((uint16_t *)dst)[i] = val;
+			else if (fbdev->Bpp == 3)
+				write_24bit(&dst[i * 3], val);
+			else
+				((uint32_t *)dst)[i] = val;
+		}
+		dst += fbdev->stride;
+		src += req->buf->width;
+	}
+}
+
 int fbdev_display_blend(struct display *disp, const struct video_blend_req *req)
 {
 	unsigned int tmp;
@@ -146,6 +215,15 @@ int fbdev_display_blend(struct display *disp, const struct video_blend_req *req)
 		dst = &fbdev->map[fbdev->yres * fbdev->stride];
 	dst = &dst[req->y * fbdev->stride + req->x * fbdev->Bpp];
 	src = req->buf->data;
+
+	if (req->over) {
+		if (fbdev->Bpp < 2 || fbdev->Bpp > 4) {
+			log_warning("invalid Bpp");
+			return 0;
+		}
+		blend_over(disp, req, dst, width, height);
+		return 0;
+	}
 
 	/* Division by 256 instead of 255 increases
 	 * speed by like 20% on slower machines.
