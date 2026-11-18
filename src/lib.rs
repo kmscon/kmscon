@@ -7,3 +7,9 @@
 // into the same binary would duplicate the Rust standard library.
 
 pub mod tsm;
+
+mod misc {
+    pub mod issue;
+    mod issue_network;
+    mod sys;
+}

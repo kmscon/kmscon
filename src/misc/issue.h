@@ -36,6 +36,16 @@
 #define ISSUE_DEFAULT_PATH                                                                         \
 	"/etc/issue:/etc/issue.d:/run/issue:/run/issue.d:/usr/lib/issue:/usr/lib/issue.d"
 
-char *kmscon_issue_get_buffer(const char *search_path, char *pty_name, size_t *len);
+#include <stddef.h>
+
+/*
+ * Implemented in Rust, in issue.rs.
+ *
+ * Returns a malloc'd, NUL-terminated, buffer containing the expanded issue
+ * text, with @pty_name for \l, and its length in @len. The caller frees it.
+ * Returns NULL if there is no issue text. If @search_path is NULL,
+ * ISSUE_DEFAULT_PATH is used.
+ */
+char *kmscon_issue_get_buffer(const char *search_path, const char *pty_name, size_t *len);
 
 #endif /* KMSCON_ISSUE_H */

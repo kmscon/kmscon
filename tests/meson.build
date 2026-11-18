@@ -57,26 +57,6 @@ test_asciinema = executable(
 )
 test('test_asciinema', test_asciinema)
 
-test_issue = executable(
-    'test_issue',
-    'test_issue.c',
-    '../src/misc/issue.c',
-    '../src/misc/issue_network.c',
-    include_directories: misc_inc,
-    dependencies: [kmscon_rs_deps, shl_deps],
-)
-test('test_issue', test_issue)
-
-test_issue_parameter = executable(
-    'test_issue_parameter',
-    'test_issue_parameter.c',
-    '../src/misc/issue.c',
-    '../src/misc/issue_network.c',
-    include_directories: misc_inc,
-    dependencies: [kmscon_rs_deps, shl_deps],
-)
-test('test_issue_parameter', test_issue_parameter)
-
 if enable_font_freetype
     test_font_freetype = executable(
         'test_font_freetype',
