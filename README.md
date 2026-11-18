@@ -57,7 +57,7 @@ Released tarballs can be found at: https://github.com/kmscon/kmscon/releases
 To build kmscon, you will need:
 - meson
 - gcc or clang toolchain
-- cargo and a rust compiler for the tsm part
+- cargo and a rust compiler for the Rust parts (kmscon-rs, including libtsm)
 
 To compile the kmscon binary, run the standard meson commands:
 ```bash

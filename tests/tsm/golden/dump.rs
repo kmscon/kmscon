@@ -2,6 +2,7 @@
 
 use std::fmt::Write;
 
+use kmscon_rs::tsm;
 use tsm::{Attr, AttrFlags, Rgb, Screen, ScreenFlags, Vte, VteFlags};
 
 use super::Recorder;

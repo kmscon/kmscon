@@ -36,7 +36,7 @@ test(
 test_text = executable(
     'test_text',
     'test_text.c',
-    dependencies: [libtsm_deps, shl_deps],
+    dependencies: [kmscon_rs_deps, shl_deps],
 )
 test('test_text', test_text)
 
@@ -44,7 +44,7 @@ test_bbulk = executable(
     'test_bbulk',
     'test_bbulk.c',
     include_directories: src_inc,
-    dependencies: [libtsm_deps, htable_deps],
+    dependencies: [kmscon_rs_deps, htable_deps],
 )
 test('test_bbulk', test_bbulk)
 
@@ -53,7 +53,7 @@ test_asciinema = executable(
     'test_asciinema.c',
     '../src/misc/asciinema.c',
     include_directories: misc_inc,
-    dependencies: [libtsm_deps, shl_deps, eloop_deps],
+    dependencies: [kmscon_rs_deps, shl_deps, eloop_deps],
 )
 test('test_asciinema', test_asciinema)
 
@@ -63,7 +63,7 @@ test_issue = executable(
     '../src/misc/issue.c',
     '../src/misc/issue_network.c',
     include_directories: misc_inc,
-    dependencies: [libtsm_deps, shl_deps],
+    dependencies: [kmscon_rs_deps, shl_deps],
 )
 test('test_issue', test_issue)
 
@@ -73,7 +73,7 @@ test_issue_parameter = executable(
     '../src/misc/issue.c',
     '../src/misc/issue_network.c',
     include_directories: misc_inc,
-    dependencies: [libtsm_deps, shl_deps],
+    dependencies: [kmscon_rs_deps, shl_deps],
 )
 test('test_issue_parameter', test_issue_parameter)
 
@@ -83,7 +83,7 @@ if enable_font_freetype
         'test_font_freetype.c',
         include_directories: src_inc,
         dependencies: [
-            libtsm_deps,
+            kmscon_rs_deps,
             freetype_deps,
             fontconfig_deps,
             threads_deps,
@@ -97,7 +97,7 @@ test_conf = executable(
     'test_conf',
     'test_conf.c',
     include_directories: [src_inc, misc_inc],
-    dependencies: [libtsm_deps, shl_deps],
+    dependencies: [kmscon_rs_deps, shl_deps],
 )
 test('test_conf', test_conf)
 
@@ -105,7 +105,7 @@ test('test_conf', test_conf)
 test_tsm = executable(
     'test_tsm',
     'test_tsm.c',
-    dependencies: [libtsm_deps],
+    dependencies: [kmscon_rs_deps],
 )
 test('test_tsm', test_tsm)
 

@@ -1,7 +1,7 @@
 //! Screen cells and their attributes.
 
-use crate::color::Rgb;
-use crate::flags::flags;
+use crate::tsm::color::Rgb;
+use crate::tsm::flags::flags;
 
 flags! {
     /// Character attributes.
@@ -46,7 +46,7 @@ impl Cell {
     }
 }
 
-/// A cell as it should be drawn, see [`Screen::render`](crate::Screen::render).
+/// A cell as it should be drawn, see [`Screen::render`](crate::tsm::Screen::render).
 ///
 /// Inverse video, selection, screen inversion and dim are already applied to
 /// the colors. Only glyph-shaping flags (bold, italic, underline, blink) are

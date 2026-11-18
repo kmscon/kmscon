@@ -7,7 +7,7 @@
 //! and drops events the application did not ask for.
 
 use super::{Handler, Vte};
-use crate::flags::flags;
+use crate::tsm::flags::flags;
 
 /// Mouse reporting protocol selected by the application.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Default, Debug)]

@@ -8,10 +8,10 @@ mod decode;
 mod keyboard;
 mod mouse;
 
-use crate::cell::Attr;
-use crate::color::Palette;
-use crate::flags::flags;
-use crate::screen::Screen;
+use crate::tsm::cell::Attr;
+use crate::tsm::color::Palette;
+use crate::tsm::flags::flags;
+use crate::tsm::screen::Screen;
 
 use self::core::Core;
 use self::decode::Decoder;
@@ -109,12 +109,12 @@ impl Handler for () {}
 /// bytes to send back to the application and other events.
 ///
 /// ```
-/// use tsm::Vte;
+/// use kmscon_rs::tsm::Vte;
 ///
 /// #[derive(Default)]
 /// struct Pty(Vec<u8>);
 ///
-/// impl tsm::Handler for Pty {
+/// impl kmscon_rs::tsm::Handler for Pty {
 ///     fn write(&mut self, data: &[u8]) {
 ///         self.0.extend_from_slice(data);
 ///     }

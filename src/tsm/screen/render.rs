@@ -1,8 +1,8 @@
 //! Rendering: flatten the visible view into drawable cells.
 
 use super::{Screen, ScreenFlags};
-use crate::cell::{AttrFlags, Cell, RenderCell};
-use crate::color::Rgb;
+use crate::tsm::cell::{AttrFlags, Cell, RenderCell};
+use crate::tsm::color::Rgb;
 
 fn dim(fg: Rgb, bg: Rgb) -> Rgb {
     Rgb::new(bg.r / 2 + fg.r / 2, bg.g / 2 + fg.g / 2, bg.b / 2 + fg.b / 2)

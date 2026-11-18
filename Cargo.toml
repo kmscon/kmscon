@@ -1,14 +1,17 @@
+# kmscon-rs: the Rust parts of kmscon, built as a single static library
+# linked into the kmscon binary. It contains libtsm (src/tsm) and the
+# modules converted from C.
 [package]
-name = "libtsm"
-version = "5.0.0"
+name = "kmscon-rs"
+version = "10.1.2"
 edition = "2024"
-description = "Terminal-emulator state machine for DEC VT100-VT520 compatible terminals, with C bindings for kmscon"
+description = "Rust parts of kmscon, with their C bindings"
 license = "MIT"
 publish = false
 
 [lib]
-name = "tsm"
-path = "src/tsm/lib.rs"
+name = "kmscon_rs"
+path = "src/lib.rs"
 # staticlib is linked into kmscon, rlib is used by the tests
 crate-type = ["staticlib", "rlib"]
 
