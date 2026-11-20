@@ -212,6 +212,7 @@ static int gltex_set(struct render *rdr)
 
 	if (gl_has_error(gt->shader)) {
 		log_warning("cannot create shader");
+		ret = -EFAULT;
 		goto err_shader;
 	}
 
@@ -410,13 +411,13 @@ static struct gl_glyph *find_glyph(struct render *rdr, const struct tsm_cell *ce
 	if (shl_hashtable_find(gt->glyphs, (void **)&glglyph, id))
 		return glglyph;
 
-	glglyph = calloc(1, sizeof(*glglyph));
-	if (!glglyph)
-		return NULL;
-
 	glyph = kmscon_font_render(font, &attr, ch);
 	if (!glyph)
 		return NULL;
+
+	glglyph = calloc(1, sizeof(*glglyph));
+	if (!glglyph)
+		goto err_free;
 
 	glglyph->double_width = glyph->double_width;
 
@@ -479,8 +480,7 @@ static int gltex_rotate(struct render *rdr, enum Orientation orientation)
 	rdr->orientation = orientation;
 
 	gltex_unset(rdr);
-	gltex_set(rdr);
-	return 0;
+	return gltex_set(rdr);
 }
 
 static int gltex_prepare(struct render *rdr, struct tsm_attr *attr)
