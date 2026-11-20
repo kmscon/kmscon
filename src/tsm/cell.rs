@@ -35,16 +35,14 @@ impl Attr {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct Cell {
     /// The character, or `'\0'` if the cell is empty.
+    /// The cell following a wide (width 2) character is `'\0'`.
     pub ch: char,
-    /// Number of columns used by the character. The cell following a wide
-    /// (width 2) character has width 0.
-    pub width: u8,
     pub attr: Attr,
 }
 
 impl Cell {
     pub(crate) fn blank(attr: Attr) -> Self {
-        Cell { ch: '\0', width: 1, attr }
+        Cell { ch: '\0', attr }
     }
 }
 

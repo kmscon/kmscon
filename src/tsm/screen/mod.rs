@@ -338,9 +338,8 @@ impl Screen {
             cells.copy_within(x..w - len, x + len);
         }
 
-        cells[x] = Cell { ch, width: len as u8, attr: *attr };
+        cells[x] = Cell { ch, attr: *attr };
         for cell in &mut cells[x + 1..(x + len).min(w)] {
-            cell.width = 0;
             cell.ch = '\0';
         }
     }

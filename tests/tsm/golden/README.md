@@ -86,8 +86,10 @@ The active screen (not the scrollback view), one row per line between `|`.
 `·` is an empty cell (code point 0), a wide character is printed once and its
 trailing cell is omitted. Characters that cannot be printed literally are shown
 as `�`. A `cells` block follows if any cell is unusual (unprintable code point,
-a width-0 cell not following a width-2 cell, a width-2 cell without a trailing
-cell, ...): `  ROW,COL U+XXXX w=WIDTH`.
+a wide character not followed by an empty trailing cell, ...):
+`  ROW,COL U+XXXX w=WIDTH`. Cells don't store a width: it is derived from the
+character, an empty cell following a wide character being its trailing cell
+(width 0).
 
 ### `attrs`
 

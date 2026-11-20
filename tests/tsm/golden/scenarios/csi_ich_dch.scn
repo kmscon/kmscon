@@ -1,3 +1,4 @@
+# Note: differs from the C libtsm 4.x: cells have no width field, an orphaned trailing cell of a wide character is a plain empty cell
 resize 8 3
 in "abcdefgh\e[1;3H\e[@"
 dump text

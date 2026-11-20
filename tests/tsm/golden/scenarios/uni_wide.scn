@@ -1,3 +1,4 @@
+# Note: differs from the C libtsm 4.x: cells have no width field, an orphaned trailing cell of a wide character is a plain empty cell
 resize 6 5
 in "\u{4e16}\u{754c}x"
 dump state text
