@@ -246,6 +246,20 @@ err_htable:
 	return ret;
 }
 
+/* frees an atlas, also a partially initialized one; the texture is only
+ * released if @gl is true (the GL context is current) */
+static void atlas_free(struct atlas *atlas, bool gl)
+{
+	free(atlas->cache_pos);
+	free(atlas->cache_texpos);
+	free(atlas->cache_fgcol);
+	free(atlas->cache_bgcol);
+
+	if (gl)
+		gl_tex_free(&atlas->tex, 1);
+	free(atlas);
+}
+
 static void gltex_unset(struct render *rdr)
 {
 	struct gltex *gt = rdr->data;
@@ -265,15 +279,7 @@ static void gltex_unset(struct render *rdr)
 	dlist_for_each_entry_safe(atlas, tmp, &gt->atlases, list)
 	{
 		dlist_unlink(&atlas->list);
-
-		free(atlas->cache_pos);
-		free(atlas->cache_texpos);
-		free(atlas->cache_fgcol);
-		free(atlas->cache_bgcol);
-
-		if (gl)
-			gl_tex_free(&atlas->tex, 1);
-		free(atlas);
+		atlas_free(atlas, gl);
 	}
 
 	if (gl) {
@@ -283,13 +289,57 @@ static void gltex_unset(struct render *rdr)
 	}
 }
 
+/*
+ * Allocates the texture storage of @atlas. OpenGL texture sizes are heavily
+ * restricted so we need to find a valid texture size that is big enough to
+ * hold as many glyphs as possible but at least 1. On success, sets the atlas
+ * size and glyph count and returns 0.
+ */
+static int atlas_alloc_tex(struct render *rdr, struct atlas *atlas)
+{
+	struct gltex *gt = rdr->data;
+	unsigned int width, height;
+	size_t newsize;
+	GLenum err;
+
+	newsize = gt->max_tex_size / FONT_WIDTH(rdr);
+	if (newsize < 1)
+		newsize = 1;
+
+	height = shl_next_pow2(FONT_HEIGHT(rdr));
+	for (;; --newsize) {
+		width = shl_next_pow2(FONT_WIDTH(rdr) * newsize);
+
+		gl_clear_error();
+
+		glBindTexture(GL_TEXTURE_2D, atlas->tex);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, width, height, 0, GL_ALPHA,
+			     GL_UNSIGNED_BYTE, NULL);
+
+		err = glGetError();
+		if (err == GL_NO_ERROR)
+			break;
+		if (newsize <= 1) {
+			gl_clear_error();
+			log_warning("OpenGL textures too small for a single glyph (%d)", err);
+			return -EFAULT;
+		}
+	}
+
+	log_debug("new atlas of size %ux%u for %zu", width, height, newsize);
+
+	atlas->count = newsize;
+	atlas->width = width;
+	atlas->height = height;
+	return 0;
+}
+
 /* returns an atlas with at least 1 free glyph position; NULL on error */
 static struct atlas *get_atlas(struct render *rdr, unsigned int num)
 {
 	struct gltex *gt = rdr->data;
 	struct atlas *atlas;
-	size_t newsize;
-	unsigned int width, height, nsize;
+	unsigned int nsize;
 	GLenum err;
 
 	/* check whether the last added atlas has still room for one glyph */
@@ -309,76 +359,30 @@ static struct atlas *get_atlas(struct render *rdr, unsigned int num)
 	if (err != GL_NO_ERROR || !atlas->tex) {
 		gl_clear_error();
 		log_warning("cannot create new OpenGL texture: %d", err);
-		goto err_free;
+		goto err;
 	}
 
-	newsize = gt->max_tex_size / FONT_WIDTH(rdr);
-	if (newsize < 1)
-		newsize = 1;
-
-	/* OpenGL texture sizes are heavily restricted so we need to find a
-	 * valid texture size that is big enough to hold as many glyphs as
-	 * possible but at least 1 */
-try_next:
-	width = shl_next_pow2(FONT_WIDTH(rdr) * newsize);
-	height = shl_next_pow2(FONT_HEIGHT(rdr));
-
-	gl_clear_error();
-
-	glBindTexture(GL_TEXTURE_2D, atlas->tex);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, width, height, 0, GL_ALPHA, GL_UNSIGNED_BYTE,
-		     NULL);
-
-	err = glGetError();
-	if (err != GL_NO_ERROR) {
-		if (newsize > 1) {
-			--newsize;
-			goto try_next;
-		}
-		gl_clear_error();
-		log_warning("OpenGL textures too small for a single glyph (%d)", err);
-		goto err_tex;
-	}
-
-	log_debug("new atlas of size %ux%u for %zu", width, height, newsize);
+	if (atlas_alloc_tex(rdr, atlas))
+		goto err;
 
 	nsize = rdr->max_cols * rdr->max_rows + 1; // +1 for the mouse pointer
 
 	atlas->cache_pos = malloc(sizeof(GLfloat) * nsize * 2 * 6);
-	if (!atlas->cache_pos)
-		goto err_mem;
-
 	atlas->cache_texpos = malloc(sizeof(GLfloat) * nsize * 2 * 6);
-	if (!atlas->cache_texpos)
-		goto err_mem;
-
 	atlas->cache_fgcol = malloc(sizeof(GLfloat) * nsize * 3 * 6);
-	if (!atlas->cache_fgcol)
-		goto err_mem;
-
 	atlas->cache_bgcol = malloc(sizeof(GLfloat) * nsize * 3 * 6);
-	if (!atlas->cache_bgcol)
-		goto err_mem;
+	if (!atlas->cache_pos || !atlas->cache_texpos || !atlas->cache_fgcol || !atlas->cache_bgcol)
+		goto err;
 
 	atlas->cache_size = nsize;
-	atlas->count = newsize;
-	atlas->width = width;
-	atlas->height = height;
 	atlas->advance_htex = 1.0 / atlas->width * FONT_WIDTH(rdr);
 	atlas->advance_vtex = 1.0 / atlas->height * FONT_HEIGHT(rdr);
 
 	dlist_link(&gt->atlases, &atlas->list);
 	return atlas;
 
-err_mem:
-	free(atlas->cache_pos);
-	free(atlas->cache_texpos);
-	free(atlas->cache_fgcol);
-	free(atlas->cache_bgcol);
-err_tex:
-	gl_tex_free(&atlas->tex, 1);
-err_free:
-	free(atlas);
+err:
+	atlas_free(atlas, atlas->tex != 0);
 	return NULL;
 }
 
