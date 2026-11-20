@@ -71,13 +71,6 @@ struct atlas {
 	unsigned int rows;
 	unsigned int fill;
 
-	unsigned int cache_size;
-	unsigned int cache_num;
-	GLfloat *cache_pos;
-	GLfloat *cache_texpos;
-	GLfloat *cache_fgcol;
-	GLfloat *cache_bgcol;
-
 	/* size of a glyph in normalized texture coordinates */
 	GLfloat tex_w;
 	GLfloat tex_h;
@@ -89,6 +82,14 @@ struct gl_glyph {
 	/* cell of the glyph in the atlas */
 	unsigned int col;
 	unsigned int row;
+};
+
+/* a glyph to draw, at (x1, y1)-(x2, y2) in console pixels */
+struct quad {
+	const struct gl_glyph *glyph;
+	float x1, y1, x2, y2;
+	struct tsm_color fg;
+	struct tsm_color bg;
 };
 
 struct gltex {
@@ -111,6 +112,20 @@ struct gltex {
 	unsigned int sh;
 
 	struct tsm_attr attr;
+
+	/* the glyphs of the frame, in draw order, at most one per console cell,
+	 * and the mouse pointer, drawn on top of them */
+	struct quad *quads;
+	unsigned int quads_size;
+	unsigned int quads_num;
+	struct quad pointer;
+	bool pointer_visible;
+
+	/* vertex data of the quads drawn with one atlas, 6 vertices per quad */
+	GLfloat *vtx_pos;
+	GLfloat *vtx_texpos;
+	GLfloat *vtx_fgcol;
+	GLfloat *vtx_bgcol;
 };
 
 static int gltex_init(struct render *rdr)
@@ -193,6 +208,37 @@ static void compute_offset(struct render *rdr)
 		display_set_cursor_offset(rdr->disp, gt->off_y, gt->off_x);
 }
 
+static void free_quads(struct gltex *gt)
+{
+	free(gt->quads);
+	free(gt->vtx_pos);
+	free(gt->vtx_texpos);
+	free(gt->vtx_fgcol);
+	free(gt->vtx_bgcol);
+}
+
+/* allocates room for one quad per console cell */
+static int alloc_quads(struct render *rdr)
+{
+	struct gltex *gt = rdr->data;
+	size_t n = (size_t)rdr->max_cols * rdr->max_rows;
+	/* at least one quad, for the pointer */
+	size_t nv = n ? n : 1;
+
+	gt->quads = calloc(nv, sizeof(*gt->quads));
+	gt->vtx_pos = malloc(sizeof(GLfloat) * nv * 6 * 2);
+	gt->vtx_texpos = malloc(sizeof(GLfloat) * nv * 6 * 2);
+	gt->vtx_fgcol = malloc(sizeof(GLfloat) * nv * 6 * 3);
+	gt->vtx_bgcol = malloc(sizeof(GLfloat) * nv * 6 * 3);
+	if (!gt->quads || !gt->vtx_pos || !gt->vtx_texpos || !gt->vtx_fgcol || !gt->vtx_bgcol) {
+		free_quads(gt);
+		return -ENOMEM;
+	}
+
+	gt->quads_size = n;
+	return 0;
+}
+
 static int gltex_set(struct render *rdr)
 {
 	struct gltex *gt = rdr->data;
@@ -245,6 +291,10 @@ static int gltex_set(struct render *rdr)
 	compute_offset(rdr);
 	compute_projection(rdr);
 
+	ret = alloc_quads(rdr);
+	if (ret)
+		goto err_shader;
+
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &s);
 	if (s <= 0)
 		s = 64;
@@ -266,11 +316,6 @@ err_htable:
  * released if @gl is true (the GL context is current) */
 static void atlas_free(struct atlas *atlas, bool gl)
 {
-	free(atlas->cache_pos);
-	free(atlas->cache_texpos);
-	free(atlas->cache_fgcol);
-	free(atlas->cache_bgcol);
-
 	if (gl)
 		gl_tex_free(&atlas->tex, 1);
 	free(atlas);
@@ -291,6 +336,7 @@ static void gltex_unset(struct render *rdr)
 	}
 
 	shl_hashtable_free(gt->glyphs);
+	free_quads(gt);
 
 	dlist_for_each_entry_safe(atlas, tmp, &gt->atlases, list)
 	{
@@ -385,7 +431,6 @@ static struct atlas *get_atlas(struct render *rdr, unsigned int num)
 {
 	struct gltex *gt = rdr->data;
 	struct atlas *atlas;
-	unsigned int nsize;
 	GLenum err;
 
 	/* check whether the last added atlas has still room for the glyph */
@@ -420,16 +465,6 @@ static struct atlas *get_atlas(struct render *rdr, unsigned int num)
 		goto err;
 	}
 
-	nsize = rdr->max_cols * rdr->max_rows + 1; // +1 for the mouse pointer
-
-	atlas->cache_pos = malloc(sizeof(GLfloat) * nsize * 2 * 6);
-	atlas->cache_texpos = malloc(sizeof(GLfloat) * nsize * 2 * 6);
-	atlas->cache_fgcol = malloc(sizeof(GLfloat) * nsize * 3 * 6);
-	atlas->cache_bgcol = malloc(sizeof(GLfloat) * nsize * 3 * 6);
-	if (!atlas->cache_pos || !atlas->cache_texpos || !atlas->cache_fgcol || !atlas->cache_bgcol)
-		goto err;
-
-	atlas->cache_size = nsize;
 	/* exact, as the texture sizes are powers of 2 */
 	atlas->tex_w = (GLfloat)FONT_WIDTH(rdr) / atlas->width;
 	atlas->tex_h = (GLfloat)FONT_HEIGHT(rdr) / atlas->height;
@@ -549,17 +584,14 @@ static int gltex_rotate(struct render *rdr, enum Orientation orientation)
 static int gltex_prepare(struct render *rdr, struct tsm_attr *attr)
 {
 	struct gltex *gt = rdr->data;
-	struct atlas *atlas;
 	int ret;
 
 	ret = display_use(rdr->disp);
 	if (ret)
 		return ret;
 
-	dlist_for_each_entry(atlas, &gt->atlases, list)
-	{
-		atlas->cache_num = 0;
-	}
+	gt->quads_num = 0;
+	gt->pointer_visible = false;
 	gt->attr = *attr;
 
 	glClearColor(gt->attr.bg.r / 255.0, gt->attr.bg.g / 255.0, gt->attr.bg.b / 255.0, 1);
@@ -567,26 +599,23 @@ static int gltex_prepare(struct render *rdr, struct tsm_attr *attr)
 	return 0;
 }
 
-/*
- * Appends a glyph quad to the vertex caches of @atlas, as two triangles.
- * (x1, y1) is the top-left and (x2, y2) the bottom-right corner in console
- * pixels, the texture spans @width cells from cell (@col, @row) of the atlas.
- */
-static int atlas_push_quad(struct atlas *atlas, float x1, float y1, float x2, float y2,
-			   unsigned int col, unsigned int row, float width,
-			   const struct tsm_color *fg, const struct tsm_color *bg)
+/* writes the vertices of quad @q at index @idx of the vertex arrays, as two
+ * triangles */
+static void emit_quad(struct gltex *gt, unsigned int idx, const struct quad *q)
 {
+	const struct gl_glyph *glyph = q->glyph;
+	const struct atlas *atlas = glyph->atlas;
+	float x1 = q->x1, y1 = q->y1, x2 = q->x2, y2 = q->y2;
+	float width = glyph->double_width ? 2.0 : 1.0;
+	const struct tsm_color *fg = &q->fg, *bg = &q->bg;
 	GLfloat *pos, *texpos, *fgcol, *bgcol;
-	GLfloat u1 = col * atlas->tex_w;
-	GLfloat u2 = (col + width) * atlas->tex_w;
-	GLfloat v1 = row * atlas->tex_h;
-	GLfloat v2 = (row + 1) * atlas->tex_h;
+	GLfloat u1 = glyph->col * atlas->tex_w;
+	GLfloat u2 = (glyph->col + width) * atlas->tex_w;
+	GLfloat v1 = glyph->row * atlas->tex_h;
+	GLfloat v2 = (glyph->row + 1) * atlas->tex_h;
 	int i;
 
-	if (atlas->cache_num >= atlas->cache_size)
-		return -ERANGE;
-
-	pos = &atlas->cache_pos[atlas->cache_num * 2 * 6];
+	pos = &gt->vtx_pos[idx * 2 * 6];
 	pos[0] = x1;
 	pos[1] = y1;
 	pos[2] = x1;
@@ -601,7 +630,7 @@ static int atlas_push_quad(struct atlas *atlas, float x1, float y1, float x2, fl
 	pos[10] = x2;
 	pos[11] = y1;
 
-	texpos = &atlas->cache_texpos[atlas->cache_num * 2 * 6];
+	texpos = &gt->vtx_texpos[idx * 2 * 6];
 	texpos[0] = u1;
 	texpos[1] = v1;
 	texpos[2] = u1;
@@ -616,8 +645,8 @@ static int atlas_push_quad(struct atlas *atlas, float x1, float y1, float x2, fl
 	texpos[10] = u2;
 	texpos[11] = v1;
 
-	fgcol = &atlas->cache_fgcol[atlas->cache_num * 3 * 6];
-	bgcol = &atlas->cache_bgcol[atlas->cache_num * 3 * 6];
+	fgcol = &gt->vtx_fgcol[idx * 3 * 6];
+	bgcol = &gt->vtx_bgcol[idx * 3 * 6];
 	for (i = 0; i < 6; ++i) {
 		fgcol[i * 3 + 0] = fg->r / 255.0;
 		fgcol[i * 3 + 1] = fg->g / 255.0;
@@ -626,9 +655,6 @@ static int atlas_push_quad(struct atlas *atlas, float x1, float y1, float x2, fl
 		bgcol[i * 3 + 1] = bg->g / 255.0;
 		bgcol[i * 3 + 2] = bg->b / 255.0;
 	}
-
-	++atlas->cache_num;
-	return 0;
 }
 
 static int gltex_draw_cell(struct render *rdr, const struct tsm_cell *cell, unsigned int posx,
@@ -638,7 +664,6 @@ static int gltex_draw_cell(struct render *rdr, const struct tsm_cell *cell, unsi
 	struct gl_glyph *glglyph;
 	float x1, x2, y1, y2;
 	float width;
-	int ret;
 
 	if (posx && gt->previous_overflow && (cell->ch == 0 || cell->ch == ' ')) {
 		gt->previous_overflow = false;
@@ -654,10 +679,18 @@ static int gltex_draw_cell(struct render *rdr, const struct tsm_cell *cell, unsi
 	y1 = gt->off_y + posy * FONT_HEIGHT(rdr);
 	y2 = y1 + FONT_HEIGHT(rdr);
 
-	ret = atlas_push_quad(glglyph->atlas, x1, y1, x2, y2, glglyph->col, glglyph->row, width,
-			      &cell->fg, &cell->bg);
-	if (ret)
-		return ret;
+	if (gt->quads_num >= gt->quads_size)
+		return -ERANGE;
+
+	gt->quads[gt->quads_num++] = (struct quad){
+		.glyph = glglyph,
+		.x1 = x1,
+		.y1 = y1,
+		.x2 = x2,
+		.y2 = y2,
+		.fg = cell->fg,
+		.bg = cell->bg,
+	};
 
 	gt->previous_overflow = glglyph->double_width;
 	return 0;
@@ -713,14 +746,35 @@ static int gltex_draw_pointer(struct render *rdr, unsigned int x, unsigned int y
 	x2 = x1 + FONT_WIDTH(rdr);
 	y2 = y1 + FONT_HEIGHT(rdr);
 
-	return atlas_push_quad(glyph->atlas, x1, y1, x2, y2, glyph->col, glyph->row, 1.0,
-			       &gt->attr.fg, &gt->attr.bg);
+	gt->pointer = (struct quad){
+		.glyph = glyph,
+		.x1 = x1,
+		.y1 = y1,
+		.x2 = x2,
+		.y2 = y2,
+		.fg = gt->attr.fg,
+		.bg = gt->attr.bg,
+	};
+	gt->pointer_visible = true;
+	return 0;
+}
+
+static void draw_atlas(struct gltex *gt, const struct atlas *atlas, unsigned int num)
+{
+	glBindTexture(GL_TEXTURE_2D, atlas->tex);
+
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, gt->vtx_pos);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, gt->vtx_texpos);
+	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, gt->vtx_fgcol);
+	glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, gt->vtx_bgcol);
+	glDrawArrays(GL_TRIANGLES, 0, 6 * num);
 }
 
 static int gltex_render(struct render *rdr)
 {
 	struct gltex *gt = rdr->data;
 	struct atlas *atlas;
+	unsigned int i, num;
 
 	gl_clear_error();
 
@@ -739,18 +793,21 @@ static int gltex_render(struct render *rdr)
 	glActiveTexture(GL_TEXTURE0);
 	glUniform1i(gt->uni_atlas, 0);
 
+	/* one draw call per atlas, reusing the vertex arrays, as client side
+	 * arrays are consumed by glDrawArrays() */
 	dlist_for_each_entry(atlas, &gt->atlases, list)
 	{
-		if (!atlas->cache_num)
-			continue;
+		num = 0;
+		for (i = 0; i < gt->quads_num; ++i)
+			if (gt->quads[i].glyph->atlas == atlas)
+				emit_quad(gt, num++, &gt->quads[i]);
+		if (num)
+			draw_atlas(gt, atlas, num);
+	}
 
-		glBindTexture(GL_TEXTURE_2D, atlas->tex);
-
-		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, atlas->cache_pos);
-		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, atlas->cache_texpos);
-		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, atlas->cache_fgcol);
-		glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, atlas->cache_bgcol);
-		glDrawArrays(GL_TRIANGLES, 0, 6 * atlas->cache_num);
+	if (gt->pointer_visible) {
+		emit_quad(gt, 0, &gt->pointer);
+		draw_atlas(gt, gt->pointer.glyph->atlas, 1);
 	}
 
 	glDisableVertexAttribArray(0);
