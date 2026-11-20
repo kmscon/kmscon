@@ -84,11 +84,6 @@ struct gl_glyph {
 	unsigned int texoff;
 };
 
-#define GLYPH_WIDTH(gly) ((gly)->buf.width)
-#define GLYPH_HEIGHT(gly) ((gly)->buf.height)
-#define GLYPH_STRIDE(gly) ((gly)->buf.stride)
-#define GLYPH_DATA(gly) ((gly)->buf.data)
-
 struct gltex {
 	struct shl_hashtable *glyphs;
 	unsigned int max_tex_size;
@@ -122,7 +117,7 @@ static int gltex_init(struct render *rdr)
 {
 	struct gltex *gt;
 
-	gt = malloc(sizeof(*gt));
+	gt = calloc(1, sizeof(*gt));
 	if (!gt)
 		return -ENOMEM;
 
@@ -203,7 +198,8 @@ static int gltex_set(struct render *rdr)
 	flen = _binary_gltex_atlas_frag_size;
 	gl_clear_error();
 
-	ret = gl_shader_new(&gt->shader, vert, vlen, frag, flen, attr, 4);
+	ret = gl_shader_new(&gt->shader, vert, vlen, frag, flen, attr,
+			    sizeof(attr) / sizeof(*attr));
 	if (ret)
 		goto err_htable;
 
@@ -433,8 +429,8 @@ static struct gl_glyph *find_glyph(struct render *rdr, const struct tsm_cell *ce
 
 	glBindTexture(GL_TEXTURE_2D, atlas->tex);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, FONT_WIDTH(rdr) * atlas->fill, 0, GLYPH_WIDTH(glyph),
-			GLYPH_HEIGHT(glyph), GL_ALPHA, GL_UNSIGNED_BYTE, GLYPH_DATA(glyph));
+	glTexSubImage2D(GL_TEXTURE_2D, 0, FONT_WIDTH(rdr) * atlas->fill, 0, glyph->buf.width,
+			glyph->buf.height, GL_ALPHA, GL_UNSIGNED_BYTE, glyph->buf.data);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 
 	/* Check for GL-errors
@@ -626,10 +622,10 @@ static int gltex_draw(struct render *rdr, const struct tsm_cell *cells,
 			if (cursor->visible && cursor->x == posx && cursor->y == posy)
 				gltex_draw_cell(rdr, &cursor->cell, posx, posy);
 			else if ((cells[off].attr & TSM_ATTR_BLINK) && rdr->blinking) {
-				struct tsm_cell cell = cells[off];
+				struct tsm_cell blank = cells[off];
 
-				cell.ch = ' ';
-				gltex_draw_cell(rdr, &cell, posx, posy);
+				blank.ch = ' ';
+				gltex_draw_cell(rdr, &blank, posx, posy);
 			} else
 				gltex_draw_cell(rdr, &cells[off], posx, posy);
 		}
