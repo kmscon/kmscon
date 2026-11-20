@@ -508,15 +508,88 @@ static int gltex_prepare(struct render *rdr, struct tsm_attr *attr)
 	return 0;
 }
 
+/*
+ * Appends a glyph quad to the vertex caches of @atlas, as two triangles.
+ * (x1, y1) is the top-left and (x2, y2) the bottom-right corner in GL
+ * coordinates, the texture spans @width glyphs from @texoff.
+ */
+static int atlas_push_quad(struct atlas *atlas, float x1, float y1, float x2, float y2,
+			   unsigned int texoff, float width, const struct tsm_color *fg,
+			   const struct tsm_color *bg)
+{
+	GLfloat *pos, *texpos, *fgcol, *bgcol;
+	int i;
+
+	if (atlas->cache_num >= atlas->cache_size)
+		return -ERANGE;
+
+	pos = &atlas->cache_pos[atlas->cache_num * 2 * 6];
+	pos[0] = x1;
+	pos[1] = y1;
+	pos[2] = x1;
+	pos[3] = y2;
+	pos[4] = x2;
+	pos[5] = y2;
+
+	pos[6] = x1;
+	pos[7] = y1;
+	pos[8] = x2;
+	pos[9] = y2;
+	pos[10] = x2;
+	pos[11] = y1;
+
+	texpos = &atlas->cache_texpos[atlas->cache_num * 2 * 6];
+	texpos[0] = texoff;
+	texpos[1] = 0.0;
+	texpos[2] = texoff;
+	texpos[3] = 1.0;
+	texpos[4] = texoff + width;
+	texpos[5] = 1.0;
+
+	texpos[6] = texoff;
+	texpos[7] = 0.0;
+	texpos[8] = texoff + width;
+	texpos[9] = 1.0;
+	texpos[10] = texoff + width;
+	texpos[11] = 0.0;
+
+	fgcol = &atlas->cache_fgcol[atlas->cache_num * 3 * 6];
+	bgcol = &atlas->cache_bgcol[atlas->cache_num * 3 * 6];
+	for (i = 0; i < 6; ++i) {
+		fgcol[i * 3 + 0] = fg->r / 255.0;
+		fgcol[i * 3 + 1] = fg->g / 255.0;
+		fgcol[i * 3 + 2] = fg->b / 255.0;
+		bgcol[i * 3 + 0] = bg->r / 255.0;
+		bgcol[i * 3 + 1] = bg->g / 255.0;
+		bgcol[i * 3 + 2] = bg->b / 255.0;
+	}
+
+	++atlas->cache_num;
+	return 0;
+}
+
+/* screen size in the orientation of the console */
+static void screen_size(struct render *rdr, unsigned int *w, unsigned int *h)
+{
+	struct gltex *gt = rdr->data;
+
+	if (rdr->orientation == OR_NORMAL || rdr->orientation == OR_UPSIDE_DOWN) {
+		*w = gt->sw;
+		*h = gt->sh;
+	} else {
+		*w = gt->sh;
+		*h = gt->sw;
+	}
+}
+
 static int gltex_draw_cell(struct render *rdr, const struct tsm_cell *cell, unsigned int posx,
 			   unsigned int posy)
 {
 	struct gltex *gt = rdr->data;
-	struct atlas *atlas;
 	struct gl_glyph *glglyph;
-	float gl_x1, gl_x2, gl_y1, gl_y2;
+	float x1, x2, y1, y2;
 	float width;
-	int i, idx;
+	int ret;
 
 	if (posx && gt->previous_overflow && (cell->ch == 0 || cell->ch == ' ')) {
 		gt->previous_overflow = false;
@@ -526,60 +599,18 @@ static int gltex_draw_cell(struct render *rdr, const struct tsm_cell *cell, unsi
 	if (!glglyph)
 		return -ENOMEM;
 
-	atlas = glglyph->atlas;
-
-	if (atlas->cache_num >= atlas->cache_size)
-		return -ERANGE;
-
 	width = glglyph->double_width ? 2.0 : 1.0;
+	x1 = gt->off_x + gt->advance_x * posx - 1.0;
+	x2 = x1 + width * gt->advance_x;
+	y1 = 1.0 - gt->off_y - gt->advance_y * posy;
+	y2 = y1 - gt->advance_y;
+
+	ret = atlas_push_quad(glglyph->atlas, x1, y1, x2, y2, glglyph->texoff, width, &cell->fg,
+			      &cell->bg);
+	if (ret)
+		return ret;
+
 	gt->previous_overflow = glglyph->double_width;
-
-	idx = atlas->cache_num * 2 * 6;
-	gl_x1 = gt->off_x + gt->advance_x * posx - 1.0;
-	gl_x2 = gl_x1 + width * gt->advance_x;
-	gl_y1 = 1.0 - gt->off_y - gt->advance_y * posy;
-	gl_y2 = gl_y1 - gt->advance_y;
-
-	atlas->cache_pos[idx + 0] = gl_x1;
-	atlas->cache_pos[idx + 1] = gl_y1;
-	atlas->cache_pos[idx + 2] = gl_x1;
-	atlas->cache_pos[idx + 3] = gl_y2;
-	atlas->cache_pos[idx + 4] = gl_x2;
-	atlas->cache_pos[idx + 5] = gl_y2;
-
-	atlas->cache_pos[idx + 6] = gl_x1;
-	atlas->cache_pos[idx + 7] = gl_y1;
-	atlas->cache_pos[idx + 8] = gl_x2;
-	atlas->cache_pos[idx + 9] = gl_y2;
-	atlas->cache_pos[idx + 10] = gl_x2;
-	atlas->cache_pos[idx + 11] = gl_y1;
-
-	atlas->cache_texpos[idx + 0] = glglyph->texoff;
-	atlas->cache_texpos[idx + 1] = 0.0;
-	atlas->cache_texpos[idx + 2] = glglyph->texoff;
-	atlas->cache_texpos[idx + 3] = 1.0;
-	atlas->cache_texpos[idx + 4] = glglyph->texoff + width;
-	atlas->cache_texpos[idx + 5] = 1.0;
-
-	atlas->cache_texpos[idx + 6] = glglyph->texoff;
-	atlas->cache_texpos[idx + 7] = 0.0;
-	atlas->cache_texpos[idx + 8] = glglyph->texoff + width;
-	atlas->cache_texpos[idx + 9] = 1.0;
-	atlas->cache_texpos[idx + 10] = glglyph->texoff + width;
-	atlas->cache_texpos[idx + 11] = 0.0;
-
-	for (i = 0; i < 6; ++i) {
-		idx = atlas->cache_num * 3 * 6 + i * 3;
-		atlas->cache_fgcol[idx + 0] = cell->fg.r / 255.0;
-		atlas->cache_fgcol[idx + 1] = cell->fg.g / 255.0;
-		atlas->cache_fgcol[idx + 2] = cell->fg.b / 255.0;
-		atlas->cache_bgcol[idx + 0] = cell->bg.r / 255.0;
-		atlas->cache_bgcol[idx + 1] = cell->bg.g / 255.0;
-		atlas->cache_bgcol[idx + 2] = cell->bg.b / 255.0;
-	}
-
-	++atlas->cache_num;
-
 	return 0;
 }
 
@@ -609,11 +640,9 @@ static int gltex_draw(struct render *rdr, const struct tsm_cell *cells,
 static int gltex_draw_pointer(struct render *rdr, unsigned int x, unsigned int y)
 {
 	struct gltex *gt = rdr->data;
-	struct atlas *atlas;
 	struct gl_glyph *glyph;
-	float gl_x1, gl_x2, gl_y1, gl_y2;
+	float x1, x2, y1, y2;
 	unsigned int sw, sh;
-	int i, idx;
 	struct tsm_cell pointer_cell = {0};
 	pointer_cell.ch = 'I';
 
@@ -621,18 +650,7 @@ static int gltex_draw_pointer(struct render *rdr, unsigned int x, unsigned int y
 	if (!glyph)
 		return -ENOMEM;
 
-	atlas = glyph->atlas;
-
-	if (atlas->cache_num >= atlas->cache_size)
-		return -ERANGE;
-
-	if (rdr->orientation == OR_NORMAL || rdr->orientation == OR_UPSIDE_DOWN) {
-		sw = gt->sw;
-		sh = gt->sh;
-	} else {
-		sw = gt->sh;
-		sh = gt->sw;
-	}
+	screen_size(rdr, &sw, &sh);
 
 	if (x > sw)
 		x = sw;
@@ -640,54 +658,13 @@ static int gltex_draw_pointer(struct render *rdr, unsigned int x, unsigned int y
 	if (y > sh)
 		y = sh;
 
-	gl_x1 = gt->off_x + x * 2.0 / sw - 1.0 - gt->advance_x / 2.0;
-	gl_y1 = 1.0 - gt->off_y - y * 2.0 / sh + gt->advance_y / 2.0;
-	gl_x2 = gl_x1 + gt->advance_x;
-	gl_y2 = gl_y1 - gt->advance_y;
+	x1 = gt->off_x + x * 2.0 / sw - 1.0 - gt->advance_x / 2.0;
+	y1 = 1.0 - gt->off_y - y * 2.0 / sh + gt->advance_y / 2.0;
+	x2 = x1 + gt->advance_x;
+	y2 = y1 - gt->advance_y;
 
-	idx = atlas->cache_num * 2 * 6;
-
-	atlas->cache_pos[idx + 0] = gl_x1;
-	atlas->cache_pos[idx + 1] = gl_y1;
-	atlas->cache_pos[idx + 2] = gl_x1;
-	atlas->cache_pos[idx + 3] = gl_y2;
-	atlas->cache_pos[idx + 4] = gl_x2;
-	atlas->cache_pos[idx + 5] = gl_y2;
-
-	atlas->cache_pos[idx + 6] = gl_x1;
-	atlas->cache_pos[idx + 7] = gl_y1;
-	atlas->cache_pos[idx + 8] = gl_x2;
-	atlas->cache_pos[idx + 9] = gl_y2;
-	atlas->cache_pos[idx + 10] = gl_x2;
-	atlas->cache_pos[idx + 11] = gl_y1;
-
-	atlas->cache_texpos[idx + 0] = glyph->texoff;
-	atlas->cache_texpos[idx + 1] = 0.0;
-	atlas->cache_texpos[idx + 2] = glyph->texoff;
-	atlas->cache_texpos[idx + 3] = 1.0;
-	atlas->cache_texpos[idx + 4] = glyph->texoff + 1.0;
-	atlas->cache_texpos[idx + 5] = 1.0;
-
-	atlas->cache_texpos[idx + 6] = glyph->texoff;
-	atlas->cache_texpos[idx + 7] = 0.0;
-	atlas->cache_texpos[idx + 8] = glyph->texoff + 1.0;
-	atlas->cache_texpos[idx + 9] = 1.0;
-	atlas->cache_texpos[idx + 10] = glyph->texoff + 1.0;
-	atlas->cache_texpos[idx + 11] = 0.0;
-
-	for (i = 0; i < 6; ++i) {
-		idx = atlas->cache_num * 3 * 6 + i * 3;
-		atlas->cache_fgcol[idx + 0] = gt->attr.fg.r / 255.0;
-		atlas->cache_fgcol[idx + 1] = gt->attr.fg.g / 255.0;
-		atlas->cache_fgcol[idx + 2] = gt->attr.fg.b / 255.0;
-		atlas->cache_bgcol[idx + 0] = gt->attr.bg.r / 255.0;
-		atlas->cache_bgcol[idx + 1] = gt->attr.bg.g / 255.0;
-		atlas->cache_bgcol[idx + 2] = gt->attr.bg.b / 255.0;
-	}
-
-	++atlas->cache_num;
-
-	return 0;
+	return atlas_push_quad(glyph->atlas, x1, y1, x2, y2, glyph->texoff, 1.0, &gt->attr.fg,
+			       &gt->attr.bg);
 }
 
 static int gltex_render(struct render *rdr)
