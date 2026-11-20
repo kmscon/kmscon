@@ -25,14 +25,14 @@
 
 /*
  * OpenGL Texture based rendering backend module
- * This module provides the gltex renderer backend.
+ * This module provides the gltex render backend.
  */
 
 #include <errno.h>
 #include <stdlib.h>
+#include "render_internal.h"
 #include "shl/log.h"
 #include "shl/module_interface.h"
-#include "text_internal.h"
 
 #define LOG_SUBSYSTEM "mod_gltex"
 
@@ -40,8 +40,8 @@ static int kmscon_gltex_load(void)
 {
 	int ret;
 
-	kmscon_text_gltex_ops.owner = SHL_THIS_MODULE;
-	ret = kmscon_text_register(&kmscon_text_gltex_ops);
+	gltex_ops.owner = SHL_THIS_MODULE;
+	ret = render_register(&gltex_ops);
 	if (ret) {
 		log_error("cannot register gltex renderer");
 		return ret;
@@ -52,7 +52,7 @@ static int kmscon_gltex_load(void)
 
 static void kmscon_gltex_unload(void)
 {
-	kmscon_text_unregister(&kmscon_text_gltex_ops);
+	render_unregister(&gltex_ops);
 }
 
 SHL_MODULE(NULL, kmscon_gltex_load, kmscon_gltex_unload, NULL);

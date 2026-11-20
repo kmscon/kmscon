@@ -1,5 +1,5 @@
 /*
- * kmscon - OpenGL Textures Text Renderer Backend
+ * kmscon - OpenGL Textures Render Backend
  *
  * Copyright (c) 2012-2013 David Herrmann <dh.herrmann@googlemail.com>
  *
@@ -24,9 +24,9 @@
  */
 
 /**
- * SECTION:text_gltex.c
- * @short_description: OpenGL Textures Text Renderer Backend
- * @include: text_internal.h
+ * SECTION:render_gltex.c
+ * @short_description: OpenGL Textures Render Backend
+ * @include: render_internal.h
  *
  * Uses OpenGL textures to store glyph information and draws these textures with
  * a custom fragment shader.
@@ -48,15 +48,15 @@
 #include "font/font.h"
 #include "gltex_atlas.frag.bin.h"
 #include "gltex_atlas.vert.bin.h"
+#include "render_internal.h"
 #include "shl/dlist.h"
 #include "shl/gl.h"
 #include "shl/hashtable.h"
 #include "shl/log.h"
 #include "shl/misc.h"
-#include "text_internal.h"
 #include "video/video.h"
 
-#define LOG_SUBSYSTEM "text_gltex"
+#define LOG_SUBSYSTEM "render_gltex"
 
 struct atlas {
 	struct dlist list;
@@ -118,7 +118,7 @@ struct gltex {
 	struct tsm_attr attr;
 };
 
-static int gltex_init(struct kmscon_text *txt)
+static int gltex_init(struct render *rdr)
 {
 	struct gltex *gt;
 
@@ -126,13 +126,13 @@ static int gltex_init(struct kmscon_text *txt)
 	if (!gt)
 		return -ENOMEM;
 
-	txt->data = gt;
+	rdr->data = gt;
 	return 0;
 }
 
-static void gltex_destroy(struct kmscon_text *txt)
+static void gltex_destroy(struct render *rdr)
 {
-	struct gltex *gt = txt->data;
+	struct gltex *gt = rdr->data;
 
 	free(gt);
 }
@@ -152,41 +152,41 @@ static void gltex_set_cos(struct gltex *gt, enum Orientation orientation)
 	gt->sin = sin_table[orientation];
 }
 
-static void compute_advance_and_offset(struct kmscon_text *txt)
+static void compute_advance_and_offset(struct render *rdr)
 {
-	struct gltex *gt = txt->data;
+	struct gltex *gt = rdr->data;
 	unsigned int off_x, off_y;
 
-	if (txt->orientation == OR_NORMAL || txt->orientation == OR_UPSIDE_DOWN) {
-		gt->advance_x = 2.0 / gt->sw * FONT_WIDTH(txt);
-		gt->advance_y = 2.0 / gt->sh * FONT_HEIGHT(txt);
-		off_x = (gt->sw - txt->cols * FONT_WIDTH(txt)) / 2;
-		off_y = (gt->sh - txt->rows * FONT_HEIGHT(txt)) / 2;
+	if (rdr->orientation == OR_NORMAL || rdr->orientation == OR_UPSIDE_DOWN) {
+		gt->advance_x = 2.0 / gt->sw * FONT_WIDTH(rdr);
+		gt->advance_y = 2.0 / gt->sh * FONT_HEIGHT(rdr);
+		off_x = (gt->sw - rdr->cols * FONT_WIDTH(rdr)) / 2;
+		off_y = (gt->sh - rdr->rows * FONT_HEIGHT(rdr)) / 2;
 		gt->off_x = (float)2.0 * off_x / gt->sw;
 		gt->off_y = (float)2.0 * off_y / gt->sh;
 	} else {
-		gt->advance_x = 2.0 / gt->sh * FONT_WIDTH(txt);
-		gt->advance_y = 2.0 / gt->sw * FONT_HEIGHT(txt);
-		off_x = (gt->sw - txt->rows * FONT_HEIGHT(txt)) / 2;
-		off_y = (gt->sh - txt->cols * FONT_WIDTH(txt)) / 2;
+		gt->advance_x = 2.0 / gt->sh * FONT_WIDTH(rdr);
+		gt->advance_y = 2.0 / gt->sw * FONT_HEIGHT(rdr);
+		off_x = (gt->sw - rdr->rows * FONT_HEIGHT(rdr)) / 2;
+		off_y = (gt->sh - rdr->cols * FONT_WIDTH(rdr)) / 2;
 		gt->off_x = (float)2.0 * off_y / gt->sh;
 		gt->off_y = (float)2.0 * off_x / gt->sw;
 	}
-	display_set_cursor_offset(txt->disp, off_x, off_y);
+	display_set_cursor_offset(rdr->disp, off_x, off_y);
 }
 
-static int gltex_set(struct kmscon_text *txt)
+static int gltex_set(struct render *rdr)
 {
-	struct gltex *gt = txt->data;
+	struct gltex *gt = rdr->data;
 	int ret, vlen, flen;
 	const char *vert, *frag;
 	static char *attr[] = {"position", "texture_position", "fgcolor", "bgcolor"};
 	GLint s;
 
-	if (!display_has_opengl(txt->disp))
+	if (!display_has_opengl(rdr->disp))
 		return -EINVAL;
 
-	ret = display_use(txt->disp);
+	ret = display_use(rdr->disp);
 	if (ret < 0)
 		return ret;
 
@@ -219,15 +219,15 @@ static int gltex_set(struct kmscon_text *txt)
 		goto err_shader;
 	}
 
-	gt->sw = display_get_width(txt->disp);
-	gt->sh = display_get_height(txt->disp);
+	gt->sw = display_get_width(rdr->disp);
+	gt->sh = display_get_height(rdr->disp);
 
-	txt->max_cols = kmscon_text_get_cols(txt, FONT_WIDTH(txt));
-	txt->max_rows = kmscon_text_get_rows(txt, FONT_HEIGHT(txt));
-	txt->cols = txt->max_cols;
-	txt->rows = txt->max_rows;
-	compute_advance_and_offset(txt);
-	gltex_set_cos(gt, txt->orientation);
+	rdr->max_cols = render_get_cols(rdr, FONT_WIDTH(rdr));
+	rdr->max_rows = render_get_rows(rdr, FONT_HEIGHT(rdr));
+	rdr->cols = rdr->max_cols;
+	rdr->rows = rdr->max_rows;
+	compute_advance_and_offset(rdr);
+	gltex_set_cos(gt, rdr->orientation);
 
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &s);
 	if (s <= 0)
@@ -246,15 +246,15 @@ err_htable:
 	return ret;
 }
 
-static void gltex_unset(struct kmscon_text *txt)
+static void gltex_unset(struct render *rdr)
 {
-	struct gltex *gt = txt->data;
+	struct gltex *gt = rdr->data;
 	int ret;
 	struct dlist *tmp;
 	struct atlas *atlas;
 	bool gl = true;
 
-	ret = display_use(txt->disp);
+	ret = display_use(rdr->disp);
 	if (ret) {
 		gl = false;
 		log_warning("cannot activate OpenGL-CTX during destruction");
@@ -284,9 +284,9 @@ static void gltex_unset(struct kmscon_text *txt)
 }
 
 /* returns an atlas with at least 1 free glyph position; NULL on error */
-static struct atlas *get_atlas(struct kmscon_text *txt, unsigned int num)
+static struct atlas *get_atlas(struct render *rdr, unsigned int num)
 {
-	struct gltex *gt = txt->data;
+	struct gltex *gt = rdr->data;
 	struct atlas *atlas;
 	size_t newsize;
 	unsigned int width, height, nsize;
@@ -312,7 +312,7 @@ static struct atlas *get_atlas(struct kmscon_text *txt, unsigned int num)
 		goto err_free;
 	}
 
-	newsize = gt->max_tex_size / FONT_WIDTH(txt);
+	newsize = gt->max_tex_size / FONT_WIDTH(rdr);
 	if (newsize < 1)
 		newsize = 1;
 
@@ -320,8 +320,8 @@ static struct atlas *get_atlas(struct kmscon_text *txt, unsigned int num)
 	 * valid texture size that is big enough to hold as many glyphs as
 	 * possible but at least 1 */
 try_next:
-	width = shl_next_pow2(FONT_WIDTH(txt) * newsize);
-	height = shl_next_pow2(FONT_HEIGHT(txt));
+	width = shl_next_pow2(FONT_WIDTH(rdr) * newsize);
+	height = shl_next_pow2(FONT_HEIGHT(rdr));
 
 	gl_clear_error();
 
@@ -342,7 +342,7 @@ try_next:
 
 	log_debug("new atlas of size %ux%u for %zu", width, height, newsize);
 
-	nsize = txt->max_cols * txt->max_rows + 1; // +1 for the mouse pointer
+	nsize = rdr->max_cols * rdr->max_rows + 1; // +1 for the mouse pointer
 
 	atlas->cache_pos = malloc(sizeof(GLfloat) * nsize * 2 * 6);
 	if (!atlas->cache_pos)
@@ -364,8 +364,8 @@ try_next:
 	atlas->count = newsize;
 	atlas->width = width;
 	atlas->height = height;
-	atlas->advance_htex = 1.0 / atlas->width * FONT_WIDTH(txt);
-	atlas->advance_vtex = 1.0 / atlas->height * FONT_HEIGHT(txt);
+	atlas->advance_htex = 1.0 / atlas->width * FONT_WIDTH(rdr);
+	atlas->advance_vtex = 1.0 / atlas->height * FONT_HEIGHT(rdr);
 
 	dlist_link(&gt->atlases, &atlas->list);
 	return atlas;
@@ -382,13 +382,13 @@ err_free:
 	return NULL;
 }
 
-static struct gl_glyph *find_glyph(struct kmscon_text *txt, const struct tsm_cell *cell)
+static struct gl_glyph *find_glyph(struct render *rdr, const struct tsm_cell *cell)
 {
-	struct gltex *gt = txt->data;
+	struct gltex *gt = rdr->data;
 	struct atlas *atlas;
 	struct gl_glyph *glglyph;
 	GLenum err;
-	struct kmscon_font *font = txt->font;
+	struct kmscon_font *font = rdr->font;
 	unsigned int num;
 	struct kmscon_glyph *glyph;
 	struct kmscon_font_attr attr;
@@ -399,7 +399,7 @@ static struct gl_glyph *find_glyph(struct kmscon_text *txt, const struct tsm_cel
 	attr.italic = !!(cell->attr & TSM_ATTR_ITALIC);
 	attr.bold = !!(cell->attr & TSM_ATTR_BOLD);
 
-	if ((cell->attr & TSM_ATTR_BLINK) && txt->blinking)
+	if ((cell->attr & TSM_ATTR_BLINK) && rdr->blinking)
 		ch = ' ';
 
 	if (!kmscon_font_has_glyph(font, &attr, ch))
@@ -421,7 +421,7 @@ static struct gl_glyph *find_glyph(struct kmscon_text *txt, const struct tsm_cel
 	glglyph->double_width = glyph->double_width;
 
 	num = kmscon_glyph_cwidth(glyph);
-	atlas = get_atlas(txt, num);
+	atlas = get_atlas(rdr, num);
 	if (!atlas)
 		goto err_free;
 
@@ -429,7 +429,7 @@ static struct gl_glyph *find_glyph(struct kmscon_text *txt, const struct tsm_cel
 
 	glBindTexture(GL_TEXTURE_2D, atlas->tex);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, FONT_WIDTH(txt) * atlas->fill, 0, GLYPH_WIDTH(glyph),
+	glTexSubImage2D(GL_TEXTURE_2D, 0, FONT_WIDTH(rdr) * atlas->fill, 0, GLYPH_WIDTH(glyph),
 			GLYPH_HEIGHT(glyph), GL_ALPHA, GL_UNSIGNED_BYTE, GLYPH_DATA(glyph));
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 
@@ -467,29 +467,29 @@ err_free:
 	return NULL;
 }
 
-static void gltex_resize(struct kmscon_text *txt, unsigned int cols, unsigned int rows)
+static void gltex_resize(struct render *rdr, unsigned int cols, unsigned int rows)
 {
-	txt->cols = cols;
-	txt->rows = rows;
-	compute_advance_and_offset(txt);
+	rdr->cols = cols;
+	rdr->rows = rows;
+	compute_advance_and_offset(rdr);
 }
 
-static int gltex_rotate(struct kmscon_text *txt, enum Orientation orientation)
+static int gltex_rotate(struct render *rdr, enum Orientation orientation)
 {
-	txt->orientation = orientation;
+	rdr->orientation = orientation;
 
-	gltex_unset(txt);
-	gltex_set(txt);
+	gltex_unset(rdr);
+	gltex_set(rdr);
 	return 0;
 }
 
-static int gltex_prepare(struct kmscon_text *txt, struct tsm_attr *attr)
+static int gltex_prepare(struct render *rdr, struct tsm_attr *attr)
 {
-	struct gltex *gt = txt->data;
+	struct gltex *gt = rdr->data;
 	struct atlas *atlas;
 	int ret;
 
-	ret = display_use(txt->disp);
+	ret = display_use(rdr->disp);
 	if (ret)
 		return ret;
 
@@ -504,10 +504,10 @@ static int gltex_prepare(struct kmscon_text *txt, struct tsm_attr *attr)
 	return 0;
 }
 
-static int gltex_draw_cell(struct kmscon_text *txt, const struct tsm_cell *cell, unsigned int posx,
+static int gltex_draw_cell(struct render *rdr, const struct tsm_cell *cell, unsigned int posx,
 			   unsigned int posy)
 {
-	struct gltex *gt = txt->data;
+	struct gltex *gt = rdr->data;
 	struct atlas *atlas;
 	struct gl_glyph *glglyph;
 	float gl_x1, gl_x2, gl_y1, gl_y2;
@@ -518,7 +518,7 @@ static int gltex_draw_cell(struct kmscon_text *txt, const struct tsm_cell *cell,
 		gt->previous_overflow = false;
 		return 0;
 	}
-	glglyph = find_glyph(txt, cell);
+	glglyph = find_glyph(rdr, cell);
 	if (!glglyph)
 		return -ENOMEM;
 
@@ -579,32 +579,32 @@ static int gltex_draw_cell(struct kmscon_text *txt, const struct tsm_cell *cell,
 	return 0;
 }
 
-static int gltex_draw(struct kmscon_text *txt, const struct tsm_cell *cells,
-		      struct kmscon_cursor *cursor)
+static int gltex_draw(struct render *rdr, const struct tsm_cell *cells,
+		      struct render_cursor *cursor)
 {
 	unsigned int posx, posy, off;
 
-	for (posy = 0; posy < txt->rows; posy++) {
-		for (posx = 0; posx < txt->cols; posx++) {
-			off = posx + posy * txt->cols;
+	for (posy = 0; posy < rdr->rows; posy++) {
+		for (posx = 0; posx < rdr->cols; posx++) {
+			off = posx + posy * rdr->cols;
 
 			if (cursor->visible && cursor->x == posx && cursor->y == posy)
-				gltex_draw_cell(txt, &cursor->cell, posx, posy);
-			else if ((cells[off].attr & TSM_ATTR_BLINK) && txt->blinking) {
+				gltex_draw_cell(rdr, &cursor->cell, posx, posy);
+			else if ((cells[off].attr & TSM_ATTR_BLINK) && rdr->blinking) {
 				struct tsm_cell cell = cells[off];
 
 				cell.ch = ' ';
-				gltex_draw_cell(txt, &cell, posx, posy);
+				gltex_draw_cell(rdr, &cell, posx, posy);
 			} else
-				gltex_draw_cell(txt, &cells[off], posx, posy);
+				gltex_draw_cell(rdr, &cells[off], posx, posy);
 		}
 	}
 	return 0;
 }
 
-static int gltex_draw_pointer(struct kmscon_text *txt, unsigned int x, unsigned int y)
+static int gltex_draw_pointer(struct render *rdr, unsigned int x, unsigned int y)
 {
-	struct gltex *gt = txt->data;
+	struct gltex *gt = rdr->data;
 	struct atlas *atlas;
 	struct gl_glyph *glyph;
 	float gl_x1, gl_x2, gl_y1, gl_y2;
@@ -613,7 +613,7 @@ static int gltex_draw_pointer(struct kmscon_text *txt, unsigned int x, unsigned 
 	struct tsm_cell pointer_cell = {0};
 	pointer_cell.ch = 'I';
 
-	glyph = find_glyph(txt, &pointer_cell);
+	glyph = find_glyph(rdr, &pointer_cell);
 	if (!glyph)
 		return -ENOMEM;
 
@@ -622,7 +622,7 @@ static int gltex_draw_pointer(struct kmscon_text *txt, unsigned int x, unsigned 
 	if (atlas->cache_num >= atlas->cache_size)
 		return -ERANGE;
 
-	if (txt->orientation == OR_NORMAL || txt->orientation == OR_UPSIDE_DOWN) {
+	if (rdr->orientation == OR_NORMAL || rdr->orientation == OR_UPSIDE_DOWN) {
 		sw = gt->sw;
 		sh = gt->sh;
 	} else {
@@ -686,9 +686,9 @@ static int gltex_draw_pointer(struct kmscon_text *txt, unsigned int x, unsigned 
 	return 0;
 }
 
-static int gltex_render(struct kmscon_text *txt)
+static int gltex_render(struct render *rdr)
 {
-	struct gltex *gt = txt->data;
+	struct gltex *gt = rdr->data;
 	struct atlas *atlas;
 	float mat[16];
 
@@ -741,7 +741,7 @@ static int gltex_render(struct kmscon_text *txt)
 	return 0;
 }
 
-struct kmscon_text_ops kmscon_text_gltex_ops = {
+struct render_ops gltex_ops = {
 	.name = "gltex",
 	.owner = NULL,
 	.init = gltex_init,

@@ -33,7 +33,7 @@
 #include "conf.h"
 #include "config.h"
 #include "dbus.h"
-#include "render/text.h"
+#include "render/render.h"
 #include "seat.h"
 #include "shl/eloop.h"
 #include "shl/log.h"
@@ -192,7 +192,7 @@ int main(int argc, char **argv)
 
 	kmscon_load_modules();
 	kmscon_font_register(&kmscon_font_8x16_ops);
-	kmscon_text_register(&kmscon_text_bbulk_ops);
+	render_register(&render_bbulk_ops);
 	video_register_drm2d();
 	video_register_fbdev();
 
@@ -220,7 +220,7 @@ int main(int argc, char **argv)
 err_unload_app:
 	destroy_app(&app);
 err_unload:
-	kmscon_text_unregister(&kmscon_text_bbulk_ops);
+	render_unregister(&render_bbulk_ops);
 	kmscon_font_unregister(kmscon_font_8x16_ops.name);
 	kmscon_unload_modules();
 	kmscon_conf_free(conf_ctx);

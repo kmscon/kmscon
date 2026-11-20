@@ -35,7 +35,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "conf.h"
-#include "render/text.h"
+#include "render/render.h"
 #include "tsm.h"
 
 enum kmscon_conf_gpu_selection {
