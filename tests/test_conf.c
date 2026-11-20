@@ -5,7 +5,7 @@
 
 #include "../src/misc/conf.c"
 #include "config.h"
-#include "render/text.h"
+#include "render/render.h"
 #undef LOG_SUBSYSTEM
 #include "../src/config.c"
 

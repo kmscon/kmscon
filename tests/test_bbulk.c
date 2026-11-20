@@ -7,9 +7,9 @@
 #include <errno.h>
 #include <stdint.h>
 #include <string.h>
-#include "../src/render/text_internal.h"
+#include "../src/render/render_internal.h"
 
-/* ---- Stubs for external dependencies used by text_bbulk.c ---- */
+/* ---- Stubs for external dependencies used by render_bbulk.c ---- */
 #include "../src/font/font.h"	/* for kmscon_font_* */
 #include "../src/video/video.h" /* for display_* prototypes */
 unsigned int display_get_width(struct display *disp)
@@ -27,22 +27,22 @@ unsigned int display_get_height(struct display *disp)
 #define FAKE_CELL_W 8
 #define FAKE_CELL_H 16
 
-/* Stub font metrics APIs used indirectly by text.c/text_bbulk.c */
-unsigned int kmscon_text_get_cols(struct kmscon_text *txt, unsigned int font_width)
+/* Stub font metrics APIs used indirectly by render.c/render_bbulk.c */
+unsigned int render_get_cols(struct render *txt, unsigned int font_width)
 {
 	(void)txt;
 	(void)font_width;
 	return 640 / FAKE_CELL_W;
 }
 
-unsigned int kmscon_text_get_rows(struct kmscon_text *txt, unsigned int font_height)
+unsigned int render_get_rows(struct render *txt, unsigned int font_height)
 {
 	(void)txt;
 	(void)font_height;
 	return 480 / FAKE_CELL_H;
 }
 
-/* Stub font rendering APIs used by text_bbulk.c */
+/* Stub font rendering APIs used by render_bbulk.c */
 struct kmscon_glyph *kmscon_font_render(struct kmscon_font *font, struct kmscon_font_attr *attr,
 					const uint32_t ch)
 {
@@ -79,7 +79,7 @@ int kmscon_rotate_glyph(struct kmscon_glyph *vb, const struct kmscon_glyph *glyp
 	return 0;
 }
 
-/* Stub uterm display APIs used by text_bbulk.c */
+/* Stub uterm display APIs used by render_bbulk.c */
 bool display_need_redraw(struct display *disp)
 {
 	(void)disp;
@@ -132,10 +132,10 @@ void display_set_cursor_offset(struct display *disp, int32_t x, int32_t y)
 /* Fake font objects with valid width/height for FONT_WIDTH/FONT_HEIGHT macros */
 static struct kmscon_font fake_font = {.width = FAKE_CELL_W, .height = FAKE_CELL_H};
 
-static void init_fake_txt(struct kmscon_text *txt)
+static void init_fake_txt(struct render *txt)
 {
 	memset(txt, 0, sizeof(*txt));
-	txt->ops = &kmscon_text_bbulk_ops;
+	txt->ops = &render_bbulk_ops;
 	txt->disp = (struct display *)0x1; /* non-null stub */
 	txt->font = &fake_font;
 	txt->orientation = OR_NORMAL;
@@ -144,12 +144,12 @@ static void init_fake_txt(struct kmscon_text *txt)
 
 int main(void)
 {
-	struct kmscon_text txt;
+	struct render txt;
 	int ret;
 
 	init_fake_txt(&txt);
 
-	ret = kmscon_text_bbulk_ops.init(&txt);
+	ret = render_bbulk_ops.init(&txt);
 	assert(ret == 0);
 	struct bbulk *bb = txt.data;
 	assert(bb != NULL);
@@ -184,6 +184,6 @@ int main(void)
 	assert(bb->cells == NULL);
 	assert(bb->cell_flags == NULL);
 	assert(bb->damage_rects == NULL);
-	kmscon_text_bbulk_ops.destroy(&txt);
+	render_bbulk_ops.destroy(&txt);
 	return 0;
 }

@@ -45,7 +45,7 @@
 #include "issue.h"
 #include "locker.h"
 #include "pty.h"
-#include "render/text.h"
+#include "render/render.h"
 #include "seat.h"
 #include "shl/dlist.h"
 #include "shl/eloop.h"
@@ -60,7 +60,7 @@ struct screen {
 	struct dlist list;
 	struct kmscon_terminal *term;
 	struct display *disp;
-	struct kmscon_text *txt;
+	struct render *rdr;
 
 	bool config_enabled;
 	bool pending;
@@ -151,8 +151,8 @@ static void coord_to_cell(struct kmscon_terminal *term, int32_t x, int32_t y, un
  * terminal font to it */
 static void scale_pointer(struct screen *scr, int32_t x, int32_t y, int32_t *sx, int32_t *sy)
 {
-	int32_t scr_fw = kmscon_text_get_font_width(scr->txt);
-	int32_t scr_fh = kmscon_text_get_font_height(scr->txt);
+	int32_t scr_fw = render_get_font_width(scr->rdr);
+	int32_t scr_fh = render_get_font_height(scr->rdr);
 	int32_t term_fw = scr->term->font->width;
 	int32_t term_fh = scr->term->font->height;
 
@@ -175,9 +175,9 @@ static void draw_pointer(struct screen *scr)
 		int32_t x, y;
 
 		scale_pointer(scr, scr->term->pointer.x, scr->term->pointer.y, &x, &y);
-		kmscon_text_draw_pointer(scr->txt, x, y);
+		render_draw_pointer(scr->rdr, x, y);
 	} else
-		kmscon_text_draw_pointer(scr->txt, scr->term->pointer.x, scr->term->pointer.y);
+		render_draw_pointer(scr->rdr, scr->term->pointer.x, scr->term->pointer.y);
 }
 
 static inline uint32_t argb(uint8_t a, uint8_t r, uint8_t g, uint8_t b)
@@ -276,8 +276,8 @@ static uint32_t *generate_ibeam_cursor(unsigned int font_height, unsigned int *w
 
 static void setup_hw_cursor(struct screen *scr)
 {
-	enum Orientation orientation = kmscon_text_get_orientation(scr->txt);
-	unsigned int fh = kmscon_text_get_font_height(scr->txt);
+	enum Orientation orientation = render_get_orientation(scr->rdr);
+	unsigned int fh = render_get_font_height(scr->rdr);
 	bool rotate = orientation == OR_LEFT || orientation == OR_RIGHT;
 	unsigned int beam_h, beam_w;
 	uint32_t *pixels;
@@ -355,15 +355,15 @@ static void do_redraw_screen(struct screen *scr)
 	scr->pending = false;
 
 	tsm_vte_get_default_attr(scr->term->vte, &attr);
-	kmscon_text_prepare(scr->txt, &attr, scr->term->blinking);
+	render_prepare(scr->rdr, &attr, scr->term->blinking);
 
 	if (scr->term->locker)
-		kmscon_text_draw(scr->txt, locker_get_vte(scr->term->locker),
-				 scr->term->cursor_blinking);
+		render_draw(scr->rdr, locker_get_vte(scr->term->locker),
+			    scr->term->cursor_blinking);
 	else
-		kmscon_text_draw(scr->txt, scr->term->vte, scr->term->cursor_blinking);
+		render_draw(scr->rdr, scr->term->vte, scr->term->cursor_blinking);
 	draw_pointer(scr);
-	kmscon_text_render(scr->txt);
+	render_render(scr->rdr);
 
 	ret = display_swap(scr->disp);
 	if (ret && ret != -EBUSY)
@@ -413,7 +413,7 @@ static unsigned int term_min_width(struct kmscon_terminal *term)
 
 	dlist_for_each_entry(scr, &term->screens, list)
 	{
-		unsigned int w = kmscon_text_get_width(scr->txt);
+		unsigned int w = render_get_width(scr->rdr);
 
 		if (!scr->enabled)
 			continue;
@@ -430,7 +430,7 @@ static unsigned int term_min_height(struct kmscon_terminal *term)
 
 	dlist_for_each_entry(scr, &term->screens, list)
 	{
-		unsigned int h = kmscon_text_get_height(scr->txt);
+		unsigned int h = render_get_height(scr->rdr);
 		if (!scr->enabled)
 			continue;
 		if (h < height)
@@ -607,7 +607,7 @@ static void font_update_all(struct kmscon_terminal *term)
 
 	dlist_for_each_entry(scr, &term->screens, list)
 	{
-		ret = kmscon_text_set(scr->txt, term->font);
+		ret = render_set(scr->rdr, term->font);
 		if (ret)
 			log_warning("cannot change text-renderer font: %d", ret);
 		refresh_hw_cursor(scr);
@@ -632,11 +632,11 @@ static void terminal_update_size_clone(struct kmscon_terminal *term)
 		if (!force_enable && !scr->config_enabled)
 			continue;
 
-		cols = kmscon_text_get_cols(scr->txt, term->font->width);
+		cols = render_get_cols(scr->rdr, term->font->width);
 		if (cols && cols < min_cols)
 			min_cols = cols;
 
-		rows = kmscon_text_get_rows(scr->txt, term->font->height);
+		rows = render_get_rows(scr->rdr, term->font->height);
 		if (rows && rows < min_rows)
 			min_rows = rows;
 	}
@@ -673,8 +673,8 @@ static void terminal_update_size_largest(struct kmscon_terminal *term)
 		if (!force_enable && !scr->config_enabled)
 			continue;
 
-		rows = kmscon_text_get_rows(scr->txt, term->font->height);
-		cols = kmscon_text_get_cols(scr->txt, term->font->width);
+		rows = render_get_rows(scr->rdr, term->font->height);
+		cols = render_get_cols(scr->rdr, term->font->width);
 
 		cells = rows * cols;
 		if (cells > max_cells) {
@@ -685,8 +685,8 @@ static void terminal_update_size_largest(struct kmscon_terminal *term)
 	}
 	dlist_for_each_entry(scr, &term->screens, list)
 	{
-		rows = kmscon_text_get_rows(scr->txt, term->font->height);
-		cols = kmscon_text_get_cols(scr->txt, term->font->width);
+		rows = render_get_rows(scr->rdr, term->font->height);
+		cols = render_get_cols(scr->rdr, term->font->width);
 		if (rows != term->rows || cols != term->cols ||
 		    (!force_enable && !scr->config_enabled))
 			disable_screen(scr);
@@ -708,8 +708,8 @@ retry:
 			     scr->term->conf->font_engine))
 		return;
 
-	if (kmscon_text_get_cols(scr->txt, font->width) < scr->term->cols ||
-	    kmscon_text_get_rows(scr->txt, font->height) < scr->term->rows) {
+	if (render_get_cols(scr->rdr, font->width) < scr->term->cols ||
+	    render_get_rows(scr->rdr, font->height) < scr->term->rows) {
 		log_debug("scaling would truncate, reducing height to %d", scaled_height);
 		kmscon_font_unref(font);
 		if (scaled_height <= scr->term->font->increase_step)
@@ -724,7 +724,7 @@ retry:
 		kmscon_font_unref(font);
 		return;
 	}
-	if (kmscon_text_set(scr->txt, font)) {
+	if (render_set(scr->rdr, font)) {
 		kmscon_font_unref(font);
 		return;
 	}
@@ -750,14 +750,14 @@ static void terminal_update_size_scaled(struct kmscon_terminal *term)
 
 		scr->scaled = false;
 
-		h = (kmscon_text_get_cols(scr->txt, term->font->width) * height) / term->cols;
-		w = (kmscon_text_get_rows(scr->txt, term->font->height) * height) / term->rows;
+		h = (render_get_cols(scr->rdr, term->font->width) * height) / term->cols;
+		w = (render_get_rows(scr->rdr, term->font->height) * height) / term->rows;
 		scaled_height = min(h, w);
 
 		if (scaled_height > height)
 			scale_screen(scr, scaled_height);
 		if (!scr->scaled)
-			kmscon_text_set(scr->txt, term->font);
+			render_set(scr->rdr, term->font);
 		refresh_hw_cursor(scr);
 	}
 }
@@ -790,7 +790,7 @@ static bool terminal_update_size(struct kmscon_terminal *term)
 	dlist_for_each_entry(scr, &term->screens, list)
 	{
 		if (scr->enabled)
-			kmscon_text_resize(scr->txt, term->cols, term->rows);
+			render_resize(scr->rdr, term->cols, term->rows);
 	}
 
 	if (cols == term->cols && rows == term->rows)
@@ -814,9 +814,9 @@ static void terminal_update_size_notify(struct kmscon_terminal *term)
 
 static void rotate_cw_screen(struct screen *scr)
 {
-	unsigned int orientation = kmscon_text_get_orientation(scr->txt);
+	unsigned int orientation = render_get_orientation(scr->rdr);
 	orientation = (orientation + 1) % (OR_LEFT + 1);
-	kmscon_text_rotate(scr->txt, orientation);
+	render_rotate(scr->rdr, orientation);
 	refresh_hw_cursor(scr);
 }
 
@@ -833,12 +833,12 @@ static void rotate_cw_all(struct kmscon_terminal *term)
 
 static void rotate_ccw_screen(struct screen *scr)
 {
-	unsigned int orientation = kmscon_text_get_orientation(scr->txt);
+	unsigned int orientation = render_get_orientation(scr->rdr);
 	if (orientation == OR_NORMAL)
 		orientation = OR_LEFT;
 	else
 		orientation -= 1;
-	kmscon_text_rotate(scr->txt, orientation);
+	render_rotate(scr->rdr, orientation);
 	refresh_hw_cursor(scr);
 }
 
@@ -891,7 +891,7 @@ int terminal_add_display(struct kmscon_terminal *term, struct display *disp)
 	else
 		be = "bbulk";
 
-	ret = kmscon_text_new(&scr->txt, be, orientation, scr->disp);
+	ret = render_new(&scr->rdr, be, orientation, scr->disp);
 	if (ret) {
 		log_error("cannot create text-renderer");
 		goto err_cb;
@@ -906,7 +906,7 @@ int terminal_add_display(struct kmscon_terminal *term, struct display *disp)
 
 	log_notice("Display %s[%s] with backend [%s] text renderer [%s] font engine [%s] Cursor "
 		   "[%s]\n",
-		   gpu, connector, display_backend_name(disp), kmscon_text_get_name(scr->txt),
+		   gpu, connector, display_backend_name(disp), render_get_name(scr->rdr),
 		   term->font->ops->name, scr->hw_cursor ? "HW" : "SW");
 
 	display_ref(scr->disp);
@@ -928,7 +928,7 @@ static void free_screen(struct screen *scr, bool update)
 	if (scr->hw_cursor)
 		display_destroy_cursor(scr->disp);
 	dlist_unlink(&scr->list);
-	kmscon_text_unref(scr->txt);
+	render_unref(scr->rdr);
 	display_unregister_pageflip(scr->disp, display_pageflip, scr);
 	display_unref(scr->disp);
 	free(scr);
@@ -1184,9 +1184,9 @@ static void hw_cursor_show(struct kmscon_terminal *term, int32_t x, int32_t y)
 
 		if (scr->scaled) {
 			scale_pointer(scr, x, y, &sx, &sy);
-			kmscon_text_show_cursor(scr->txt, sx, sy);
+			render_show_cursor(scr->rdr, sx, sy);
 		} else {
-			kmscon_text_show_cursor(scr->txt, x, y);
+			render_show_cursor(scr->rdr, x, y);
 		}
 	}
 }
@@ -1353,7 +1353,7 @@ void terminal_refresh_displays(struct kmscon_terminal *term)
 
 	dlist_for_each_entry(scr, &term->screens, list)
 	{
-		kmscon_text_resize(scr->txt, term->cols, term->rows);
+		render_resize(scr->rdr, term->cols, term->rows);
 		display_set_need_redraw(scr->disp);
 	}
 	redraw_all(term);

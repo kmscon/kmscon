@@ -1,5 +1,5 @@
 /*
- * kmscon - Text Renderer internals
+ * kmscon - Render internals
  *
  * Copyright (c) 2012-2013 David Herrmann <dh.herrmann@googlemail.com>
  *
@@ -24,21 +24,21 @@
  */
 
 /*
- * Text Renderer internals
- * Shared by the text renderer core and its backends only. Users of a text
- * renderer go through the functions of text.h.
+ * Render internals
+ * Shared by the render core and its backends only. Users of a render
+ * renderer go through the functions of render.h.
  */
 
-#ifndef KMSCON_TEXT_INTERNAL_H
-#define KMSCON_TEXT_INTERNAL_H
+#ifndef KMSCON_RENDER_INTERNAL_H
+#define KMSCON_RENDER_INTERNAL_H
 
 #include <stdbool.h>
-#include "text.h"
+#include "render.h"
 
-struct kmscon_text {
+struct render {
 	unsigned long ref;
 	struct shl_register_record *record;
-	const struct kmscon_text_ops *ops;
+	const struct render_ops *ops;
 	void *data;
 
 	struct kmscon_font *font;
@@ -52,34 +52,33 @@ struct kmscon_text {
 	bool blinking;
 };
 
-struct kmscon_cursor {
+struct render_cursor {
 	struct tsm_cell cell;
 	unsigned int x;
 	unsigned int y;
 	bool visible;
 };
 
-struct kmscon_text_ops {
+struct render_ops {
 	const char *name;
 	struct shl_module *owner;
-	int (*init)(struct kmscon_text *txt);
-	void (*destroy)(struct kmscon_text *txt);
-	int (*set)(struct kmscon_text *txt);
-	void (*unset)(struct kmscon_text *txt);
-	void (*resize)(struct kmscon_text *txt, unsigned int cols, unsigned int rows);
-	int (*rotate)(struct kmscon_text *txt, enum Orientation orientation);
-	int (*prepare)(struct kmscon_text *txt, struct tsm_attr *attr);
-	int (*draw)(struct kmscon_text *txt, const struct tsm_cell *cells,
-		    struct kmscon_cursor *cursor);
-	int (*draw_pointer)(struct kmscon_text *txt, unsigned int x, unsigned int y);
-	int (*render)(struct kmscon_text *txt);
+	int (*init)(struct render *rdr);
+	void (*destroy)(struct render *rdr);
+	int (*set)(struct render *rdr);
+	void (*unset)(struct render *rdr);
+	void (*resize)(struct render *rdr, unsigned int cols, unsigned int rows);
+	int (*rotate)(struct render *rdr, enum Orientation orientation);
+	int (*prepare)(struct render *rdr, struct tsm_attr *attr);
+	int (*draw)(struct render *rdr, const struct tsm_cell *cells, struct render_cursor *cursor);
+	int (*draw_pointer)(struct render *rdr, unsigned int x, unsigned int y);
+	int (*render)(struct render *rdr);
 };
 
-#define FONT_WIDTH(txt) ((txt)->font->width)
-#define FONT_HEIGHT(txt) ((txt)->font->height)
+#define FONT_WIDTH(rdr) ((rdr)->font->width)
+#define FONT_HEIGHT(rdr) ((rdr)->font->height)
 
 /* modularized backends */
 
-extern struct kmscon_text_ops kmscon_text_gltex_ops;
+extern struct render_ops gltex_ops;
 
 #endif /* KMSCON_TEXT_INTERNAL_H */

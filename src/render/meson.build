@@ -1,7 +1,7 @@
-# Text renderer
+# Render
 
 render_srcs = [
-    'text.c',
+    'render.c',
     'bbulk.c',
 ]
 
