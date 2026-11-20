@@ -70,26 +70,30 @@ struct atlas {
 	unsigned int cols;
 	unsigned int rows;
 	unsigned int fill;
-
-	/* size of a glyph in normalized texture coordinates */
-	GLfloat tex_w;
-	GLfloat tex_h;
 };
 
 struct gl_glyph {
-	bool double_width;
 	struct atlas *atlas;
-	/* cell of the glyph in the atlas */
-	unsigned int col;
-	unsigned int row;
+	/* width in console cells, 1 or 2 */
+	unsigned int cwidth;
+	/* top-left and bottom-right texture coordinates in the atlas */
+	GLfloat u1, v1, u2, v2;
 };
 
-/* a glyph to draw, at (x1, y1)-(x2, y2) in console pixels */
+/* a glyph to draw, with its top-left corner at (x, y) in console pixels */
 struct quad {
 	const struct gl_glyph *glyph;
-	float x1, y1, x2, y2;
+	int x, y;
 	struct tsm_color fg;
 	struct tsm_color bg;
+};
+
+struct vertex {
+	GLfloat x, y; /* console pixels */
+	GLfloat u, v; /* texture coordinates */
+	/* RGBA, the alpha byte is unused but keeps the vertex 4-byte aligned */
+	GLubyte fg[4];
+	GLubyte bg[4];
 };
 
 struct gltex {
@@ -121,13 +125,8 @@ struct gltex {
 	struct quad pointer;
 	bool pointer_visible;
 
-	/* vertex data of the quads drawn with one atlas, 6 vertices per quad;
-	 * colors are RGBA bytes, the alpha byte is unused but keeps the vertex
-	 * data 4-byte aligned */
-	GLfloat *vtx_pos;
-	GLfloat *vtx_texpos;
-	GLubyte *vtx_fgcol;
-	GLubyte *vtx_bgcol;
+	/* vertices of the quads drawn with one atlas, 6 per quad */
+	struct vertex *vertices;
 };
 
 static int gltex_init(struct render *rdr)
@@ -147,13 +146,6 @@ static void gltex_destroy(struct render *rdr)
 	struct gltex *gt = rdr->data;
 
 	free(gt);
-}
-
-static void free_glyph(void *data)
-{
-	struct gl_glyph *glyph = data;
-
-	free(glyph);
 }
 
 /* screen size in the orientation of the console */
@@ -213,10 +205,7 @@ static void compute_offset(struct render *rdr)
 static void free_quads(struct gltex *gt)
 {
 	free(gt->quads);
-	free(gt->vtx_pos);
-	free(gt->vtx_texpos);
-	free(gt->vtx_fgcol);
-	free(gt->vtx_bgcol);
+	free(gt->vertices);
 }
 
 /* allocates room for one quad per console cell */
@@ -228,11 +217,8 @@ static int alloc_quads(struct render *rdr)
 	size_t nv = n ? n : 1;
 
 	gt->quads = calloc(nv, sizeof(*gt->quads));
-	gt->vtx_pos = malloc(sizeof(GLfloat) * nv * 6 * 2);
-	gt->vtx_texpos = malloc(sizeof(GLfloat) * nv * 6 * 2);
-	gt->vtx_fgcol = malloc(nv * 6 * 4);
-	gt->vtx_bgcol = malloc(nv * 6 * 4);
-	if (!gt->quads || !gt->vtx_pos || !gt->vtx_texpos || !gt->vtx_fgcol || !gt->vtx_bgcol) {
+	gt->vertices = calloc(nv * 6, sizeof(*gt->vertices));
+	if (!gt->quads || !gt->vertices) {
 		free_quads(gt);
 		return -ENOMEM;
 	}
@@ -244,8 +230,7 @@ static int alloc_quads(struct render *rdr)
 static int gltex_set(struct render *rdr)
 {
 	struct gltex *gt = rdr->data;
-	int ret, vlen, flen;
-	const char *vert, *frag;
+	int ret;
 	static char *attr[] = {"position", "texture_position", "fgcolor", "bgcolor"};
 	GLint s;
 
@@ -259,18 +244,15 @@ static int gltex_set(struct render *rdr)
 	memset(gt, 0, sizeof(*gt));
 	dlist_init(&gt->atlases);
 
-	ret = shl_hashtable_new(&gt->glyphs, shl_direct_hash, shl_direct_equal, free_glyph);
+	ret = shl_hashtable_new(&gt->glyphs, shl_direct_hash, shl_direct_equal, free);
 	if (ret)
 		return ret;
 
-	vert = _binary_gltex_atlas_vert_start;
-	vlen = _binary_gltex_atlas_vert_size;
-	frag = _binary_gltex_atlas_frag_start;
-	flen = _binary_gltex_atlas_frag_size;
 	gl_clear_error();
 
-	ret = gl_shader_new(&gt->shader, vert, vlen, frag, flen, attr,
-			    sizeof(attr) / sizeof(*attr));
+	ret = gl_shader_new(&gt->shader, _binary_gltex_atlas_vert_start,
+			    _binary_gltex_atlas_vert_size, _binary_gltex_atlas_frag_start,
+			    _binary_gltex_atlas_frag_size, attr, sizeof(attr) / sizeof(*attr));
 	if (ret)
 		goto err_htable;
 
@@ -467,10 +449,6 @@ static struct atlas *get_atlas(struct render *rdr, unsigned int num)
 		goto err;
 	}
 
-	/* exact, as the texture sizes are powers of 2 */
-	atlas->tex_w = (GLfloat)FONT_WIDTH(rdr) / atlas->width;
-	atlas->tex_h = (GLfloat)FONT_HEIGHT(rdr) / atlas->height;
-
 	dlist_link(&gt->atlases, &atlas->list);
 	return atlas;
 
@@ -486,7 +464,7 @@ static struct gl_glyph *find_glyph(struct render *rdr, const struct tsm_cell *ce
 	struct gl_glyph *glglyph;
 	GLenum err;
 	struct kmscon_font *font = rdr->font;
-	unsigned int num, slot;
+	unsigned int slot, x, y;
 	struct kmscon_glyph *glyph;
 	struct kmscon_font_attr attr;
 	uint32_t ch = cell->ch ? cell->ch : ' ';
@@ -515,24 +493,22 @@ static struct gl_glyph *find_glyph(struct render *rdr, const struct tsm_cell *ce
 	if (!glglyph)
 		goto err_free;
 
-	glglyph->double_width = glyph->double_width;
-
-	num = kmscon_glyph_cwidth(glyph);
-	atlas = get_atlas(rdr, num);
+	glglyph->cwidth = kmscon_glyph_cwidth(glyph);
+	atlas = get_atlas(rdr, glglyph->cwidth);
 	if (!atlas)
 		goto err_free;
 
-	slot = atlas_next_cell(atlas, num);
-	glglyph->col = slot % atlas->cols;
-	glglyph->row = slot / atlas->cols;
+	/* position of the glyph in the atlas, in texels */
+	slot = atlas_next_cell(atlas, glglyph->cwidth);
+	x = slot % atlas->cols * FONT_WIDTH(rdr);
+	y = slot / atlas->cols * FONT_HEIGHT(rdr);
 
 	gl_clear_error();
 
 	glBindTexture(GL_TEXTURE_2D, atlas->tex);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, glglyph->col * FONT_WIDTH(rdr),
-			glglyph->row * FONT_HEIGHT(rdr), glyph->buf.width, glyph->buf.height,
-			GL_ALPHA, GL_UNSIGNED_BYTE, glyph->buf.data);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, glyph->buf.width, glyph->buf.height, GL_ALPHA,
+			GL_UNSIGNED_BYTE, glyph->buf.data);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 
 	/* Check for GL-errors
@@ -552,12 +528,17 @@ static struct gl_glyph *find_glyph(struct render *rdr, const struct tsm_cell *ce
 		goto err_free;
 	}
 
+	/* exact, as the atlas sizes are powers of 2 */
 	glglyph->atlas = atlas;
+	glglyph->u1 = (GLfloat)x / atlas->width;
+	glglyph->v1 = (GLfloat)y / atlas->height;
+	glglyph->u2 = (GLfloat)(x + glglyph->cwidth * FONT_WIDTH(rdr)) / atlas->width;
+	glglyph->v2 = (GLfloat)(y + FONT_HEIGHT(rdr)) / atlas->height;
 
 	if (shl_hashtable_insert(gt->glyphs, id, glglyph))
 		goto err_free;
 
-	atlas->fill = slot + num;
+	atlas->fill = slot + glglyph->cwidth;
 	free(glyph);
 
 	return glglyph;
@@ -601,65 +582,34 @@ static int gltex_prepare(struct render *rdr, struct tsm_attr *attr)
 	return 0;
 }
 
-/* writes the vertices of quad @q at index @idx of the vertex arrays, as two
- * triangles */
-static void emit_quad(struct gltex *gt, unsigned int idx, const struct quad *q)
+static void set_vertex(struct vertex *v, float x, float y, float u, float t, const struct quad *q)
 {
-	const struct gl_glyph *glyph = q->glyph;
-	const struct atlas *atlas = glyph->atlas;
-	float x1 = q->x1, y1 = q->y1, x2 = q->x2, y2 = q->y2;
-	float width = glyph->double_width ? 2.0 : 1.0;
-	const struct tsm_color *fg = &q->fg, *bg = &q->bg;
-	GLfloat *pos, *texpos;
-	GLubyte *fgcol, *bgcol;
-	GLfloat u1 = glyph->col * atlas->tex_w;
-	GLfloat u2 = (glyph->col + width) * atlas->tex_w;
-	GLfloat v1 = glyph->row * atlas->tex_h;
-	GLfloat v2 = (glyph->row + 1) * atlas->tex_h;
-	int i;
+	*v = (struct vertex){
+		.x = x,
+		.y = y,
+		.u = u,
+		.v = t,
+		.fg = {q->fg.r, q->fg.g, q->fg.b, 255},
+		.bg = {q->bg.r, q->bg.g, q->bg.b, 255},
+	};
+}
 
-	pos = &gt->vtx_pos[idx * 2 * 6];
-	pos[0] = x1;
-	pos[1] = y1;
-	pos[2] = x1;
-	pos[3] = y2;
-	pos[4] = x2;
-	pos[5] = y2;
+/* writes the 6 vertices of quad @q, as two triangles, at index @idx */
+static void emit_quad(struct render *rdr, unsigned int idx, const struct quad *q)
+{
+	struct gltex *gt = rdr->data;
+	struct vertex *v = &gt->vertices[idx * 6];
+	const struct gl_glyph *g = q->glyph;
+	float x1 = q->x, y1 = q->y;
+	float x2 = x1 + g->cwidth * FONT_WIDTH(rdr), y2 = y1 + FONT_HEIGHT(rdr);
 
-	pos[6] = x1;
-	pos[7] = y1;
-	pos[8] = x2;
-	pos[9] = y2;
-	pos[10] = x2;
-	pos[11] = y1;
+	set_vertex(&v[0], x1, y1, g->u1, g->v1, q);
+	set_vertex(&v[1], x1, y2, g->u1, g->v2, q);
+	set_vertex(&v[2], x2, y2, g->u2, g->v2, q);
 
-	texpos = &gt->vtx_texpos[idx * 2 * 6];
-	texpos[0] = u1;
-	texpos[1] = v1;
-	texpos[2] = u1;
-	texpos[3] = v2;
-	texpos[4] = u2;
-	texpos[5] = v2;
-
-	texpos[6] = u1;
-	texpos[7] = v1;
-	texpos[8] = u2;
-	texpos[9] = v2;
-	texpos[10] = u2;
-	texpos[11] = v1;
-
-	fgcol = &gt->vtx_fgcol[idx * 4 * 6];
-	bgcol = &gt->vtx_bgcol[idx * 4 * 6];
-	for (i = 0; i < 6; ++i) {
-		fgcol[i * 4 + 0] = fg->r;
-		fgcol[i * 4 + 1] = fg->g;
-		fgcol[i * 4 + 2] = fg->b;
-		fgcol[i * 4 + 3] = 255;
-		bgcol[i * 4 + 0] = bg->r;
-		bgcol[i * 4 + 1] = bg->g;
-		bgcol[i * 4 + 2] = bg->b;
-		bgcol[i * 4 + 3] = 255;
-	}
+	set_vertex(&v[3], x1, y1, g->u1, g->v1, q);
+	set_vertex(&v[4], x2, y2, g->u2, g->v2, q);
+	set_vertex(&v[5], x2, y1, g->u2, g->v1, q);
 }
 
 static int gltex_draw_cell(struct render *rdr, const struct tsm_cell *cell, unsigned int posx,
@@ -667,8 +617,6 @@ static int gltex_draw_cell(struct render *rdr, const struct tsm_cell *cell, unsi
 {
 	struct gltex *gt = rdr->data;
 	struct gl_glyph *glglyph;
-	float x1, x2, y1, y2;
-	float width;
 
 	if (posx && gt->previous_overflow && (cell->ch == 0 || cell->ch == ' ')) {
 		gt->previous_overflow = false;
@@ -678,26 +626,18 @@ static int gltex_draw_cell(struct render *rdr, const struct tsm_cell *cell, unsi
 	if (!glglyph)
 		return -ENOMEM;
 
-	width = glglyph->double_width ? 2.0 : 1.0;
-	x1 = gt->off_x + posx * FONT_WIDTH(rdr);
-	x2 = x1 + width * FONT_WIDTH(rdr);
-	y1 = gt->off_y + posy * FONT_HEIGHT(rdr);
-	y2 = y1 + FONT_HEIGHT(rdr);
-
 	if (gt->quads_num >= gt->quads_size)
 		return -ERANGE;
 
 	gt->quads[gt->quads_num++] = (struct quad){
 		.glyph = glglyph,
-		.x1 = x1,
-		.y1 = y1,
-		.x2 = x2,
-		.y2 = y2,
+		.x = gt->off_x + posx * FONT_WIDTH(rdr),
+		.y = gt->off_y + posy * FONT_HEIGHT(rdr),
 		.fg = cell->fg,
 		.bg = cell->bg,
 	};
 
-	gt->previous_overflow = glglyph->double_width;
+	gt->previous_overflow = glglyph->cwidth == 2;
 	return 0;
 }
 
@@ -728,7 +668,6 @@ static int gltex_draw_pointer(struct render *rdr, unsigned int x, unsigned int y
 {
 	struct gltex *gt = rdr->data;
 	struct gl_glyph *glyph;
-	float x1, x2, y1, y2;
 	unsigned int sw, sh;
 	struct tsm_cell pointer_cell = {0};
 	pointer_cell.ch = 'I';
@@ -746,17 +685,10 @@ static int gltex_draw_pointer(struct render *rdr, unsigned int x, unsigned int y
 		y = sh;
 
 	/* center the pointer on (x, y), aligned on whole pixels */
-	x1 = (int)(gt->off_x + x) - (int)(FONT_WIDTH(rdr) / 2);
-	y1 = (int)(gt->off_y + y) - (int)(FONT_HEIGHT(rdr) / 2);
-	x2 = x1 + FONT_WIDTH(rdr);
-	y2 = y1 + FONT_HEIGHT(rdr);
-
 	gt->pointer = (struct quad){
 		.glyph = glyph,
-		.x1 = x1,
-		.y1 = y1,
-		.x2 = x2,
-		.y2 = y2,
+		.x = (int)(gt->off_x + x) - (int)(FONT_WIDTH(rdr) / 2),
+		.y = (int)(gt->off_y + y) - (int)(FONT_HEIGHT(rdr) / 2),
 		.fg = gt->attr.fg,
 		.bg = gt->attr.bg,
 	};
@@ -764,21 +696,18 @@ static int gltex_draw_pointer(struct render *rdr, unsigned int x, unsigned int y
 	return 0;
 }
 
-static void draw_atlas(struct gltex *gt, const struct atlas *atlas, unsigned int num)
+/* draws the first @num quads of the vertex array, with the texture of @atlas */
+static void draw_atlas(const struct atlas *atlas, unsigned int num)
 {
 	glBindTexture(GL_TEXTURE_2D, atlas->tex);
-
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, gt->vtx_pos);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, gt->vtx_texpos);
-	/* normalized: the shader gets the colors in [0, 1] */
-	glVertexAttribPointer(2, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, gt->vtx_fgcol);
-	glVertexAttribPointer(3, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, gt->vtx_bgcol);
 	glDrawArrays(GL_TRIANGLES, 0, 6 * num);
 }
 
 static int gltex_render(struct render *rdr)
 {
 	struct gltex *gt = rdr->data;
+	const struct vertex *v = gt->vertices;
+	const GLsizei stride = sizeof(*v);
 	struct atlas *atlas;
 	unsigned int i, num;
 
@@ -791,10 +720,14 @@ static int gltex_render(struct render *rdr)
 
 	glUniformMatrix4fv(gt->uni_proj, 1, GL_FALSE, gt->proj);
 
-	glEnableVertexAttribArray(0);
-	glEnableVertexAttribArray(1);
-	glEnableVertexAttribArray(2);
-	glEnableVertexAttribArray(3);
+	for (i = 0; i < 4; ++i)
+		glEnableVertexAttribArray(i);
+
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, stride, &v->x);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, stride, &v->u);
+	/* normalized: the shader gets the colors in [0, 1] */
+	glVertexAttribPointer(2, 4, GL_UNSIGNED_BYTE, GL_TRUE, stride, v->fg);
+	glVertexAttribPointer(3, 4, GL_UNSIGNED_BYTE, GL_TRUE, stride, v->bg);
 
 	glActiveTexture(GL_TEXTURE0);
 	glUniform1i(gt->uni_atlas, 0);
@@ -806,20 +739,18 @@ static int gltex_render(struct render *rdr)
 		num = 0;
 		for (i = 0; i < gt->quads_num; ++i)
 			if (gt->quads[i].glyph->atlas == atlas)
-				emit_quad(gt, num++, &gt->quads[i]);
+				emit_quad(rdr, num++, &gt->quads[i]);
 		if (num)
-			draw_atlas(gt, atlas, num);
+			draw_atlas(atlas, num);
 	}
 
 	if (gt->pointer_visible) {
-		emit_quad(gt, 0, &gt->pointer);
-		draw_atlas(gt, gt->pointer.glyph->atlas, 1);
+		emit_quad(rdr, 0, &gt->pointer);
+		draw_atlas(gt->pointer.glyph->atlas, 1);
 	}
 
-	glDisableVertexAttribArray(0);
-	glDisableVertexAttribArray(1);
-	glDisableVertexAttribArray(2);
-	glDisableVertexAttribArray(3);
+	for (i = 0; i < 4; ++i)
+		glDisableVertexAttribArray(i);
 
 	if (gl_has_error(gt->shader)) {
 		log_warning("rendering console caused OpenGL errors");
