@@ -91,14 +91,12 @@ struct gltex {
 
 	struct dlist atlases;
 
-	GLfloat advance_x;
-	GLfloat advance_y;
-	GLfloat off_x;
-	GLfloat off_y;
+	/* console origin and projection, in pixels of the rotated console */
+	unsigned int off_x;
+	unsigned int off_y;
+	GLfloat proj[16];
 
 	struct gl_shader *shader;
-	GLuint uni_cos;
-	GLuint uni_sin;
 	GLuint uni_proj;
 	GLuint uni_atlas;
 	GLuint uni_advance_htex;
@@ -106,9 +104,6 @@ struct gltex {
 
 	unsigned int sw;
 	unsigned int sh;
-
-	GLfloat cos;
-	GLfloat sin;
 
 	struct tsm_attr attr;
 };
@@ -139,35 +134,58 @@ static void free_glyph(void *data)
 	free(glyph);
 }
 
-static void gltex_set_cos(struct gltex *gt, enum Orientation orientation)
-{
-	float sin_table[5] = {0.0, 1.0, 0.0, -1.0, 0.0};
-
-	gt->cos = sin_table[orientation + 1];
-	gt->sin = sin_table[orientation];
-}
-
-static void compute_advance_and_offset(struct render *rdr)
+/* screen size in the orientation of the console */
+static void screen_size(struct render *rdr, unsigned int *w, unsigned int *h)
 {
 	struct gltex *gt = rdr->data;
-	unsigned int off_x, off_y;
 
 	if (rdr->orientation == OR_NORMAL || rdr->orientation == OR_UPSIDE_DOWN) {
-		gt->advance_x = 2.0 / gt->sw * FONT_WIDTH(rdr);
-		gt->advance_y = 2.0 / gt->sh * FONT_HEIGHT(rdr);
-		off_x = (gt->sw - rdr->cols * FONT_WIDTH(rdr)) / 2;
-		off_y = (gt->sh - rdr->rows * FONT_HEIGHT(rdr)) / 2;
-		gt->off_x = (float)2.0 * off_x / gt->sw;
-		gt->off_y = (float)2.0 * off_y / gt->sh;
+		*w = gt->sw;
+		*h = gt->sh;
 	} else {
-		gt->advance_x = 2.0 / gt->sh * FONT_WIDTH(rdr);
-		gt->advance_y = 2.0 / gt->sw * FONT_HEIGHT(rdr);
-		off_x = (gt->sw - rdr->rows * FONT_HEIGHT(rdr)) / 2;
-		off_y = (gt->sh - rdr->cols * FONT_WIDTH(rdr)) / 2;
-		gt->off_x = (float)2.0 * off_y / gt->sh;
-		gt->off_y = (float)2.0 * off_x / gt->sw;
+		*w = gt->sh;
+		*h = gt->sw;
 	}
-	display_set_cursor_offset(rdr->disp, off_x, off_y);
+}
+
+/*
+ * Projection from console pixels (origin at the top-left corner of the rotated
+ * console, y going down) to OpenGL coordinates, rotated by the orientation.
+ */
+static void compute_projection(struct render *rdr)
+{
+	struct gltex *gt = rdr->data;
+	static const float sin_table[5] = {0.0, 1.0, 0.0, -1.0, 0.0};
+	float c = sin_table[rdr->orientation + 1];
+	float s = sin_table[rdr->orientation];
+	unsigned int cw, ch;
+	float *m = gt->proj;
+
+	screen_size(rdr, &cw, &ch);
+
+	gl_m4_identity(m);
+	m[0] = 2.0 * c / cw;
+	m[1] = -2.0 * s / cw;
+	m[4] = -2.0 * s / ch;
+	m[5] = -2.0 * c / ch;
+	m[12] = s - c;
+	m[13] = s + c;
+}
+
+static void compute_offset(struct render *rdr)
+{
+	struct gltex *gt = rdr->data;
+	unsigned int cw, ch;
+
+	screen_size(rdr, &cw, &ch);
+	gt->off_x = (cw - rdr->cols * FONT_WIDTH(rdr)) / 2;
+	gt->off_y = (ch - rdr->rows * FONT_HEIGHT(rdr)) / 2;
+
+	/* the cursor offset is in screen pixels, not rotated */
+	if (rdr->orientation == OR_NORMAL || rdr->orientation == OR_UPSIDE_DOWN)
+		display_set_cursor_offset(rdr->disp, gt->off_x, gt->off_y);
+	else
+		display_set_cursor_offset(rdr->disp, gt->off_y, gt->off_x);
 }
 
 static int gltex_set(struct render *rdr)
@@ -203,8 +221,6 @@ static int gltex_set(struct render *rdr)
 	if (ret)
 		goto err_htable;
 
-	gt->uni_cos = gl_shader_get_uniform(gt->shader, "cos");
-	gt->uni_sin = gl_shader_get_uniform(gt->shader, "sin");
 	gt->uni_proj = gl_shader_get_uniform(gt->shader, "projection");
 	gt->uni_atlas = gl_shader_get_uniform(gt->shader, "atlas");
 	gt->uni_advance_htex = gl_shader_get_uniform(gt->shader, "advance_htex");
@@ -223,8 +239,8 @@ static int gltex_set(struct render *rdr)
 	rdr->max_rows = render_get_rows(rdr, FONT_HEIGHT(rdr));
 	rdr->cols = rdr->max_cols;
 	rdr->rows = rdr->max_rows;
-	compute_advance_and_offset(rdr);
-	gltex_set_cos(gt, rdr->orientation);
+	compute_offset(rdr);
+	compute_projection(rdr);
 
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &s);
 	if (s <= 0)
@@ -472,7 +488,7 @@ static void gltex_resize(struct render *rdr, unsigned int cols, unsigned int row
 {
 	rdr->cols = cols;
 	rdr->rows = rows;
-	compute_advance_and_offset(rdr);
+	compute_offset(rdr);
 }
 
 static int gltex_rotate(struct render *rdr, enum Orientation orientation)
@@ -564,20 +580,6 @@ static int atlas_push_quad(struct atlas *atlas, float x1, float y1, float x2, fl
 	return 0;
 }
 
-/* screen size in the orientation of the console */
-static void screen_size(struct render *rdr, unsigned int *w, unsigned int *h)
-{
-	struct gltex *gt = rdr->data;
-
-	if (rdr->orientation == OR_NORMAL || rdr->orientation == OR_UPSIDE_DOWN) {
-		*w = gt->sw;
-		*h = gt->sh;
-	} else {
-		*w = gt->sh;
-		*h = gt->sw;
-	}
-}
-
 static int gltex_draw_cell(struct render *rdr, const struct tsm_cell *cell, unsigned int posx,
 			   unsigned int posy)
 {
@@ -596,10 +598,10 @@ static int gltex_draw_cell(struct render *rdr, const struct tsm_cell *cell, unsi
 		return -ENOMEM;
 
 	width = glglyph->double_width ? 2.0 : 1.0;
-	x1 = gt->off_x + gt->advance_x * posx - 1.0;
-	x2 = x1 + width * gt->advance_x;
-	y1 = 1.0 - gt->off_y - gt->advance_y * posy;
-	y2 = y1 - gt->advance_y;
+	x1 = gt->off_x + posx * FONT_WIDTH(rdr);
+	x2 = x1 + width * FONT_WIDTH(rdr);
+	y1 = gt->off_y + posy * FONT_HEIGHT(rdr);
+	y2 = y1 + FONT_HEIGHT(rdr);
 
 	ret = atlas_push_quad(glglyph->atlas, x1, y1, x2, y2, glglyph->texoff, width, &cell->fg,
 			      &cell->bg);
@@ -654,10 +656,11 @@ static int gltex_draw_pointer(struct render *rdr, unsigned int x, unsigned int y
 	if (y > sh)
 		y = sh;
 
-	x1 = gt->off_x + x * 2.0 / sw - 1.0 - gt->advance_x / 2.0;
-	y1 = 1.0 - gt->off_y - y * 2.0 / sh + gt->advance_y / 2.0;
-	x2 = x1 + gt->advance_x;
-	y2 = y1 - gt->advance_y;
+	/* center the pointer on (x, y), aligned on whole pixels */
+	x1 = (int)(gt->off_x + x) - (int)(FONT_WIDTH(rdr) / 2);
+	y1 = (int)(gt->off_y + y) - (int)(FONT_HEIGHT(rdr) / 2);
+	x2 = x1 + FONT_WIDTH(rdr);
+	y2 = y1 + FONT_HEIGHT(rdr);
 
 	return atlas_push_quad(glyph->atlas, x1, y1, x2, y2, glyph->texoff, 1.0, &gt->attr.fg,
 			       &gt->attr.bg);
@@ -667,7 +670,6 @@ static int gltex_render(struct render *rdr)
 {
 	struct gltex *gt = rdr->data;
 	struct atlas *atlas;
-	float mat[16];
 
 	gl_clear_error();
 
@@ -676,10 +678,7 @@ static int gltex_render(struct render *rdr)
 	glViewport(0, 0, gt->sw, gt->sh);
 	glDisable(GL_BLEND);
 
-	gl_m4_identity(mat);
-	glUniformMatrix4fv(gt->uni_proj, 1, GL_FALSE, mat);
-	glUniform1f(gt->uni_cos, gt->cos);
-	glUniform1f(gt->uni_sin, gt->sin);
+	glUniformMatrix4fv(gt->uni_proj, 1, GL_FALSE, gt->proj);
 
 	glEnableVertexAttribArray(0);
 	glEnableVertexAttribArray(1);
