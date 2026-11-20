@@ -114,18 +114,24 @@ pub fn state(out: &mut String, vte: &Vte<Recorder>) {
 
 pub fn text(out: &mut String, s: &Screen) {
     let w = s.width();
-    let is_tail =
-        |row: &[tsm::Cell], x: usize| x > 0 && row[x].width == 0 && row[x].ch == '\0' && row[x - 1].width == 2;
+    let wide = |c: &tsm::Cell| tsm::char_width(c.ch) == 2;
+    let is_tail = |row: &[tsm::Cell], x: usize| x > 0 && row[x].ch == '\0' && wide(&row[x - 1]);
+    // Width of a cell: 0 for the trailing cell of a wide character, 1 for an
+    // empty cell, otherwise the width of the character.
+    let width = |row: &[tsm::Cell], x: usize| match row[x].ch {
+        _ if is_tail(row, x) => 0,
+        '\0' => 1,
+        c => tsm::char_width(c),
+    };
     let is_odd = |row: &[tsm::Cell], x: usize| {
         let c = &row[x];
         if c.ch != '\0' && !printable(c.ch) {
             return true;
         }
-        match c.width {
-            0 => !is_tail(row, x),
+        match width(row, x) {
             1 => false,
-            2 => x + 1 >= w || row[x + 1].width != 0,
-            _ => true,
+            2 => x + 1 >= w || !is_tail(row, x + 1),
+            _ => !is_tail(row, x),
         }
     };
 
@@ -155,7 +161,7 @@ pub fn text(out: &mut String, s: &Screen) {
             let row = s.row(y).unwrap();
             for x in 0..w {
                 if is_odd(row, x) {
-                    writeln!(out, "  {y},{x} U+{:04X} w={}", row[x].ch as u32, row[x].width).unwrap();
+                    writeln!(out, "  {y},{x} U+{:04X} w={}", row[x].ch as u32, width(row, x)).unwrap();
                 }
             }
         }

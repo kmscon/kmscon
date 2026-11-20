@@ -52,10 +52,7 @@ text
 text
    0|ab······|
    1|0·······|
-   2|a世··世b·|
-cells
-  2,1 U+4E16 w=2
-  2,3 U+0000 w=0
+   2|a世·世b·|
 > in "\e[3;3H\e[P\e[P"
 > dump text
 text
