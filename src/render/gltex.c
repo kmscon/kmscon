@@ -64,7 +64,11 @@ struct atlas {
 	GLuint tex;
 	unsigned int height;
 	unsigned int width;
-	unsigned int count;
+
+	/* the atlas is a grid of cols x rows glyph cells, filled row by row;
+	 * fill is the index of the next free cell */
+	unsigned int cols;
+	unsigned int rows;
 	unsigned int fill;
 
 	unsigned int cache_size;
@@ -82,7 +86,9 @@ struct atlas {
 struct gl_glyph {
 	bool double_width;
 	struct atlas *atlas;
-	unsigned int texoff;
+	/* cell of the glyph in the atlas */
+	unsigned int col;
+	unsigned int row;
 };
 
 struct gltex {
@@ -242,8 +248,8 @@ static int gltex_set(struct render *rdr)
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &s);
 	if (s <= 0)
 		s = 64;
-	else if (s > 2048)
-		s = 2048;
+	else if (s > 1024)
+		s = 1024;
 	gt->max_tex_size = s;
 
 	gl_clear_error();
@@ -300,26 +306,29 @@ static void gltex_unset(struct render *rdr)
 }
 
 /*
- * Allocates the texture storage of @atlas. OpenGL texture sizes are heavily
- * restricted so we need to find a valid texture size that is big enough to
- * hold as many glyphs as possible but at least 1. On success, sets the atlas
- * size and glyph count and returns 0.
+ * Allocates the texture storage of @atlas, as big as possible, up to
+ * max_tex_size in both directions. OpenGL may refuse big textures, so halve
+ * the height then the width until it succeeds, keeping room for at least one
+ * glyph. On success, sets the atlas size and grid and returns 0.
  */
 static int atlas_alloc_tex(struct render *rdr, struct atlas *atlas)
 {
 	struct gltex *gt = rdr->data;
-	unsigned int width, height;
-	size_t newsize;
+	unsigned int width, height, min_width, min_height;
 	GLenum err;
 
-	newsize = gt->max_tex_size / FONT_WIDTH(rdr);
-	if (newsize < 1)
-		newsize = 1;
+	/* largest power of 2 not above max_tex_size */
+	width = shl_next_pow2(gt->max_tex_size);
+	if (width > gt->max_tex_size)
+		width /= 2;
+	height = width;
 
-	height = shl_next_pow2(FONT_HEIGHT(rdr));
-	for (;; --newsize) {
-		width = shl_next_pow2(FONT_WIDTH(rdr) * newsize);
+	min_width = shl_next_pow2(FONT_WIDTH(rdr));
+	min_height = shl_next_pow2(FONT_HEIGHT(rdr));
+	width = width < min_width ? min_width : width;
+	height = height < min_height ? min_height : height;
 
+	for (;;) {
 		gl_clear_error();
 
 		glBindTexture(GL_TEXTURE_2D, atlas->tex);
@@ -329,22 +338,49 @@ static int atlas_alloc_tex(struct render *rdr, struct atlas *atlas)
 		err = glGetError();
 		if (err == GL_NO_ERROR)
 			break;
-		if (newsize <= 1) {
+
+		if (height > min_height) {
+			height /= 2;
+		} else if (width > min_width) {
+			width /= 2;
+		} else {
 			gl_clear_error();
 			log_warning("OpenGL textures too small for a single glyph (%d)", err);
 			return -EFAULT;
 		}
 	}
 
-	log_debug("new atlas of size %ux%u for %zu", width, height, newsize);
-
-	atlas->count = newsize;
 	atlas->width = width;
 	atlas->height = height;
+	atlas->cols = width / FONT_WIDTH(rdr);
+	atlas->rows = height / FONT_HEIGHT(rdr);
+
+	log_debug("new atlas of size %ux%u for %ux%u glyphs", width, height, atlas->cols,
+		  atlas->rows);
 	return 0;
 }
 
-/* returns an atlas with at least 1 free glyph position; NULL on error */
+/*
+ * Returns the cell where a glyph @num cells wide would be stored in @atlas, as
+ * an index in cells. Glyphs don't span two rows, so a glyph that doesn't fit
+ * at the end of a row goes to the next one. The glyph fits if the returned
+ * index + @num <= cols * rows.
+ */
+static unsigned int atlas_next_cell(const struct atlas *atlas, unsigned int num)
+{
+	unsigned int cell = atlas->fill;
+
+	if (cell % atlas->cols + num > atlas->cols)
+		cell += atlas->cols - cell % atlas->cols;
+	return cell;
+}
+
+static bool atlas_has_room(const struct atlas *atlas, unsigned int num)
+{
+	return num <= atlas->cols && atlas_next_cell(atlas, num) + num <= atlas->cols * atlas->rows;
+}
+
+/* returns an atlas with room for a glyph @num cells wide; NULL on error */
 static struct atlas *get_atlas(struct render *rdr, unsigned int num)
 {
 	struct gltex *gt = rdr->data;
@@ -352,9 +388,9 @@ static struct atlas *get_atlas(struct render *rdr, unsigned int num)
 	unsigned int nsize;
 	GLenum err;
 
-	/* check whether the last added atlas has still room for one glyph */
+	/* check whether the last added atlas has still room for the glyph */
 	atlas = dlist_first(&gt->atlases, struct atlas, list);
-	if (atlas && atlas->fill + num <= atlas->count)
+	if (atlas && atlas_has_room(atlas, num))
 		return atlas;
 
 	/* all atlases are full so we have to create a new atlas */
@@ -378,6 +414,11 @@ static struct atlas *get_atlas(struct render *rdr, unsigned int num)
 
 	if (atlas_alloc_tex(rdr, atlas))
 		goto err;
+
+	if (!atlas_has_room(atlas, num)) {
+		log_warning("OpenGL textures too small for a glyph of %u cells", num);
+		goto err;
+	}
 
 	nsize = rdr->max_cols * rdr->max_rows + 1; // +1 for the mouse pointer
 
@@ -408,7 +449,7 @@ static struct gl_glyph *find_glyph(struct render *rdr, const struct tsm_cell *ce
 	struct gl_glyph *glglyph;
 	GLenum err;
 	struct kmscon_font *font = rdr->font;
-	unsigned int num;
+	unsigned int num, slot;
 	struct kmscon_glyph *glyph;
 	struct kmscon_font_attr attr;
 	uint32_t ch = cell->ch ? cell->ch : ' ';
@@ -444,12 +485,17 @@ static struct gl_glyph *find_glyph(struct render *rdr, const struct tsm_cell *ce
 	if (!atlas)
 		goto err_free;
 
+	slot = atlas_next_cell(atlas, num);
+	glglyph->col = slot % atlas->cols;
+	glglyph->row = slot / atlas->cols;
+
 	gl_clear_error();
 
 	glBindTexture(GL_TEXTURE_2D, atlas->tex);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-	glTexSubImage2D(GL_TEXTURE_2D, 0, FONT_WIDTH(rdr) * atlas->fill, 0, glyph->buf.width,
-			glyph->buf.height, GL_ALPHA, GL_UNSIGNED_BYTE, glyph->buf.data);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, glglyph->col * FONT_WIDTH(rdr),
+			glglyph->row * FONT_HEIGHT(rdr), glyph->buf.width, glyph->buf.height,
+			GL_ALPHA, GL_UNSIGNED_BYTE, glyph->buf.data);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 
 	/* Check for GL-errors
@@ -470,12 +516,11 @@ static struct gl_glyph *find_glyph(struct render *rdr, const struct tsm_cell *ce
 	}
 
 	glglyph->atlas = atlas;
-	glglyph->texoff = atlas->fill;
 
 	if (shl_hashtable_insert(gt->glyphs, id, glglyph))
 		goto err_free;
 
-	atlas->fill += num;
+	atlas->fill = slot + num;
 	free(glyph);
 
 	return glglyph;
@@ -525,16 +570,17 @@ static int gltex_prepare(struct render *rdr, struct tsm_attr *attr)
 /*
  * Appends a glyph quad to the vertex caches of @atlas, as two triangles.
  * (x1, y1) is the top-left and (x2, y2) the bottom-right corner in console
- * pixels, the texture spans @width glyphs from glyph @texoff of the atlas.
+ * pixels, the texture spans @width cells from cell (@col, @row) of the atlas.
  */
 static int atlas_push_quad(struct atlas *atlas, float x1, float y1, float x2, float y2,
-			   unsigned int texoff, float width, const struct tsm_color *fg,
-			   const struct tsm_color *bg)
+			   unsigned int col, unsigned int row, float width,
+			   const struct tsm_color *fg, const struct tsm_color *bg)
 {
 	GLfloat *pos, *texpos, *fgcol, *bgcol;
-	GLfloat u1 = texoff * atlas->tex_w;
-	GLfloat u2 = (texoff + width) * atlas->tex_w;
-	GLfloat v2 = atlas->tex_h;
+	GLfloat u1 = col * atlas->tex_w;
+	GLfloat u2 = (col + width) * atlas->tex_w;
+	GLfloat v1 = row * atlas->tex_h;
+	GLfloat v2 = (row + 1) * atlas->tex_h;
 	int i;
 
 	if (atlas->cache_num >= atlas->cache_size)
@@ -557,18 +603,18 @@ static int atlas_push_quad(struct atlas *atlas, float x1, float y1, float x2, fl
 
 	texpos = &atlas->cache_texpos[atlas->cache_num * 2 * 6];
 	texpos[0] = u1;
-	texpos[1] = 0.0;
+	texpos[1] = v1;
 	texpos[2] = u1;
 	texpos[3] = v2;
 	texpos[4] = u2;
 	texpos[5] = v2;
 
 	texpos[6] = u1;
-	texpos[7] = 0.0;
+	texpos[7] = v1;
 	texpos[8] = u2;
 	texpos[9] = v2;
 	texpos[10] = u2;
-	texpos[11] = 0.0;
+	texpos[11] = v1;
 
 	fgcol = &atlas->cache_fgcol[atlas->cache_num * 3 * 6];
 	bgcol = &atlas->cache_bgcol[atlas->cache_num * 3 * 6];
@@ -608,8 +654,8 @@ static int gltex_draw_cell(struct render *rdr, const struct tsm_cell *cell, unsi
 	y1 = gt->off_y + posy * FONT_HEIGHT(rdr);
 	y2 = y1 + FONT_HEIGHT(rdr);
 
-	ret = atlas_push_quad(glglyph->atlas, x1, y1, x2, y2, glglyph->texoff, width, &cell->fg,
-			      &cell->bg);
+	ret = atlas_push_quad(glglyph->atlas, x1, y1, x2, y2, glglyph->col, glglyph->row, width,
+			      &cell->fg, &cell->bg);
 	if (ret)
 		return ret;
 
@@ -667,8 +713,8 @@ static int gltex_draw_pointer(struct render *rdr, unsigned int x, unsigned int y
 	x2 = x1 + FONT_WIDTH(rdr);
 	y2 = y1 + FONT_HEIGHT(rdr);
 
-	return atlas_push_quad(glyph->atlas, x1, y1, x2, y2, glyph->texoff, 1.0, &gt->attr.fg,
-			       &gt->attr.bg);
+	return atlas_push_quad(glyph->atlas, x1, y1, x2, y2, glyph->col, glyph->row, 1.0,
+			       &gt->attr.fg, &gt->attr.bg);
 }
 
 static int gltex_render(struct render *rdr)
