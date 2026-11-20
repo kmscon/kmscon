@@ -121,11 +121,13 @@ struct gltex {
 	struct quad pointer;
 	bool pointer_visible;
 
-	/* vertex data of the quads drawn with one atlas, 6 vertices per quad */
+	/* vertex data of the quads drawn with one atlas, 6 vertices per quad;
+	 * colors are RGBA bytes, the alpha byte is unused but keeps the vertex
+	 * data 4-byte aligned */
 	GLfloat *vtx_pos;
 	GLfloat *vtx_texpos;
-	GLfloat *vtx_fgcol;
-	GLfloat *vtx_bgcol;
+	GLubyte *vtx_fgcol;
+	GLubyte *vtx_bgcol;
 };
 
 static int gltex_init(struct render *rdr)
@@ -228,8 +230,8 @@ static int alloc_quads(struct render *rdr)
 	gt->quads = calloc(nv, sizeof(*gt->quads));
 	gt->vtx_pos = malloc(sizeof(GLfloat) * nv * 6 * 2);
 	gt->vtx_texpos = malloc(sizeof(GLfloat) * nv * 6 * 2);
-	gt->vtx_fgcol = malloc(sizeof(GLfloat) * nv * 6 * 3);
-	gt->vtx_bgcol = malloc(sizeof(GLfloat) * nv * 6 * 3);
+	gt->vtx_fgcol = malloc(nv * 6 * 4);
+	gt->vtx_bgcol = malloc(nv * 6 * 4);
 	if (!gt->quads || !gt->vtx_pos || !gt->vtx_texpos || !gt->vtx_fgcol || !gt->vtx_bgcol) {
 		free_quads(gt);
 		return -ENOMEM;
@@ -608,7 +610,8 @@ static void emit_quad(struct gltex *gt, unsigned int idx, const struct quad *q)
 	float x1 = q->x1, y1 = q->y1, x2 = q->x2, y2 = q->y2;
 	float width = glyph->double_width ? 2.0 : 1.0;
 	const struct tsm_color *fg = &q->fg, *bg = &q->bg;
-	GLfloat *pos, *texpos, *fgcol, *bgcol;
+	GLfloat *pos, *texpos;
+	GLubyte *fgcol, *bgcol;
 	GLfloat u1 = glyph->col * atlas->tex_w;
 	GLfloat u2 = (glyph->col + width) * atlas->tex_w;
 	GLfloat v1 = glyph->row * atlas->tex_h;
@@ -645,15 +648,17 @@ static void emit_quad(struct gltex *gt, unsigned int idx, const struct quad *q)
 	texpos[10] = u2;
 	texpos[11] = v1;
 
-	fgcol = &gt->vtx_fgcol[idx * 3 * 6];
-	bgcol = &gt->vtx_bgcol[idx * 3 * 6];
+	fgcol = &gt->vtx_fgcol[idx * 4 * 6];
+	bgcol = &gt->vtx_bgcol[idx * 4 * 6];
 	for (i = 0; i < 6; ++i) {
-		fgcol[i * 3 + 0] = fg->r / 255.0;
-		fgcol[i * 3 + 1] = fg->g / 255.0;
-		fgcol[i * 3 + 2] = fg->b / 255.0;
-		bgcol[i * 3 + 0] = bg->r / 255.0;
-		bgcol[i * 3 + 1] = bg->g / 255.0;
-		bgcol[i * 3 + 2] = bg->b / 255.0;
+		fgcol[i * 4 + 0] = fg->r;
+		fgcol[i * 4 + 1] = fg->g;
+		fgcol[i * 4 + 2] = fg->b;
+		fgcol[i * 4 + 3] = 255;
+		bgcol[i * 4 + 0] = bg->r;
+		bgcol[i * 4 + 1] = bg->g;
+		bgcol[i * 4 + 2] = bg->b;
+		bgcol[i * 4 + 3] = 255;
 	}
 }
 
@@ -765,8 +770,9 @@ static void draw_atlas(struct gltex *gt, const struct atlas *atlas, unsigned int
 
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, gt->vtx_pos);
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, gt->vtx_texpos);
-	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, gt->vtx_fgcol);
-	glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, gt->vtx_bgcol);
+	/* normalized: the shader gets the colors in [0, 1] */
+	glVertexAttribPointer(2, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, gt->vtx_fgcol);
+	glVertexAttribPointer(3, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, gt->vtx_bgcol);
 	glDrawArrays(GL_TRIANGLES, 0, 6 * num);
 }
 
