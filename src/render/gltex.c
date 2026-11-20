@@ -74,8 +74,9 @@ struct atlas {
 	GLfloat *cache_fgcol;
 	GLfloat *cache_bgcol;
 
-	GLfloat advance_htex;
-	GLfloat advance_vtex;
+	/* size of a glyph in normalized texture coordinates */
+	GLfloat tex_w;
+	GLfloat tex_h;
 };
 
 struct gl_glyph {
@@ -99,8 +100,6 @@ struct gltex {
 	struct gl_shader *shader;
 	GLuint uni_proj;
 	GLuint uni_atlas;
-	GLuint uni_advance_htex;
-	GLuint uni_advance_vtex;
 
 	unsigned int sw;
 	unsigned int sh;
@@ -223,8 +222,6 @@ static int gltex_set(struct render *rdr)
 
 	gt->uni_proj = gl_shader_get_uniform(gt->shader, "projection");
 	gt->uni_atlas = gl_shader_get_uniform(gt->shader, "atlas");
-	gt->uni_advance_htex = gl_shader_get_uniform(gt->shader, "advance_htex");
-	gt->uni_advance_vtex = gl_shader_get_uniform(gt->shader, "advance_vtex");
 
 	if (gl_has_error(gt->shader)) {
 		log_warning("cannot create shader");
@@ -375,6 +372,10 @@ static struct atlas *get_atlas(struct render *rdr, unsigned int num)
 		goto err;
 	}
 
+	/* glyphs are drawn at their exact size, sample texels without blending */
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
 	if (atlas_alloc_tex(rdr, atlas))
 		goto err;
 
@@ -388,8 +389,9 @@ static struct atlas *get_atlas(struct render *rdr, unsigned int num)
 		goto err;
 
 	atlas->cache_size = nsize;
-	atlas->advance_htex = 1.0 / atlas->width * FONT_WIDTH(rdr);
-	atlas->advance_vtex = 1.0 / atlas->height * FONT_HEIGHT(rdr);
+	/* exact, as the texture sizes are powers of 2 */
+	atlas->tex_w = (GLfloat)FONT_WIDTH(rdr) / atlas->width;
+	atlas->tex_h = (GLfloat)FONT_HEIGHT(rdr) / atlas->height;
 
 	dlist_link(&gt->atlases, &atlas->list);
 	return atlas;
@@ -522,14 +524,17 @@ static int gltex_prepare(struct render *rdr, struct tsm_attr *attr)
 
 /*
  * Appends a glyph quad to the vertex caches of @atlas, as two triangles.
- * (x1, y1) is the top-left and (x2, y2) the bottom-right corner in GL
- * coordinates, the texture spans @width glyphs from @texoff.
+ * (x1, y1) is the top-left and (x2, y2) the bottom-right corner in console
+ * pixels, the texture spans @width glyphs from glyph @texoff of the atlas.
  */
 static int atlas_push_quad(struct atlas *atlas, float x1, float y1, float x2, float y2,
 			   unsigned int texoff, float width, const struct tsm_color *fg,
 			   const struct tsm_color *bg)
 {
 	GLfloat *pos, *texpos, *fgcol, *bgcol;
+	GLfloat u1 = texoff * atlas->tex_w;
+	GLfloat u2 = (texoff + width) * atlas->tex_w;
+	GLfloat v2 = atlas->tex_h;
 	int i;
 
 	if (atlas->cache_num >= atlas->cache_size)
@@ -551,18 +556,18 @@ static int atlas_push_quad(struct atlas *atlas, float x1, float y1, float x2, fl
 	pos[11] = y1;
 
 	texpos = &atlas->cache_texpos[atlas->cache_num * 2 * 6];
-	texpos[0] = texoff;
+	texpos[0] = u1;
 	texpos[1] = 0.0;
-	texpos[2] = texoff;
-	texpos[3] = 1.0;
-	texpos[4] = texoff + width;
-	texpos[5] = 1.0;
+	texpos[2] = u1;
+	texpos[3] = v2;
+	texpos[4] = u2;
+	texpos[5] = v2;
 
-	texpos[6] = texoff;
+	texpos[6] = u1;
 	texpos[7] = 0.0;
-	texpos[8] = texoff + width;
-	texpos[9] = 1.0;
-	texpos[10] = texoff + width;
+	texpos[8] = u2;
+	texpos[9] = v2;
+	texpos[10] = u2;
 	texpos[11] = 0.0;
 
 	fgcol = &atlas->cache_fgcol[atlas->cache_num * 3 * 6];
@@ -694,8 +699,6 @@ static int gltex_render(struct render *rdr)
 			continue;
 
 		glBindTexture(GL_TEXTURE_2D, atlas->tex);
-		glUniform1f(gt->uni_advance_htex, atlas->advance_htex);
-		glUniform1f(gt->uni_advance_vtex, atlas->advance_vtex);
 
 		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, atlas->cache_pos);
 		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, atlas->cache_texpos);
