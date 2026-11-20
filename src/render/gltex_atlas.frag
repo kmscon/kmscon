@@ -30,11 +30,13 @@
  * background colors.
  */
 
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
 precision mediump float;
+#endif
 
 uniform sampler2D atlas;
-uniform float advance_htex;
-uniform float advance_vtex;
 
 varying vec2 texpos;
 varying vec3 fgcol;
@@ -42,8 +44,7 @@ varying vec3 bgcol;
 
 void main()
 {
-	vec2 pos = vec2(texpos.x * advance_htex, texpos.y * advance_vtex);
-	float alpha = texture2D(atlas, pos).a;
+	float alpha = texture2D(atlas, texpos).a;
 	vec3 val = alpha * fgcol + (1.0 - alpha) * bgcol;
 	gl_FragColor = vec4(val, 1.0);
 }
