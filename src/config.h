@@ -152,6 +152,9 @@ struct kmscon_conf_t {
 	/* lock the terminal after this inactivity time in seconds (0 = disabled) */
 	unsigned int lock_timeout;
 
+	/* mods to switch VT with Fx keys */
+	unsigned int switch_vt_fx_mods;
+
 	/* Grabs / Keyboard-Shortcuts */
 	/* scroll-up grab */
 	struct conf_grab *grab_scroll_up;

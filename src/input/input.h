@@ -97,7 +97,7 @@ void input_set_compose(struct input *input, const char *locale, const char *comp
 int input_update_keymap(struct input *input, const char *model, const char *layout,
 			const char *variant, const char *options);
 void input_set_conf(struct input *input, unsigned int repeat_delay, unsigned int repeat_rate,
-		    bool mouse_enabled);
+		    bool mouse_enabled, unsigned int switch_vt_mods);
 void input_ref(struct input *input);
 void input_unref(struct input *input);
 

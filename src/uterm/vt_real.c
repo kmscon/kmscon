@@ -467,6 +467,7 @@ static void real_input(struct input *input, struct input_key_event *ev, void *da
 	struct uterm_vt_real *vt = data;
 	int id, ret, active_tty;
 	unsigned int mods = ev->mods;
+	bool fx_switch_mods = false;
 
 	if (ev->handled || !vt->base.active || vt->base.hup)
 		return;
@@ -484,7 +485,14 @@ static void real_input(struct input *input, struct input_key_event *ev, void *da
 	id = 0;
 	/* ignore caps lock */
 	mods &= ~SHL_LOCK_MASK;
-	if ((mods == SHL_ALT_MASK || mods == (SHL_ALT_MASK | SHL_CONTROL_MASK)) &&
+	if (input->switch_vt_mods == SWITCH_VT_MOD_CTRL_ALT)
+	    fx_switch_mods = (mods == (SHL_ALT_MASK | SHL_CONTROL_MASK));
+	else if (input->switch_vt_mods == SWITCH_VT_MOD_ALT)
+	    fx_switch_mods = (mods == SHL_ALT_MASK);
+	else
+	    fx_switch_mods = (mods == SHL_ALT_MASK || mods == (SHL_ALT_MASK | SHL_CONTROL_MASK));
+
+	if (fx_switch_mods &&
 	    ev->keysyms[0] >= XKB_KEY_F1 && ev->keysyms[0] <= XKB_KEY_F24) {
 		ev->handled = true;
 		id = ev->keysyms[0] - XKB_KEY_F1 + 1;

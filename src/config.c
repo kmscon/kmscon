@@ -150,6 +150,11 @@ static void print_help()
 		"\t    --lock-timeout <secs>      [0]\n"
 		"\t                                 Lock a terminal not used for this\n"
 		"\t                                 time in seconds (0=off)\n"
+		"\t    --switch-vt-fx-mods <mode> [0]\n"
+		"\t                                 Modifiers for switching VT using Fx keys:\n"
+		"\t                                 0-<Alt> or <Ctrl><Alt>\n"
+		"\t                                 1-<Ctrl><Alt>\n"
+		"\t                                 2-<Alt>\n"
 		"\n"
 		"Grabs / Keyboard-Shortcuts:\n"
 		"\t    --grab-scroll-up <grab>     [<Shift>Up]\n"
@@ -1034,6 +1039,7 @@ int kmscon_conf_new(struct conf_ctx **out)
 		CONF_OPTION_BOOL(0, "soft-cursor", &conf->soft_cursor, false),
 		CONF_OPTION_UINT(0, "dpms-timeout", &conf->dpms_timeout, 600),
 		CONF_OPTION_UINT(0, "lock-timeout", &conf->lock_timeout, 0),
+		CONF_OPTION_UINT(0, "switch-vt-fx-mods", &conf->switch_vt_fx_mods, 0),
 
 		/* Grabs / Keyboard-Shortcuts */
 		CONF_OPTION_GRAB(0, "grab-scroll-up", &conf->grab_scroll_up, &def_grab_scroll_up),

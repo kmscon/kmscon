@@ -116,7 +116,7 @@ static void setup_input(struct uterm_monitor *mon)
 		return;
 
 	input_set_compose(input, input_conf.locale, input_conf.xkb_compose_file);
-	input_set_conf(input, 250, 50, true);
+	input_set_conf(input, 250, 50, true, 0);
 	ret = input_register_key_cb(input, input_arrived, NULL);
 	if (ret)
 		return;

@@ -56,6 +56,12 @@ enum pointer_kind {
 	POINTER_VMOUSE,
 };
 
+enum switch_vt_mods {
+	SWITCH_VT_MOD_ALT_OR_CTRL_ALT = 0,
+	SWITCH_VT_MOD_CTRL_ALT = 1,
+	SWITCH_VT_MOD_ALT = 2,
+};
+
 /* Button state for pressed_button field */
 #define BUTTON_NONE 255
 
@@ -130,6 +136,8 @@ struct input {
 	struct xkb_state *state;
 	struct xkb_compose_state *compose_state;
 	struct xkb_compose_table *compose_table;
+
+	enum switch_vt_mods switch_vt_mods;
 
 	bool mouse_enabled;
 	struct shl_hook *pointer_hook;

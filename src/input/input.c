@@ -568,7 +568,7 @@ int input_update_keymap(struct input *input, const char *model, const char *layo
 
 SHL_EXPORT
 void input_set_conf(struct input *input, unsigned int repeat_delay, unsigned int repeat_rate,
-		    bool mouse_enabled)
+		    bool mouse_enabled, unsigned int switch_vt_mods)
 {
 	if (!repeat_delay)
 		repeat_delay = 250;
@@ -582,6 +582,13 @@ void input_set_conf(struct input *input, unsigned int repeat_delay, unsigned int
 	input->repeat_delay = repeat_delay;
 	input->repeat_rate = repeat_rate;
 	input->mouse_enabled = mouse_enabled;
+
+	if (switch_vt_mods == 1)
+	    input->switch_vt_mods = SWITCH_VT_MOD_CTRL_ALT;
+	else if (switch_vt_mods == 2)
+	    input->switch_vt_mods = SWITCH_VT_MOD_ALT;
+	else
+	    input->switch_vt_mods = SWITCH_VT_MOD_ALT_OR_CTRL_ALT;
 }
 
 SHL_EXPORT
