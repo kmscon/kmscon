@@ -153,6 +153,8 @@ struct kmscon_conf_t {
 	unsigned int lock_timeout;
 
 	/* Grabs / Keyboard-Shortcuts */
+	/* allow VT switching with ALT+Left/Right */
+	bool fbcon_compat;
 	/* scroll-up grab */
 	struct conf_grab *grab_scroll_up;
 	/* scroll-down grab */

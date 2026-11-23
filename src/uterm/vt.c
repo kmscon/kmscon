@@ -71,7 +71,8 @@ void vt_cb_hup(struct uterm_vt *vt)
 
 SHL_EXPORT
 struct uterm_vt *uterm_vt_allocate(struct ev_eloop *eloop, bool libseat, struct input *input,
-				   const char *vt_name, struct uterm_vt_cb *cb, void *data)
+				   const char *vt_name, struct uterm_vt_cb *cb, void *data,
+				   bool fbcon_compat)
 {
 	struct uterm_vt *vt = NULL;
 
@@ -92,6 +93,7 @@ struct uterm_vt *uterm_vt_allocate(struct ev_eloop *eloop, bool libseat, struct 
 
 	vt->cb = *cb;
 	vt->data = data;
+	vt->fbcon_compat = fbcon_compat;
 
 	input_ref(input);
 	ev_eloop_ref(eloop);

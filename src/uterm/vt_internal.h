@@ -28,6 +28,7 @@ struct uterm_vt {
 
 	bool active;
 	bool hup;
+	bool fbcon_compat;
 
 	const struct uterm_vt_ops *ops;
 };

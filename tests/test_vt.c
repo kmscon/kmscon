@@ -110,7 +110,7 @@ int main(int argc, char **argv)
 	if (ret)
 		goto err_exit;
 
-	vt = uterm_vt_allocate(eloop, false, input, vtpath, NULL, NULL);
+	vt = uterm_vt_allocate(eloop, false, input, vtpath, NULL, NULL, true);
 	if (!vt)
 		goto err_input;
 

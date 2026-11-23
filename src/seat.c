@@ -722,7 +722,7 @@ int kmscon_seat_new(struct kmscon_seat **out, struct conf_ctx *main_conf,
 		goto err_free;
 
 	seat->vt = uterm_vt_allocate(seat->eloop, conf->libseat, seat->input, conf->vt, &seat_vt_cb,
-				     seat);
+				     seat, conf->fbcon_compat);
 	if (!seat->vt) {
 		ret = -ENOMEM;
 		goto err_input;

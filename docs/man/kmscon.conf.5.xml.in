@@ -362,6 +362,17 @@ font-name=Ubuntu Mono
       </varlistentry>
 
       <varlistentry>
+        <term><option>fbcon-compat</option></term>
+        <listitem>
+          <para>Use fbcon compatibility mode for keyboard shortcut for VT
+                switching. This enables ALT+Fx, ALT+Left, ALT+Right, LOGO+Left,
+                and LOGO+Right to switch to another VT. This has no effect if
+                --vt is not set.
+                (default: on)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
         <term><option>grab-scroll-up</option></term>
         <listitem>
           <para>Shortcut to scroll up. (default: &lt;Shift&gt;Up)</para>

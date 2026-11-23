@@ -152,6 +152,9 @@ static void print_help()
 		"\t                                 time in seconds (0=off)\n"
 		"\n"
 		"Grabs / Keyboard-Shortcuts:\n"
+		"\t    --fbcon-compat [on]         Enable fbcon shortcuts for VT switching\n"
+		"\t                                  Enable ALT+Fx, ALT+Left, ALT+Right, "
+		"\t                                  LOGO+Left, LOGO+Right for VT switching\n"
 		"\t    --grab-scroll-up <grab>     [<Shift>Up]\n"
 		"\t                                  Shortcut to scroll up\n"
 		"\t    --grab-scroll-down <grab>   [<Shift>Down]\n"
@@ -1036,6 +1039,7 @@ int kmscon_conf_new(struct conf_ctx **out)
 		CONF_OPTION_UINT(0, "lock-timeout", &conf->lock_timeout, 0),
 
 		/* Grabs / Keyboard-Shortcuts */
+		CONF_OPTION_BOOL(0, "fbcon-compat", &conf->fbcon_compat, true),
 		CONF_OPTION_GRAB(0, "grab-scroll-up", &conf->grab_scroll_up, &def_grab_scroll_up),
 		CONF_OPTION_GRAB(0, "grab-scroll-down", &conf->grab_scroll_down,
 				 &def_grab_scroll_down),

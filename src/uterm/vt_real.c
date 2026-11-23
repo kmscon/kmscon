@@ -68,7 +68,7 @@
 #include <unistd.h>
 
 #include "input/input.h"
-#include "input/input_internal.h"
+#include "shl/dlist.h"
 #include "shl/eloop.h"
 #include "shl/log.h"
 #include "shl/misc.h"
@@ -467,6 +467,8 @@ static void real_input(struct input *input, struct input_key_event *ev, void *da
 	struct uterm_vt_real *vt = data;
 	int id, ret, active_tty;
 	unsigned int mods = ev->mods;
+	bool fbcon_compat = vt->base.fbcon_compat;
+	uint32_t keysym;
 
 	if (ev->handled || !vt->base.active || vt->base.hup)
 		return;
@@ -484,31 +486,32 @@ static void real_input(struct input *input, struct input_key_event *ev, void *da
 	id = 0;
 	/* ignore caps lock */
 	mods &= ~SHL_LOCK_MASK;
-	if ((mods == SHL_ALT_MASK || mods == (SHL_ALT_MASK | SHL_CONTROL_MASK)) &&
-	    ev->keysyms[0] >= XKB_KEY_F1 && ev->keysyms[0] <= XKB_KEY_F24) {
+	keysym = ev->keysyms[0];
+
+	if (keysym >= XKB_KEY_F1 && keysym <= XKB_KEY_F24) {
+		if ((fbcon_compat && mods == SHL_ALT_MASK) ||
+		    mods == (SHL_ALT_MASK | SHL_CONTROL_MASK)) {
+			ev->handled = true;
+			id = keysym - XKB_KEY_F1 + 1;
+		}
+	} else if (keysym == XKB_KEY_Left && fbcon_compat) {
+		if ((mods == SHL_ALT_MASK || mods == SHL_LOGO_MASK)) {
+			ev->handled = true;
+			id = vt->real_num - 1;
+			if (id == 0)
+				id = MAX_VT;
+		}
+	} else if (keysym == XKB_KEY_Right && fbcon_compat) {
+		if ((mods == SHL_ALT_MASK || mods == SHL_LOGO_MASK)) {
+			ev->handled = true;
+			if (vt->real_num >= MAX_VT)
+				id = 1;
+			else
+				id = vt->real_num + 1;
+		}
+	} else if (keysym >= XKB_KEY_XF86Switch_VT_1 && keysym <= XKB_KEY_XF86Switch_VT_12) {
 		ev->handled = true;
-		id = ev->keysyms[0] - XKB_KEY_F1 + 1;
-		if (id == vt->real_num)
-			return;
-	} else if ((mods == SHL_ALT_MASK || mods == SHL_LOGO_MASK) &&
-		   ev->keysyms[0] == XKB_KEY_Left) {
-		ev->handled = true;
-		id = vt->real_num - 1;
-		if (id == 0)
-			id = MAX_VT;
-	} else if ((mods == SHL_ALT_MASK || mods == SHL_LOGO_MASK) &&
-		   ev->keysyms[0] == XKB_KEY_Right) {
-		ev->handled = true;
-		if (vt->real_num >= MAX_VT)
-			id = 1;
-		else
-			id = vt->real_num + 1;
-	} else if (ev->keysyms[0] >= XKB_KEY_XF86Switch_VT_1 &&
-		   ev->keysyms[0] <= XKB_KEY_XF86Switch_VT_12) {
-		ev->handled = true;
-		id = ev->keysyms[0] - XKB_KEY_XF86Switch_VT_1 + 1;
-		if (id == vt->real_num)
-			return;
+		id = keysym - XKB_KEY_XF86Switch_VT_1 + 1;
 	}
 
 	if (!id || id == vt->real_num)
