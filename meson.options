@@ -42,6 +42,8 @@ option('pam', type: 'feature', value: 'auto',
 # systemd password agent
 option('systemd-ask-password', type: 'feature', value: 'auto',
   description: 'Install systemd units to use kmscon as systemd password agent')
+option('dracut', type: 'feature', value: 'auto',
+  description: 'Install dracut module to use kmscon as password agent in the initramfs')
 
 # TERM default value
 option('term', type: 'string', value: 'kmscon',

@@ -47,6 +47,15 @@ systemdsystemunitdir = systemd_deps.get_variable(
     default_value: 'lib/systemd/system',
 )
 
+dracut_deps = dependency(
+    'dracut',
+    required: get_option('dracut'),
+)
+dracutmodulesdir = dracut_deps.get_variable(
+    'dracutmodulesdir',
+    default_value: 'lib/dracut/modules.d',
+)
+
 #
 # Required dependencies
 #
@@ -208,6 +217,12 @@ enable_systemd_ask_password = get_option('systemd-ask-password').require(
     error_message: 'systemd was not found.',
 ).allowed()
 
+# dracut module, it requires the systemd password agent units
+enable_dracut = get_option('dracut').require(
+    dracut_deps.found() and enable_systemd_ask_password,
+    error_message: 'dracut or systemd-ask-password is not available.',
+).allowed()
+
 # Additionally check if glesv2 is needed
 enable_glesv2 = enable_video_drm3d or enable_renderer_gltex
 
@@ -225,6 +240,7 @@ summary(
         'moduledir': moduledir,
         'mandir': mandir,
         'systemdsystemunitdir': systemdsystemunitdir,
+        'dracutmodulesdir': dracutmodulesdir,
     },
     section: 'Directories',
 )
@@ -234,6 +250,7 @@ summary(
         'tests': get_option('tests'),
         'docs': enable_docs,
         'systemd-ask-password': enable_systemd_ask_password,
+        'dracut': enable_dracut,
     },
     section: 'Miscellaneous',
 )
@@ -291,6 +308,14 @@ if enable_systemd_ask_password
         'scripts/systemd/systemd-ask-password-kmscon.service',
         install_dir: systemdsystemunitdir,
         install_mode: 'rw-r--r--',
+    )
+endif
+
+if enable_dracut
+    install_data(
+        'scripts/dracut/99kmscon-askpass/module-setup.sh',
+        install_dir: dracutmodulesdir / '99kmscon-askpass',
+        install_mode: 'rwxr-xr-x',
     )
 endif
 
