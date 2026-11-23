@@ -52,7 +52,8 @@ struct uterm_vt_cb {
 };
 
 struct uterm_vt *uterm_vt_allocate(struct ev_eloop *eloop, bool libseat, struct input *input,
-				   const char *vt_name, struct uterm_vt_cb *cb, void *data);
+				   const char *vt_name, struct uterm_vt_cb *cb, void *data,
+				   bool fbcon_compat);
 void uterm_vt_deallocate(struct uterm_vt *vt);
 
 int uterm_vt_open_device(struct uterm_vt *vt, const char *device, int *fd_id);

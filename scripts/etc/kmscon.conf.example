@@ -74,6 +74,7 @@
 ## Other keys are case sensitive, and follow the keysym_names[] of the
 ## xkbcommon library.
 ## https://github.com/xkbcommon/libxkbcommon/blob/master/src/keysym-names.h
+#fbcon-compat    #Use no-fbcon-compat to disable
 #grab-scroll-up=<Shift>Up
 #grab-scroll-down=<Shift>Down
 #grab-page-up=<Shift>Prior
