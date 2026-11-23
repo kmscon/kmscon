@@ -39,6 +39,10 @@ option('dbus', type: 'feature', value: 'auto',
 option('pam', type: 'feature', value: 'auto',
   description: 'PAM authentication, to unlock locked terminals')
 
+# systemd password agent
+option('systemd-ask-password', type: 'feature', value: 'auto',
+  description: 'Install systemd units to use kmscon as systemd password agent')
+
 # TERM default value
 option('term', type: 'string', value: 'kmscon',
   description: 'default $TERM value')

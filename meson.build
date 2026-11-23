@@ -202,6 +202,12 @@ enable_docs = get_option('docs').require(
     error_message: docs_error_string,
 ).allowed()
 
+# systemd password agent units, only useful if systemd is present
+enable_systemd_ask_password = get_option('systemd-ask-password').require(
+    systemd_deps.found(),
+    error_message: 'systemd was not found.',
+).allowed()
+
 # Additionally check if glesv2 is needed
 enable_glesv2 = enable_video_drm3d or enable_renderer_gltex
 
@@ -227,6 +233,7 @@ summary(
         'extra_debug': get_option('extra_debug'),
         'tests': get_option('tests'),
         'docs': enable_docs,
+        'systemd-ask-password': enable_systemd_ask_password,
     },
     section: 'Miscellaneous',
 )
@@ -277,6 +284,15 @@ foreach filename, kwargs : {
         kwargs: kwargs,
     )
 endforeach
+
+if enable_systemd_ask_password
+    install_data(
+        'scripts/systemd/systemd-ask-password-kmscon.path',
+        'scripts/systemd/systemd-ask-password-kmscon.service',
+        install_dir: systemdsystemunitdir,
+        install_mode: 'rw-r--r--',
+    )
+endif
 
 # kmscon.conf
 install_data(
