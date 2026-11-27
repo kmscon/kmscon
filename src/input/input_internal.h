@@ -108,7 +108,7 @@ struct input_dev {
 struct input {
 	unsigned long ref;
 	struct ev_eloop *eloop;
-	int awake;
+	bool awake;
 
 	uterm_open_cb open_cb;
 	uterm_close_cb close_cb;
