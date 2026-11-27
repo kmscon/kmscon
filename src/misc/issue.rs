@@ -182,7 +182,10 @@ impl Expander<'_> {
                 out.extend_from_slice(book.all_ip(code == b'a').as_bytes());
                 return;
             }
-            _ => b"",
+            _ => {
+                out.push(code);
+                return;
+            }
         };
         out.extend_from_slice(text);
     }
