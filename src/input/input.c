@@ -629,7 +629,7 @@ void *input_add_dev(struct input *input, const char *node)
 	if (!dev)
 		return NULL;
 
-	if (input->awake > 0) {
+	if (input->awake) {
 		if (input_init_dev(input, dev))
 			return NULL;
 	}
@@ -726,8 +726,7 @@ void input_sleep(struct input *input)
 	if (!input)
 		return;
 
-	--input->awake;
-	if (input->awake != 0)
+	if (!input->awake)
 		return;
 
 	log_debug("going to sleep");
@@ -736,6 +735,7 @@ void input_sleep(struct input *input)
 	{
 		input_sleep_dev(dev);
 	}
+	input->awake = false;
 }
 
 SHL_EXPORT
@@ -745,11 +745,7 @@ void input_wake_up(struct input *input)
 	struct input_dev *dev;
 	int ret;
 
-	if (!input)
-		return;
-
-	++input->awake;
-	if (input->awake != 1)
+	if (!input || input->awake)
 		return;
 
 	log_debug("waking up");
@@ -768,15 +764,13 @@ void input_wake_up(struct input *input)
 		if (ret)
 			input_free_dev(dev);
 	}
+	input->awake = true;
 }
 
 SHL_EXPORT
 bool input_is_awake(struct input *input)
 {
-	if (!input)
-		return false;
-
-	return input->awake > 0;
+	return input && input->awake;
 }
 
 SHL_EXPORT
