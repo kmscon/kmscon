@@ -158,6 +158,20 @@ static bool is_crtc_in_use(struct video *video, uint32_t crtc_id)
 	return false;
 }
 
+static bool is_plane_in_use(struct video *video, uint32_t plane_id)
+{
+	struct display *disp;
+	struct drm_display *ddrm;
+
+	dlist_for_each_entry(disp, &video->displays, list)
+	{
+		ddrm = disp->data;
+		if (ddrm->plane.id == plane_id || ddrm->cursor_plane.id == plane_id)
+			return true;
+	}
+	return false;
+}
+
 static int get_crtc_index(drmModeRes *res, uint32_t crtc_id)
 {
 	int i;
@@ -231,9 +245,16 @@ static int modeset_find_plane(int fd, struct display *disp)
 {
 	struct drm_display *ddrm = disp->data;
 	drmModePlaneResPtr plane_res;
-	bool found_primary = false;
-	bool found_cursor = false;
-	int i, ret = -EINVAL;
+	uint32_t crtc_mask;
+	int primary_prio = -1, primary_crtcs = INT_MAX;
+	int cursor_prio = -1, cursor_crtcs = INT_MAX;
+	bool primary_damage = false;
+	unsigned int i;
+	int ret = -EINVAL;
+
+	if (ddrm->crtc_index >= 32)
+		return -EINVAL;
+	crtc_mask = 1U << ddrm->crtc_index;
 
 	plane_res = drmModeGetPlaneResources(fd);
 	if (!plane_res) {
@@ -242,8 +263,12 @@ static int modeset_find_plane(int fd, struct display *disp)
 	}
 
 	for (i = 0; i < plane_res->count_planes; i++) {
-		int plane_id = plane_res->planes[i];
+		uint32_t plane_id = plane_res->planes[i];
 		uint64_t plane_type;
+		int prio, n_crtcs;
+
+		if (is_plane_in_use(disp->video, plane_id))
+			continue;
 
 		drmModePlanePtr plane = drmModeGetPlane(fd, plane_id);
 		if (!plane) {
@@ -251,40 +276,58 @@ static int modeset_find_plane(int fd, struct display *disp)
 			continue;
 		}
 
-		if (plane->possible_crtcs & (1 << ddrm->crtc_index)) {
+		/*
+		 * Only consider planes compatible with this CRTC that are either
+		 * already attached to it or currently unattached; moving an active
+		 * plane directly from another CRTC in one atomic commit fails with
+		 * -EINVAL in the kernel. Prefer an already-attached plane, and
+		 * break ties toward planes with fewer possible_crtcs so shared
+		 * planes remain available for other CRTCs.
+		 */
+		if ((plane->possible_crtcs & crtc_mask) &&
+		    (plane->crtc_id == ddrm->crtc.id || plane->crtc_id == 0)) {
 			drmModeObjectPropertiesPtr props =
 				drmModeObjectGetProperties(fd, plane_id, DRM_MODE_OBJECT_PLANE);
 
-			if (!props)
+			if (!props) {
+				drmModeFreePlane(plane);
 				continue;
+			}
 
+			prio = (plane->crtc_id == ddrm->crtc.id) ? 1 : 0;
+			n_crtcs = __builtin_popcount(plane->possible_crtcs);
 			plane_type = get_property_value(fd, props, "type");
-			if (!found_primary && plane_type == DRM_PLANE_TYPE_PRIMARY) {
-				found_primary = true;
+			if (plane_type == DRM_PLANE_TYPE_PRIMARY &&
+			    (prio > primary_prio ||
+			     (prio == primary_prio && n_crtcs < primary_crtcs))) {
+				primary_prio = prio;
+				primary_crtcs = n_crtcs;
 				ddrm->plane.id = plane_id;
+				primary_damage = get_property_id(fd, props, "FB_DAMAGE_CLIPS") > 0;
 				ret = 0;
-				if (get_property_id(fd, props, "FB_DAMAGE_CLIPS") > 0)
-					disp->flags |= DISPLAY_DAMAGE;
-			} else if (!found_cursor && plane_type == DRM_PLANE_TYPE_CURSOR) {
-				found_cursor = true;
+			} else if (plane_type == DRM_PLANE_TYPE_CURSOR &&
+				   (prio > cursor_prio ||
+				    (prio == cursor_prio && n_crtcs < cursor_crtcs))) {
+				cursor_prio = prio;
+				cursor_crtcs = n_crtcs;
 				ddrm->cursor_plane.id = plane_id;
 			}
 			drmModeFreeObjectProperties(props);
 		}
 		drmModeFreePlane(plane);
-
-		if (found_primary && found_cursor)
-			break;
 	}
 	drmModeFreePlaneResources(plane_res);
 
-	if (found_primary)
+	if (primary_prio >= 0) {
+		if (primary_damage)
+			disp->flags |= DISPLAY_DAMAGE;
 		log_debug("found primary plane, id: %d damage support: %s\n", ddrm->plane.id,
 			  disp->flags & DISPLAY_DAMAGE ? "yes" : "no");
-	else
+	} else {
 		log_warn("couldn't find a primary plane\n");
+	}
 
-	if (found_cursor)
+	if (cursor_prio >= 0)
 		log_debug("found cursor plane, id: %d\n", ddrm->cursor_plane.id);
 
 	return ret;
